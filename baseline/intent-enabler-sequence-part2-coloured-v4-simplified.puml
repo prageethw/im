@@ -1,0 +1,128 @@
+@startuml
+title Intent Enabler — Sequence Part 2: Runtime Assurance and Re-decision
+
+' ---------- Styling ----------
+skinparam backgroundColor #FFFFFF
+skinparam shadowing false
+skinparam roundcorner 14
+skinparam sequence {
+  ArrowThickness 2
+  LifeLineBorderColor #64748B
+  LifeLineBackgroundColor #F8FAFC
+  ParticipantBorderColor #334155
+  ParticipantBackgroundColor #FFFFFF
+  ParticipantFontColor #111827
+  ParticipantFontStyle bold
+  ActorBorderColor #334155
+  ActorBackgroundColor #FFFFFF
+  ActorFontColor #111827
+  DividerBackgroundColor #E0E7FF
+  DividerBorderColor #64748B
+  DividerFontColor #111827
+  DividerFontStyle bold
+  GroupBorderColor #64748B
+  GroupBackgroundColor #F8FAFC
+  NoteBackgroundColor #FEF3C7
+  NoteBorderColor #D97706
+  NoteFontColor #111827
+}
+skinparam maxMessageSize 90
+skinparam ParticipantPadding 20
+skinparam BoxPadding 16
+' PlantUML shows participant labels at top and bottom when footbox is not hidden.
+autonumber "<b>[000]"
+
+
+box "Intent Consumer" #BAE6FD
+actor "Client\n(OEX)" as Client
+participant "Gateway" as GW
+end box
+
+box "Intent Domain" #BBF7D0
+participant "ID MS\nintent-definition-ms" as ID
+participant "IC MS\nintent-controller-ms" as IC
+participant "II MS\nintent-intelligence-ms" as II
+participant "IA MS\nintent-assurance-ms" as IA
+end box
+
+box "Intent Support Domain" #FDE68A
+participant "ICB MS\nintent-callback-ms" as ICB
+end box
+
+box "Other T7 Entities" #DDD6FE
+participant "t7.optimiser" as OPT
+participant "t7.orchestrator" as ORCH
+end box
+
+
+== Runtime assurance loop ==
+
+note over Client,ID
+  Client and ID MS are included for full context.
+  They do not directly participate in the runtime assurance loop.
+end note
+
+activate IA
+
+loop Assurance monitoring
+  IA -[#64748B]> IA: Evaluate runtime state,\nactive resources, evaluations and metrics
+
+  alt Non-degraded status change
+    IA -[#EA580C]> IC: <color:#EA580C><b>IntentAssuranceEvent</b></color>\nnon-degraded form; no candidates
+    activate IC
+    IC -[#EA580C]> IC: Update external Intent\nand IntentReport
+    deactivate IC
+
+  else Degraded status change
+    IA -[#EA580C]> II: <color:#EA580C><b>IntentAssuranceEvent</b></color>\nDegraded; with candidates for re-decision
+    IA -[#EA580C]> IC: <color:#EA580C><b>IntentAssuranceEvent</b></color>\nDegraded; with candidates for re-decision
+    activate IC
+    IC -[#EA580C]> IC: Update external Intent\nand IntentReport
+    deactivate IC
+
+    note right of IA
+      candidates are conditional.
+      When present, candidates include
+      the current active resources too.
+    end note
+
+    activate II
+    II -[#64748B]> II: Evaluate re-decision need\nusing knowledge and candidates
+    II -[#15803D]> OPT: <color:#15803D><b>IntentResolvedEvent</b></color>
+    activate OPT
+    OPT -[#15803D]> OPT: Re-optimise selected resources
+    OPT -[#15803D]--> II: <color:#15803D><b>IntentOptimisedEvent</b></color>
+    deactivate OPT
+    II -[#1D4ED8]> IA: <color:#1D4ED8><b>IntentNetworkReadyEvent</b></color>
+    deactivate II
+
+    IA -[#7C3AED]> ORCH: <color:#7C3AED><b>Apply updated configuration</b></color>
+    activate ORCH
+    ORCH -[#7C3AED]--> IA: <color:#7C3AED><b>Apply result</b></color>
+    ORCH -[#7C3AED]> GW: <color:#7C3AED><b>Network state callback</b></color>
+    deactivate ORCH
+
+    GW -[#7C3AED]> ICB: <color:#7C3AED><b>POST /intent/callback/v1/submissions</b></color>
+    activate ICB
+    ICB -[#7C3AED]> IA: <color:#7C3AED><b>Publish / mediate network state</b></color>\ninto internal event path
+    deactivate ICB
+  end
+end
+
+deactivate IA
+
+
+legend bottom
+|= Visual cue |= Meaning |
+|<#BAE6FD> Intent Consumer | Client and gateway entry path |
+|<#BBF7D0> Intent Domain | Core intent microservices |
+|<#FDE68A> Intent Support Domain | ICB MS incoming callback mediation |
+|<#DDD6FE> Other T7 Entities | t7.optimiser and t7.orchestrator |
+|<#DBEAFE> <color:#1D4ED8><b>Blue event labels</b></color> | Internal intent events |
+|<#DCFCE7> <color:#15803D><b>Green event labels</b></color> | Optimisation events |
+|<#FED7AA> <color:#EA580C><b>Orange event labels</b></color> | Assurance / lifecycle events |
+|<#EDE9FE> <color:#7C3AED><b>Purple event labels</b></color> | Network callback / orchestrator path |
+|<#FECACA> <color:#DC2626><b>Red event labels</b></color> | Rejection / failure path |
+endlegend
+
+@enduml
