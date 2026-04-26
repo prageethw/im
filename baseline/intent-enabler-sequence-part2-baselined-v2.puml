@@ -29,7 +29,6 @@ skinparam sequence {
 skinparam maxMessageSize 90
 skinparam ParticipantPadding 20
 skinparam BoxPadding 16
-' PlantUML shows participant labels at top and bottom when footbox is not hidden.
 autonumber "<b>[000]"
 
 
@@ -52,6 +51,7 @@ end box
 box "Other T7 Entities" #DDD6FE
 participant "t7.optimiser" as OPT
 participant "t7.orchestrator" as ORCH
+participant "t7.telemetry" as TEL
 end box
 
 
@@ -65,6 +65,7 @@ end note
 activate IA
 
 loop Assurance monitoring
+  TEL -[#7C3AED]> IA: <color:#7C3AED><b>Real-time telemetry stream</b></color>
   IA -[#64748B]> IA: Evaluate runtime state,\nactive resources, evaluations and metrics
 
   alt Non-degraded status change
@@ -96,6 +97,11 @@ loop Assurance monitoring
     II -[#1D4ED8]> IA: <color:#1D4ED8><b>IntentNetworkReadyEvent</b></color>
     deactivate II
 
+    IA -[#7C3AED]> TEL: <color:#7C3AED><b>Prepare / refresh telemetry subscription</b></color>\nfor updated configuration
+    activate TEL
+    TEL -[#7C3AED]--> IA: <color:#7C3AED><b>Subscription refreshed</b></color>
+    deactivate TEL
+
     IA -[#7C3AED]> ORCH: <color:#7C3AED><b>Apply updated configuration</b></color>
     activate ORCH
     ORCH -[#7C3AED]--> IA: <color:#7C3AED><b>Apply result</b></color>
@@ -117,7 +123,7 @@ legend bottom
 |<#BAE6FD> Intent Consumer | Client and gateway entry path |
 |<#BBF7D0> Intent Domain | Core intent microservices |
 |<#FDE68A> Intent Support Domain | ICB MS incoming callback mediation |
-|<#DDD6FE> Other T7 Entities | t7.optimiser and t7.orchestrator |
+|<#DDD6FE> Other T7 Entities | t7.optimiser, t7.orchestrator and t7.telemetry |
 |<#DBEAFE> <color:#1D4ED8><b>Blue event labels</b></color> | Internal intent events |
 |<#DCFCE7> <color:#15803D><b>Green event labels</b></color> | Optimisation events |
 |<#FED7AA> <color:#EA580C><b>Orange event labels</b></color> | Assurance / lifecycle events |
