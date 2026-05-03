@@ -1,6 +1,6 @@
 # Optimisation Full Recovery Pack
 
-Generated: 2026-05-03T12:21:37
+Generated: 2026-05-03T20:58:11
 
 This file combines the current optimisation architecture recovery material into one place.
 
@@ -1351,18 +1351,18 @@ The process view must not combine these as a single `Consumer / OEX` node.
 
 ---
 
-## Baseline appended 2026-05-03T12:21:37 - Corrected Screen Builder invocation responsibility
+## Baseline appended 2026-05-03T20:58:11 - Fully removed Istio-specific wording
 
-Corrected the security/integration wording:
+Cleaned remaining Istio-specific wording across active docs and recovery pack.
 
+Baseline wording:
 ```text
-OGW invokes OEX Screen Builder MS with mTLS and User Context JWT.
+OC MS calls OD MS over mTLS to validate the referenced ACTIVE OptimisationSpecification.
 ```
 
-The previous wording incorrectly said:
-
+Implementation detail:
 ```text
-OEX GW invokes OEX Screen Builder MS with mTLS and User Context JWT.
+mTLS may be provided by a service mesh or platform mechanism; the current design does not mandate Istio.
 ```
 
 
@@ -3385,7 +3385,7 @@ Detailed runtime process interpretation:
 2. OEX sends the request to OGW.
 3. OGW routes to OEX APIs.
 4. OEX APIs route through OEX GW.
-5. OGW routes to OEX Screen Builder MS.
+5. OEX GW routes to OEX Screen Builder MS.
 6. OEX Screen Builder MS calls NGW.
 7. NGW calls OC MS.
 8. OC MS validates the runtime request against the ACTIVE OptimisationSpecification from OD MS.
@@ -3524,7 +3524,7 @@ NGW -> OC MS:
   Uses mTLS to expose runtime Optimisation APIs.
 
 OC MS -> OD MS:
-  Uses Istio mTLS for internal service-to-service validation.
+  Uses mTLS for internal service-to-service validation.
 
 OC MS -> Kafka:
   Emits OptimisationRequestedEvent with instruction EXECUTE or CANCEL.
@@ -3572,11 +3572,11 @@ Detailed flow:
 ```text
 1. Consumer submits an optimisation request through the OEX experience or another authorised integration path.
 2. User-facing access is handled through OGW and OEX APIs.
-3. OGW invokes OEX Screen Builder MS with mTLS and User Context JWT.
+3. OEX GW invokes OEX Screen Builder MS with mTLS and User Context JWT.
 4. OEX Screen Builder MS calls NGW using mTLS and OAuth2 system-to-system.
 5. NGW routes the request to OC MS.
 6. OC MS validates request structure.
-7. OC MS calls OD MS over Istio mTLS to validate the referenced ACTIVE OptimisationSpecification.
+7. OC MS calls OD MS over mTLS to validate the referenced ACTIVE OptimisationSpecification.
 8. OC MS validates constraints[], targets[], and context[] against the OD MS request contract.
 9. OC MS persists runtime Optimisation with lifecycleStatus = ACKNOWLEDGED.
 10. OC MS writes OptimisationRequestedEvent with instruction = EXECUTE to outbox.
@@ -3749,7 +3749,7 @@ OC MS calls OD MS to validate referenced `OptimisationSpecification` resources. 
 
 ```text
 OC MS
--> Istio mTLS
+-> mTLS
 -> OD MS
 ```
 
@@ -3933,7 +3933,7 @@ OD MS specification responses may use caching where appropriate. OC MS runtime r
 
 - NGW integrates with OD MS and OC MS using mTLS.
 
-- OC MS calls OD MS using Istio mTLS for internal service-to-service validation.
+- OC MS calls OD MS using mTLS for internal service-to-service validation.
 
 - Kafka is available as the event backbone.
 
@@ -4232,7 +4232,7 @@ Detailed runtime process interpretation:
 2. OEX sends the request to OGW.
 3. OGW routes to OEX APIs.
 4. OEX APIs route through OEX GW.
-5. OGW routes to OEX Screen Builder MS.
+5. OEX GW routes to OEX Screen Builder MS.
 6. OEX Screen Builder MS calls NGW.
 7. NGW calls OC MS.
 8. OC MS validates the runtime request against the ACTIVE OptimisationSpecification from OD MS.

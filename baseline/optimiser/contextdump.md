@@ -1348,3 +1348,25 @@ The previous wording incorrectly said:
 ```text
 OEX GW invokes OEX Screen Builder MS with mTLS and User Context JWT.
 ```
+
+---
+
+## Baseline appended 2026-05-03T20:57:54 - Removed Istio-specific mTLS wording
+
+Updated wording to avoid committing to Istio or any specific service mesh.
+
+Use:
+
+```text
+OC MS calls OD MS over mTLS to validate the referenced ACTIVE OptimisationSpecification.
+```
+
+Do not baseline:
+
+```text
+OC MS calls OD MS over Istio mTLS to validate the referenced ACTIVE OptimisationSpecification.
+```
+
+Reason:
+- The design requires mTLS.
+- The implementation may use Istio or another service mesh/platform mechanism.
