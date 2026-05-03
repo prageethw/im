@@ -1,6 +1,6 @@
 # Optimisation Full Recovery Pack
 
-Generated: 2026-05-03T06:17:27
+Generated: 2026-05-03T06:42:50
 
 This file combines the current optimisation architecture recovery material into one place.
 
@@ -1190,12 +1190,43 @@ Reasoning:
 - `resourceAttributes` remains the field for stable candidate-resource descriptive attributes.
 - The example selectedResource `path-001` is consistent because `path-001` satisfies maxLatency 18ms <= 20ms while `path-002` fails maxLatency 24ms > 20ms.
 
+---
+
+## Baseline appended 2026-05-03T06:42:50 - Cleaned OD MS specification to constraints targets context model
+
+Cleaned and baselined the OD MS specification so it aligns with the current runtime optimisation model.
+
+OD MS current baseline:
+- OD MS defines the caller-facing request contract using `constraints[]`, `targets[]`, and `context[]`.
+- The older generic `inputs[]` model is no longer the baseline for this optimisation design.
+- `constraints[]` are hard pass/fail rules.
+- `targets[]` are optimisation preferences/goals among valid candidates.
+- `context[]` contains optimiser data such as topologySnapshot and candidateResources.
+- For resource/path/option selection, context must provide or reference a candidate set with at least two candidate options unless explicitly feasibility-validation-only.
+- Candidate resources use `metrics` for measured/computed values and `resourceAttributes` for stable descriptive properties.
+- OD MS contract now aligns with OC MS validation and worker execution.
+
+Also corrected stale endpoint references in OD MS from:
+```text
+POST /optimisation/{id}/cancel
+POST /optimisation/{id}/retry
+```
+
+to:
+```text
+POST /optimisation/{id}/cancellation
+POST /optimisation/{id}/retrial
+```
+
 
 ---
 
 # Part 2: Current OD MS Specification
 
 # Optimisation-Definition-MS / OD MS Specification
+
+> Current baseline: OD MS defines the runtime request contract using `constraints[]`, `targets[]`, and `context[]`. The older generic `inputs[]` model is not the active baseline for this optimisation design.
+
 
 ## 1. OD MS summary
 
@@ -1217,7 +1248,7 @@ OD MS does not own:
 In one sentence:
 
 ```text
-OD MS is the governed catalogue of optimisation capabilities; it tells callers what inputs they must provide, while the platform privately owns how those inputs are translated into deterministic Gurobi execution.
+OD MS is the governed catalogue of optimisation capabilities; it tells callers what constraints, targets, and context they must provide, while the platform privately owns how those constraints, targets, and context are translated into deterministic Gurobi execution.
 ```
 
 ---
@@ -1319,7 +1350,7 @@ Transactional activation logic:
 
 ## 5. Public OptimisationSpecification shape
 
-The public OD MS resource exposes only the caller-facing input contract.
+The public OD MS resource exposes only the caller-facing request contract.
 
 It exposes:
 
@@ -1336,14 +1367,14 @@ version
 lifecycleStatus
 creationDate
 lastUpdate
-inputs
+constraints, targets, and context
 _links
 ```
 
 It does **not** expose by default:
 
 ```text
-supportedInputModes
+supportedContractModes
 allowedObjectives
 candidateResourceRules
 solverConfiguration
@@ -1389,10 +1420,10 @@ Example resource:
   "creationDate": "2026-05-02T01:00:00Z",
   "lastUpdate": "2026-05-02T02:00:00Z",
 
-  // Public caller-facing input contract only.
+  // Public caller-facing request contract only.
   // This exposes what external callers must or may feed into POST /optimisation.
   // It does not expose objective logic, candidate rules, solver config, model binding, or Gurobi formulation.
-  "inputs": [
+  "constraints": [
     {
       // Required latency threshold the caller must provide.
       // The deterministic optimisation model knows how to apply it.
@@ -1487,9 +1518,9 @@ Content-Type: application/json
   // DRAFT can be edited. ACTIVE is immutable.
   "lifecycleStatus": "DRAFT",
 
-  // Public caller-facing input contract only.
+  // Public caller-facing request contract only.
   // This tells external callers what they need to feed into POST /optimisation.
-  "inputs": [
+  "constraints": [
     {
       // Required latency threshold the caller must provide.
       "name": "latency",
@@ -1559,8 +1590,8 @@ Content-Type: application/json
   "creationDate": "2026-05-02T01:00:00Z",
   "lastUpdate": "2026-05-02T01:00:00Z",
 
-  // Accepted public input contract.
-  "inputs": [
+  // Accepted public request contract.
+  "constraints": [
     {
       "name": "latency",
       "description": "Maximum acceptable latency threshold.",
@@ -1653,7 +1684,7 @@ Cache-Control: max-age=3600
   "creationDate": "2026-05-02T01:00:00Z",
   "lastUpdate": "2026-05-02T02:00:00Z",
 
-  "inputs": [
+  "constraints": [
     {
       // Required latency threshold the caller must provide.
       "name": "latency",
@@ -1707,7 +1738,7 @@ Cache-Control: max-age=3600
 
 Lists/searches `OptimisationSpecification` resources.
 
-List response is summary-only by default. Caller follows `self` to get the full input contract.
+List response is summary-only by default. Caller follows `self` to get the full request contract.
 
 ### Request
 
@@ -1748,7 +1779,7 @@ X-Result-Count: 1
     "creationDate": "2026-05-02T01:00:00Z",
     "lastUpdate": "2026-05-02T02:00:00Z",
 
-    // Client follows self to retrieve the full input contract.
+    // Client follows self to retrieve the full request contract.
     "_links": {
       "self": {
         "href": "/optimisationSpecification/os-7f3a9c21",
@@ -1797,7 +1828,7 @@ Content-Type: application/json
   // with the same specificationKey in the same transaction.
   "lifecycleStatus": "ACTIVE",
 
-  "inputs": [
+  "constraints": [
     {
       "name": "latency",
       "description": "Maximum acceptable latency threshold.",
@@ -1860,7 +1891,7 @@ Cache-Control: max-age=3600
   "creationDate": "2026-05-02T01:00:00Z",
   "lastUpdate": "2026-05-02T02:30:00Z",
 
-  "inputs": [
+  "constraints": [
     {
       "name": "latency",
       "description": "Maximum acceptable latency threshold.",
@@ -2105,8 +2136,8 @@ No If-None-Match in the active baseline.
 ETag is used for unsafe concurrency only:
   PUT /optimisationSpecification/{id}
   DELETE /optimisationSpecification/{id}
-  POST /optimisation/{id}/cancel
-  POST /optimisation/{id}/retry
+  POST /optimisation/{id}/cancellationlation
+  POST /optimisation/{id}/retrial
 
 Missing If-Match on unsafe operation:
   428 Precondition Required
@@ -2122,7 +2153,7 @@ Stale/wrong If-Match:
 ```text
 OD MS owns OptimisationSpecification.
 
-OptimisationSpecification is a public capability/input contract, not a public Gurobi model definition.
+OptimisationSpecification is a public capability/request contract, not a public Gurobi model definition.
 
 Expose only:
   id
@@ -2137,11 +2168,11 @@ Expose only:
   lifecycleStatus
   creationDate
   lastUpdate
-  inputs
+  constraints, targets, and context
   _links
 
 Do not expose by default:
-  supportedInputModes
+  supportedContractModes
   allowedObjectives
   candidateResourceRules
   solverConfiguration
@@ -2176,13 +2207,13 @@ No DELETED or ARCHIVED lifecycle status in the active baseline.
 
 ---
 
-## Optimisation request definition contract baseline:
+## Corrected OptimisationSpecification request contract baseline:
 
-OD MS defines the caller-facing contract for the runtime optimisation request. For the current path/resource-selection capability, the contract is split into:
+OD MS owns the public `OptimisationSpecification` resource. For runtime optimisation requests, OD MS defines the caller-facing request contract using three separate contract sections:
 
 ```text
 constraints[]:
-  Hard pass/fail rules that must be satisfied.
+  Hard pass/fail rules that runtime requests must satisfy.
   Example: maxLatency lessThanOrEqualTo 20ms.
 
 targets[]:
@@ -2190,11 +2221,11 @@ targets[]:
   Example: minimise cost first, minimise latency second, maximise reliability third.
 
 context[]:
-  Data used by the optimiser, including candidate resources and their metrics.
+  Data required by the optimiser, including candidate resources and their metrics.
   Example: topologySnapshot with candidateResourceSetId and at least two candidateResources.
 ```
 
-The previous generic `inputs[]` model is replaced by the clearer top-level model:
+The older generic `inputs[]` model is no longer the baseline for this optimisation design. Use:
 
 ```text
 constraints[]
@@ -2202,103 +2233,122 @@ targets[]
 context[]
 ```
 
-Example runtime contract values:
+### Example OptimisationSpecification contract fragment:
 
 ```json
 {
   "constraints": [
     {
       "name": "maxLatency",
-      "operator": "lessThanOrEqualTo",
       "valueType": "number",
-      "value": 20,
-      "unit": "ms"
+      "required": true,
+      "operators": [
+        "lessThanOrEqualTo"
+      ],
+      "unit": "ms",
+      "description": "Maximum allowed latency for a candidate resource."
     }
   ],
   "targets": [
     {
       "name": "cost",
       "goal": "minimise",
-      "priority": 1
+      "priority": 1,
+      "description": "Primary optimisation target is to minimise cost among valid candidates."
     },
     {
       "name": "latency",
       "goal": "minimise",
-      "priority": 2
+      "priority": 2,
+      "description": "Secondary optimisation target is to minimise latency among valid candidates."
     },
     {
       "name": "reliability",
       "goal": "maximise",
-      "priority": 3
+      "priority": 3,
+      "description": "Tertiary optimisation target is to maximise reliability among valid candidates."
     }
   ],
   "context": [
     {
       "name": "topologySnapshot",
       "valueType": "object",
-      "value": {
-        "dataset": "topology-snapshot",
-        "version": "2026-05-02T10:00:00Z",
-        "candidateResourceSetId": "candidate-paths-surgical-melbourne-20260502T100000Z",
-        "candidateResources": [
-          {
-            "resourceId": "path-001",
-            "resourceType": "deliveryResource",
-            "resourceClass": "low-latency-path",
-            "resourceAttributes": {
-              "locationId": "melbourne-hospital"
-            },
-            "metrics": [
-              {
-                "name": "latency",
-                "value": 18,
-                "unit": "ms"
-              },
-              {
-                "name": "reliability",
-                "value": 99.95,
-                "unit": "percent"
-              },
-              {
-                "name": "cost",
-                "value": 70,
-                "unit": "costUnit"
-              }
-            ]
+      "required": true,
+      "description": "Topology snapshot containing or referencing the candidate resource set available for optimisation.",
+      "schema": {
+        "type": "object",
+        "required": [
+          "dataset",
+          "version",
+          "candidateResourceSetId",
+          "candidateResources"
+        ],
+        "properties": {
+          "dataset": {
+            "type": "string"
           },
-          {
-            "resourceId": "path-002",
-            "resourceType": "deliveryResource",
-            "resourceClass": "high-reliability-path",
-            "resourceAttributes": {
-              "locationId": "melbourne-hospital"
-            },
-            "metrics": [
-              {
-                "name": "latency",
-                "value": 24,
-                "unit": "ms"
-              },
-              {
-                "name": "reliability",
-                "value": 99.995,
-                "unit": "percent"
-              },
-              {
-                "name": "cost",
-                "value": 90,
-                "unit": "costUnit"
+          "version": {
+            "type": "string"
+          },
+          "candidateResourceSetId": {
+            "type": "string"
+          },
+          "candidateResources": {
+            "type": "array",
+            "minItems": 2,
+            "description": "Candidate resources available to the optimiser. At least two candidate options are required for resource/path/option-selection optimisation unless the capability is explicitly feasibility-validation-only.",
+            "items": {
+              "type": "object",
+              "required": [
+                "resourceId",
+                "resourceType",
+                "metrics"
+              ],
+              "properties": {
+                "resourceId": {
+                  "type": "string"
+                },
+                "resourceType": {
+                  "type": "string"
+                },
+                "resourceClass": {
+                  "type": "string"
+                },
+                "resourceAttributes": {
+                  "type": "object",
+                  "description": "Stable descriptive properties of the resource, such as locationId or pathClass."
+                },
+                "metrics": {
+                  "type": "array",
+                  "description": "Measured or computed values used for evaluation/optimisation, such as latency, reliability, cost, or utilisation.",
+                  "items": {
+                    "type": "object",
+                    "required": [
+                      "name",
+                      "value"
+                    ],
+                    "properties": {
+                      "name": {
+                        "type": "string"
+                      },
+                      "value": {},
+                      "unit": {
+                        "type": "string"
+                      }
+                    }
+                  }
+                }
               }
-            ]
+            }
           }
-        ]
+        }
       }
     }
   ]
 }
 ```
 
-Candidate-set rule:
+### Candidate-set rule:
 
 ```text
 For optimisation capabilities that select a resource, route, path, placement, or option, the context contract must provide or reference a candidate set with at least two candidate options.
@@ -2310,7 +2360,16 @@ Use metrics for measured or computed candidate values such as latency, reliabili
 Use resourceAttributes for stable descriptive candidate properties such as locationId or pathClass.
 ```
 
-Selection consistency for the example:
+### End-to-end rule:
+
+```text
+OD MS defines the constraints[], targets[], and context[] request contract.
+OC MS validates runtime constraints[], targets[], and context[] against the ACTIVE OptimisationSpecification.
+Worker uses constraints[], targets[], and context[] during optimisation.
+Result references the selected candidate back to sourceInput and candidateResourceSetId where applicable.
+```
+
+### Example selection consistency:
 
 ```text
 path-001 passes maxLatency because latency 18ms <= 20ms.
@@ -3575,7 +3634,7 @@ The optimisation platform provides a reusable capability for running determinist
 
 The platform is not limited to the intent-management domain. It is designed as a generic optimisation capability that can be used by OEX, platform services, planning tools, assurance functions, intent-management flows, and other authorised entities that need to run optimisation.
 
-The business need is to allow authorised consumers to discover available optimisation capabilities, understand the required input contract, submit optimisation requests asynchronously, monitor execution state, request cancellation of active requests where needed, request retrial of failed requests, and retrieve final outcomes without exposing internal solver details or Gurobi model implementation.
+The business need is to allow authorised consumers to discover available optimisation capabilities, understand the required input contract, submit optimisation requests asynchronously, monitor execution state, cancel active requests where needed, retry failed requests, and retrieve final outcomes without exposing internal solver details or Gurobi model implementation.
 
 The solution separates the definition of optimisation capabilities from the execution and lifecycle control of optimisation runs.
 
@@ -3587,7 +3646,7 @@ The solution provides a reusable, asynchronous optimisation platform backed by d
 
 It uses two core microservices:
 - Optimisation-Definition-MS / OD MS owns OptimisationSpecification and exposes the caller-facing input contract.
-- Optimisation-Controller-MS / OC MS owns runtime Optimisation lifecycle, cancellation, retrial, event integration, and result projection.
+- Optimisation-Controller-MS / OC MS owns runtime Optimisation lifecycle, cancellation, retry, event integration, and result projection.
 
 Consumers may include OEX, platform services, planning tools, assurance functions, intent-management flows, or other authorised entities that need to run optimisation.
 
@@ -3628,8 +3687,8 @@ The Python/Gurobi worker is responsible for executing the internal deterministic
 | Discover optimisation capability | User / OEX / platform service | Retrieve available OptimisationSpecification records from OD MS and understand required inputs. | Caller knows which optimisation capability to use and what inputs to provide. |
 | Create runtime optimisation | User / OEX / platform service | Submit a runtime Optimisation request to OC MS using an ACTIVE specification and valid inputs. | OC MS returns 202 Accepted and creates an ACKNOWLEDGED optimisation. |
 | Monitor optimisation | User / OEX / platform service | Read current lifecycle state and result when available. | Caller can see whether the optimisation is pending, processing, completed, infeasible, failed, cancelling, or cancelled. |
-| Request optimisation cancellation | User / OEX / platform service | Request cancellation for an eligible active optimisation. | OC MS moves the resource to CANCELLING and instructs the worker to cancel where safely possible. |
-| Request optimisation retrial | User / OEX / platform service | Retrial a FAILED optimisation by creating a new linked optimisation. | A new ACKNOWLEDGED optimisation is created with retrialOf pointing to the failed one. |
+| Cancel optimisation | User / OEX / platform service | Request cancellation for an eligible active optimisation. | OC MS moves the resource to CANCELLING and instructs the worker to cancel where safely possible. |
+| Retry failed optimisation | User / OEX / platform service | Retry a FAILED optimisation by creating a new linked optimisation. | A new ACKNOWLEDGED optimisation is created with retryOf pointing to the failed one. |
 | Execute optimisation | Python/Gurobi worker | Consume worker instruction and execute the deterministic optimisation model. | Worker emits SUCCESS, INFEASIBLE, or FAILURE outcome. |
 
 ### 3.2 Logical view:
@@ -3687,29 +3746,7 @@ optimisation-logical-view.drawio
 
 ### 3.3 Process view:
 
-#### 3.3.1 Create and activate OptimisationSpecification:
-
-This process defines and activates an optimisation capability before runtime consumers can submit optimisation requests against it.
-
-Authorised platform/admin consumer
--> NGW
--> OD MS
--> OD MS DB
-
-Detailed flow:
-
-1. Authorised platform/admin consumer creates a draft OptimisationSpecification.
-2. Request reaches OD MS through NGW.
-3. OD MS validates the specification wrapper and input contract structure.
-4. OD MS persists the specification with lifecycleStatus = DRAFT.
-5. The draft can be reviewed and updated while it remains in DRAFT.
-6. When ready, the specification is activated.
-7. OD MS enforces that only one ACTIVE OptimisationSpecification exists per specificationKey.
-8. If another ACTIVE specification already exists for the same specificationKey, OD MS retires the previous active version transactionally.
-9. OD MS persists the new specification as ACTIVE.
-10. Runtime consumers can now reference this ACTIVE OptimisationSpecification in POST /optimisation.
-
-#### 3.3.2 Create and execute optimisation:
+#### 3.3.1 Create and execute optimisation:
 
 Consumer / OEX
 -> OEX UI
@@ -3751,7 +3788,7 @@ Detailed flow:
 19. OC MS updates lifecycle and result.
 20. Consumer retrieves result through GET /optimisation/{id}.
 
-#### 3.3.3 Request optimisation cancellation:
+#### 3.3.2 Cancel optimisation:
 
 Consumer / OEX
 -> OEX UI
@@ -3766,7 +3803,7 @@ Consumer / OEX
 
 Detailed flow:
 
-1. Consumer calls POST /optimisation/{id}/cancellation with If-Match.
+1. Consumer calls POST /optimisation/{id}/cancel with If-Match.
 2. Request reaches OC MS through the authorised gateway path.
 3. OC MS validates ETag.
 4. OC MS checks lifecycleStatus is ACKNOWLEDGED, QUEUED, or PROCESSING.
@@ -3777,7 +3814,7 @@ Detailed flow:
 9. Worker stops, cancels, or ignores work where safely possible.
 10. OC MS eventually projects CANCELLED when cancellation is confirmed or safely resolved.
 
-#### 3.3.4 Request optimisation retrial:
+#### 3.3.3 Retry failed optimisation:
 
 Consumer / OEX
 -> OEX UI
@@ -3792,11 +3829,11 @@ Consumer / OEX
 
 Detailed flow:
 
-1. Consumer calls POST /optimisation/{id}/retrial with If-Match.
+1. Consumer calls POST /optimisation/{id}/retry with If-Match.
 2. Request reaches OC MS through the authorised gateway path.
 3. OC MS validates original Optimisation lifecycleStatus = FAILED.
 4. OC MS creates a new Optimisation resource.
-5. New Optimisation links to the original through retrialOf.
+5. New Optimisation links to the original through retryOf.
 6. New Optimisation starts with lifecycleStatus = ACKNOWLEDGED.
 7. OC MS writes OptimisationRequestedEvent with instruction = EXECUTE for the new Optimisation.
 8. Worker processes the new request.
@@ -3809,23 +3846,23 @@ Detailed flow:
 |---|---|
 | Microsoft Entra ID | Provides SSO authentication for users/operators before they access OEX. Supplies identity context used by the user-facing access path. |
 | ACG approval process | Governs operator access to OEX. Users must be approved through the organisational access-control process before they can use the OEX optimisation experience. |
-| OEX UI | Provides the user/operator-facing interface for discovering optimisation capabilities, submitting requests, monitoring state, requesting cancellation, requesting retrial, and viewing results. The OEX UI reaches the OEX channel through OGW. |
+| OEX UI | Provides the user/operator-facing interface for discovering optimisation capabilities, submitting requests, monitoring state, cancelling, retrying, and viewing results. The OEX UI reaches the OEX channel through OGW. |
 | OGW | User-context-aware gateway for OEX UI integration. Uses user SSO OAuth2 from the UI path and propagates user identity context into the OEX channel. Routes OEX requests to OEX Screen Builder MS. |
 | OEX Screen Builder MS | Builds and orchestrates the OEX screen/backend experience. Sits between OGW and NGW. Integrates with NGW using mTLS and OAuth2 system-to-system to call backend optimisation APIs. |
 | NGW | NAAS Gateway exposing backend optimisation domain APIs for OD MS and OC MS. Provides the controlled backend API entry point for OEX Screen Builder MS and other authorised system consumers. NGW-exposed backend APIs are TMF-compliant. |
 | Optimisation-Definition-MS / OD MS | Owns the definition side of the optimisation platform through OptimisationSpecification. Publishes caller-facing input contracts, manages DRAFT, ACTIVE, and RETIRED specification lifecycle, and ensures only one ACTIVE specification exists per specificationKey. Does not expose solver/model internals. |
 | OD MS Database | Stores OptimisationSpecification records, version metadata, lifecycle state, input contracts, timestamps, ETag/revision data, and retained retired specifications for audit/history. |
-| Optimisation-Controller-MS / OC MS | Owns runtime Optimisation resources. Accepts requests, validates the generic wrapper and OD MS input contract, manages lifecycle, cancellation, retrial, outbox/inbox integration, and result projection. Performs syntactic and contract validation only. |
-| OC MS Database | Stores runtime Optimisation resources, accepted inputs, optional sourceContext, lifecycle state, status reasons, result projections, retrial links, timestamps, ETag/revision data, outbox records, and inbox records. |
+| Optimisation-Controller-MS / OC MS | Owns runtime Optimisation resources. Accepts requests, validates the generic wrapper and OD MS input contract, manages lifecycle, cancellation, retry, outbox/inbox integration, and result projection. Performs syntactic and contract validation only. |
+| OC MS Database | Stores runtime Optimisation resources, accepted inputs, optional sourceContext, lifecycle state, status reasons, result projections, retry links, timestamps, ETag/revision data, outbox records, and inbox records. |
 | OC MS Outbox Relay | Publishes persisted OC MS outbox records to Kafka after DB commit. Publishes OptimisationRequestedEvent with instruction = EXECUTE or instruction = CANCEL. |
 | Kafka topic | Main internal event stream for worker instructions and outcomes between OC MS and the Python/Gurobi worker. Uses CloudEvents-style Kafka headers. |
-| Kafka DLQ | Holds events that cannot be safely processed after retrial handling. Preserves original event payload and failure metadata for operational investigation and replay decisions. |
+| Kafka DLQ | Holds events that cannot be safely processed after retry handling. Preserves original event payload and failure metadata for operational investigation and replay decisions. |
 | Python / Gurobi Worker | Consumes OptimisationRequestedEvent. For EXECUTE, resolves the internal deterministic model binding, resolves required data, executes optimisation, and emits an outcome. For CANCEL, cancels/stops/ignores processing where safely possible. |
 | Internal deterministic optimisation models | Own solver-specific logic that is not exposed externally. Encapsulate objective formulation, constraints, candidate-resource rules, model binding, solver configuration, and Gurobi formulation. |
 | Gurobi Optimizer | Executes the mathematical optimisation model prepared by the worker/model layer. Produces solve outcomes that the worker maps into SUCCESS, INFEASIBLE, or FAILURE. |
 | Analytics platform / data sources | Provides authorised datasets required by the worker/model layer, such as topology snapshots, traffic forecasts, capacity information, inventory data, or other optimisation input datasets. |
 | OC MS Inbox Consumer | Consumes worker outcome events, applies idempotency and stale/late-event handling, maps outcomes to lifecycle states, and projects result/failure details into the runtime Optimisation resource. |
-| Operational support / monitoring | Monitors service health, Kafka lag, outbox/inbox processing, worker failures, solver failures, DLQ records, retrial counts, stale/late events, and optimisation lifecycle/result trends. |
+| Operational support / monitoring | Monitors service health, Kafka lag, outbox/inbox processing, worker failures, solver failures, DLQ records, retry counts, stale/late events, and optimisation lifecycle/result trends. |
 
 ---
 
@@ -3916,8 +3953,8 @@ Python/Gurobi Worker:
 ### 5.7 API concurrency control:
 
 ETags are used for unsafe runtime actions:
-- POST /optimisation/{id}/cancellation
-- POST /optimisation/{id}/retrial
+- POST /optimisation/{id}/cancel
+- POST /optimisation/{id}/retry
 
 Both require If-Match.
 
@@ -3972,7 +4009,7 @@ The worker and internal model layer own the solver-specific details.
 
 OD MS and OC MS should be deployed as independently scalable and highly available services.
 
-OD MS availability is important for capability discovery and request validation. OC MS availability is critical for runtime optimisation creation, lifecycle reads, cancellation, retrial, and event projection.
+OD MS availability is important for capability discovery and request validation. OC MS availability is critical for runtime optimisation creation, lifecycle reads, cancellation, retry, and event projection.
 
 Kafka availability is critical for asynchronous worker instruction and outcome exchange. The outbox/inbox patterns reduce data-loss risk during transient service or Kafka failures.
 
@@ -4052,7 +4089,7 @@ OD MS specification responses may use caching where appropriate. OC MS runtime r
 - Runtime Optimisation does not support client-side PUT or DELETE.
 - Cancellation is represented through lifecycleStatus = CANCELLING and an OptimisationRequestedEvent with instruction = CANCEL.
 - Only one ACTIVE OptimisationSpecification is allowed per specificationKey.
-- ETag / If-Match is required for unsafe runtime operations such as cancellation and retrial.
+- ETag / If-Match is required for unsafe runtime operations such as cancel and retry.
 - Internal Kafka events do not use TMF REST @type, @baseType, or @schemaLocation.
 
 ---
@@ -4072,8 +4109,8 @@ DELETE /optimisationSpecification/{id}
 GET  /optimisation  
 POST /optimisation  
 GET  /optimisation/{id}  
-POST /optimisation/{id}/cancellation  
-POST /optimisation/{id}/retrial
+POST /optimisation/{id}/cancel  
+POST /optimisation/{id}/retry
 
 Unsupported:
 

@@ -1173,3 +1173,31 @@ Reasoning:
 - `metrics` remains the agreed field for candidate measured/computed values.
 - `resourceAttributes` remains the field for stable candidate-resource descriptive attributes.
 - The example selectedResource `path-001` is consistent because `path-001` satisfies maxLatency 18ms <= 20ms while `path-002` fails maxLatency 24ms > 20ms.
+
+---
+
+## Baseline appended 2026-05-03T06:42:50 - Cleaned OD MS specification to constraints targets context model
+
+Cleaned and baselined the OD MS specification so it aligns with the current runtime optimisation model.
+
+OD MS current baseline:
+- OD MS defines the caller-facing request contract using `constraints[]`, `targets[]`, and `context[]`.
+- The older generic `inputs[]` model is no longer the baseline for this optimisation design.
+- `constraints[]` are hard pass/fail rules.
+- `targets[]` are optimisation preferences/goals among valid candidates.
+- `context[]` contains optimiser data such as topologySnapshot and candidateResources.
+- For resource/path/option selection, context must provide or reference a candidate set with at least two candidate options unless explicitly feasibility-validation-only.
+- Candidate resources use `metrics` for measured/computed values and `resourceAttributes` for stable descriptive properties.
+- OD MS contract now aligns with OC MS validation and worker execution.
+
+Also corrected stale endpoint references in OD MS from:
+```text
+POST /optimisation/{id}/cancel
+POST /optimisation/{id}/retry
+```
+
+to:
+```text
+POST /optimisation/{id}/cancellation
+POST /optimisation/{id}/retrial
+```
