@@ -165,7 +165,7 @@ Content-Type: application/json
   "priority": "1",
 
   // Capability-specific caller-fed constraints, targets, and context.
-  // Validated syntactically against OD MS OptimisationSpecification.constraints, targets, and context.
+  // Validated syntactically against OD MS OptimisationSpecification constraintSpecifications, targetSpecifications, and contextSpecifications.
   "constraints": [
     {
       "name": "maxLatency",
@@ -437,7 +437,7 @@ OC MS validates:
   generic REST wrapper using its static API/OpenAPI contract
   referenced OptimisationSpecification exists in OD MS
   referenced OptimisationSpecification lifecycleStatus is ACTIVE
-  constraints[], targets[], and context[] against the referenced ACTIVE OptimisationSpecification.constraints, targets, and context
+  runtime constraints[], targets[], and context[] against the referenced ACTIVE OptimisationSpecification contract definitions.constraints, targets, and context
 
 OC MS does not validate:
   optimisation semantics
@@ -1412,9 +1412,41 @@ The presence of `constraints[]` in OC MS is expected. In OC MS it is not the def
 
 ---
 
-## Logical view baseline:
+## OD definition versus OC runtime model baseline:
 
-OC MS runtime logical path:
+OD MS defines the contract using:
+
+```text
+constraintSpecifications[]
+targetSpecifications[]
+contextSpecifications[]
+```
+
+OC MS runtime Optimisation resources carry actual accepted values using:
+
+```text
+constraints[]
+targets[]
+context[]
+```
+
+OC MS validation mapping:
+
+```text
+runtime constraints[] -> OD constraintSpecifications[]
+runtime targets[] -> OD targetSpecifications[]
+runtime context[] -> OD contextSpecifications[]
+```
+
+OC MS validates structure, required fields, enum/value type rules, and cardinality against the ACTIVE OptimisationSpecification. This includes candidateResources minItems = 2 for selection optimisation.
+
+OC MS does not perform solver feasibility, candidate ranking, metric-vs-constraint evaluation, or objective trade-off evaluation.
+
+---
+
+## Runtime E2E access path baseline:
+
+OC MS runtime access follows this path before backend asynchronous execution:
 
 ```text
 User
@@ -1430,59 +1462,212 @@ User
 -> Gurobi Optimizer
 ```
 
-OC MS owns runtime Optimisation resources. It validates runtime requests against OD MS definitions, persists accepted executions, emits Kafka instructions, consumes worker outcomes, and projects lifecycle/result state.
+OC MS sits behind NGW. OC MS does not directly authenticate end users. User authentication and user-context-aware routing occur through Entra ID SSO, OEX UI/APIs, OGW, OEX Screen Builder MS, and NGW.
 
-## Process view baseline:
+OC MS validates the runtime request against OD MS, persists the Optimisation, emits Kafka events, and consumes worker outcomes.
 
-OC MS runtime process expansion:
+---
+
+## OC MS infrastructure security controls:
+
+OC MS integrations must explicitly capture service-to-infrastructure security controls.
+
+### OC MS -> OC MS Database:
 
 ```text
-User
--> Microsoft Entra ID SSO
--> OEX UI
--> OEX APIs
--> OGW
--> OEX Screen Builder MS
--> NGW
--> OC MS
--> OD MS
--> OC MS DB
--> OC MS Outbox
--> Kafka
--> Python/Gurobi Worker
--> Gurobi Optimizer
--> Kafka
--> OC MS Inbox
--> OC MS DB
--> User polls GET /optimisation/{id}
+Authentication:
+  OC MS connects using an authenticated OC MS service identity.
+
+Authorisation:
+  OC MS is authorised only for the OC MS database/schema/tables required for runtime Optimisation, lifecycle state, result projection, outbox, and inbox records.
+  No broad database admin/root access by default.
+
+Encrypted connectivity:
+  OC MS database connectivity uses encrypted transport.
+  mTLS or platform-approved encrypted database connectivity is used where supported by the selected database platform.
+
+Secrets and certificates:
+  Database credentials, keys, and certificates are stored in approved secret management.
+  Rotation must be supported without application code changes where possible.
+
+Environment separation:
+  OC MS database principals, roles, schemas, and credentials are environment-scoped.
+  Non-production OC MS identities must not access production OC MS data.
+
+Audit and monitoring:
+  Authentication failures, authorisation denials, privileged operations, unusual access patterns, outbox/inbox processing failures, and schema changes are logged and monitored.
+
+Ownership:
+  OC MS owns application-level access to runtime Optimisation, outbox, and inbox data.
+  Database/platform teams own database platform controls.
 ```
 
-OC MS process responsibilities:
+### OC MS -> OD MS:
 
 ```text
-validate runtime constraints[], targets[], and context[] against ACTIVE OD MS specification
-reject contract violations with 422
-persist accepted runtime Optimisation in OC MS DB
-write OptimisationRequestedEvent to OC MS Outbox
-publish/relay to Kafka
-consume SUCCESS / INFEASIBLE / FAILURE outcomes through OC MS Inbox
-project lifecycle and result into OC MS DB
-support cancellation through POST /optimisation/<built-in function id>/cancellation
-support retrial through POST /optimisation/<built-in function id>/retrial
+Authentication:
+  OC MS calls OD MS using an authenticated service identity.
+
+Authorisation:
+  OC MS is authorised only to retrieve/validate referenced OptimisationSpecification resources needed for runtime request validation.
+
+Encrypted connectivity:
+  OC MS calls OD MS over mTLS to validate the referenced ACTIVE OptimisationSpecification.
+
+Secrets and certificates:
+  Service credentials/certificates are managed through approved secret/certificate management and rotated.
+
+Audit and monitoring:
+  Failed authentication, denied authorisation, validation failures, and downstream dependency failures are logged and monitored.
+```
+
+### OC MS -> Kafka:
+
+```text
+Authentication:
+  OC MS Outbox Relay and OC MS Inbox use authenticated service identities.
+
+Encrypted connectivity:
+  OC MS connects to Kafka brokers using TLS/mTLS.
+
+Authorisation:
+  Kafka ACLs enforce least-privilege access by topic and consumer group.
+
+OC MS Outbox Relay:
+  Allowed to WRITE worker instruction events.
+  Allowed to DESCRIBE required topics.
+  Not allowed broad wildcard topic access.
+
+OC MS Inbox:
+  Allowed to READ worker outcome events using the approved OC MS inbox consumer group.
+  Allowed to DESCRIBE required topics.
+  Not allowed to use worker consumer groups or write arbitrary topics.
+
+DLQ:
+  DLQ produce/read/replay permissions are restricted to approved service or operations identities.
+
+Secrets and certificates:
+  Kafka credentials, keys, and certificates are stored in approved secret management and rotated.
+
+Audit and monitoring:
+  Produce failures, consume failures, ACL denials, authentication failures, consumer lag, DLQ growth, and replay attempts are logged and monitored.
+```
+
+### OC MS -> platform cache, if introduced later:
+
+```text
+OC MS does not require a cache in the current baseline.
+
+If a cache is introduced later, the OC MS design brief must capture:
+  authenticated service identity
+  least-privilege cache namespace/keyspace access
+  encrypted connectivity
+  approved secret/certificate management
+  environment-scoped cache roles
+  audit/monitoring of denied access and privileged operations
 ```
 
 ---
 
-## Optimisation catalogue security relationship:
+## Observability and monitoring telemetry baseline:
 
-OC MS does not provide catalogue-management access.
+Each service design brief and the E2E solution brief must capture observability as more than application logging.
+
+Observability includes:
 
 ```text
-OC MS cannot create, update, activate, or retire OptimisationSpecification records.
-
-OC MS only validates runtime Optimisation requests against ACTIVE OptimisationSpecification records from OD MS.
-
-Runtime consumers cannot bypass OD MS governance through OC MS.
+application logs
+metrics
+distributed traces
+audit/security events
+dependency telemetry
+alertable operational signals
 ```
 
-Catalogue security and governance are owned by OD MS and restricted to approved optimisation domain engineers after agreement with broader E2E teams.
+Correlation and trace propagation:
+
+```text
+accept correlation id / request id from the upstream caller where provided
+generate a correlation id when missing
+propagate correlation id to downstream service, database, cache, Kafka, and platform calls where applicable
+propagate trace context where platform standards support it
+preserve useful downstream correlation identifiers in logs/telemetry where approved
+```
+
+Application log baseline:
+
+```text
+request id / correlation id
+service name
+operation or endpoint
+safe subject/user/service reference where applicable
+resource id where applicable
+dependency called
+dependency status code or outcome
+latency
+authorisation decision result where applicable
+error code/reason
+```
+
+Monitoring telemetry baseline:
+
+```text
+request count by endpoint/operation and status
+latency by endpoint/operation and dependency
+error rate by endpoint/operation and dependency
+dependency failure counts
+timeout and retry counts where applicable
+authorisation allow/deny counts where applicable
+token or credential validation failure counts where applicable
+database connection and query failure counts where applicable
+Kafka produce/consume failure counts where applicable
+Kafka lag and DLQ growth where applicable
+outbox/inbox backlog where applicable
+cache hit/miss/error counts where applicable
+```
+
+Distributed tracing baseline:
+
+```text
+trace inbound service requests
+trace outbound dependency calls
+include correlation id and safe business/resource identifiers as trace attributes where approved
+do not include sensitive token claims, secrets, credentials, or full private payloads in traces
+```
+
+Security/audit baseline:
+
+```text
+authentication failures
+authorisation failures
+privileged operation attempts
+catalogue write/activation/retirement attempts where applicable
+unsafe runtime action attempts such as cancellation and retrial where applicable
+Kafka replay/DLQ actions where applicable
+database privileged access or schema-change actions where applicable
+```
+
+Sensitive claims, full tokens, secrets, credentials, private payload data, and personal data beyond approved identifiers must not be logged or emitted as telemetry attributes.
+
+---
+
+## OC MS observability focus:
+
+OC MS observability must include runtime optimisation, outbox, inbox, and worker outcome monitoring.
+
+Additional OC MS signals:
+
+```text
+runtime Optimisation create/list/detail counts
+contract validation failures including OPTIMISATION_CONTRACT_VIOLATION
+lifecycle transition counts
+SUCCESS / INFEASIBLE / FAILURE outcome counts
+cancellation and retrial action counts
+ETag / If-Match precondition failures
+OC MS database dependency latency and failures
+OC MS Outbox backlog and publish failures
+OC MS Inbox lag and consume/project failures
+Kafka produce/consume failure counts
+DLQ growth and replay attempts
+late/stale worker outcome handling counts
+```

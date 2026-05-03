@@ -1244,29 +1244,103 @@ Correction:
 
 ---
 
-## Baseline appended 2026-05-03T22:42:08 - Re-added visible Manage optimisation catalogue use case
+## Baseline appended 2026-05-03T11:23:51 - All logical and process views aligned
 
-Confirmed and re-added the visible use case row in the E2E use case view:
+Updated all active logical and process views to the agreed baseline.
 
+Logical sequence:
 ```text
-Manage optimisation catalogue
+User
+-> Microsoft Entra ID SSO
+-> OEX UI
+-> OEX APIs
+-> OGW
+-> OEX Screen Builder MS
+-> NGW
+-> OD MS / OC MS
+-> Kafka
+-> Python/Gurobi Worker
+-> Gurobi Optimizer
 ```
 
-Also added the `Optimisation catalogue governance use case` section to make the use case visible outside the security section.
+Definition path:
+```text
+User
+-> Microsoft Entra ID SSO
+-> OEX UI
+-> OEX APIs
+-> OGW
+-> OEX Screen Builder MS
+-> NGW
+-> OD MS
+```
+
+Runtime logical path:
+```text
+User
+-> Microsoft Entra ID SSO
+-> OEX UI
+-> OEX APIs
+-> OGW
+-> OEX Screen Builder MS
+-> NGW
+-> OC MS
+-> Kafka
+-> Python/Gurobi Worker
+-> Gurobi Optimizer
+```
+
+Runtime process expansion:
+```text
+User
+-> Microsoft Entra ID SSO
+-> OEX UI
+-> OEX APIs
+-> OGW
+-> OEX Screen Builder MS
+-> NGW
+-> OC MS
+-> OD MS
+-> OC MS DB
+-> OC MS Outbox
+-> Kafka
+-> Python/Gurobi Worker
+-> Gurobi Optimizer
+-> Kafka
+-> OC MS Inbox
+-> OC MS DB
+-> User polls GET /optimisation/{id}
+```
+
+Removed prior drift:
+- no `Consumer / OEX` actor in the baseline
+- no separate `OEX GW` hop
+- no stale `/cancel` or `/retry` endpoint references
 
 ---
 
-## Baseline appended 2026-05-03T23:43:48 - OSB MS design baseline
+## Baseline appended 2026-05-03T22:04:55 - Catalogue governance highlighted in summary and security
 
-Created `osb-ms-specification.md` as the baseline design for OSB MS / Optimisation Screen Builder MS.
+Updated the E2E solution brief summary and security section to highlight that managing the optimisation catalogue is an internal governed capability.
 
-Baselined:
-- OSB MS is the context-aware OEX facade/backend-for-frontend for optimisation experiences.
-- Access path: User -> OEX UI -> OGW -> OSB MS -> NGW -> OC MS -> OD MS.
-- OSB APIs use `/optimisationExperience/v1`.
-- Phase one endpoints cover home, capabilities, request-form, runtime optimisation create/list/detail, cancellation, and retrial.
-- Phase two endpoints cover governed catalogue/specification journeys.
-- Catalogue write/activate/retire journeys are restricted to approved optimisation domain engineers and remain governed by OD MS.
-- OSB MS is not source of truth for OptimisationSpecification or runtime Optimisation.
-- OSB MS uses mTLS and User Context JWT from OGW, and mTLS plus OAuth2 system-to-system to NGW.
-- OSB MS initially has no DB/cache/Kafka integration; future infrastructure integrations must explicitly capture the shared security controls.
+Baseline:
+- Only approved optimisation domain engineers can create, update, activate, or retire OptimisationSpecification records.
+- Catalogue changes require agreement with broader E2E teams before becoming ACTIVE.
+- General users, OEX consumers, runtime callers, platform services, OC MS, and workers cannot self-author OptimisationSpecification records.
+- Catalogue write/activation/retirement operations require authenticated, authorised, audited access and ETag / If-Match where applicable.
+
+---
+
+## Baseline appended 2026-05-03T23:49:38 - Observability and monitoring telemetry across all specs and E2E brief
+
+Extended the observability baseline across:
+- OD MS specification
+- OC MS specification
+- OSB MS specification
+- E2E solution brief
+
+Baseline:
+- Observability is not only application logging.
+- Each service design brief and the E2E brief must cover application logs, metrics, distributed traces, audit/security events, dependency telemetry, and alertable operational signals.
+- Correlation context must be accepted/generated and propagated across service, database, Kafka, cache, and platform calls where applicable.
+- Sensitive claims, full tokens, secrets, credentials, private payload data, and personal data beyond approved identifiers must not be logged or emitted as telemetry attributes.

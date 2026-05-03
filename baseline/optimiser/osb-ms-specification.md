@@ -334,25 +334,6 @@ For runtime optimisation:
 INFEASIBLE is an optimisation outcome from the worker/model projected by OC MS.
 ```
 
-## Observability:
-
-OSB MS must log and propagate correlation context.
-
-Baseline telemetry:
-
-```text
-request id / correlation id
-user context subject or approved non-sensitive user reference
-capability id
-optimisation id where applicable
-backend dependency called
-backend status code
-latency
-authorisation decision result
-error code/reason
-```
-
-Sensitive claims and tokens must not be logged.
 
 ## Phase baseline:
 
@@ -381,4 +362,104 @@ approved optimisation domain engineer journeys
 
 ```text
 2026-05-03T23:43:48
+```
+
+---
+
+## Observability and monitoring telemetry baseline:
+
+Each service design brief and the E2E solution brief must capture observability as more than application logging.
+
+Observability includes:
+
+```text
+application logs
+metrics
+distributed traces
+audit/security events
+dependency telemetry
+alertable operational signals
+```
+
+Correlation and trace propagation:
+
+```text
+accept correlation id / request id from the upstream caller where provided
+generate a correlation id when missing
+propagate correlation id to downstream service, database, cache, Kafka, and platform calls where applicable
+propagate trace context where platform standards support it
+preserve useful downstream correlation identifiers in logs/telemetry where approved
+```
+
+Application log baseline:
+
+```text
+request id / correlation id
+service name
+operation or endpoint
+safe subject/user/service reference where applicable
+resource id where applicable
+dependency called
+dependency status code or outcome
+latency
+authorisation decision result where applicable
+error code/reason
+```
+
+Monitoring telemetry baseline:
+
+```text
+request count by endpoint/operation and status
+latency by endpoint/operation and dependency
+error rate by endpoint/operation and dependency
+dependency failure counts
+timeout and retry counts where applicable
+authorisation allow/deny counts where applicable
+token or credential validation failure counts where applicable
+database connection and query failure counts where applicable
+Kafka produce/consume failure counts where applicable
+Kafka lag and DLQ growth where applicable
+outbox/inbox backlog where applicable
+cache hit/miss/error counts where applicable
+```
+
+Distributed tracing baseline:
+
+```text
+trace inbound service requests
+trace outbound dependency calls
+include correlation id and safe business/resource identifiers as trace attributes where approved
+do not include sensitive token claims, secrets, credentials, or full private payloads in traces
+```
+
+Security/audit baseline:
+
+```text
+authentication failures
+authorisation failures
+privileged operation attempts
+catalogue write/activation/retirement attempts where applicable
+unsafe runtime action attempts such as cancellation and retrial where applicable
+Kafka replay/DLQ actions where applicable
+database privileged access or schema-change actions where applicable
+```
+
+Sensitive claims, full tokens, secrets, credentials, private payload data, and personal data beyond approved identifiers must not be logged or emitted as telemetry attributes.
+
+---
+
+## OSB MS observability focus:
+
+OSB MS observability must include OEX experience, context-awareness, and downstream dependency monitoring.
+
+Additional OSB MS signals:
+
+```text
+home/capability/request-form/render endpoint counts
+runtime action counts for create/cancellation/retrial
+User Context JWT validation failures
+context-based filtering decisions
+catalogue-management access attempts
+NGW dependency latency and failures
+OC MS / OD MS backend error surfacing counts
 ```

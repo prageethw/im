@@ -393,9 +393,46 @@ This OD MS specification intentionally does not include actual runtime candidate
 
 ---
 
-## Logical view baseline:
+## Shared versus candidate-specific context attributes:
 
-OD MS definition logical path:
+Shared context attributes should be modelled at the `topologySnapshot` level.
+
+Candidate-specific attributes should be modelled under `candidateResources[].resourceAttributes` only when they vary per candidate.
+
+For this example, `location.locationId` belongs at `topologySnapshot` level because all candidate paths belong to the same optimisation scope/location.
+
+Do not repeat the same `locationId` under every candidate resource.
+
+Example runtime context shape:
+
+```json
+{
+  "name": "topologySnapshot",
+  "valueType": "object",
+  "value": {
+    "dataset": "topology-snapshot",
+    "version": "2026-05-02T10:00:00Z",
+    "candidateResourceSetId": "candidate-paths-surgical-melbourne-20260502T100000Z",
+    "location": {
+      "locationId": "melbourne-hospital"
+    },
+    "candidateResources": [
+      {
+        "resourceId": "path-001",
+        "resourceType": "deliveryResource",
+        "resourceClass": "low-latency-path",
+        "metrics": []
+      }
+    ]
+  }
+}
+```
+
+---
+
+## Definition E2E access path baseline:
+
+OD MS definition access follows this path:
 
 ```text
 User
@@ -408,51 +445,168 @@ User
 -> OD MS
 ```
 
-OD MS also participates in runtime validation as the specification source:
+OD MS sits behind NGW. OD MS does not participate in Kafka, Python/Gurobi Worker, or Gurobi Optimizer runtime execution flows.
+
+---
+
+## OD MS infrastructure security controls:
+
+OD MS integrations must explicitly capture service-to-infrastructure security controls.
+
+### OD MS -> OD MS Database:
 
 ```text
-OC MS -> OD MS
+Authentication:
+  OD MS connects using an authenticated OD MS service identity.
+
+Authorisation:
+  OD MS is authorised only for the OD MS database/schema/tables required for OptimisationSpecification storage and retrieval.
+  No broad database admin/root access by default.
+
+Encrypted connectivity:
+  OD MS database connectivity uses encrypted transport.
+  mTLS or platform-approved encrypted database connectivity is used where supported by the selected database platform.
+
+Secrets and certificates:
+  Database credentials, keys, and certificates are stored in approved secret management.
+  Rotation must be supported without application code changes where possible.
+
+Environment separation:
+  OD MS database principals, roles, schemas, and credentials are environment-scoped.
+  Non-production OD MS identities must not access production OD MS data.
+
+Audit and monitoring:
+  Authentication failures, authorisation denials, privileged operations, schema changes, and unusual access patterns are logged and monitored.
+
+Ownership:
+  OD MS owns application-level access to OptimisationSpecification data.
+  Database/platform teams own database platform controls.
 ```
 
-OD MS does not participate in Kafka, Python/Gurobi Worker, Gurobi Optimizer, OC MS Inbox, or runtime result projection.
-
-## Process view baseline:
-
-OD MS definition-management process:
+### OD MS -> platform cache, if introduced later:
 
 ```text
-1. User authenticates through Microsoft Entra ID SSO.
-2. User accesses OEX UI.
-3. OEX UI calls OEX APIs.
-4. OEX APIs route through OGW.
-5. OGW routes to OEX Screen Builder MS.
-6. OEX Screen Builder MS calls NGW.
-7. NGW calls OD MS.
-8. OD MS validates OptimisationSpecification definition shape.
-9. OD MS stores the definition as DRAFT.
-10. OD MS transitions the definition to ACTIVE when approved/ready.
+OD MS does not require a cache in the current baseline.
+
+If a cache is introduced later, the OD MS design brief must capture:
+  authenticated service identity
+  least-privilege cache namespace/keyspace access
+  encrypted connectivity
+  approved secret/certificate management
+  environment-scoped cache roles
+  audit/monitoring of denied access and privileged operations
 ```
 
-OD MS definition model:
+### OD MS -> Kafka:
 
 ```text
-constraintSpecifications[]
-targetSpecifications[]
-contextSpecifications[]
+OD MS does not integrate directly with Kafka in the current baseline.
+
+If OD MS later becomes a Kafka producer or consumer, the OD MS design brief must capture:
+  service identity
+  TLS/mTLS broker connectivity
+  topic-level ACLs
+  consumer-group permissions where applicable
+  DLQ permissions where applicable
+  secret/certificate management
+  monitoring and audit controls
 ```
 
 ---
 
-## Optimisation catalogue security baseline:
+## Observability and monitoring telemetry baseline:
 
-OD MS catalogue-management operations are restricted.
+Each service design brief and the E2E solution brief must capture observability as more than application logging.
+
+Observability includes:
 
 ```text
-Only approved optimisation domain engineers can create, update, activate, or retire OptimisationSpecification records.
+application logs
+metrics
+distributed traces
+audit/security events
+dependency telemetry
+alertable operational signals
+```
 
-Catalogue changes require prior agreement with broader E2E teams that own, consume, or are impacted by the optimisation capability.
+Correlation and trace propagation:
 
-General users, OEX consumers, runtime callers, OC MS, and workers cannot self-author OptimisationSpecification records.
+```text
+accept correlation id / request id from the upstream caller where provided
+generate a correlation id when missing
+propagate correlation id to downstream service, database, cache, Kafka, and platform calls where applicable
+propagate trace context where platform standards support it
+preserve useful downstream correlation identifiers in logs/telemetry where approved
+```
 
-All catalogue write/activate/retire operations must be authenticated, authorised, audited, and protected with ETag / If-Match where applicable.
+Application log baseline:
+
+```text
+request id / correlation id
+service name
+operation or endpoint
+safe subject/user/service reference where applicable
+resource id where applicable
+dependency called
+dependency status code or outcome
+latency
+authorisation decision result where applicable
+error code/reason
+```
+
+Monitoring telemetry baseline:
+
+```text
+request count by endpoint/operation and status
+latency by endpoint/operation and dependency
+error rate by endpoint/operation and dependency
+dependency failure counts
+timeout and retry counts where applicable
+authorisation allow/deny counts where applicable
+token or credential validation failure counts where applicable
+database connection and query failure counts where applicable
+Kafka produce/consume failure counts where applicable
+Kafka lag and DLQ growth where applicable
+outbox/inbox backlog where applicable
+cache hit/miss/error counts where applicable
+```
+
+Distributed tracing baseline:
+
+```text
+trace inbound service requests
+trace outbound dependency calls
+include correlation id and safe business/resource identifiers as trace attributes where approved
+do not include sensitive token claims, secrets, credentials, or full private payloads in traces
+```
+
+Security/audit baseline:
+
+```text
+authentication failures
+authorisation failures
+privileged operation attempts
+catalogue write/activation/retirement attempts where applicable
+unsafe runtime action attempts such as cancellation and retrial where applicable
+Kafka replay/DLQ actions where applicable
+database privileged access or schema-change actions where applicable
+```
+
+Sensitive claims, full tokens, secrets, credentials, private payload data, and personal data beyond approved identifiers must not be logged or emitted as telemetry attributes.
+
+---
+
+## OD MS observability focus:
+
+OD MS observability must include specification/catalogue lifecycle monitoring.
+
+Additional OD MS signals:
+
+```text
+OptimisationSpecification create/update/activate/retire attempts
+catalogue authorisation allow/deny counts
+ACTIVE specification lookup counts
+specification validation failures
+ETag / If-Match precondition failures
+OD MS database dependency latency and failures
 ```
