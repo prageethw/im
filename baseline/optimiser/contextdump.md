@@ -1206,3 +1206,85 @@ Key corrections:
 Updated active OD MS, OC MS, and E2E solution brief wording:
 - Use `User` instead of `User / Operator`.
 - Use `UI` instead of `User / UI`.
+
+---
+
+## Baseline appended 2026-05-03T11:46:52 - Process view corrected to Consumer/OEX/OGW/OEX APIs/OEX GW path
+
+Updated the active runtime process view to:
+
+```text
+Consumer
+-> OEX
+-> OGW
+-> OEX APIs
+-> OEX GW
+-> OEX Screen Builder MS
+-> NGW
+-> OC MS
+-> OD MS
+-> OC MS DB
+-> OC MS Outbox
+-> Kafka
+-> Python/Gurobi Worker
+-> Gurobi Optimizer
+-> Kafka
+-> OC MS Inbox
+-> OC MS DB
+-> Consumer polls GET /optimisation/{id}
+```
+
+Key corrections:
+- Process view starts with `Consumer -> OEX`.
+- Process view includes `OGW -> OEX APIs -> OEX GW -> OEX Screen Builder MS`.
+- OC MS validates against OD MS before persisting to OC MS DB.
+- Runtime persistence/outbox/inbox path remains explicit.
+- Consumer observes completion by polling `GET /optimisation/{id}`.
+
+---
+
+## Baseline appended 2026-05-03T11:49:44 - Logical view updated
+
+Updated logical view baseline to:
+
+```text
+User
+-> Microsoft Entra ID SSO
+-> OEX UI
+-> OGW
+-> OEX Screen Builder MS
+-> NGW
+-> OD MS / OC MS
+-> Kafka
+-> Python/Gurobi Worker
+-> Gurobi Optimizer
+```
+
+Definition logical path:
+```text
+User
+-> Microsoft Entra ID SSO
+-> OEX UI
+-> OGW
+-> OEX Screen Builder MS
+-> NGW
+-> OD MS
+```
+
+Runtime logical path:
+```text
+User
+-> Microsoft Entra ID SSO
+-> OEX UI
+-> OGW
+-> OEX Screen Builder MS
+-> NGW
+-> OC MS
+-> Kafka
+-> Python/Gurobi Worker
+-> Gurobi Optimizer
+```
+
+Note:
+- Logical view is intentionally simpler than the detailed process view.
+- Process view may still include detailed OEX APIs / OEX GW / OC MS DB / outbox / inbox hops where required.

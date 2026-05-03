@@ -1,6 +1,6 @@
 <mxfile host="app.diagrams.net" agent="ChatGPT">
   <diagram id="optimisation-logical-view" name="Optimisation Logical View">
-    <mxGraphModel dx="1437" dy="1760" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1500" pageHeight="900" math="0" shadow="0">
+    <mxGraphModel dx="1184" dy="1608" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1500" pageHeight="900" math="0" shadow="0">
       <root>
         <mxCell id="0" />
         <mxCell id="1" parent="0" />
@@ -154,15 +154,17 @@
         <mxCell id="1g_pKyIUPg_Uf4EWA1Bv-8" edge="1" parent="1g_pKyIUPg_Uf4EWA1Bv-17" source="1g_pKyIUPg_Uf4EWA1Bv-5" style="endArrow=block;html=1;rounded=0;strokeWidth=2;strokeColor=default;" target="1g_pKyIUPg_Uf4EWA1Bv-6" value="Authenticate">
           <mxGeometry relative="1" as="geometry">
             <Array as="points">
-              <mxPoint x="166" y="60" />
+              <mxPoint x="166" y="67" />
             </Array>
           </mxGeometry>
         </mxCell>
         <mxCell id="1g_pKyIUPg_Uf4EWA1Bv-9" edge="1" parent="1g_pKyIUPg_Uf4EWA1Bv-17" source="1g_pKyIUPg_Uf4EWA1Bv-6" style="endArrow=block;html=1;rounded=0;strokeWidth=2;curved=1;entryX=0.429;entryY=0.027;entryDx=0;entryDy=0;entryPerimeter=0;strokeColor=default;" target="1g_pKyIUPg_Uf4EWA1Bv-7" value="Token">
           <mxGeometry relative="1" as="geometry" />
         </mxCell>
-        <mxCell id="1g_pKyIUPg_Uf4EWA1Bv-10" edge="1" parent="1g_pKyIUPg_Uf4EWA1Bv-17" source="1g_pKyIUPg_Uf4EWA1Bv-5" style="endArrow=block;html=1;rounded=0;strokeWidth=2;strokeColor=default;" target="1g_pKyIUPg_Uf4EWA1Bv-7" value="Access OEX">
-          <mxGeometry relative="1" as="geometry" />
+        <mxCell id="1g_pKyIUPg_Uf4EWA1Bv-10" edge="1" parent="1g_pKyIUPg_Uf4EWA1Bv-17" style="endArrow=block;html=1;rounded=0;strokeWidth=2;strokeColor=default;" target="1g_pKyIUPg_Uf4EWA1Bv-7" value="Access OEX">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="241" y="229" as="sourcePoint" />
+          </mxGeometry>
         </mxCell>
         <mxCell id="1g_pKyIUPg_Uf4EWA1Bv-14" edge="1" parent="1g_pKyIUPg_Uf4EWA1Bv-17" source="1g_pKyIUPg_Uf4EWA1Bv-11" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;strokeWidth=3;" target="1g_pKyIUPg_Uf4EWA1Bv-12" value="">
           <mxGeometry relative="1" as="geometry" />
@@ -178,13 +180,19 @@
         <mxCell id="1g_pKyIUPg_Uf4EWA1Bv-12" parent="1g_pKyIUPg_Uf4EWA1Bv-17" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=default;fontStyle=1;container=0;" value="&lt;span style=&quot;font-size:11px&quot;&gt;SB MS&lt;/span&gt;" vertex="1">
           <mxGeometry height="40" width="140" x="380.66999999999996" y="397" as="geometry" />
         </mxCell>
-        <mxCell id="e4" edge="1" parent="1g_pKyIUPg_Uf4EWA1Bv-17" source="1g_pKyIUPg_Uf4EWA1Bv-12" style="endArrow=block;html=1;rounded=0;strokeWidth=2;strokeColor=default;exitX=0.43;exitY=0.964;exitDx=0;exitDy=0;exitPerimeter=0;" target="gw" value="OAuth2 S2S &lt;br&gt;+&lt;br&gt;&amp;nbsp;mTLS">
+        <mxCell id="e4" edge="1" parent="1g_pKyIUPg_Uf4EWA1Bv-17" source="1g_pKyIUPg_Uf4EWA1Bv-12" style="endArrow=block;html=1;rounded=0;strokeWidth=2;strokeColor=default;exitX=0.5;exitY=1;exitDx=0;exitDy=0;" target="gw" value="OAuth2 S2S &lt;br&gt;+&lt;br&gt;&amp;nbsp;mTLS">
           <mxGeometry relative="1" as="geometry">
             <Array as="points">
-              <mxPoint x="441" y="530" />
+              <mxPoint x="450" y="530" />
             </Array>
             <mxPoint x="433.01" y="526.7248430738493" as="sourcePoint" />
           </mxGeometry>
+        </mxCell>
+        <mxCell id="qLJnQWGgCQ5zNhPKmqbL-1" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f8cecc;strokeColor=default;fontStyle=1;container=0;" value="&lt;span style=&quot;font-size:11px&quot;&gt;OGW&lt;/span&gt;" vertex="1">
+          <mxGeometry height="30" width="140" x="420.67" y="-376" as="geometry" />
+        </mxCell>
+        <mxCell id="qLJnQWGgCQ5zNhPKmqbL-2" edge="1" parent="1" source="1g_pKyIUPg_Uf4EWA1Bv-11" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;strokeWidth=2;" target="qLJnQWGgCQ5zNhPKmqbL-1" value="">
+          <mxGeometry relative="1" as="geometry" />
         </mxCell>
       </root>
     </mxGraphModel>
