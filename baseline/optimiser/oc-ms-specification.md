@@ -165,7 +165,7 @@ Content-Type: application/json
   "priority": "1",
 
   // Capability-specific caller-fed constraints, targets, and context.
-  // Validated syntactically against OD MS OptimisationSpecification.constraints, targets, and context.
+  // Validated syntactically against OD MS OptimisationSpecification constraintSpecifications, targetSpecifications, and contextSpecifications.
   "constraints": [
     {
       "name": "maxLatency",
@@ -437,7 +437,7 @@ OC MS validates:
   generic REST wrapper using its static API/OpenAPI contract
   referenced OptimisationSpecification exists in OD MS
   referenced OptimisationSpecification lifecycleStatus is ACTIVE
-  constraints[], targets[], and context[] against the referenced ACTIVE OptimisationSpecification.constraints, targets, and context
+  runtime constraints[], targets[], and context[] against the referenced ACTIVE OptimisationSpecification contract definitions.constraints, targets, and context
 
 OC MS does not validate:
   optimisation semantics
@@ -1412,9 +1412,41 @@ The presence of `constraints[]` in OC MS is expected. In OC MS it is not the def
 
 ---
 
-## Logical view baseline:
+## OD definition versus OC runtime model baseline:
 
-OC MS runtime logical path:
+OD MS defines the contract using:
+
+```text
+constraintSpecifications[]
+targetSpecifications[]
+contextSpecifications[]
+```
+
+OC MS runtime Optimisation resources carry actual accepted values using:
+
+```text
+constraints[]
+targets[]
+context[]
+```
+
+OC MS validation mapping:
+
+```text
+runtime constraints[] -> OD constraintSpecifications[]
+runtime targets[] -> OD targetSpecifications[]
+runtime context[] -> OD contextSpecifications[]
+```
+
+OC MS validates structure, required fields, enum/value type rules, and cardinality against the ACTIVE OptimisationSpecification. This includes candidateResources minItems = 2 for selection optimisation.
+
+OC MS does not perform solver feasibility, candidate ranking, metric-vs-constraint evaluation, or objective trade-off evaluation.
+
+---
+
+## Runtime E2E access path baseline:
+
+OC MS runtime access follows this path before backend asynchronous execution:
 
 ```text
 User
@@ -1430,43 +1462,6 @@ User
 -> Gurobi Optimizer
 ```
 
-OC MS owns runtime Optimisation resources. It validates runtime requests against OD MS definitions, persists accepted executions, emits Kafka instructions, consumes worker outcomes, and projects lifecycle/result state.
+OC MS sits behind NGW. OC MS does not directly authenticate end users. User authentication and user-context-aware routing occur through Entra ID SSO, OEX UI/APIs, OGW, OEX Screen Builder MS, and NGW.
 
-## Process view baseline:
-
-OC MS runtime process expansion:
-
-```text
-User
--> Microsoft Entra ID SSO
--> OEX UI
--> OEX APIs
--> OGW
--> OEX Screen Builder MS
--> NGW
--> OC MS
--> OD MS
--> OC MS DB
--> OC MS Outbox
--> Kafka
--> Python/Gurobi Worker
--> Gurobi Optimizer
--> Kafka
--> OC MS Inbox
--> OC MS DB
--> User polls GET /optimisation/{id}
-```
-
-OC MS process responsibilities:
-
-```text
-validate runtime constraints[], targets[], and context[] against ACTIVE OD MS specification
-reject contract violations with 422
-persist accepted runtime Optimisation in OC MS DB
-write OptimisationRequestedEvent to OC MS Outbox
-publish/relay to Kafka
-consume SUCCESS / INFEASIBLE / FAILURE outcomes through OC MS Inbox
-project lifecycle and result into OC MS DB
-support cancellation through POST /optimisation/<built-in function id>/cancellation
-support retrial through POST /optimisation/<built-in function id>/retrial
-```
+OC MS validates the runtime request against OD MS, persists the Optimisation, emits Kafka events, and consumes worker outcomes.

@@ -393,9 +393,46 @@ This OD MS specification intentionally does not include actual runtime candidate
 
 ---
 
-## Logical view baseline:
+## Shared versus candidate-specific context attributes:
 
-OD MS definition logical path:
+Shared context attributes should be modelled at the `topologySnapshot` level.
+
+Candidate-specific attributes should be modelled under `candidateResources[].resourceAttributes` only when they vary per candidate.
+
+For this example, `location.locationId` belongs at `topologySnapshot` level because all candidate paths belong to the same optimisation scope/location.
+
+Do not repeat the same `locationId` under every candidate resource.
+
+Example runtime context shape:
+
+```json
+{
+  "name": "topologySnapshot",
+  "valueType": "object",
+  "value": {
+    "dataset": "topology-snapshot",
+    "version": "2026-05-02T10:00:00Z",
+    "candidateResourceSetId": "candidate-paths-surgical-melbourne-20260502T100000Z",
+    "location": {
+      "locationId": "melbourne-hospital"
+    },
+    "candidateResources": [
+      {
+        "resourceId": "path-001",
+        "resourceType": "deliveryResource",
+        "resourceClass": "low-latency-path",
+        "metrics": []
+      }
+    ]
+  }
+}
+```
+
+---
+
+## Definition E2E access path baseline:
+
+OD MS definition access follows this path:
 
 ```text
 User
@@ -408,35 +445,4 @@ User
 -> OD MS
 ```
 
-OD MS also participates in runtime validation as the specification source:
-
-```text
-OC MS -> OD MS
-```
-
-OD MS does not participate in Kafka, Python/Gurobi Worker, Gurobi Optimizer, OC MS Inbox, or runtime result projection.
-
-## Process view baseline:
-
-OD MS definition-management process:
-
-```text
-1. User authenticates through Microsoft Entra ID SSO.
-2. User accesses OEX UI.
-3. OEX UI calls OEX APIs.
-4. OEX APIs route through OGW.
-5. OGW routes to OEX Screen Builder MS.
-6. OEX Screen Builder MS calls NGW.
-7. NGW calls OD MS.
-8. OD MS validates OptimisationSpecification definition shape.
-9. OD MS stores the definition as DRAFT.
-10. OD MS transitions the definition to ACTIVE when approved/ready.
-```
-
-OD MS definition model:
-
-```text
-constraintSpecifications[]
-targetSpecifications[]
-contextSpecifications[]
-```
+OD MS sits behind NGW. OD MS does not participate in Kafka, Python/Gurobi Worker, or Gurobi Optimizer runtime execution flows.
