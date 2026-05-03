@@ -24,7 +24,7 @@ The solution separates the **definition of optimisation capabilities** from the 
 
 - Operator access to OEX is governed by the ACG approval process and Microsoft Entra ID SSO.
 
-- OGW exposes OEX APIs for the OEX UI using user-context-aware OAuth2. OEX GW calls OEX Screen Builder MS using mTLS and User Context JWT. OEX Screen Builder MS reaches backend OD MS and OC MS APIs through NGW using mTLS and OAuth2 system-to-system.
+- OGW exposes OEX APIs for the OEX UI using user-context-aware OAuth2. OWG calls OEX Screen Builder MS using mTLS and User Context JWT. OEX Screen Builder MS reaches backend OD MS and OC MS APIs through NGW using mTLS and OAuth2 system-to-system.
 
 - OC MS validates only request structure and the OD MS request contract, then returns `202 Accepted` and drives execution asynchronously through Kafka.
 
@@ -66,7 +66,7 @@ User
 -> Microsoft Entra ID SSO
 -> OGW
 -> OEX APIs / OEX UI
--> OEX GW
+-> OWG
 -> OEX Screen Builder MS
 -> NGW
 -> OD MS / OC MS
@@ -126,7 +126,7 @@ optimisation-logical-view.drawio
 Consumer / OEX
 -> OGW
 -> OEX APIs
--> OEX GW
+-> OWG
 -> OEX Screen Builder MS
 -> NGW
 -> OC MS
@@ -171,7 +171,7 @@ Detailed flow:
 Consumer / OEX
 -> OGW
 -> OEX APIs
--> OEX GW
+-> OWG
 -> OEX Screen Builder MS
 -> NGW
 -> OC MS
@@ -202,7 +202,7 @@ Detailed flow:
 Consumer / OEX
 -> OGW
 -> OEX APIs
--> OEX GW
+-> OWG
 -> OEX Screen Builder MS
 -> NGW
 -> OC MS
@@ -235,7 +235,7 @@ Detailed flow:
 | **ACG approval process** | Governs operator access to OEX. Users must be approved through the organisational access-control process before they can use the OEX optimisation experience. |
 | **OGW** | User-context-aware gateway for OEX APIs and OEX UI integration. Uses user SSO OAuth2 from the UI/OEX API path and propagates user identity context into the OEX layer. |
 | **OEX APIs / OEX UI** | Provides the user/operator-facing experience for discovering optimisation capabilities, submitting requests, monitoring state, cancelling, retrying, and viewing results. |
-| **OEX GW** | Secures internal OEX access to OEX Screen Builder MS using mTLS and User Context JWT. Preserves user context across the OEX backend interaction. |
+| **OWG** | Secures internal OEX access to OEX Screen Builder MS using mTLS and User Context JWT. Preserves user context across the OEX backend interaction. |
 | **OEX Screen Builder MS** | Builds and orchestrates the OEX screen/backend experience. Integrates with NGW using mTLS and OAuth2 system-to-system to call backend optimisation APIs. |
 | **NGW** | NAAS Gateway exposing backend optimisation domain APIs for OD MS and OC MS. Provides the controlled backend API entry point for OEX Screen Builder MS and other authorised system consumers. NGW-exposed backend APIs are TMF-compliant. |
 | **Optimisation-Definition-MS / OD MS** | Owns the definition side of the optimisation platform through `OptimisationSpecification`. Publishes caller-facing request contracts, manages `DRAFT`, `ACTIVE`, and `RETIRED` specification lifecycle, and ensures only one ACTIVE specification exists per `specificationKey`. Does not expose solver/model internals. |
@@ -272,7 +272,7 @@ OGW is the user-context-aware gateway for the OEX channel. It uses user SSO OAut
 
 ### 5.2 OEX internal access path:
 
-OEX GW integrates with the OEX Screen Builder MS using:
+OWG integrates with the OEX Screen Builder MS using:
 
 ```text
 mTLS
@@ -283,7 +283,7 @@ This preserves user context while securely invoking OEX backend experience servi
 
 ```text
 OGW / OEX APIs
--> OEX GW
+-> OWG
 -> OEX Screen Builder MS
 ```
 
@@ -486,7 +486,7 @@ OD MS specification responses may use caching where appropriate. OC MS runtime r
 | Misconfigured internal model binding | OD MS may expose a valid request contract while worker execution fails. | Add deployment validation, contract tests between OD MS and worker model binding, and pre-production model checks. |
 | Overexposure of solver details | Sensitive optimisation logic could leak externally. | Keep OD MS limited to caller-facing request contracts and keep solver details internal. |
 | Incorrect specification activation | Wrong `ACTIVE` specification may affect all new requests for a `specificationKey`. | Use ETag/If-Match, lifecycle governance, review/approval, and only one ACTIVE version per key. |
-| Complex access path through OEX gateways | Misconfiguration could break user context propagation or backend access. | Use clear contract testing across OGW, OEX GW, Screen Builder MS, NGW, OD MS, and OC MS. |
+| Complex access path through OEX gateways | Misconfiguration could break user context propagation or backend access. | Use clear contract testing across OGW, OWG, Screen Builder MS, NGW, OD MS, and OC MS. |
 
 ---
 
@@ -498,7 +498,7 @@ OD MS specification responses may use caching where appropriate. OC MS runtime r
 
 - OGW is the user-context-aware gateway for OEX APIs and OEX UI integration.
 
-- OEX GW integrates with OEX Screen Builder MS using mTLS and User Context JWT.
+- OWG integrates with OEX Screen Builder MS using mTLS and User Context JWT.
 
 - OEX Screen Builder MS integrates with NGW using mTLS and OAuth2 system-to-system.
 
@@ -713,7 +713,7 @@ Consumer
 -> OEX
 -> OGW
 -> OEX APIs
--> OEX GW
+-> OWG
 -> OEX Screen Builder MS
 -> NGW
 -> OC MS
@@ -735,7 +735,7 @@ Detailed interpretation:
 1. Consumer initiates the optimisation journey through OEX.
 2. OEX routes the request to OGW.
 3. OGW routes to OEX APIs.
-4. OEX APIs route through OEX GW.
+4. OEX APIs route through OWG.
 5. OGW routes to OEX Screen Builder MS.
 6. OEX Screen Builder MS calls NGW.
 7. NGW calls OC MS.
@@ -779,6 +779,6 @@ Process view compliance rule:
 
 ```text
 NGW-exposed OC MS and OD MS APIs are TMF-compliant.
-OEX / OGW / OEX APIs / OEX GW / OEX Screen Builder MS are experience-layer/private integration components and do not need to be TMF-compliant.
+OEX / OGW / OEX APIs / OWG / OEX Screen Builder MS are experience-layer/private integration components and do not need to be TMF-compliant.
 Kafka events are internal contracts and do not need to be TMF-compliant unless separately required.
 ```
