@@ -393,46 +393,9 @@ This OD MS specification intentionally does not include actual runtime candidate
 
 ---
 
-## Shared versus candidate-specific context attributes:
+## Logical view baseline:
 
-Shared context attributes should be modelled at the `topologySnapshot` level.
-
-Candidate-specific attributes should be modelled under `candidateResources[].resourceAttributes` only when they vary per candidate.
-
-For this example, `location.locationId` belongs at `topologySnapshot` level because all candidate paths belong to the same optimisation scope/location.
-
-Do not repeat the same `locationId` under every candidate resource.
-
-Example runtime context shape:
-
-```json
-{
-  "name": "topologySnapshot",
-  "valueType": "object",
-  "value": {
-    "dataset": "topology-snapshot",
-    "version": "2026-05-02T10:00:00Z",
-    "candidateResourceSetId": "candidate-paths-surgical-melbourne-20260502T100000Z",
-    "location": {
-      "locationId": "melbourne-hospital"
-    },
-    "candidateResources": [
-      {
-        "resourceId": "path-001",
-        "resourceType": "deliveryResource",
-        "resourceClass": "low-latency-path",
-        "metrics": []
-      }
-    ]
-  }
-}
-```
-
----
-
-## Definition E2E access path baseline:
-
-OD MS definition access follows this path:
+OD MS definition logical path:
 
 ```text
 User
@@ -445,69 +408,51 @@ User
 -> OD MS
 ```
 
-OD MS sits behind NGW. OD MS does not participate in Kafka, Python/Gurobi Worker, or Gurobi Optimizer runtime execution flows.
+OD MS also participates in runtime validation as the specification source:
+
+```text
+OC MS -> OD MS
+```
+
+OD MS does not participate in Kafka, Python/Gurobi Worker, Gurobi Optimizer, OC MS Inbox, or runtime result projection.
+
+## Process view baseline:
+
+OD MS definition-management process:
+
+```text
+1. User authenticates through Microsoft Entra ID SSO.
+2. User accesses OEX UI.
+3. OEX UI calls OEX APIs.
+4. OEX APIs route through OGW.
+5. OGW routes to OEX Screen Builder MS.
+6. OEX Screen Builder MS calls NGW.
+7. NGW calls OD MS.
+8. OD MS validates OptimisationSpecification definition shape.
+9. OD MS stores the definition as DRAFT.
+10. OD MS transitions the definition to ACTIVE when approved/ready.
+```
+
+OD MS definition model:
+
+```text
+constraintSpecifications[]
+targetSpecifications[]
+contextSpecifications[]
+```
 
 ---
 
-## OD MS infrastructure security controls:
+## Optimisation catalogue security baseline:
 
-OD MS integrations must explicitly capture service-to-infrastructure security controls.
-
-### OD MS -> OD MS Database:
+OD MS catalogue-management operations are restricted.
 
 ```text
-Authentication:
-  OD MS connects using an authenticated OD MS service identity.
+Only approved optimisation domain engineers can create, update, activate, or retire OptimisationSpecification records.
 
-Authorisation:
-  OD MS is authorised only for the OD MS database/schema/tables required for OptimisationSpecification storage and retrieval.
-  No broad database admin/root access by default.
+Catalogue changes require prior agreement with broader E2E teams that own, consume, or are impacted by the optimisation capability.
 
-Encrypted connectivity:
-  OD MS database connectivity uses encrypted transport.
-  mTLS or platform-approved encrypted database connectivity is used where supported by the selected database platform.
+General users, OEX consumers, runtime callers, OC MS, and workers cannot self-author OptimisationSpecification records.
 
-Secrets and certificates:
-  Database credentials, keys, and certificates are stored in approved secret management.
-  Rotation must be supported without application code changes where possible.
-
-Environment separation:
-  OD MS database principals, roles, schemas, and credentials are environment-scoped.
-  Non-production OD MS identities must not access production OD MS data.
-
-Audit and monitoring:
-  Authentication failures, authorisation denials, privileged operations, schema changes, and unusual access patterns are logged and monitored.
-
-Ownership:
-  OD MS owns application-level access to OptimisationSpecification data.
-  Database/platform teams own database platform controls.
-```
-
-### OD MS -> platform cache, if introduced later:
-
-```text
-OD MS does not require a cache in the current baseline.
-
-If a cache is introduced later, the OD MS design brief must capture:
-  authenticated service identity
-  least-privilege cache namespace/keyspace access
-  encrypted connectivity
-  approved secret/certificate management
-  environment-scoped cache roles
-  audit/monitoring of denied access and privileged operations
-```
-
-### OD MS -> Kafka:
-
-```text
-OD MS does not integrate directly with Kafka in the current baseline.
-
-If OD MS later becomes a Kafka producer or consumer, the OD MS design brief must capture:
-  service identity
-  TLS/mTLS broker connectivity
-  topic-level ACLs
-  consumer-group permissions where applicable
-  DLQ permissions where applicable
-  secret/certificate management
-  monitoring and audit controls
+All catalogue write/activate/retire operations must be authenticated, authorised, audited, and protected with ETag / If-Match where applicable.
 ```
