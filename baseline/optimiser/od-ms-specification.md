@@ -20,7 +20,7 @@ OD MS does not own:
 In one sentence:
 
 ```text
-OD MS is the governed catalogue of optimisation capabilities; it tells callers what inputs they must provide, while the platform privately owns how those inputs are translated into deterministic Gurobi execution.
+OD MS is the governed catalogue of optimisation capabilities; it tells callers what request contract they must satisfy, while the platform privately owns how those constraints, targets, and context are translated into deterministic Gurobi execution.
 ```
 
 ---
@@ -139,7 +139,7 @@ version
 lifecycleStatus
 creationDate
 lastUpdate
-inputs
+constraints, targets, and context
 _links
 ```
 
@@ -195,42 +195,44 @@ Example resource:
   // Public caller-facing request contract only.
   // This exposes what external callers must or may feed into POST /optimisation.
   // It does not expose objective logic, candidate rules, solver config, model binding, or Gurobi formulation.
-  "inputs": [
-    {
-      // Required latency threshold the caller must provide.
-      // The deterministic optimisation model knows how to apply it.
-      "name": "latency",
-      "description": "Maximum acceptable latency threshold.",
-      "valueType": "number",
-      "unit": "ms",
-      "required": true
-    },
-    {
-      // Required reliability threshold the caller must provide.
-      // The deterministic optimisation model knows how to apply it.
-      "name": "reliability",
-      "description": "Minimum acceptable reliability threshold.",
-      "valueType": "number",
-      "unit": "percent",
-      "required": true
-    },
-    {
-      // Optional caller-provided topology snapshot reference.
-      // The platform/model knows how to resolve and use it if supplied.
-      "name": "topologySnapshot",
-      "description": "Optional reference to the topology snapshot to use for optimisation.",
-      "valueType": "object",
-      "required": false
-    },
-    {
-      // Optional caller-provided traffic forecast reference.
-      // The platform/model knows how to resolve and use it if supplied.
-      "name": "trafficForecast",
-      "description": "Optional reference to the traffic forecast to use for optimisation.",
-      "valueType": "object",
-      "required": false
-    }
-  ],
+  "constraints": [
+      {
+        "name": "maxLatency",
+        "constraintType": "maximum",
+        "ontologyPredicate": "icm:atMost",
+        "valueType": "number",
+        "value": 20,
+        "unit": "ms"
+      }
+    ],
+    "targets": [
+      {
+        "name": "cost",
+        "goal": "minimise",
+        "priority": 1
+      },
+      {
+        "name": "latency",
+        "goal": "minimise",
+        "priority": 2
+      },
+      {
+        "name": "reliability",
+        "goal": "maximise",
+        "priority": 3
+      }
+    ],
+    "context": [
+      {
+        "name": "topologySnapshot",
+        "valueType": "object",
+        "value": {
+          "dataset": "topology-snapshot",
+          "version": "2026-05-02T10:00:00Z",
+          "candidateResourceSetId": "candidate-paths-surgical-melbourne-20260502T100000Z"
+        }
+      }
+    ]
 
   // HATEOAS controls vary by lifecycleStatus.
   "_links": {
@@ -292,38 +294,44 @@ Content-Type: application/json
 
   // Public caller-facing request contract only.
   // This tells external callers what they need to feed into POST /optimisation.
-  "inputs": [
-    {
-      // Required latency threshold the caller must provide.
-      "name": "latency",
-      "description": "Maximum acceptable latency threshold.",
-      "valueType": "number",
-      "unit": "ms",
-      "required": true
-    },
-    {
-      // Required reliability threshold the caller must provide.
-      "name": "reliability",
-      "description": "Minimum acceptable reliability threshold.",
-      "valueType": "number",
-      "unit": "percent",
-      "required": true
-    },
-    {
-      // Optional caller-provided topology snapshot reference.
-      "name": "topologySnapshot",
-      "description": "Optional reference to the topology snapshot to use for optimisation.",
-      "valueType": "object",
-      "required": false
-    },
-    {
-      // Optional caller-provided traffic forecast reference.
-      "name": "trafficForecast",
-      "description": "Optional reference to the traffic forecast to use for optimisation.",
-      "valueType": "object",
-      "required": false
-    }
-  ],
+  "constraints": [
+      {
+        "name": "maxLatency",
+        "constraintType": "maximum",
+        "ontologyPredicate": "icm:atMost",
+        "valueType": "number",
+        "value": 20,
+        "unit": "ms"
+      }
+    ],
+    "targets": [
+      {
+        "name": "cost",
+        "goal": "minimise",
+        "priority": 1
+      },
+      {
+        "name": "latency",
+        "goal": "minimise",
+        "priority": 2
+      },
+      {
+        "name": "reliability",
+        "goal": "maximise",
+        "priority": 3
+      }
+    ],
+    "context": [
+      {
+        "name": "topologySnapshot",
+        "valueType": "object",
+        "value": {
+          "dataset": "topology-snapshot",
+          "version": "2026-05-02T10:00:00Z",
+          "candidateResourceSetId": "candidate-paths-surgical-melbourne-20260502T100000Z"
+        }
+      }
+    ]
 
   // TMF-aligned typing.
   "type": "OptimisationSpecification",
@@ -363,34 +371,44 @@ Content-Type: application/json
   "lastUpdate": "2026-05-02T01:00:00Z",
 
   // Accepted public request contract.
-  "inputs": [
-    {
-      "name": "latency",
-      "description": "Maximum acceptable latency threshold.",
-      "valueType": "number",
-      "unit": "ms",
-      "required": true
-    },
-    {
-      "name": "reliability",
-      "description": "Minimum acceptable reliability threshold.",
-      "valueType": "number",
-      "unit": "percent",
-      "required": true
-    },
-    {
-      "name": "topologySnapshot",
-      "description": "Optional reference to the topology snapshot to use for optimisation.",
-      "valueType": "object",
-      "required": false
-    },
-    {
-      "name": "trafficForecast",
-      "description": "Optional reference to the traffic forecast to use for optimisation.",
-      "valueType": "object",
-      "required": false
-    }
-  ],
+  "constraints": [
+      {
+        "name": "maxLatency",
+        "constraintType": "maximum",
+        "ontologyPredicate": "icm:atMost",
+        "valueType": "number",
+        "value": 20,
+        "unit": "ms"
+      }
+    ],
+    "targets": [
+      {
+        "name": "cost",
+        "goal": "minimise",
+        "priority": 1
+      },
+      {
+        "name": "latency",
+        "goal": "minimise",
+        "priority": 2
+      },
+      {
+        "name": "reliability",
+        "goal": "maximise",
+        "priority": 3
+      }
+    ],
+    "context": [
+      {
+        "name": "topologySnapshot",
+        "valueType": "object",
+        "value": {
+          "dataset": "topology-snapshot",
+          "version": "2026-05-02T10:00:00Z",
+          "candidateResourceSetId": "candidate-paths-surgical-melbourne-20260502T100000Z"
+        }
+      }
+    ]
 
   // DRAFT state exposes replace and delete.
   "_links": {
@@ -456,38 +474,44 @@ Cache-Control: max-age=3600
   "creationDate": "2026-05-02T01:00:00Z",
   "lastUpdate": "2026-05-02T02:00:00Z",
 
-  "inputs": [
-    {
-      // Required latency threshold the caller must provide.
-      "name": "latency",
-      "description": "Maximum acceptable latency threshold.",
-      "valueType": "number",
-      "unit": "ms",
-      "required": true
-    },
-    {
-      // Required reliability threshold the caller must provide.
-      "name": "reliability",
-      "description": "Minimum acceptable reliability threshold.",
-      "valueType": "number",
-      "unit": "percent",
-      "required": true
-    },
-    {
-      // Optional caller-provided topology snapshot reference.
-      "name": "topologySnapshot",
-      "description": "Optional reference to the topology snapshot to use for optimisation.",
-      "valueType": "object",
-      "required": false
-    },
-    {
-      // Optional caller-provided traffic forecast reference.
-      "name": "trafficForecast",
-      "description": "Optional reference to the traffic forecast to use for optimisation.",
-      "valueType": "object",
-      "required": false
-    }
-  ],
+  "constraints": [
+      {
+        "name": "maxLatency",
+        "constraintType": "maximum",
+        "ontologyPredicate": "icm:atMost",
+        "valueType": "number",
+        "value": 20,
+        "unit": "ms"
+      }
+    ],
+    "targets": [
+      {
+        "name": "cost",
+        "goal": "minimise",
+        "priority": 1
+      },
+      {
+        "name": "latency",
+        "goal": "minimise",
+        "priority": 2
+      },
+      {
+        "name": "reliability",
+        "goal": "maximise",
+        "priority": 3
+      }
+    ],
+    "context": [
+      {
+        "name": "topologySnapshot",
+        "valueType": "object",
+        "value": {
+          "dataset": "topology-snapshot",
+          "version": "2026-05-02T10:00:00Z",
+          "candidateResourceSetId": "candidate-paths-surgical-melbourne-20260502T100000Z"
+        }
+      }
+    ]
 
   // ACTIVE exposes createOptimisation.
   // ACTIVE does not expose replace/delete because ACTIVE specifications are immutable.
@@ -600,34 +624,44 @@ Content-Type: application/json
   // with the same specificationKey in the same transaction.
   "lifecycleStatus": "ACTIVE",
 
-  "inputs": [
-    {
-      "name": "latency",
-      "description": "Maximum acceptable latency threshold.",
-      "valueType": "number",
-      "unit": "ms",
-      "required": true
-    },
-    {
-      "name": "reliability",
-      "description": "Minimum acceptable reliability threshold.",
-      "valueType": "number",
-      "unit": "percent",
-      "required": true
-    },
-    {
-      "name": "topologySnapshot",
-      "description": "Optional reference to the topology snapshot to use for optimisation.",
-      "valueType": "object",
-      "required": false
-    },
-    {
-      "name": "trafficForecast",
-      "description": "Optional reference to the traffic forecast to use for optimisation.",
-      "valueType": "object",
-      "required": false
-    }
-  ],
+  "constraints": [
+      {
+        "name": "maxLatency",
+        "constraintType": "maximum",
+        "ontologyPredicate": "icm:atMost",
+        "valueType": "number",
+        "value": 20,
+        "unit": "ms"
+      }
+    ],
+    "targets": [
+      {
+        "name": "cost",
+        "goal": "minimise",
+        "priority": 1
+      },
+      {
+        "name": "latency",
+        "goal": "minimise",
+        "priority": 2
+      },
+      {
+        "name": "reliability",
+        "goal": "maximise",
+        "priority": 3
+      }
+    ],
+    "context": [
+      {
+        "name": "topologySnapshot",
+        "valueType": "object",
+        "value": {
+          "dataset": "topology-snapshot",
+          "version": "2026-05-02T10:00:00Z",
+          "candidateResourceSetId": "candidate-paths-surgical-melbourne-20260502T100000Z"
+        }
+      }
+    ]
 
   "type": "OptimisationSpecification",
   "baseType": "EntitySpecification",
@@ -663,34 +697,44 @@ Cache-Control: max-age=3600
   "creationDate": "2026-05-02T01:00:00Z",
   "lastUpdate": "2026-05-02T02:30:00Z",
 
-  "inputs": [
-    {
-      "name": "latency",
-      "description": "Maximum acceptable latency threshold.",
-      "valueType": "number",
-      "unit": "ms",
-      "required": true
-    },
-    {
-      "name": "reliability",
-      "description": "Minimum acceptable reliability threshold.",
-      "valueType": "number",
-      "unit": "percent",
-      "required": true
-    },
-    {
-      "name": "topologySnapshot",
-      "description": "Optional reference to the topology snapshot to use for optimisation.",
-      "valueType": "object",
-      "required": false
-    },
-    {
-      "name": "trafficForecast",
-      "description": "Optional reference to the traffic forecast to use for optimisation.",
-      "valueType": "object",
-      "required": false
-    }
-  ],
+  "constraints": [
+      {
+        "name": "maxLatency",
+        "constraintType": "maximum",
+        "ontologyPredicate": "icm:atMost",
+        "valueType": "number",
+        "value": 20,
+        "unit": "ms"
+      }
+    ],
+    "targets": [
+      {
+        "name": "cost",
+        "goal": "minimise",
+        "priority": 1
+      },
+      {
+        "name": "latency",
+        "goal": "minimise",
+        "priority": 2
+      },
+      {
+        "name": "reliability",
+        "goal": "maximise",
+        "priority": 3
+      }
+    ],
+    "context": [
+      {
+        "name": "topologySnapshot",
+        "valueType": "object",
+        "value": {
+          "dataset": "topology-snapshot",
+          "version": "2026-05-02T10:00:00Z",
+          "candidateResourceSetId": "candidate-paths-surgical-melbourne-20260502T100000Z"
+        }
+      }
+    ]
 
   // ACTIVE exposes createOptimisation only.
   "_links": {
@@ -908,7 +952,7 @@ No If-None-Match in the active baseline.
 ETag is used for unsafe concurrency only:
   PUT /optimisationSpecification/{id}
   DELETE /optimisationSpecification/{id}
-  POST /optimisation/{id}/cancellationlation
+  POST /optimisation/{id}/cancellation
   POST /optimisation/{id}/retrial
 
 Missing If-Match on unsafe operation:
@@ -940,7 +984,7 @@ Expose only:
   lifecycleStatus
   creationDate
   lastUpdate
-  inputs
+  constraints, targets, and context
   _links
 
 Do not expose by default:
