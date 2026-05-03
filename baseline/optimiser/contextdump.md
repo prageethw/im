@@ -89,7 +89,7 @@ ETag: "opt-12345-v3"
 Example state-changing request:
 
 ```http
-POST /optimisation/opt-12345/cancel
+POST /optimisation/opt-12345/cancellation
 If-Match: "opt-12345-v3"
 ```
 
@@ -995,8 +995,8 @@ No If-None-Match in the active baseline.
 ETag is used for unsafe concurrency only:
   PUT /optimisationSpecification/{id}
   DELETE /optimisationSpecification/{id}
-  POST /optimisation/{id}/cancel
-  POST /optimisation/{id}/retry
+  POST /optimisation/{id}/cancellation
+  POST /optimisation/{id}/retrial
 
 Missing If-Match on unsafe operation:
   428 Precondition Required
@@ -1105,7 +1105,7 @@ Example active state:
       "method": "GET"
     },
     "cancel": {
-      "href": "/optimisation/opt-12345/cancel",
+      "href": "/optimisation/opt-12345/cancellation",
       "method": "POST"
     }
   }
@@ -1209,7 +1209,7 @@ Updated active OD MS, OC MS, and E2E solution brief wording:
 
 ---
 
-## Baseline appended 2026-05-03T11:46:52 - Process view corrected to Consumer/OEX/OGW/OEX APIs/OEX GW path
+## Baseline appended 2026-05-03T11:46:52 - Process view corrected to Consumer/OEX/OGW/OEX APIs/OWG path
 
 Updated the active runtime process view to:
 
@@ -1218,7 +1218,7 @@ Consumer
 -> OEX
 -> OGW
 -> OEX APIs
--> OEX GW
+-> OWG
 -> OEX Screen Builder MS
 -> NGW
 -> OC MS
@@ -1236,116 +1236,28 @@ Consumer
 
 Key corrections:
 - Process view starts with `Consumer -> OEX`.
-- Process view includes `OGW -> OEX APIs -> OGW -> OEX Screen Builder MS`.
+- Process view includes `OGW -> OEX APIs -> OWG -> OEX Screen Builder MS`.
 - OC MS validates against OD MS before persisting to OC MS DB.
 - Runtime persistence/outbox/inbox path remains explicit.
 - Consumer observes completion by polling `GET /optimisation/{id}`.
 
 ---
 
-## Baseline appended 2026-05-03T11:49:44 - Logical view updated
+## Baseline appended 2026-05-03T21:32:21 - Normalised OWG wording
 
-Updated logical view baseline to:
+Normalised gateway naming across the active artefacts.
 
+Current naming:
 ```text
-User
--> Microsoft Entra ID SSO
--> OEX UI
--> OGW
--> OEX Screen Builder MS
--> NGW
--> OD MS / OC MS
--> Kafka
--> Python/Gurobi Worker
--> Gurobi Optimizer
+OWG
 ```
 
-Definition logical path:
+Do not use:
 ```text
-User
--> Microsoft Entra ID SSO
--> OEX UI
--> OGW
--> OEX Screen Builder MS
--> NGW
--> OD MS
+OWG
 ```
 
-Runtime logical path:
-```text
-User
--> Microsoft Entra ID SSO
--> OEX UI
--> OGW
--> OEX Screen Builder MS
--> NGW
--> OC MS
--> Kafka
--> Python/Gurobi Worker
--> Gurobi Optimizer
-```
-
-Note:
-- Logical view is intentionally simpler than the detailed process view.
-- Process view may still include detailed OEX APIs / OEX GW / OC MS DB / outbox / inbox hops where required.
-
----
-
-## Baseline appended 2026-05-03T11:57:20 - Process view visibly added to active process sections
-
-Updated active OD MS, OC MS, and E2E solution brief process view sections to explicitly show the agreed runtime process flow:
-
-```text
-Consumer
--> OEX
--> OGW
--> OEX APIs
--> OEX GW
--> OEX Screen Builder MS
--> NGW
--> OC MS
--> OD MS
--> OC MS DB
--> OC MS Outbox
--> Kafka
--> Python/Gurobi Worker
--> Gurobi Optimizer
--> Kafka
--> OC MS Inbox
--> OC MS DB
--> Consumer polls GET /optimisation/{id}
-```
-
-Note:
-- E2E brief and OC MS show this as the runtime process view.
-- OD MS includes it as a reference and clarifies that OD MS is only the OptimisationSpecification source; OC MS persists to OC MS DB after OD validation.
-
----
-
-## Baseline appended 2026-05-03T21:07:27 - Removed specific service-mesh product wording everywhere
-
-Cleaned all current Markdown artifacts so they no longer show a specific service-mesh product name for mTLS.
-
-Current wording:
-
+Also reconfirmed:
 ```text
 OC MS calls OD MS over mTLS to validate the referenced ACTIVE OptimisationSpecification.
-```
-
-Implementation remains open to any suitable service mesh or platform mTLS mechanism.
-
----
-
-## Baseline appended 2026-05-03T21:13:10 - Corrected OEX Screen Builder invocation label
-
-Replaced remaining wording:
-
-```text
-OEX GW -> OEX Screen Builder MS:
-```
-
-with:
-
-```text
-OGW -> OEX Screen Builder MS:
 ```

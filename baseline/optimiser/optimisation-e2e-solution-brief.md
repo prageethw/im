@@ -72,7 +72,7 @@ User
 -> OD MS / OC MS
 -> Kafka
 -> Python/Gurobi Worker
--> Gurobi Optimiser
+-> Gurobi Optimizer
 ```
 
 Key logical relationships:
@@ -100,7 +100,7 @@ NGW -> OC MS:
   Uses mTLS to expose runtime Optimisation APIs.
 
 OC MS -> OD MS:
-  Uses Istio mTLS for internal service-to-service validation.
+  Uses mTLS for internal service-to-service validation.
 
 OC MS -> Kafka:
   Emits OptimisationRequestedEvent with instruction EXECUTE or CANCEL.
@@ -135,7 +135,7 @@ Consumer / OEX
 -> OC MS Outbox
 -> Kafka
 -> Python/Gurobi Worker
--> Gurobi Optimiser
+-> Gurobi Optimizer
 -> Kafka
 -> OC MS Inbox
 -> OC MS DB
@@ -151,7 +151,7 @@ Detailed flow:
 4. OEX Screen Builder MS calls NGW using mTLS and OAuth2 system-to-system.
 5. NGW routes the request to OC MS.
 6. OC MS validates request structure.
-7. OC MS calls OD MS over Istio mTLS to validate the referenced ACTIVE OptimisationSpecification.
+7. OC MS calls OD MS over mTLS to validate the referenced ACTIVE OptimisationSpecification.
 8. OC MS validates constraints[], targets[], and context[] against the OD MS request contract.
 9. OC MS persists runtime Optimisation with lifecycleStatus = ACKNOWLEDGED.
 10. OC MS writes OptimisationRequestedEvent with instruction = EXECUTE to the outbox.
@@ -318,11 +318,11 @@ This secures backend API access from the gateway to the optimisation domain serv
 
 ### 5.5 OC MS to OD MS service-to-service security:
 
-OC MS calls OD MS to validate referenced `OptimisationSpecification` resources. This internal service-to-service communication is secured using mTLS through Istio.
+OC MS calls OD MS to validate referenced `OptimisationSpecification` resources. This internal service-to-service communication is secured using mTLS through service mesh.
 
 ```text
 OC MS
--> Istio mTLS
+-> mTLS
 -> OD MS
 ```
 
@@ -506,7 +506,7 @@ OD MS specification responses may use caching where appropriate. OC MS runtime r
 
 - NGW integrates with OD MS and OC MS using mTLS.
 
-- OC MS calls OD MS using Istio mTLS for internal service-to-service validation.
+- OC MS calls OD MS using mTLS for internal service-to-service validation.
 
 - Kafka is available as the event backbone.
 
@@ -722,7 +722,7 @@ Consumer
 -> OC MS Outbox
 -> Kafka
 -> Python/Gurobi Worker
--> Gurobi Optimiser
+-> Gurobi Optimizer
 -> Kafka
 -> OC MS Inbox
 -> OC MS DB

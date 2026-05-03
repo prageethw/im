@@ -430,6 +430,25 @@ Example runtime context shape:
 
 ---
 
+## Definition E2E access path baseline:
+
+OD MS definition access follows this path:
+
+```text
+User
+-> Microsoft Entra ID SSO
+-> OEX UI
+-> OEX APIs
+-> OGW
+-> OEX Screen Builder MS
+-> NGW
+-> OD MS
+```
+
+OD MS sits behind NGW. OD MS does not participate in Kafka, Python/Gurobi Worker, or Gurobi Optimizer runtime execution flows.
+
+---
+
 ## Process view participation baseline:
 
 OD MS participates in the runtime process as the OptimisationSpecification definition source.
@@ -443,27 +462,3 @@ In the runtime process view:
 OD MS provides the ACTIVE OptimisationSpecification used by OC MS for request-contract validation.
 
 OD MS does not persist runtime Optimisation resources, does not write OC MS outbox records, does not consume Kafka worker outcomes, and does not project runtime results.
-
----
-
-## Logical view baseline:
-
-OD MS definition logical path:
-
-```text
-User
--> Microsoft Entra ID SSO
--> OEX UI
--> OGW
--> OEX Screen Builder MS
--> NGW
--> OD MS
-```
-
-OD MS also participates in runtime validation as the specification source:
-
-```text
-OC MS -> OD MS
-```
-
-OD MS does not participate in Kafka, Python/Gurobi Worker, Gurobi Optimizer, OC MS Inbox, or runtime result projection.
