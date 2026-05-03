@@ -1,8 +1,5 @@
 # Optimisation-Definition-MS / OD MS Specification
 
-> Current baseline: OD MS defines the runtime request contract using `constraints[]`, `targets[]`, and `context[]`. The older generic `inputs[]` model is not the active baseline for this optimisation design.
-
-
 ## 1. OD MS summary
 
 **Optimisation-Definition-MS (OD MS)** owns the **definition side** of the optimisation platform. Its responsibility is to publish and govern the externally visible optimisation capability contract, called `OptimisationSpecification`.
@@ -23,7 +20,7 @@ OD MS does not own:
 In one sentence:
 
 ```text
-OD MS is the governed catalogue of optimisation capabilities; it tells callers what constraints, targets, and context they must provide, while the platform privately owns how those constraints, targets, and context are translated into deterministic Gurobi execution.
+OD MS is the governed catalogue of optimisation capabilities; it tells callers what inputs they must provide, while the platform privately owns how those inputs are translated into deterministic Gurobi execution.
 ```
 
 ---
@@ -142,14 +139,14 @@ version
 lifecycleStatus
 creationDate
 lastUpdate
-constraints, targets, and context
+inputs
 _links
 ```
 
 It does **not** expose by default:
 
 ```text
-supportedContractModes
+supportedInputModes
 allowedObjectives
 candidateResourceRules
 solverConfiguration
@@ -198,7 +195,7 @@ Example resource:
   // Public caller-facing request contract only.
   // This exposes what external callers must or may feed into POST /optimisation.
   // It does not expose objective logic, candidate rules, solver config, model binding, or Gurobi formulation.
-  "constraints": [
+  "inputs": [
     {
       // Required latency threshold the caller must provide.
       // The deterministic optimisation model knows how to apply it.
@@ -295,7 +292,7 @@ Content-Type: application/json
 
   // Public caller-facing request contract only.
   // This tells external callers what they need to feed into POST /optimisation.
-  "constraints": [
+  "inputs": [
     {
       // Required latency threshold the caller must provide.
       "name": "latency",
@@ -366,7 +363,7 @@ Content-Type: application/json
   "lastUpdate": "2026-05-02T01:00:00Z",
 
   // Accepted public request contract.
-  "constraints": [
+  "inputs": [
     {
       "name": "latency",
       "description": "Maximum acceptable latency threshold.",
@@ -459,7 +456,7 @@ Cache-Control: max-age=3600
   "creationDate": "2026-05-02T01:00:00Z",
   "lastUpdate": "2026-05-02T02:00:00Z",
 
-  "constraints": [
+  "inputs": [
     {
       // Required latency threshold the caller must provide.
       "name": "latency",
@@ -603,7 +600,7 @@ Content-Type: application/json
   // with the same specificationKey in the same transaction.
   "lifecycleStatus": "ACTIVE",
 
-  "constraints": [
+  "inputs": [
     {
       "name": "latency",
       "description": "Maximum acceptable latency threshold.",
@@ -666,7 +663,7 @@ Cache-Control: max-age=3600
   "creationDate": "2026-05-02T01:00:00Z",
   "lastUpdate": "2026-05-02T02:30:00Z",
 
-  "constraints": [
+  "inputs": [
     {
       "name": "latency",
       "description": "Maximum acceptable latency threshold.",
@@ -943,11 +940,11 @@ Expose only:
   lifecycleStatus
   creationDate
   lastUpdate
-  constraints, targets, and context
+  inputs
   _links
 
 Do not expose by default:
-  supportedContractModes
+  supportedInputModes
   allowedObjectives
   candidateResourceRules
   solverConfiguration
@@ -982,178 +979,29 @@ No DELETED or ARCHIVED lifecycle status in the active baseline.
 
 ---
 
-## Corrected OptimisationSpecification request contract baseline:
+## TMF/TIO constraint representation baseline:
 
-OD MS owns the public `OptimisationSpecification` resource. For runtime optimisation requests, OD MS defines the caller-facing request contract using three separate contract sections:
-
-```text
-constraints[]:
-  Hard pass/fail rules that runtime requests must satisfy.
-  Example: maxLatency lessThanOrEqualTo 20ms.
-
-targets[]:
-  Optimisation goals or preferences applied among valid candidates.
-  Example: minimise cost first, minimise latency second, maximise reliability third.
-
-context[]:
-  Data required by the optimiser, including candidate resources and their metrics.
-  Example: topologySnapshot with candidateResourceSetId and at least two candidateResources.
-```
-
-The older generic `inputs[]` model is no longer the baseline for this optimisation design. Use:
-
-```text
-constraints[]
-targets[]
-context[]
-```
-
-### Example OptimisationSpecification contract fragment:
+For upper-bound constraints in the platform-facing optimisation API, use this shape:
 
 ```json
 {
-  "constraints": [
-    {
-      "name": "maxLatency",
-      "valueType": "number",
-      "required": true,
-      "operators": [
-        "lessThanOrEqualTo"
-      ],
-      "unit": "ms",
-      "description": "Maximum allowed latency for a candidate resource."
-    }
-  ],
-  "targets": [
-    {
-      "name": "cost",
-      "goal": "minimise",
-      "priority": 1,
-      "description": "Primary optimisation target is to minimise cost among valid candidates."
-    },
-    {
-      "name": "latency",
-      "goal": "minimise",
-      "priority": 2,
-      "description": "Secondary optimisation target is to minimise latency among valid candidates."
-    },
-    {
-      "name": "reliability",
-      "goal": "maximise",
-      "priority": 3,
-      "description": "Tertiary optimisation target is to maximise reliability among valid candidates."
-    }
-  ],
-  "context": [
-    {
-      "name": "topologySnapshot",
-      "valueType": "object",
-      "required": true,
-      "description": "Topology snapshot containing or referencing the candidate resource set available for optimisation.",
-      "schema": {
-        "type": "object",
-        "required": [
-          "dataset",
-          "version",
-          "candidateResourceSetId",
-          "candidateResources"
-        ],
-        "properties": {
-          "dataset": {
-            "type": "string"
-          },
-          "version": {
-            "type": "string"
-          },
-          "candidateResourceSetId": {
-            "type": "string"
-          },
-          "candidateResources": {
-            "type": "array",
-            "minItems": 2,
-            "description": "Candidate resources available to the optimiser. At least two candidate options are required for resource/path/option-selection optimisation unless the capability is explicitly feasibility-validation-only.",
-            "items": {
-              "type": "object",
-              "required": [
-                "resourceId",
-                "resourceType",
-                "metrics"
-              ],
-              "properties": {
-                "resourceId": {
-                  "type": "string"
-                },
-                "resourceType": {
-                  "type": "string"
-                },
-                "resourceClass": {
-                  "type": "string"
-                },
-                "resourceAttributes": {
-                  "type": "object",
-                  "description": "Stable descriptive properties of the resource, such as locationId or pathClass."
-                },
-                "metrics": {
-                  "type": "array",
-                  "description": "Measured or computed values used for evaluation/optimisation, such as latency, reliability, cost, or utilisation.",
-                  "items": {
-                    "type": "object",
-                    "required": [
-                      "name",
-                      "value"
-                    ],
-                    "properties": {
-                      "name": {
-                        "type": "string"
-                      },
-                      "value": {},
-                      "unit": {
-                        "type": "string"
-                      }
-                    }
-                  }
-                }
-              }
-            }
-          }
-        }
-      }
-    }
-  ]
+  "name": "maxLatency",
+  "constraintType": "maximum",
+  "ontologyPredicate": "icm:atMost",
+  "valueType": "number",
+  "value": 20,
+  "unit": "ms"
 }
 ```
 
-### Candidate-set rule:
+Meaning:
 
 ```text
-For optimisation capabilities that select a resource, route, path, placement, or option, the context contract must provide or reference a candidate set with at least two candidate options.
+constraintType maximum:
+  Candidate metric must be less than or equal to the supplied value.
 
-A single candidate option is not a meaningful optimisation problem unless the capability is explicitly feasibility-validation-only.
-
-Use metrics for measured or computed candidate values such as latency, reliability, cost, or utilisation.
-
-Use resourceAttributes for stable descriptive candidate properties such as locationId or pathClass.
+ontologyPredicate icm:atMost:
+  Provides TMF/TIO semantic traceability for an upper-bound property expectation.
 ```
 
-### End-to-end rule:
-
-```text
-OD MS defines the constraints[], targets[], and context[] request contract.
-OC MS validates runtime constraints[], targets[], and context[] against the ACTIVE OptimisationSpecification.
-Worker uses constraints[], targets[], and context[] during optimisation.
-Result references the selected candidate back to sourceInput and candidateResourceSetId where applicable.
-```
-
-### Example selection consistency:
-
-```text
-path-001 passes maxLatency because latency 18ms <= 20ms.
-path-002 fails maxLatency because latency 24ms > 20ms.
-
-Among valid candidates, targets are applied:
-  cost minimise priority 1
-  latency minimise priority 2
-  reliability maximise priority 3
-
-Therefore path-001 is the consistent selectedResource in the example result.
-```
+Do not use a platform contract field named `operator` for this upper-bound constraint.

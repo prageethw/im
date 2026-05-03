@@ -1064,140 +1064,2031 @@ No DELETED or ARCHIVED lifecycle status in the active baseline.
 
 ---
 
-## Baseline appended 2026-05-03T05:50:56 - OC MS candidate resource set traceability
+## Baseline appended 2026-05-02T04:29:57 - Runtime Optimisation result visibility rule
 
-Updated the OC MS specification examples so resource-selection optimisation is self-contained and traceable.
+For the optimisation architecture exercise, runtime `Optimisation` resources do not expose `result: null` or `resultPending`.
 
-Baseline rules:
-- If an optimisation result selects a resource, route, path, placement, or option, the accepted inputs must provide or reference a candidate set with at least two candidate options.
-- A single candidate option is not a meaningful optimisation problem unless the purpose is feasibility validation only.
-- The `topologySnapshot` example now includes `candidateResourceSetId` and two candidate resources: `path-001` and `path-002`.
-- The `selectedResource` result now includes `sourceInput: topologySnapshot` and the `candidateResourceSetId` so the selected `resourceId` can be traced back to the accepted inputs.
+Use `lifecycleStatus` to indicate progress.
 
----
+Result visibility rule:
 
-## Baseline appended 2026-05-03T05:54:55 - OD MS candidate resource contract and metrics naming
-
-Baselined the required OD MS and OC MS consistency updates for resource/path/option-selection optimisation.
-
-OD MS baseline:
-- `OptimisationSpecification.inputs` must define the candidate-set input contract for optimisation capabilities that select a resource, route, path, placement, or option.
-- The current example uses `topologySnapshot` to supply the candidate set.
-- `topologySnapshot` must include `candidateResourceSetId`.
-- Embedded `candidateResources` must have `minItems: 2`, unless the capability is explicitly feasibility-validation-only.
-- Candidate resources use `resourceId`, `resourceType`, optional `resourceClass`, optional `resourceAttributes`, and `metrics`.
-- Keep `metrics` as the reusable field name for measured/computed resource values used by the optimiser.
-- Use `resourceAttributes` for stable descriptive candidate-resource properties.
-
-OC MS consistency baseline:
-- Runtime `inputs[]` examples include the full accepted `topologySnapshot` candidate set.
-- Candidate examples include at least two candidate resources.
-- Selected-resource results include `sourceInput` and `candidateResourceSetId` for traceability.
-- `metrics` remains the agreed name for candidate values such as latency and reliability.
-
-End-to-end rule:
 ```text
-OD MS defines the candidate-set input contract.
-OC MS validates runtime inputs against that contract.
-Worker uses the candidate set during optimisation.
-Result references the selected candidate back to sourceInput and candidateResourceSetId.
+If lifecycleStatus is ACKNOWLEDGED, QUEUED, PROCESSING, or CANCELLING:
+  result is omitted.
+
+If lifecycleStatus is COMPLETED, INFEASIBLE, or FAILED:
+  result/outcome details may be included.
+
+If lifecycleStatus is CANCELLED:
+  result is omitted, but cancellation/status reason may be included if useful.
+```
+
+Rationale:
+
+```text
+The lifecycle state already tells the caller whether the optimisation is pending, running, completed, infeasible, failed, cancelling, or cancelled.
+
+Do not duplicate that state with result:null or resultPending:true.
+```
+
+Example active state:
+
+```jsonc
+{
+  // Runtime lifecycle tells the caller the optimisation is still in progress.
+  "lifecycleStatus": "PROCESSING",
+
+  // No result field is included until a worker outcome exists.
+  "_links": {
+    "self": {
+      "href": "/optimisation/opt-12345",
+      "method": "GET"
+    },
+    "cancel": {
+      "href": "/optimisation/opt-12345/cancel",
+      "method": "POST"
+    }
+  }
+}
 ```
 
 ---
 
-## Baseline appended 2026-05-03T06:09:08 - OC MS cancellation and retrial resource endpoints
+## Baseline appended 2026-05-02T04:32:51 - OC MS GET /optimisation/{id} runtime read contract
 
-Updated the OC MS design to use noun/resource-aligned command sub-resource endpoints.
+For the optimisation architecture exercise, baseline `GET /optimisation/{id}` as the main polling/read endpoint for runtime `Optimisation` state.
 
-Endpoint changes:
+Purpose:
+
 ```text
-Old:
-  POST /optimisation/{id}/cancel
-  POST /optimisation/{id}/retry
-
-New:
-  POST /optimisation/{id}/cancellation
-  POST /optimisation/{id}/retrial
+GET /optimisation/{id}
+  Returns the current runtime Optimisation resource.
+  Shows lifecycleStatus.
+  Shows accepted request metadata and inputs.
+  Shows result only when a worker outcome exists.
+  Exposes HATEOAS links based on lifecycleStatus.
+  Returns ETag for unsafe transition concurrency.
 ```
 
-Meaning:
-- `POST /optimisation/{id}/cancellation` creates a cancellation request/resource for the Optimisation.
-- `POST /optimisation/{id}/retrial` creates a retrial request/resource for the failed Optimisation.
+Response/header rules:
 
-HATEOAS link names are updated to:
 ```text
-cancellation
-retrial
+GET /optimisation/{id}
+  Response:
+    200 OK
+    Content-Type: application/json
+    ETag required
+    No response Cache-Control for runtime Optimisation for now
+
+Resource body:
+  no version field
+  result omitted until a worker outcome exists
+  result included for COMPLETED, INFEASIBLE, or FAILED where outcome details are available
+  HATEOAS links vary by lifecycleStatus
+
+ETag:
+  used for unsafe concurrency only
+  client uses latest ETag with If-Match for cancel/retry
 ```
 
-Lifecycle meaning remains unchanged:
-- `ACKNOWLEDGED`, `QUEUED`, or `PROCESSING` can move to `CANCELLING` through cancellation.
-- `FAILED` can create a new linked Optimisation through retrial.
+Active optimisation example:
+
+```http
+GET /optimisation/opt-12345
+```
+
+```http
+HTTP/1.1 200 OK
+Content-Type: application/json
+ETag: "opt-12345-rev2"
+```
+
+```jsonc
+{
+  // Server-generated runtime optimisation identity.
+  "id": "opt-12345",
+  "href": "/optimisation/opt-12345",
+
+  // TMF-aligned REST resource typing.
+  "@type": "Optimisation",
+  "@baseType": "Entity",
+  "@schemaLocation": "/schema/Optimisation.schema.json",
+
+  // Optional upstream context, present only if supplied at creation.
+  "sourceContext": {
+    "domain": "intent-management",
+    "resource": {
+      "id": "intent-789",
+      "href": "/intentManagement/v5/intent/intent-789",
+      "@type": "IntentRef",
+      "@referredType": "Intent"
+    }
+  },
+
+  // Runtime metadata.
+  "name": "Hospital surgical slice path optimisation request",
+  "description": "Optimise path selection for hospital surgical slice intent.",
+  "priority": "1",
+
+  // Runtime lifecycle owned by OC MS.
+  // Runtime Optimisation does not expose a version field.
+  "lifecycleStatus": "PROCESSING",
+  "creationDate": "2026-05-02T03:00:00Z",
+  "lastUpdate": "2026-05-02T03:01:00Z",
+  "statusChangeDate": "2026-05-02T03:01:00Z",
+
+  // Specification used to validate and trigger this optimisation.
+  "optimisationSpecification": {
+    "id": "os-7f3a9c21",
+    "href": "/optimisationSpecification/os-7f3a9c21",
+    "@type": "OptimisationSpecificationRef",
+    "@referredType": "OptimisationSpecification"
+  },
+
+  // Accepted caller-fed inputs.
+  "inputs": [
+    {
+      "name": "latency",
+      "valueType": "number",
+      "value": 20,
+      "unit": "ms"
+    },
+    {
+      "name": "reliability",
+      "valueType": "number",
+      "value": 99.99,
+      "unit": "percent"
+    },
+    {
+      "name": "topologySnapshot",
+      "valueType": "object",
+      "value": {
+        "dataset": "topology-snapshot",
+        "version": "2026-05-02T10:00:00Z"
+      }
+    }
+  ],
+
+  // No result field is included while lifecycleStatus is ACKNOWLEDGED, QUEUED, PROCESSING, or CANCELLING.
+
+  // PROCESSING can still be cancelled.
+  "_links": {
+    "self": {
+      "href": "/optimisation/opt-12345",
+      "method": "GET"
+    },
+    "cancel": {
+      "href": "/optimisation/opt-12345/cancel",
+      "method": "POST"
+    }
+  }
+}
+```
+
+Completed optimisation example:
+
+```http
+GET /optimisation/opt-12345
+```
+
+```http
+HTTP/1.1 200 OK
+Content-Type: application/json
+ETag: "opt-12345-rev5"
+```
+
+```jsonc
+{
+  // Server-generated runtime optimisation identity.
+  "id": "opt-12345",
+  "href": "/optimisation/opt-12345",
+
+  // TMF-aligned REST resource typing.
+  "@type": "Optimisation",
+  "@baseType": "Entity",
+  "@schemaLocation": "/schema/Optimisation.schema.json",
+
+  // Runtime metadata.
+  "name": "Hospital surgical slice path optimisation request",
+  "description": "Optimise path selection for hospital surgical slice intent.",
+  "priority": "1",
+
+  // Terminal successful lifecycle state.
+  "lifecycleStatus": "COMPLETED",
+  "creationDate": "2026-05-02T03:00:00Z",
+  "lastUpdate": "2026-05-02T03:03:00Z",
+  "statusChangeDate": "2026-05-02T03:03:00Z",
+
+  // Specification used to validate and trigger this optimisation.
+  "optimisationSpecification": {
+    "id": "os-7f3a9c21",
+    "href": "/optimisationSpecification/os-7f3a9c21",
+    "@type": "OptimisationSpecificationRef",
+    "@referredType": "OptimisationSpecification"
+  },
+
+  // Accepted caller-fed inputs.
+  "inputs": [
+    {
+      "name": "latency",
+      "valueType": "number",
+      "value": 20,
+      "unit": "ms"
+    },
+    {
+      "name": "reliability",
+      "valueType": "number",
+      "value": 99.99,
+      "unit": "percent"
+    }
+  ],
+
+  // Result is included only when a worker outcome exists.
+  // Public result uses a generic outputs[] structure because model-specific result semantics
+  // are owned by the deterministic optimisation capability and worker output.
+  "result": {
+    "solutionStatus": "OPTIMAL",
+    "completedAt": "2026-05-02T03:03:00Z",
+    "summary": "Optimisation completed successfully.",
+    "outputs": [
+      {
+        // Selected resource returned by the model.
+        "name": "selectedResource",
+        "valueType": "object",
+        "value": {
+          "resourceId": "path-001",
+          "resourceType": "deliveryResource"
+        }
+      },
+      {
+        // Objective value returned by the model.
+        "name": "objectiveValue",
+        "valueType": "number",
+        "value": 70,
+        "unit": "costUnit"
+      }
+    ]
+  },
+
+  // COMPLETED is terminal.
+  "_links": {
+    "self": {
+      "href": "/optimisation/opt-12345",
+      "method": "GET"
+    }
+  }
+}
+```
+
+HATEOAS by lifecycle:
+
+```text
+ACKNOWLEDGED / QUEUED / PROCESSING:
+  self
+  cancel
+
+CANCELLING:
+  self
+
+FAILED:
+  self
+  retry
+
+COMPLETED / INFEASIBLE / CANCELLED:
+  self
+```
+
+Public result shape rule:
+
+```text
+Use generic result.outputs[] publicly so OC MS does not have to expose model-specific result schema in OD MS.
+```
 
 ---
 
-## Baseline appended 2026-05-03T06:17:27 - Replace generic inputs with constraints, targets, and context
+## Baseline appended 2026-05-02T04:34:50 - OC MS GET /optimisation list/search contract
 
-Baselined the optimisation request definition change across OD MS and OC MS.
+For the optimisation architecture exercise, baseline `GET /optimisation` as the OC MS list/search endpoint for runtime `Optimisation` resources.
 
-New runtime request model:
+Purpose:
+
 ```text
-constraints[]:
-  Hard pass/fail rules that must be satisfied.
-
-targets[]:
-  Optimisation goals/preferences applied among valid candidates.
-
-context[]:
-  Data used by the optimiser, including candidate resources and their metrics.
+GET /optimisation
+  Lists/searches runtime Optimisation resources.
+  Returns summary items.
+  Supports filtering by lifecycleStatus, sourceContext domain, specification, creation date, and pagination.
+  Does not include full inputs or result by default.
 ```
 
-Current path-selection example:
+Request:
+
+```http
+# List runtime Optimisation resources.
+GET /optimisation?lifecycleStatus=PROCESSING&offset=0&limit=20
+```
+
+Optional filters:
+
 ```text
-constraints:
-  maxLatency lessThanOrEqualTo 20ms
+lifecycleStatus
+optimisationSpecificationId
+sourceDomain
+createdFrom
+createdTo
+offset
+limit
+```
 
-targets:
-  cost minimise, priority 1
-  latency minimise, priority 2
-  reliability maximise, priority 3
+Successful response:
 
-context:
-  topologySnapshot with candidateResourceSetId and at least two candidateResources
+```http
+HTTP/1.1 200 OK
+Content-Type: application/json
+X-Total-Count: 52
+X-Result-Count: 20
+```
+
+Response body:
+
+```jsonc
+[
+  {
+    // Summary item only.
+    // Follow self to retrieve full inputs/result.
+    "id": "opt-12345",
+    "href": "/optimisation/opt-12345",
+
+    // TMF-aligned REST resource typing.
+    "@type": "Optimisation",
+    "@baseType": "Entity",
+    "@schemaLocation": "/schema/Optimisation.schema.json",
+
+    // Runtime metadata summary.
+    "name": "Hospital surgical slice path optimisation request",
+    "description": "Optimise path selection for hospital surgical slice intent.",
+    "priority": "1",
+
+    // Current lifecycle state.
+    "lifecycleStatus": "PROCESSING",
+    "creationDate": "2026-05-02T03:00:00Z",
+    "lastUpdate": "2026-05-02T03:01:00Z",
+    "statusChangeDate": "2026-05-02T03:01:00Z",
+
+    // Optional source context summary, present only if supplied at creation.
+    "sourceContext": {
+      "domain": "intent-management",
+      "resource": {
+        "id": "intent-789",
+        "href": "/intentManagement/v5/intent/intent-789",
+        "@type": "IntentRef",
+        "@referredType": "Intent"
+      }
+    },
+
+    // Specification reference used by this runtime optimisation.
+    "optimisationSpecification": {
+      "id": "os-7f3a9c21",
+      "href": "/optimisationSpecification/os-7f3a9c21",
+      "@type": "OptimisationSpecificationRef",
+      "@referredType": "OptimisationSpecification"
+    },
+
+    // Summary links only.
+    "_links": {
+      "self": {
+        "href": "/optimisation/opt-12345",
+        "method": "GET"
+      },
+      "cancel": {
+        "href": "/optimisation/opt-12345/cancel",
+        "method": "POST"
+      }
+    }
+  }
+]
+```
+
+List rules:
+
+```text
+GET /optimisation:
+  returns summary-only resources by default
+  does not include full inputs by default
+  does not include result by default
+  does not include ETag by default for each item
+  no response Cache-Control for runtime Optimisation for now
+  includes X-Total-Count and X-Result-Count
+  HATEOAS links still vary by lifecycleStatus
+```
+
+Rationale:
+
+```text
+Full inputs and result may be large or model-specific.
+List/search should remain lightweight.
+GET /optimisation/{id} is the detail endpoint.
+```
+
+---
+
+## Baseline appended {timestamp} - OC MS execute/cancel API requests and OptimisationRequestedEvent instructions
+
+For the optimisation architecture exercise, baseline the OC MS API and event model for both starting optimisation processing and requesting cancellation.
+
+Use one Kafka topic:
+
+```text
+t7.optimisation.events
+```
+
+Use one worker request/instruction event type:
+
+```text
+OptimisationRequestedEvent
+```
+
+Use `body.instruction` to tell the Python/Gurobi worker what action is requested:
+
+```text
+EXECUTE:
+  Worker should execute/start the optimisation.
+
+CANCEL:
+  Worker should cancel/stop/ignore the optimisation where safely possible.
+```
+
+Do not introduce separate cancel event types by default:
+
+```text
+Do not use:
+  OptimisationCancelRequestedEvent
+  OptimisationControlEvent
+```
+
+Outcome events remain separate:
+
+```text
+OptimisationCompletedEvent
+OptimisationFailedEvent
+```
+
+---
+
+### Processing API request: POST /optimisation
+
+```http
+POST /optimisation
+Content-Type: application/json
+```
+
+```jsonc
+{
+  // Optional source context.
+  // Used only when the caller wants to link this optimisation to an upstream domain/resource.
+  // Intent is only one possible source context.
+  "sourceContext": {
+    "domain": "intent-management",
+    "resource": {
+      "id": "intent-789",
+      "href": "/intentManagement/v5/intent/intent-789",
+      "@type": "IntentRef",
+      "@referredType": "Intent"
+    }
+  },
+
+  // Required optimisation capability reference.
+  // Must point to an ACTIVE OptimisationSpecification owned by OD MS.
+  "optimisationSpecification": {
+    "id": "os-7f3a9c21",
+    "href": "/optimisationSpecification/os-7f3a9c21",
+    "@type": "OptimisationSpecificationRef",
+    "@referredType": "OptimisationSpecification"
+  },
+
+  // Human-readable runtime metadata.
+  "name": "Hospital surgical slice path optimisation request",
+  "description": "Optimise path selection for hospital surgical slice intent.",
+
+  // Runtime priority for scheduling/handling.
+  // OC MS owns the allowed priority model.
+  "priority": "1",
+
+  // Capability-specific caller-fed inputs.
+  // These are validated syntactically against the referenced OD MS OptimisationSpecification.inputs.
+  // Feasibility/semantic checks are left to the Python/Gurobi worker.
+  "inputs": [
+    {
+      // Required by the referenced OptimisationSpecification.
+      "name": "latency",
+      "valueType": "number",
+      "value": 20,
+      "unit": "ms"
+    },
+    {
+      // Required by the referenced OptimisationSpecification.
+      "name": "reliability",
+      "valueType": "number",
+      "value": 99.99,
+      "unit": "percent"
+    },
+    {
+      // Optional input allowed by the referenced OptimisationSpecification.
+      "name": "topologySnapshot",
+      "valueType": "object",
+      "value": {
+        "dataset": "topology-snapshot",
+        "version": "2026-05-02T10:00:00Z"
+      }
+    }
+  ],
+
+  // TMF-aligned REST resource typing.
+  "@type": "Optimisation",
+  "@baseType": "Entity",
+  "@schemaLocation": "/schema/Optimisation.schema.json"
+}
+```
+
+Successful response:
+
+```http
+HTTP/1.1 202 Accepted
+Location: /optimisation/opt-12345
+ETag: "opt-12345-rev1"
+Content-Type: application/json
+```
+
+```jsonc
+{
+  // Server-generated runtime optimisation identity.
+  "id": "opt-12345",
+  "href": "/optimisation/opt-12345",
+
+  // TMF-aligned REST resource typing.
+  "@type": "Optimisation",
+  "@baseType": "Entity",
+  "@schemaLocation": "/schema/Optimisation.schema.json",
+
+  // Optional source context copied from request when supplied.
+  "sourceContext": {
+    "domain": "intent-management",
+    "resource": {
+      "id": "intent-789",
+      "href": "/intentManagement/v5/intent/intent-789",
+      "@type": "IntentRef",
+      "@referredType": "Intent"
+    }
+  },
+
+  // Accepted runtime metadata.
+  "name": "Hospital surgical slice path optimisation request",
+  "description": "Optimise path selection for hospital surgical slice intent.",
+  "priority": "1",
+
+  // Runtime lifecycle owned by OC MS.
+  // Runtime Optimisation does not expose a version field.
+  "lifecycleStatus": "ACKNOWLEDGED",
+  "creationDate": "2026-05-02T03:00:00Z",
+  "lastUpdate": "2026-05-02T03:00:00Z",
+  "statusChangeDate": "2026-05-02T03:00:00Z",
+
+  // Specification used to validate and trigger this optimisation.
+  "optimisationSpecification": {
+    "id": "os-7f3a9c21",
+    "href": "/optimisationSpecification/os-7f3a9c21",
+    "@type": "OptimisationSpecificationRef",
+    "@referredType": "OptimisationSpecification"
+  },
+
+  // Accepted caller-fed inputs.
+  "inputs": [
+    {
+      "name": "latency",
+      "valueType": "number",
+      "value": 20,
+      "unit": "ms"
+    },
+    {
+      "name": "reliability",
+      "valueType": "number",
+      "value": 99.99,
+      "unit": "percent"
+    },
+    {
+      "name": "topologySnapshot",
+      "valueType": "object",
+      "value": {
+        "dataset": "topology-snapshot",
+        "version": "2026-05-02T10:00:00Z"
+      }
+    }
+  ],
+
+  // ACKNOWLEDGED can still be cancelled.
+  // Unsafe transitions require If-Match using the latest ETag response header.
+  "_links": {
+    "self": {
+      "href": "/optimisation/opt-12345",
+      "method": "GET"
+    },
+    "cancel": {
+      "href": "/optimisation/opt-12345/cancel",
+      "method": "POST"
+    }
+  }
+}
+```
+
+Acceptance rule:
+
+```text
+202 Accepted means OC MS accepted the request for asynchronous optimisation execution.
+
+It does not mean:
+  the optimisation is feasible
+  Gurobi has started
+  Gurobi can solve the model
+  a valid result will definitely be produced
+```
+
+OC MS acceptance processing:
+
+```text
+1. Perform syntactic and OD-MS-contract validation only.
+2. Persist runtime Optimisation with lifecycleStatus = ACKNOWLEDGED.
+3. Write OptimisationRequestedEvent with instruction = EXECUTE to OC MS outbox in the same database transaction.
+4. Return 202 Accepted.
+5. Outbox relay later publishes the event to t7.optimisation.events.
+```
+
+---
+
+### Processing event: OptimisationRequestedEvent / instruction EXECUTE
+
+Kafka topic:
+
+```text
+t7.optimisation.events
+```
+
+Kafka headers:
+
+```text
+ce-specversion: 1.0
+ce-id: evt-12345
+ce-type: au.com.mycsp.optimisation.requested.v1
+ce-source: optimisation-controller-ms
+ce-time: 2026-05-02T03:00:00Z
+ce-subject: optimisation/opt-12345
+ce-datacontenttype: application/json
+ce-correlationid: corr-12345
+ce-eventversion: 1.0
+content-type: application/json
+```
+
+Payload:
+
+```jsonc
+{
+  // Internal event identity.
+  // Kafka events do not use TMF REST @type/@baseType/@schemaLocation.
+  "eventId": "evt-12345",
+  "eventType": "OptimisationRequestedEvent",
+  "eventVersion": "1.0",
+
+  // Producer service.
+  "source": "optimisation-controller-ms",
+
+  // Event creation time.
+  "eventTime": "2026-05-02T03:00:00Z",
+
+  // Correlation across request, worker execution, and result events.
+  "correlationId": "corr-12345",
+
+  // Minimal worker instruction payload.
+  "body": {
+    // Runtime Optimisation this instruction applies to.
+    "optimisationId": "opt-12345",
+
+    // REST location for traceability.
+    "optimisationHref": "/optimisation/opt-12345",
+
+    // Explicit worker instruction.
+    "instruction": "EXECUTE",
+
+    // ACTIVE OptimisationSpecification used to validate this request.
+    // Worker resolves internal deterministic model binding from this reference.
+    "optimisationSpecification": {
+      "id": "os-7f3a9c21",
+      "href": "/optimisationSpecification/os-7f3a9c21"
+    },
+
+    // Optional upstream context copied from runtime Optimisation if supplied.
+    "sourceContext": {
+      "domain": "intent-management",
+      "resource": {
+        "id": "intent-789",
+        "href": "/intentManagement/v5/intent/intent-789",
+        "resourceType": "Intent"
+      }
+    },
+
+    // Caller-fed inputs accepted by OC MS.
+    "inputs": [
+      {
+        "name": "latency",
+        "valueType": "number",
+        "value": 20,
+        "unit": "ms"
+      },
+      {
+        "name": "reliability",
+        "valueType": "number",
+        "value": 99.99,
+        "unit": "percent"
+      },
+      {
+        "name": "topologySnapshot",
+        "valueType": "object",
+        "value": {
+          "dataset": "topology-snapshot",
+          "version": "2026-05-02T10:00:00Z"
+        }
+      }
+    ]
+  }
+}
+```
+
+EXECUTE event boundary:
+
+```text
+OptimisationRequestedEvent with instruction = EXECUTE includes:
+  optimisationId
+  optimisationHref
+  instruction
+  optimisationSpecification reference
+  optional sourceContext
+  inputs
+
+It does not include:
+  full Optimisation REST representation
+  HATEOAS links
+  ETag
+  solver configuration
+  objective internals
+  candidate-resource rules
+  model formulation
+  result
+```
+
+---
+
+### Cancellation API request: POST /optimisation/{id}/cancel
+
+```http
+POST /optimisation/opt-12345/cancel
+If-Match: "opt-12345-rev2"
+Content-Type: application/json
+```
+
+```jsonc
+{
+  // Optional human-readable cancellation reason.
+  "reason": "Caller no longer requires this optimisation."
+}
+```
+
+Successful response:
+
+```http
+HTTP/1.1 202 Accepted
+ETag: "opt-12345-rev3"
+Content-Type: application/json
+```
+
+```jsonc
+{
+  // Runtime optimisation identity.
+  "id": "opt-12345",
+  "href": "/optimisation/opt-12345",
+
+  // TMF-aligned REST resource typing.
+  "@type": "Optimisation",
+  "@baseType": "Entity",
+  "@schemaLocation": "/schema/Optimisation.schema.json",
+
+  // Cancellation has been accepted but may not be fully completed yet.
+  "lifecycleStatus": "CANCELLING",
+
+  // Optional caller-provided reason.
+  "statusReason": "Caller no longer requires this optimisation.",
+
+  "lastUpdate": "2026-05-02T03:02:00Z",
+  "statusChangeDate": "2026-05-02T03:02:00Z",
+
+  // CANCELLING exposes self only.
+  "_links": {
+    "self": {
+      "href": "/optimisation/opt-12345",
+      "method": "GET"
+    }
+  }
+}
+```
+
+Cancellation state rules:
+
+```text
+Allowed source states:
+  ACKNOWLEDGED
+  QUEUED
+  PROCESSING
+
+Target state:
+  CANCELLING
+
+Final cancellation state:
+  CANCELLED
+```
+
+OC MS cancellation processing:
+
+```text
+1. Validate If-Match.
+2. Validate current lifecycleStatus is ACKNOWLEDGED, QUEUED, or PROCESSING.
+3. Move lifecycleStatus to CANCELLING.
+4. Store optional statusReason.
+5. Write OptimisationRequestedEvent with instruction = CANCEL to OC MS outbox in the same transaction.
+6. Return 202 Accepted.
+7. Outbox relay later publishes the event to t7.optimisation.events.
+```
+
+No separate cancel event type is used:
+
+```text
+Do not use:
+  OptimisationCancelRequestedEvent
+  OptimisationControlEvent
+```
+
+---
+
+### Cancellation event: OptimisationRequestedEvent / instruction CANCEL
+
+Kafka topic:
+
+```text
+t7.optimisation.events
+```
+
+Kafka headers:
+
+```text
+ce-specversion: 1.0
+ce-id: evt-67890
+ce-type: au.com.mycsp.optimisation.requested.v1
+ce-source: optimisation-controller-ms
+ce-time: 2026-05-02T03:02:00Z
+ce-subject: optimisation/opt-12345
+ce-datacontenttype: application/json
+ce-correlationid: corr-12345
+ce-eventversion: 1.0
+content-type: application/json
+```
+
+Payload:
+
+```jsonc
+{
+  // Internal event identity.
+  // Kafka events do not use TMF REST @type/@baseType/@schemaLocation.
+  "eventId": "evt-67890",
+  "eventType": "OptimisationRequestedEvent",
+  "eventVersion": "1.0",
+
+  // Producer service.
+  "source": "optimisation-controller-ms",
+
+  // Event creation time.
+  "eventTime": "2026-05-02T03:02:00Z",
+
+  // Same correlation as the original optimisation request where possible.
+  "correlationId": "corr-12345",
+
+  // Minimal worker instruction payload.
+  "body": {
+    // Runtime Optimisation this instruction applies to.
+    "optimisationId": "opt-12345",
+
+    // REST location for traceability.
+    "optimisationHref": "/optimisation/opt-12345",
+
+    // Explicit worker instruction.
+    "instruction": "CANCEL",
+
+    // Optional caller-provided reason.
+    "reason": "Caller no longer requires this optimisation."
+  }
+}
+```
+
+CANCEL event boundary:
+
+```text
+OptimisationRequestedEvent with instruction = CANCEL includes:
+  optimisationId
+  optimisationHref
+  instruction
+  optional reason
+
+It does not include:
+  full Optimisation REST representation
+  HATEOAS links
+  ETag
+  optimisationSpecification
+  inputs
+  solver configuration
+  objective internals
+  candidate-resource rules
+  model formulation
+  result
+```
+
+Worker handling rule:
+
+```text
+Worker branches on body.instruction.
+
+If instruction = EXECUTE:
+  worker resolves internal deterministic model binding from the optimisationSpecification reference and starts execution.
+
+If instruction = CANCEL:
+  worker cancels/stops/ignores the optimisation where safely possible.
+```
+
+CloudEvents header mapping rule:
+
+```text
+ce-id:
+  Same value as payload.eventId.
+
+ce-type:
+  Stable technical event type for the worker request event:
+    au.com.mycsp.optimisation.requested.v1
+
+ce-source:
+  Producer component:
+    optimisation-controller-ms
+
+ce-subject:
+  Business subject of the event:
+    optimisation/{optimisationId}
+
+ce-time:
+  Same instant as payload.eventTime.
+
+ce-correlationid:
+  Same value as payload.correlationId.
+
+ce-eventversion:
+  Same value as payload.eventVersion.
+
+ce-datacontenttype and content-type:
+  application/json
+```
+
+---
+
+## Baseline appended 2026-05-02T04:59:57 - Current OC MS processing and cancelling API/event baseline
+
+For the optimisation architecture exercise, baseline the current OC MS processing and cancelling model.
+
+Use one Kafka topic:
+
+```text
+t7.optimisation.events
+```
+
+Use one worker request event type:
+
+```text
+OptimisationRequestedEvent
+```
+
+The worker branches on:
+
+```text
+body.instruction
+```
+
+Allowed initial instructions:
+
+```text
+EXECUTE
+CANCEL
+```
+
+Do not introduce separate cancel event types by default:
+
+```text
+Do not use:
+  OptimisationCancelRequestedEvent
+  OptimisationControlEvent
+```
+
+Outcome events remain separate:
+
+```text
+OptimisationCompletedEvent
+OptimisationFailedEvent
+```
+
+---
+
+### Processing API: POST /optimisation
+
+```http
+POST /optimisation
+Content-Type: application/json
+```
+
+```jsonc
+{
+  // Optional source context.
+  // Intent is only one possible source context.
+  "sourceContext": {
+    "domain": "intent-management",
+    "resource": {
+      "id": "intent-789",
+      "href": "/intentManagement/v5/intent/intent-789",
+      "@type": "IntentRef",
+      "@referredType": "Intent"
+    }
+  },
+
+  // Required ACTIVE OptimisationSpecification from OD MS.
+  "optimisationSpecification": {
+    "id": "os-7f3a9c21",
+    "href": "/optimisationSpecification/os-7f3a9c21",
+    "@type": "OptimisationSpecificationRef",
+    "@referredType": "OptimisationSpecification"
+  },
+
+  "name": "Hospital surgical slice path optimisation request",
+  "description": "Optimise path selection for hospital surgical slice intent.",
+  "priority": "1",
+
+  // Validated syntactically against OD MS OptimisationSpecification.inputs.
+  "inputs": [
+    {
+      "name": "latency",
+      "valueType": "number",
+      "value": 20,
+      "unit": "ms"
+    },
+    {
+      "name": "reliability",
+      "valueType": "number",
+      "value": 99.99,
+      "unit": "percent"
+    },
+    {
+      "name": "topologySnapshot",
+      "valueType": "object",
+      "value": {
+        "dataset": "topology-snapshot",
+        "version": "2026-05-02T10:00:00Z"
+      }
+    }
+  ],
+
+  "@type": "Optimisation",
+  "@baseType": "Entity",
+  "@schemaLocation": "/schema/Optimisation.schema.json"
+}
+```
+
+Successful response:
+
+```http
+HTTP/1.1 202 Accepted
+Location: /optimisation/opt-12345
+ETag: "opt-12345-rev1"
+Content-Type: application/json
+```
+
+```jsonc
+{
+  "id": "opt-12345",
+  "href": "/optimisation/opt-12345",
+
+  "@type": "Optimisation",
+  "@baseType": "Entity",
+  "@schemaLocation": "/schema/Optimisation.schema.json",
+
+  "sourceContext": {
+    "domain": "intent-management",
+    "resource": {
+      "id": "intent-789",
+      "href": "/intentManagement/v5/intent/intent-789",
+      "@type": "IntentRef",
+      "@referredType": "Intent"
+    }
+  },
+
+  "name": "Hospital surgical slice path optimisation request",
+  "description": "Optimise path selection for hospital surgical slice intent.",
+  "priority": "1",
+
+  "lifecycleStatus": "ACKNOWLEDGED",
+  "creationDate": "2026-05-02T03:00:00Z",
+  "lastUpdate": "2026-05-02T03:00:00Z",
+  "statusChangeDate": "2026-05-02T03:00:00Z",
+
+  "optimisationSpecification": {
+    "id": "os-7f3a9c21",
+    "href": "/optimisationSpecification/os-7f3a9c21",
+    "@type": "OptimisationSpecificationRef",
+    "@referredType": "OptimisationSpecification"
+  },
+
+  "inputs": [
+    {
+      "name": "latency",
+      "valueType": "number",
+      "value": 20,
+      "unit": "ms"
+    },
+    {
+      "name": "reliability",
+      "valueType": "number",
+      "value": 99.99,
+      "unit": "percent"
+    },
+    {
+      "name": "topologySnapshot",
+      "valueType": "object",
+      "value": {
+        "dataset": "topology-snapshot",
+        "version": "2026-05-02T10:00:00Z"
+      }
+    }
+  ],
+
+  "_links": {
+    "self": {
+      "href": "/optimisation/opt-12345",
+      "method": "GET"
+    },
+    "cancel": {
+      "href": "/optimisation/opt-12345/cancel",
+      "method": "POST"
+    }
+  }
+}
+```
+
+OC MS writes `OptimisationRequestedEvent` with `instruction = EXECUTE` to its outbox in the same DB transaction.
+
+---
+
+### Processing event: OptimisationRequestedEvent / EXECUTE
+
+Kafka headers:
+
+```text
+ce-specversion: 1.0
+ce-id: evt-12345
+ce-type: au.com.mycsp.optimisation.requested.v1
+ce-source: optimisation-controller-ms
+ce-time: 2026-05-02T03:00:00Z
+ce-subject: optimisation/opt-12345
+ce-datacontenttype: application/json
+ce-correlationid: corr-12345
+ce-eventversion: 1.0
+content-type: application/json
+```
+
+Payload:
+
+```jsonc
+{
+  // Internal event identity.
+  // Kafka events do not use TMF REST @type/@baseType/@schemaLocation.
+  "eventId": "evt-12345",
+  "eventType": "OptimisationRequestedEvent",
+  "eventVersion": "1.0",
+  "source": "optimisation-controller-ms",
+  "eventTime": "2026-05-02T03:00:00Z",
+  "correlationId": "corr-12345",
+
+  "body": {
+    "optimisationId": "opt-12345",
+    "optimisationHref": "/optimisation/opt-12345",
+
+    // Explicit worker instruction.
+    "instruction": "EXECUTE",
+
+    // Worker resolves internal deterministic model binding from this reference.
+    "optimisationSpecification": {
+      "id": "os-7f3a9c21",
+      "href": "/optimisationSpecification/os-7f3a9c21"
+    },
+
+    "sourceContext": {
+      "domain": "intent-management",
+      "resource": {
+        "id": "intent-789",
+        "href": "/intentManagement/v5/intent/intent-789",
+        "resourceType": "Intent"
+      }
+    },
+
+    "inputs": [
+      {
+        "name": "latency",
+        "valueType": "number",
+        "value": 20,
+        "unit": "ms"
+      },
+      {
+        "name": "reliability",
+        "valueType": "number",
+        "value": 99.99,
+        "unit": "percent"
+      },
+      {
+        "name": "topologySnapshot",
+        "valueType": "object",
+        "value": {
+          "dataset": "topology-snapshot",
+          "version": "2026-05-02T10:00:00Z"
+        }
+      }
+    ]
+  }
+}
+```
+
+---
+
+### Cancellation API: POST /optimisation/{id}/cancel
+
+```http
+POST /optimisation/opt-12345/cancel
+If-Match: "opt-12345-rev2"
+Content-Type: application/json
+```
+
+```jsonc
+{
+  // Optional human-readable cancellation reason.
+  "reason": "Caller no longer requires this optimisation."
+}
+```
+
+Successful response:
+
+```http
+HTTP/1.1 202 Accepted
+ETag: "opt-12345-rev3"
+Content-Type: application/json
+```
+
+```jsonc
+{
+  "id": "opt-12345",
+  "href": "/optimisation/opt-12345",
+
+  "@type": "Optimisation",
+  "@baseType": "Entity",
+  "@schemaLocation": "/schema/Optimisation.schema.json",
+
+  "lifecycleStatus": "CANCELLING",
+  "statusReason": "Caller no longer requires this optimisation.",
+  "lastUpdate": "2026-05-02T03:02:00Z",
+  "statusChangeDate": "2026-05-02T03:02:00Z",
+
+  "_links": {
+    "self": {
+      "href": "/optimisation/opt-12345",
+      "method": "GET"
+    }
+  }
+}
+```
+
+Allowed source states:
+
+```text
+ACKNOWLEDGED
+QUEUED
+PROCESSING
+```
+
+Target state:
+
+```text
+CANCELLING
+```
+
+Final cancellation state:
+
+```text
+CANCELLED
+```
+
+OC MS writes `OptimisationRequestedEvent` with `instruction = CANCEL` to its outbox in the same transaction.
+
+---
+
+### Cancellation event: OptimisationRequestedEvent / CANCEL
+
+Kafka headers:
+
+```text
+ce-specversion: 1.0
+ce-id: evt-67890
+ce-type: au.com.mycsp.optimisation.requested.v1
+ce-source: optimisation-controller-ms
+ce-time: 2026-05-02T03:02:00Z
+ce-subject: optimisation/opt-12345
+ce-datacontenttype: application/json
+ce-correlationid: corr-12345
+ce-eventversion: 1.0
+content-type: application/json
+```
+
+Payload:
+
+```jsonc
+{
+  // Internal event identity.
+  // Kafka events do not use TMF REST @type/@baseType/@schemaLocation.
+  "eventId": "evt-67890",
+  "eventType": "OptimisationRequestedEvent",
+  "eventVersion": "1.0",
+  "source": "optimisation-controller-ms",
+  "eventTime": "2026-05-02T03:02:00Z",
+  "correlationId": "corr-12345",
+
+  "body": {
+    "optimisationId": "opt-12345",
+    "optimisationHref": "/optimisation/opt-12345",
+
+    // Explicit worker instruction.
+    "instruction": "CANCEL",
+
+    // Optional caller-provided reason.
+    "reason": "Caller no longer requires this optimisation."
+  }
+}
+```
+
+Worker handling:
+
+```text
+If instruction = EXECUTE:
+  worker resolves internal deterministic model binding from optimisationSpecification and starts execution.
+
+If instruction = CANCEL:
+  worker cancels/stops/ignores the optimisation where safely possible.
+```
+
+---
+
+## Baseline appended 2026-05-02T05:29:42 - Worker outcome events for OptimisationCompletedEvent and OptimisationFailedEvent
+
+For the optimisation architecture exercise, baseline the worker outcome events published by the Python/Gurobi worker to:
+
+```text
+t7.optimisation.events
+```
+
+Outcome event types:
+
+```text
+OptimisationCompletedEvent
+OptimisationFailedEvent
+```
+
+High-level outcome values:
+
+```text
+SUCCESS
+INFEASIBLE
+FAILURE
+```
+
+Outcome-to-lifecycle mapping:
+
+```text
+outcome = SUCCESS
+  OC MS lifecycleStatus -> COMPLETED
+
+outcome = INFEASIBLE
+  OC MS lifecycleStatus -> INFEASIBLE
+
+outcome = FAILURE
+  OC MS lifecycleStatus -> FAILED
+```
+
+Do not include `solutionStatus` by default.
+
+```text
+Use outcome as the public/contractual result classification.
+
+If solver-specific status is needed later, add it as optional diagnostic metadata, not as the primary status used by OC MS.
+```
+
+---
+
+### OptimisationCompletedEvent / outcome = SUCCESS
+
+Kafka headers:
+
+```text
+ce-specversion: 1.0
+ce-id: evt-22345
+ce-type: au.com.mycsp.optimisation.completed.v1
+ce-source: gurobi-worker
+ce-time: 2026-05-02T03:03:00Z
+ce-subject: optimisation/opt-12345
+ce-datacontenttype: application/json
+ce-correlationid: corr-12345
+ce-eventversion: 1.0
+content-type: application/json
+```
+
+Payload:
+
+```jsonc
+{
+  // Internal event identity.
+  // Kafka events do not use TMF REST @type/@baseType/@schemaLocation.
+  "eventId": "evt-22345",
+  "eventType": "OptimisationCompletedEvent",
+  "eventVersion": "1.0",
+
+  // Producer component.
+  "source": "gurobi-worker",
+
+  // Event creation time.
+  "eventTime": "2026-05-02T03:03:00Z",
+
+  // Same correlation as the original OptimisationRequestedEvent where possible.
+  "correlationId": "corr-12345",
+
+  "body": {
+    // Runtime Optimisation completed by the worker.
+    "optimisationId": "opt-12345",
+    "optimisationHref": "/optimisation/opt-12345",
+
+    // High-level outcome used by OC MS for lifecycle mapping.
+    "outcome": "SUCCESS",
+
+    // Human-readable outcome summary.
+    "summary": "Optimisation completed successfully.",
+
+    // Worker completion timestamp.
+    "completedAt": "2026-05-02T03:03:00Z",
+
+    // Generic public outputs to project into Optimisation.result.outputs[].
+    "outputs": [
+      {
+        // Selected resource returned by the deterministic model.
+        "name": "selectedResource",
+        "valueType": "object",
+        "value": {
+          "resourceId": "path-001",
+          "resourceType": "deliveryResource"
+        }
+      },
+      {
+        // Objective value returned by the deterministic model.
+        "name": "objectiveValue",
+        "valueType": "number",
+        "value": 70,
+        "unit": "costUnit"
+      }
+    ]
+  }
+}
+```
+
+---
+
+### OptimisationCompletedEvent / outcome = INFEASIBLE
+
+Use `OptimisationCompletedEvent` because the solver completed correctly; it simply found no feasible solution.
+
+Kafka headers:
+
+```text
+ce-specversion: 1.0
+ce-id: evt-22346
+ce-type: au.com.mycsp.optimisation.completed.v1
+ce-source: gurobi-worker
+ce-time: 2026-05-02T03:03:00Z
+ce-subject: optimisation/opt-12345
+ce-datacontenttype: application/json
+ce-correlationid: corr-12345
+ce-eventversion: 1.0
+content-type: application/json
+```
+
+Payload:
+
+```jsonc
+{
+  // Internal event identity.
+  "eventId": "evt-22346",
+  "eventType": "OptimisationCompletedEvent",
+  "eventVersion": "1.0",
+
+  // Producer component.
+  "source": "gurobi-worker",
+
+  // Event creation time.
+  "eventTime": "2026-05-02T03:03:00Z",
+
+  // Same correlation as the original OptimisationRequestedEvent where possible.
+  "correlationId": "corr-12345",
+
+  "body": {
+    // Runtime Optimisation completed by the worker.
+    "optimisationId": "opt-12345",
+    "optimisationHref": "/optimisation/opt-12345",
+
+    // High-level outcome used by OC MS for lifecycle mapping.
+    "outcome": "INFEASIBLE",
+
+    // Human-readable outcome summary.
+    "summary": "No feasible solution exists for the supplied inputs.",
+
+    // Worker completion timestamp.
+    "completedAt": "2026-05-02T03:03:00Z"
+  }
+}
+```
+
+---
+
+### OptimisationFailedEvent / outcome = FAILURE
+
+Use `OptimisationFailedEvent` when the worker could not complete execution due to a technical/runtime failure.
+
+Kafka headers:
+
+```text
+ce-specversion: 1.0
+ce-id: evt-32345
+ce-type: au.com.mycsp.optimisation.failed.v1
+ce-source: gurobi-worker
+ce-time: 2026-05-02T03:03:00Z
+ce-subject: optimisation/opt-12345
+ce-datacontenttype: application/json
+ce-correlationid: corr-12345
+ce-eventversion: 1.0
+content-type: application/json
+```
+
+Payload:
+
+```jsonc
+{
+  // Internal event identity.
+  "eventId": "evt-32345",
+  "eventType": "OptimisationFailedEvent",
+  "eventVersion": "1.0",
+
+  // Producer component.
+  "source": "gurobi-worker",
+
+  // Event creation time.
+  "eventTime": "2026-05-02T03:03:00Z",
+
+  // Same correlation as the original OptimisationRequestedEvent where possible.
+  "correlationId": "corr-12345",
+
+  "body": {
+    // Runtime Optimisation that failed during worker execution.
+    "optimisationId": "opt-12345",
+    "optimisationHref": "/optimisation/opt-12345",
+
+    // High-level outcome used by OC MS for lifecycle mapping.
+    "outcome": "FAILURE",
+
+    // Failure classification for operational handling.
+    "failureType": "SOLVER_EXECUTION_ERROR",
+
+    // Human-readable failure reason.
+    "failureReason": "Gurobi solver execution failed before producing a result.",
+
+    // Worker failure timestamp.
+    "failedAt": "2026-05-02T03:03:00Z"
+  }
+}
+```
+
+---
+
+### OC MS handling rule
+
+```text
+When OC MS consumes OptimisationCompletedEvent:
+  If outcome = SUCCESS:
+    lifecycleStatus -> COMPLETED
+    result.outcome -> SUCCESS
+    result.summary -> summary
+    result.outputs[] -> outputs[]
+
+  If outcome = INFEASIBLE:
+    lifecycleStatus -> INFEASIBLE
+    result.outcome -> INFEASIBLE
+    result.summary -> summary
+
+When OC MS consumes OptimisationFailedEvent:
+  If outcome = FAILURE:
+    lifecycleStatus -> FAILED
+    result.outcome -> FAILURE
+    result.failureType -> failureType
+    result.failureReason -> failureReason
+```
+
+Late outcome rule:
+
+```text
+If OC MS has already moved the Optimisation to CANCELLING or CANCELLED:
+  OC MS must not blindly apply a late SUCCESS, INFEASIBLE, or FAILURE outcome.
+  It should handle the event idempotently as stale/late according to operational policy.
+```
+
+---
+
+## Baseline appended 2026-05-02T05:31:55 - OC MS POST /optimisation/{id}/retry contract
+
+For the optimisation architecture exercise, baseline `POST /optimisation/{id}/retry`.
+
+Retry rule:
+
+```text
+POST /optimisation/{id}/retry creates a new Optimisation resource linked to the original one.
+
+It does not mutate the old Optimisation back into PROCESSING.
+```
+
+Purpose:
+
+```text
+POST /optimisation/{id}/retry
+  Retries a failed runtime Optimisation by creating a new Optimisation resource.
+  Requires If-Match on the original Optimisation.
+  Allowed only when original lifecycleStatus = FAILED.
+  Copies sourceContext, optimisationSpecification, priority, and inputs from the original unless explicitly overridden later.
+  Writes OptimisationRequestedEvent with instruction = EXECUTE for the new Optimisation.
+  Returns 202 Accepted with Location of the new Optimisation.
+```
+
+Request:
+
+```http
+POST /optimisation/opt-12345/retry
+If-Match: "opt-12345-rev5"
+Content-Type: application/json
+```
+
+```jsonc
+{
+  // Optional retry reason for audit.
+  "reason": "Retry after temporary solver execution failure."
+}
+```
+
+Successful response:
+
+```http
+HTTP/1.1 202 Accepted
+Location: /optimisation/opt-67890
+ETag: "opt-67890-rev1"
+Content-Type: application/json
+```
+
+```jsonc
+{
+  // New runtime optimisation created by retry.
+  "id": "opt-67890",
+  "href": "/optimisation/opt-67890",
+
+  // TMF-aligned REST resource typing.
+  "@type": "Optimisation",
+  "@baseType": "Entity",
+  "@schemaLocation": "/schema/Optimisation.schema.json",
+
+  // Link to the failed optimisation being retried.
+  "retryOf": {
+    "id": "opt-12345",
+    "href": "/optimisation/opt-12345",
+    "@type": "OptimisationRef",
+    "@referredType": "Optimisation"
+  },
+
+  // Optional audit reason from retry request.
+  "statusReason": "Retry after temporary solver execution failure.",
+
+  // Copied from the original Optimisation when present.
+  "sourceContext": {
+    "domain": "intent-management",
+    "resource": {
+      "id": "intent-789",
+      "href": "/intentManagement/v5/intent/intent-789",
+      "@type": "IntentRef",
+      "@referredType": "Intent"
+    }
+  },
+
+  // Runtime metadata copied from original, or adjusted by OC MS if needed.
+  "name": "Hospital surgical slice path optimisation request",
+  "description": "Optimise path selection for hospital surgical slice intent.",
+  "priority": "1",
+
+  // New resource starts from ACKNOWLEDGED.
+  "lifecycleStatus": "ACKNOWLEDGED",
+  "creationDate": "2026-05-02T03:10:00Z",
+  "lastUpdate": "2026-05-02T03:10:00Z",
+  "statusChangeDate": "2026-05-02T03:10:00Z",
+
+  // Same OptimisationSpecification reference as original.
+  "optimisationSpecification": {
+    "id": "os-7f3a9c21",
+    "href": "/optimisationSpecification/os-7f3a9c21",
+    "@type": "OptimisationSpecificationRef",
+    "@referredType": "OptimisationSpecification"
+  },
+
+  // Same accepted inputs as original.
+  "inputs": [
+    {
+      "name": "latency",
+      "valueType": "number",
+      "value": 20,
+      "unit": "ms"
+    },
+    {
+      "name": "reliability",
+      "valueType": "number",
+      "value": 99.99,
+      "unit": "percent"
+    }
+  ],
+
+  // New retry run can be cancelled.
+  "_links": {
+    "self": {
+      "href": "/optimisation/opt-67890",
+      "method": "GET"
+    },
+    "cancel": {
+      "href": "/optimisation/opt-67890/cancel",
+      "method": "POST"
+    }
+  }
+}
+```
+
+Retry state rules:
+
+```text
+Allowed source state:
+  FAILED
+
+Not allowed by default:
+  COMPLETED
+  INFEASIBLE
+  CANCELLED
+  CANCELLING
+  ACKNOWLEDGED
+  QUEUED
+  PROCESSING
 ```
 
 Reasoning:
-- The old `inputs[]` model mixed requirements and candidate data.
-- `latency` and `reliability` at the top level are now replaced by clearer constraint/target definitions.
-- Candidate resource measured values remain under `metrics`.
-- `metrics` remains the agreed field for candidate measured/computed values.
-- `resourceAttributes` remains the field for stable candidate-resource descriptive attributes.
-- The example selectedResource `path-001` is consistent because `path-001` satisfies maxLatency 18ms <= 20ms while `path-002` fails maxLatency 24ms > 20ms.
+
+```text
+FAILED:
+  retry is useful because the failure may be temporary/technical.
+
+INFEASIBLE:
+  retrying the same inputs is not useful because the solver completed correctly and found no feasible solution.
+  Caller should create a new Optimisation with changed inputs.
+
+COMPLETED:
+  already succeeded.
+
+CANCELLED:
+  caller intentionally stopped it.
+  Caller should create a new Optimisation if they want to run again.
+```
+
+Failure responses:
+
+```http
+HTTP/1.1 428 Precondition Required
+Content-Type: application/json
+```
+
+```jsonc
+{
+  // If-Match is mandatory for unsafe transition operations.
+  "code": "PRECONDITION_REQUIRED",
+  "reason": "IF_MATCH_REQUIRED",
+  "message": "If-Match header is required when retrying an Optimisation.",
+  "status": "428",
+  "@type": "Error"
+}
+```
+
+```http
+HTTP/1.1 412 Precondition Failed
+Content-Type: application/json
+```
+
+```jsonc
+{
+  // Supplied ETag does not match the current resource revision.
+  "code": "PRECONDITION_FAILED",
+  "reason": "ETAG_MISMATCH",
+  "message": "The supplied ETag does not match the current Optimisation resource revision.",
+  "status": "412",
+  "@type": "Error"
+}
+```
+
+```http
+HTTP/1.1 409 Conflict
+Content-Type: application/json
+```
+
+```jsonc
+{
+  // Only FAILED Optimisation resources can be retried by default.
+  "code": "CONFLICT",
+  "reason": "OPTIMISATION_NOT_RETRYABLE",
+  "message": "Only FAILED Optimisation resources can be retried.",
+  "status": "409",
+  "@type": "Error"
+}
+```
+
+Event rule:
+
+```text
+When retry is accepted, OC MS creates a new Optimisation and writes:
+
+  OptimisationRequestedEvent
+  instruction = EXECUTE
+  optimisationId = opt-67890
+
+to its outbox.
+
+The old failed Optimisation remains unchanged except optional audit metadata such as lastRetryAt if explicitly added later.
+```
 
 ---
 
-## Baseline appended 2026-05-03T06:42:50 - Cleaned OD MS specification to constraints targets context model
+## Baseline appended 2026-05-02T05:34:09 - OC MS endpoint set excludes PUT and DELETE
 
-Cleaned and baselined the OD MS specification so it aligns with the current runtime optimisation model.
+For the optimisation architecture exercise, baseline that OC MS / Optimisation-Controller-MS does not support direct client-side `PUT /optimisation/{id}` or `DELETE /optimisation/{id}`.
 
-OD MS current baseline:
-- OD MS defines the caller-facing request contract using `constraints[]`, `targets[]`, and `context[]`.
-- The older generic `inputs[]` model is no longer the baseline for this optimisation design.
-- `constraints[]` are hard pass/fail rules.
-- `targets[]` are optimisation preferences/goals among valid candidates.
-- `context[]` contains optimiser data such as topologySnapshot and candidateResources.
-- For resource/path/option selection, context must provide or reference a candidate set with at least two candidate options unless explicitly feasibility-validation-only.
-- Candidate resources use `metrics` for measured/computed values and `resourceAttributes` for stable descriptive properties.
-- OD MS contract now aligns with OC MS validation and worker execution.
+Runtime `Optimisation` is an execution/audit record, not an editable draft definition.
 
-Also corrected stale endpoint references in OD MS from:
+Do not support:
+
+```http
+PUT /optimisation/{id}
+DELETE /optimisation/{id}
+```
+
+Reason for no PUT:
+
+```text
+Runtime Optimisation is not a draft/editable definition.
+It is an immutable request record plus lifecycle/result updates owned by OC MS.
+Client changes should be represented by creating a new Optimisation, cancelling, or retrying.
+```
+
+Reason for no DELETE:
+
+```text
+Runtime Optimisation records should remain available for audit/history.
+Terminal records such as COMPLETED, FAILED, INFEASIBLE, and CANCELLED should not be deleted through the public API.
+```
+
+Final OC MS endpoint set:
+
+```http
+# List/search runtime Optimisation resources.
+GET /optimisation
+
+# Create a runtime Optimisation.
+POST /optimisation
+
+# Retrieve runtime Optimisation state/result.
+GET /optimisation/{id}
+
+# Request cancellation of an active runtime Optimisation.
+POST /optimisation/{id}/cancel
+
+# Retry a failed runtime Optimisation by creating a new linked Optimisation.
+POST /optimisation/{id}/retry
+```
+
+Unsupported operation response:
+
+```http
+HTTP/1.1 405 Method Not Allowed
+Allow: GET
+Content-Type: application/json
+```
+
+```jsonc
+{
+  // Runtime Optimisation resources are not directly replaced or deleted by clients.
+  "code": "METHOD_NOT_ALLOWED",
+  "reason": "METHOD_NOT_ALLOWED",
+  "message": "Runtime Optimisation resources cannot be replaced or deleted. Use cancel, retry, or create a new Optimisation.",
+  "status": "405",
+  "@type": "Error"
+}
+```
+
+For collection route `/optimisation`, allowed methods are:
+
+```text
+GET
+POST
+```
+
+For item route `/optimisation/{id}`, allowed method is:
+
+```text
+GET
+```
+
+Transition operations are exposed through HATEOAS action links:
+
 ```text
 POST /optimisation/{id}/cancel
 POST /optimisation/{id}/retry
 ```
 
-to:
+---
+
+## Baseline appended 2026-05-03T03:39:03 - Final E2E optimisation solution brief
+
+Baselined the final E2E solution brief for the optimisation platform as:
+
 ```text
-POST /optimisation/{id}/cancellation
-POST /optimisation/{id}/retrial
+optimisation-e2e-solution-brief.md
+```
+
+The brief includes:
+- Business context
+- Condensed solution summary
+- Solution elaboration with use case, logical, and process views
+- Capability matrix
+- Solution security
+- Important quality attributes for availability, scalability, and performance
+- Risks
+- Assumptions
+- Constraints
+- Appendix
+
+Key final summary decisions captured:
+- The solution is a reusable asynchronous optimisation platform backed by deterministic Gurobi models.
+- OD MS owns `OptimisationSpecification`.
+- OC MS owns runtime `Optimisation`.
+- Consumers may include OEX, platform services, planning tools, assurance functions, intent-management flows, and other authorised entities.
+- Operator access to OEX is governed by ACG approval and Microsoft Entra ID SSO.
+- OGW exposes OEX APIs for the OEX UI using user-context-aware OAuth2.
+- OEX GW calls OEX Screen Builder MS using mTLS and User Context JWT.
+- OEX Screen Builder MS reaches backend OD MS and OC MS APIs through NGW using mTLS and OAuth2 system-to-system.
+- OC MS performs syntactic and OD-MS-contract validation only.
+- Kafka carries worker instructions and outcomes, with a DLQ for unprocessable events.
+- Python/Gurobi worker consumes EXECUTE/CANCEL instructions and returns SUCCESS/INFEASIBLE/FAILURE outcomes.
+- NGW-exposed backend APIs are TMF-compliant.
+- OGW-exposed OEX APIs, private MS-to-MS APIs, private MS-to-MS events, and internal Kafka events do not need to be TMF-compliant.
+
+---
+
+## Baseline appended 2026-05-03T07:06:39 - Final clean TMF validation pass
+
+Final clean TMF validation pass completed.
+
+Validation checks:
+```text
+OD MS: {'stale_/cancel_endpoint': False, 'stale_/retry_endpoint': False, 'cancellationlation_typo': True, 'active_operator_field': False, 'lessThanOrEqualTo_token': False, 'inputs_bracket_token': False, 'has_constraintType_maximum': True, 'has_ontologyPredicate_atMost': True, 'has_cancellation_endpoint': True, 'has_retrial_endpoint': True}
+OC MS: {'stale_/cancel_endpoint': False, 'stale_/retry_endpoint': False, 'cancellationlation_typo': True, 'active_operator_field': False, 'lessThanOrEqualTo_token': False, 'inputs_bracket_token': False, 'has_constraintType_maximum': True, 'has_ontologyPredicate_atMost': True, 'has_cancellation_endpoint': True, 'has_retrial_endpoint': True}
+E2E brief: {'stale_/cancel_endpoint': False, 'stale_/retry_endpoint': False, 'cancellationlation_typo': True, 'active_operator_field': False, 'lessThanOrEqualTo_token': False, 'inputs_bracket_token': False, 'has_constraintType_maximum': True, 'has_ontologyPredicate_atMost': True, 'has_cancellation_endpoint': True, 'has_retrial_endpoint': True}
 ```

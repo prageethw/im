@@ -21,7 +21,7 @@ OC MS does not own:
   Analytics platform datasets
 ```
 
-OC MS accepts runtime optimisation requests, validates only the wrapper and OD MS input contract, persists the request, emits a worker instruction event, then later projects worker outcomes back into the runtime resource.
+OC MS accepts runtime optimisation requests, validates only the wrapper and OD MS request contract, persists the request, emits a worker instruction event, then later projects worker outcomes back into the runtime resource.
 
 ## OC MS endpoint set:
 
@@ -36,7 +36,7 @@ POST /optimisation
 GET /optimisation/{id}
 
 # Request cancellation of an active runtime Optimisation.
-POST /optimisation/{id}/cancellation
+POST /optimisation/{id}/cancellationlation
 
 # Retrial a failed runtime Optimisation by creating a new linked Optimisation.
 POST /optimisation/{id}/retrial
@@ -84,7 +84,7 @@ FAILED:
   Technical/runtime failure occurred.
 
 CANCELLING:
-  Cancel command has been accepted and worker should stop/ignore where safely possible.
+  Cancellation command has been accepted and worker should stop/ignore where safely possible.
 
 CANCELLED:
   Optimisation is confirmed cancelled.
@@ -118,7 +118,7 @@ CANCELLED -> terminal
 ```text
 ACKNOWLEDGED / QUEUED / PROCESSING:
   self
-  cancel
+  cancellation
 
 CANCELLING:
   self
@@ -166,92 +166,25 @@ Content-Type: application/json
 
   // Capability-specific caller-fed inputs.
   // Validated syntactically against OD MS OptimisationSpecification.inputs.
-  "constraints": [
+  "inputs": [
     {
-      "name": "maxLatency",
-      "operator": "lessThanOrEqualTo",
+      "name": "latency",
       "valueType": "number",
       "value": 20,
       "unit": "ms"
-    }
-  ],
-  "targets": [
-    {
-      "name": "cost",
-      "goal": "minimise",
-      "priority": 1
-    },
-    {
-      "name": "latency",
-      "goal": "minimise",
-      "priority": 2
     },
     {
       "name": "reliability",
-      "goal": "maximise",
-      "priority": 3
-    }
-  ],
-  "context": [
+      "valueType": "number",
+      "value": 99.99,
+      "unit": "percent"
+    },
     {
       "name": "topologySnapshot",
       "valueType": "object",
       "value": {
         "dataset": "topology-snapshot",
-        "version": "2026-05-02T10:00:00Z",
-        "candidateResourceSetId": "candidate-paths-surgical-melbourne-20260502T100000Z",
-        "candidateResources": [
-          {
-            "resourceId": "path-001",
-            "resourceType": "deliveryResource",
-            "resourceClass": "low-latency-path",
-            "resourceAttributes": {
-              "locationId": "melbourne-hospital"
-            },
-            "metrics": [
-              {
-                "name": "latency",
-                "value": 18,
-                "unit": "ms"
-              },
-              {
-                "name": "reliability",
-                "value": 99.95,
-                "unit": "percent"
-              },
-              {
-                "name": "cost",
-                "value": 70,
-                "unit": "costUnit"
-              }
-            ]
-          },
-          {
-            "resourceId": "path-002",
-            "resourceType": "deliveryResource",
-            "resourceClass": "high-reliability-path",
-            "resourceAttributes": {
-              "locationId": "melbourne-hospital"
-            },
-            "metrics": [
-              {
-                "name": "latency",
-                "value": 24,
-                "unit": "ms"
-              },
-              {
-                "name": "reliability",
-                "value": 99.995,
-                "unit": "percent"
-              },
-              {
-                "name": "cost",
-                "value": 90,
-                "unit": "costUnit"
-              }
-            ]
-          }
-        ]
+        "version": "2026-05-02T10:00:00Z"
       }
     }
   ],
@@ -307,93 +240,18 @@ Content-Type: application/json
     "@referredType": "OptimisationSpecification"
   },
 
-  "constraints": [
+  "inputs": [
     {
-      "name": "maxLatency",
-      "operator": "lessThanOrEqualTo",
+      "name": "latency",
       "valueType": "number",
       "value": 20,
       "unit": "ms"
-    }
-  ],
-  "targets": [
-    {
-      "name": "cost",
-      "goal": "minimise",
-      "priority": 1
-    },
-    {
-      "name": "latency",
-      "goal": "minimise",
-      "priority": 2
     },
     {
       "name": "reliability",
-      "goal": "maximise",
-      "priority": 3
-    }
-  ],
-  "context": [
-    {
-      "name": "topologySnapshot",
-      "valueType": "object",
-      "value": {
-        "dataset": "topology-snapshot",
-        "version": "2026-05-02T10:00:00Z",
-        "candidateResourceSetId": "candidate-paths-surgical-melbourne-20260502T100000Z",
-        "candidateResources": [
-          {
-            "resourceId": "path-001",
-            "resourceType": "deliveryResource",
-            "resourceClass": "low-latency-path",
-            "resourceAttributes": {
-              "locationId": "melbourne-hospital"
-            },
-            "metrics": [
-              {
-                "name": "latency",
-                "value": 18,
-                "unit": "ms"
-              },
-              {
-                "name": "reliability",
-                "value": 99.95,
-                "unit": "percent"
-              },
-              {
-                "name": "cost",
-                "value": 70,
-                "unit": "costUnit"
-              }
-            ]
-          },
-          {
-            "resourceId": "path-002",
-            "resourceType": "deliveryResource",
-            "resourceClass": "high-reliability-path",
-            "resourceAttributes": {
-              "locationId": "melbourne-hospital"
-            },
-            "metrics": [
-              {
-                "name": "latency",
-                "value": 24,
-                "unit": "ms"
-              },
-              {
-                "name": "reliability",
-                "value": 99.995,
-                "unit": "percent"
-              },
-              {
-                "name": "cost",
-                "value": 90,
-                "unit": "costUnit"
-              }
-            ]
-          }
-        ]
-      }
+      "valueType": "number",
+      "value": 99.99,
+      "unit": "percent"
     }
   ],
 
@@ -403,15 +261,12 @@ Content-Type: application/json
       "method": "GET"
     },
     "cancellation": {
-      "href": "/optimisation/opt-12345/cancellation",
+      "href": "/optimisation/opt-12345/cancellationlation",
       "method": "POST"
     }
   }
 }
 ```
-
-
-The returned Optimisation resource includes the full accepted `inputs[]` set provided by the caller, not a truncated subset.
 
 `202 Accepted` means OC MS accepted the request for asynchronous execution. It does not mean the optimisation is feasible, started, solvable, or guaranteed to produce a valid result.
 
@@ -422,7 +277,7 @@ OC MS validates:
   generic REST wrapper using its static API/OpenAPI contract
   referenced OptimisationSpecification exists in OD MS
   referenced OptimisationSpecification lifecycleStatus is ACTIVE
-  constraints[], targets[], and context[] against the referenced ACTIVE OptimisationSpecification contract
+  constraints[], targets[], and context[] against the referenced ACTIVE OptimisationSpecification.inputs
 
 OC MS does not validate:
   optimisation semantics
@@ -431,23 +286,6 @@ OC MS does not validate:
   objective interpretation
   Gurobi model validity
   resource-selection correctness
-```
-
-
-### Runtime request definition model:
-
-```text
-constraints[]:
-  Hard pass/fail rules that must be satisfied.
-  Example: maxLatency lessThanOrEqualTo 20ms.
-
-targets[]:
-  Optimisation goals or preferences applied among valid candidates.
-  Example: minimise cost first, minimise latency second, maximise reliability third.
-
-context[]:
-  Data used by the optimiser, including candidate resources and their metrics.
-  Example: topologySnapshot with candidateResourceSetId and at least two candidateResources.
 ```
 
 After acceptance, OC MS persists the runtime resource and writes `OptimisationRequestedEvent` with `instruction = EXECUTE` to its outbox in the same transaction.
@@ -491,93 +329,12 @@ Active-state example:
     "@referredType": "OptimisationSpecification"
   },
 
-  "constraints": [
+  "inputs": [
     {
-      "name": "maxLatency",
-      "operator": "lessThanOrEqualTo",
+      "name": "latency",
       "valueType": "number",
       "value": 20,
       "unit": "ms"
-    }
-  ],
-  "targets": [
-    {
-      "name": "cost",
-      "goal": "minimise",
-      "priority": 1
-    },
-    {
-      "name": "latency",
-      "goal": "minimise",
-      "priority": 2
-    },
-    {
-      "name": "reliability",
-      "goal": "maximise",
-      "priority": 3
-    }
-  ],
-  "context": [
-    {
-      "name": "topologySnapshot",
-      "valueType": "object",
-      "value": {
-        "dataset": "topology-snapshot",
-        "version": "2026-05-02T10:00:00Z",
-        "candidateResourceSetId": "candidate-paths-surgical-melbourne-20260502T100000Z",
-        "candidateResources": [
-          {
-            "resourceId": "path-001",
-            "resourceType": "deliveryResource",
-            "resourceClass": "low-latency-path",
-            "resourceAttributes": {
-              "locationId": "melbourne-hospital"
-            },
-            "metrics": [
-              {
-                "name": "latency",
-                "value": 18,
-                "unit": "ms"
-              },
-              {
-                "name": "reliability",
-                "value": 99.95,
-                "unit": "percent"
-              },
-              {
-                "name": "cost",
-                "value": 70,
-                "unit": "costUnit"
-              }
-            ]
-          },
-          {
-            "resourceId": "path-002",
-            "resourceType": "deliveryResource",
-            "resourceClass": "high-reliability-path",
-            "resourceAttributes": {
-              "locationId": "melbourne-hospital"
-            },
-            "metrics": [
-              {
-                "name": "latency",
-                "value": 24,
-                "unit": "ms"
-              },
-              {
-                "name": "reliability",
-                "value": 99.995,
-                "unit": "percent"
-              },
-              {
-                "name": "cost",
-                "value": 90,
-                "unit": "costUnit"
-              }
-            ]
-          }
-        ]
-      }
     }
   ],
 
@@ -588,7 +345,7 @@ Active-state example:
       "method": "GET"
     },
     "cancellation": {
-      "href": "/optimisation/opt-12345/cancellation",
+      "href": "/optimisation/opt-12345/cancellationlation",
       "method": "POST"
     }
   }
@@ -620,9 +377,7 @@ Completed-state example:
         "valueType": "object",
         "value": {
           "resourceId": "path-001",
-          "resourceType": "deliveryResource",
-          "sourceInput": "topologySnapshot",
-          "candidateResourceSetId": "candidate-paths-surgical-melbourne-20260502T100000Z"
+          "resourceType": "deliveryResource"
         }
       },
       {
@@ -650,20 +405,9 @@ GET /optimisation/{id}:
   ETag required
   no response Cache-Control for runtime Optimisation for now
   no version field
-  accepted constraints[], targets[], and context[] returned in full on the Optimisation object
   result omitted until worker outcome exists
   generic result.outputs[] when outcome exists
 ```
-Candidate-set rule:
-
-```text
-If an optimisation result selects a resource, route, path, placement, or option, the accepted context must provide or reference a candidate set with at least two candidate options.
-
-A single candidate option is not a meaningful optimisation problem unless the purpose is feasibility validation only.
-
-When the selected output references a resourceId, the result should include traceability back to the source input and candidateResourceSetId where applicable.
-```
-
 
 ## GET /optimisation:
 
@@ -681,7 +425,7 @@ X-Result-Count: 20
 ```jsonc
 [
   {
-    // Summary only. Follow self for full inputs/result.
+    // Summary only. Follow self for full constraints/targets/context/result.
     "id": "opt-12345",
     "href": "/optimisation/opt-12345",
 
@@ -711,7 +455,7 @@ X-Result-Count: 20
         "method": "GET"
       },
       "cancellation": {
-        "href": "/optimisation/opt-12345/cancellation",
+        "href": "/optimisation/opt-12345/cancellationlation",
         "method": "POST"
       }
     }
@@ -743,7 +487,7 @@ offset
 limit
 ```
 
-## POST /optimisation/{id}/cancellation:
+## POST /optimisation/{id}/cancellationlation:
 
 ```http
 POST /optimisation/opt-12345/cancellationlation
@@ -853,93 +597,12 @@ Content-Type: application/json
     "@referredType": "OptimisationSpecification"
   },
 
-  "constraints": [
+  "inputs": [
     {
-      "name": "maxLatency",
-      "operator": "lessThanOrEqualTo",
+      "name": "latency",
       "valueType": "number",
       "value": 20,
       "unit": "ms"
-    }
-  ],
-  "targets": [
-    {
-      "name": "cost",
-      "goal": "minimise",
-      "priority": 1
-    },
-    {
-      "name": "latency",
-      "goal": "minimise",
-      "priority": 2
-    },
-    {
-      "name": "reliability",
-      "goal": "maximise",
-      "priority": 3
-    }
-  ],
-  "context": [
-    {
-      "name": "topologySnapshot",
-      "valueType": "object",
-      "value": {
-        "dataset": "topology-snapshot",
-        "version": "2026-05-02T10:00:00Z",
-        "candidateResourceSetId": "candidate-paths-surgical-melbourne-20260502T100000Z",
-        "candidateResources": [
-          {
-            "resourceId": "path-001",
-            "resourceType": "deliveryResource",
-            "resourceClass": "low-latency-path",
-            "resourceAttributes": {
-              "locationId": "melbourne-hospital"
-            },
-            "metrics": [
-              {
-                "name": "latency",
-                "value": 18,
-                "unit": "ms"
-              },
-              {
-                "name": "reliability",
-                "value": 99.95,
-                "unit": "percent"
-              },
-              {
-                "name": "cost",
-                "value": 70,
-                "unit": "costUnit"
-              }
-            ]
-          },
-          {
-            "resourceId": "path-002",
-            "resourceType": "deliveryResource",
-            "resourceClass": "high-reliability-path",
-            "resourceAttributes": {
-              "locationId": "melbourne-hospital"
-            },
-            "metrics": [
-              {
-                "name": "latency",
-                "value": 24,
-                "unit": "ms"
-              },
-              {
-                "name": "reliability",
-                "value": 99.995,
-                "unit": "percent"
-              },
-              {
-                "name": "cost",
-                "value": 90,
-                "unit": "costUnit"
-              }
-            ]
-          }
-        ]
-      }
     }
   ],
 
@@ -949,7 +612,7 @@ Content-Type: application/json
       "method": "GET"
     },
     "cancellation": {
-      "href": "/optimisation/opt-67890/cancellation",
+      "href": "/optimisation/opt-67890/cancellationlation",
       "method": "POST"
     }
   }
@@ -1001,7 +664,7 @@ EXECUTE
 CANCEL
 ```
 
-Do not use separate cancel event types:
+Do not use separate cancellation event types:
 
 ```text
 OptimisationCancelRequestedEvent
@@ -1145,9 +808,7 @@ No `solutionStatus` by default.
         "valueType": "object",
         "value": {
           "resourceId": "path-001",
-          "resourceType": "deliveryResource",
-          "sourceInput": "topologySnapshot",
-          "candidateResourceSetId": "candidate-paths-surgical-melbourne-20260502T100000Z"
+          "resourceType": "deliveryResource"
         }
       }
     ]
@@ -1220,7 +881,7 @@ GET /optimisation:
   no per-item ETag by default
   includes X-Total-Count and X-Result-Count
 
-POST /optimisation/{id}/cancellation:
+POST /optimisation/{id}/cancellationlation:
   requires If-Match
   missing If-Match -> 428
   stale/wrong If-Match -> 412
@@ -1230,3 +891,22 @@ POST /optimisation/{id}/retrial:
   missing If-Match -> 428
   stale/wrong If-Match -> 412
 ```
+
+---
+
+## TMF/TIO constraint representation baseline:
+
+For upper-bound constraints in runtime Optimisation requests, responses, and worker instruction events, use:
+
+```json
+{
+  "name": "maxLatency",
+  "constraintType": "maximum",
+  "ontologyPredicate": "icm:atMost",
+  "valueType": "number",
+  "value": 20,
+  "unit": "ms"
+}
+```
+
+Do not use a platform contract field named `operator` for this upper-bound constraint.
