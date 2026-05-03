@@ -467,3 +467,44 @@ OC MS -> OD MS
 ```
 
 OD MS does not participate in Kafka, Python/Gurobi Worker, Gurobi Optimizer, OC MS Inbox, or runtime result projection.
+
+---
+
+## Process view baseline:
+
+OD MS participates in the runtime process as the OptimisationSpecification definition source.
+
+Full runtime process reference:
+
+```text
+Consumer
+-> OEX
+-> OGW
+-> OEX APIs
+-> OEX GW
+-> OEX Screen Builder MS
+-> NGW
+-> OC MS
+-> OD MS
+-> OC MS DB
+-> OC MS Outbox
+-> Kafka
+-> Python/Gurobi Worker
+-> Gurobi Optimizer
+-> Kafka
+-> OC MS Inbox
+-> OC MS DB
+-> Consumer polls GET /optimisation/{id}
+```
+
+OD MS role in this process:
+
+```text
+OC MS -> OD MS:
+  OC MS uses OD MS to retrieve/validate against the ACTIVE OptimisationSpecification.
+
+OD MS -> OC MS DB:
+  OD MS does not call OC MS DB. This arrow in the process view means control returns to OC MS after specification validation, and OC MS then persists the accepted runtime Optimisation in OC MS DB.
+```
+
+OD MS does not persist runtime Optimisation resources, does not write OC MS outbox records, does not consume Kafka worker outcomes, and does not project runtime results.

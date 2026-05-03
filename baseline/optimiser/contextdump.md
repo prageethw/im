@@ -1288,3 +1288,34 @@ User
 Note:
 - Logical view is intentionally simpler than the detailed process view.
 - Process view may still include detailed OEX APIs / OEX GW / OC MS DB / outbox / inbox hops where required.
+
+---
+
+## Baseline appended 2026-05-03T11:57:20 - Process view visibly added to active process sections
+
+Updated active OD MS, OC MS, and E2E solution brief process view sections to explicitly show the agreed runtime process flow:
+
+```text
+Consumer
+-> OEX
+-> OGW
+-> OEX APIs
+-> OEX GW
+-> OEX Screen Builder MS
+-> NGW
+-> OC MS
+-> OD MS
+-> OC MS DB
+-> OC MS Outbox
+-> Kafka
+-> Python/Gurobi Worker
+-> Gurobi Optimizer
+-> Kafka
+-> OC MS Inbox
+-> OC MS DB
+-> Consumer polls GET /optimisation/{id}
+```
+
+Note:
+- E2E brief and OC MS show this as the runtime process view.
+- OD MS includes it as a reference and clarifies that OD MS is only the OptimisationSpecification source; OC MS persists to OC MS DB after OD validation.
