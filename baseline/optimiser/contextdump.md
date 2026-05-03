@@ -1236,7 +1236,7 @@ Consumer
 
 Key corrections:
 - Process view starts with `Consumer -> OEX`.
-- Process view includes `OGW -> OEX APIs -> OEX GW -> OEX Screen Builder MS`.
+- Process view includes `OGW -> OEX APIs -> OGW -> OEX Screen Builder MS`.
 - OC MS validates against OD MS before persisting to OC MS DB.
 - Runtime persistence/outbox/inbox path remains explicit.
 - Consumer observes completion by polling `GET /optimisation/{id}`.
@@ -1333,3 +1333,19 @@ OC MS calls OD MS over mTLS to validate the referenced ACTIVE OptimisationSpecif
 ```
 
 Implementation remains open to any suitable service mesh or platform mTLS mechanism.
+
+---
+
+## Baseline appended 2026-05-03T21:13:10 - Corrected OEX Screen Builder invocation label
+
+Replaced remaining wording:
+
+```text
+OEX GW -> OEX Screen Builder MS:
+```
+
+with:
+
+```text
+OGW -> OEX Screen Builder MS:
+```

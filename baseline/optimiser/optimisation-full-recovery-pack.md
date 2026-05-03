@@ -1,6 +1,6 @@
 # Optimisation Full Recovery Pack
 
-Generated: 2026-05-03T20:58:11
+Generated: 2026-05-03T21:13:22
 
 This file combines the current optimisation architecture recovery material into one place.
 
@@ -1252,7 +1252,7 @@ Consumer
 
 Key corrections:
 - Process view starts with `Consumer -> OEX`.
-- Process view includes `OGW -> OEX APIs -> OEX GW -> OEX Screen Builder MS`.
+- Process view includes `OGW -> OEX APIs -> OGW -> OEX Screen Builder MS`.
 - OC MS validates against OD MS before persisting to OC MS DB.
 - Runtime persistence/outbox/inbox path remains explicit.
 - Consumer observes completion by polling `GET /optimisation/{id}`.
@@ -1307,62 +1307,18 @@ Note:
 
 ---
 
-## Baseline appended 2026-05-03T11:57:20 - Process view visibly added to active process sections
+## Baseline appended 2026-05-03T21:13:22 - Corrected OEX Screen Builder invocation label
 
-Updated active OD MS, OC MS, and E2E solution brief process view sections to explicitly show the agreed runtime process flow:
+Replaced remaining wording:
 
 ```text
-Consumer
--> OEX
--> OGW
--> OEX APIs
--> OEX GW
--> OEX Screen Builder MS
--> NGW
--> OC MS
--> OD MS
--> OC MS DB
--> OC MS Outbox
--> Kafka
--> Python/Gurobi Worker
--> Gurobi Optimizer
--> Kafka
--> OC MS Inbox
--> OC MS DB
--> Consumer polls GET /optimisation/{id}
+OEX GW -> OEX Screen Builder MS:
 ```
 
-Note:
-- E2E brief and OC MS show this as the runtime process view.
-- OD MS includes it as a reference and clarifies that OD MS is only the OptimisationSpecification source; OC MS persists to OC MS DB after OD validation.
-
----
-
-## Baseline appended 2026-05-03T12:00:03 - Fixed process view start actor
-
-Corrected process view start so it begins with two separate steps:
+with:
 
 ```text
-Consumer
--> OEX
-```
-
-The process view must not combine these as a single `Consumer / OEX` node.
-
----
-
-## Baseline appended 2026-05-03T20:58:11 - Fully removed Istio-specific wording
-
-Cleaned remaining Istio-specific wording across active docs and recovery pack.
-
-Baseline wording:
-```text
-OC MS calls OD MS over mTLS to validate the referenced ACTIVE OptimisationSpecification.
-```
-
-Implementation detail:
-```text
-mTLS may be provided by a service mesh or platform mechanism; the current design does not mandate Istio.
+OGW -> OEX Screen Builder MS:
 ```
 
 
@@ -1839,47 +1795,6 @@ OC MS -> OD MS
 ```
 
 OD MS does not participate in Kafka, Python/Gurobi Worker, Gurobi Optimizer, OC MS Inbox, or runtime result projection.
-
----
-
-## Process view baseline:
-
-OD MS participates in the runtime process as the OptimisationSpecification definition source.
-
-Full runtime process reference:
-
-```text
-Consumer
--> OEX
--> OGW
--> OEX APIs
--> OEX GW
--> OEX Screen Builder MS
--> NGW
--> OC MS
--> OD MS
--> OC MS DB
--> OC MS Outbox
--> Kafka
--> Python/Gurobi Worker
--> Gurobi Optimizer
--> Kafka
--> OC MS Inbox
--> OC MS DB
--> Consumer polls GET /optimisation/{id}
-```
-
-OD MS role in this process:
-
-```text
-OC MS -> OD MS:
-  OC MS uses OD MS to retrieve/validate against the ACTIVE OptimisationSpecification.
-
-OD MS -> OC MS DB:
-  OD MS does not call OC MS DB. This arrow in the process view means control returns to OC MS after specification validation, and OC MS then persists the accepted runtime Optimisation in OC MS DB.
-```
-
-OD MS does not persist runtime Optimisation resources, does not write OC MS outbox records, does not consume Kafka worker outcomes, and does not project runtime results.
 
 
 ---
@@ -3332,28 +3247,7 @@ OC MS does not perform solver feasibility, candidate ranking, metric-vs-constrai
 
 ---
 
-## Logical view baseline:
-
-OC MS runtime logical path:
-
-```text
-User
--> Microsoft Entra ID SSO
--> OEX UI
--> OGW
--> OEX Screen Builder MS
--> NGW
--> OC MS
--> Kafka
--> Python/Gurobi Worker
--> Gurobi Optimizer
-```
-
-OC MS owns runtime Optimisation resources. It validates runtime requests against OD MS definitions, persists accepted executions, emits Kafka instructions, consumes worker outcomes, and projects lifecycle/result state.
-
----
-
-## Process view baseline:
+## Corrected process view baseline:
 
 The agreed runtime process view is:
 
@@ -3378,14 +3272,14 @@ Consumer
 -> Consumer polls GET /optimisation/{id}
 ```
 
-Detailed runtime process interpretation:
+Detailed interpretation:
 
 ```text
 1. Consumer initiates the optimisation journey through OEX.
-2. OEX sends the request to OGW.
+2. OEX routes the request to OGW.
 3. OGW routes to OEX APIs.
 4. OEX APIs route through OEX GW.
-5. OEX GW routes to OEX Screen Builder MS.
+5. OGW routes to OEX Screen Builder MS.
 6. OEX Screen Builder MS calls NGW.
 7. NGW calls OC MS.
 8. OC MS validates the runtime request against the ACTIVE OptimisationSpecification from OD MS.
@@ -3394,7 +3288,7 @@ Detailed runtime process interpretation:
 11. OC MS Outbox relay publishes the event to Kafka.
 12. Python/Gurobi Worker consumes the event from Kafka.
 13. Python/Gurobi Worker invokes Gurobi Optimizer.
-14. Worker publishes the outcome event back to Kafka.
+14. Worker publishes outcome event back to Kafka.
 15. OC MS Inbox consumes the outcome event from Kafka.
 16. OC MS Inbox updates OC MS DB with lifecycle/result projection.
 17. Consumer polls GET /optimisation/{id} to retrieve current status/result.
@@ -3408,14 +3302,50 @@ targets[]
 context[]
 ```
 
-Validation and outcome boundary:
+Runtime contract validation:
 
 ```text
 OC MS validates runtime constraints[], targets[], and context[] against the ACTIVE OD MS OptimisationSpecification.
-OC MS validates request structure, required fields, value types, supported names, supported enum values, and cardinality such as candidateResources minItems = 2.
+OC MS validates structure, required fields, value types, supported names, supported enum values, and cardinality such as candidateResources minItems = 2.
 OC MS does not perform solver feasibility, metric-vs-constraint evaluation, candidate ranking, or objective trade-off evaluation.
-Worker/model owns SUCCESS, INFEASIBLE, or FAILURE outcomes.
 ```
+
+Outcome projection:
+
+```text
+SUCCESS -> COMPLETED
+INFEASIBLE -> INFEASIBLE
+FAILURE -> FAILED
+```
+
+Process view compliance rule:
+
+```text
+NGW-exposed OC MS and OD MS APIs are TMF-compliant.
+OEX / OGW / OEX APIs / OEX GW / OEX Screen Builder MS are experience-layer/private integration components and do not need to be TMF-compliant.
+Kafka events are internal contracts and do not need to be TMF-compliant unless separately required.
+```
+
+---
+
+## Logical view baseline:
+
+OC MS runtime logical path:
+
+```text
+User
+-> Microsoft Entra ID SSO
+-> OEX UI
+-> OGW
+-> OEX Screen Builder MS
+-> NGW
+-> OC MS
+-> Kafka
+-> Python/Gurobi Worker
+-> Gurobi Optimizer
+```
+
+OC MS owns runtime Optimisation resources. It validates runtime requests against OD MS definitions, persists accepted executions, emits Kafka instructions, consumes worker outcomes, and projects lifecycle/result state.
 
 
 ---
@@ -3511,7 +3441,7 @@ UI -> OGW:
 OGW -> OEX APIs:
   Uses user SSO OAuth2 and propagates user context.
 
-OEX GW -> OEX Screen Builder MS:
+OGW -> OEX Screen Builder MS:
   Uses mTLS and User Context JWT.
 
 OEX Screen Builder MS -> NGW:
@@ -3524,7 +3454,7 @@ NGW -> OC MS:
   Uses mTLS to expose runtime Optimisation APIs.
 
 OC MS -> OD MS:
-  Uses mTLS for internal service-to-service validation.
+  Uses Istio mTLS for internal service-to-service validation.
 
 OC MS -> Kafka:
   Emits OptimisationRequestedEvent with instruction EXECUTE or CANCEL.
@@ -3547,8 +3477,7 @@ optimisation-logical-view.drawio
 #### 3.3.1 Create and execute optimisation:
 
 ```text
-Consumer
--> OEX
+Consumer / OEX
 -> OGW
 -> OEX APIs
 -> OEX GW
@@ -3572,11 +3501,11 @@ Detailed flow:
 ```text
 1. Consumer submits an optimisation request through the OEX experience or another authorised integration path.
 2. User-facing access is handled through OGW and OEX APIs.
-3. OEX GW invokes OEX Screen Builder MS with mTLS and User Context JWT.
+3. OGW invokes OEX Screen Builder MS with mTLS and User Context JWT.
 4. OEX Screen Builder MS calls NGW using mTLS and OAuth2 system-to-system.
 5. NGW routes the request to OC MS.
 6. OC MS validates request structure.
-7. OC MS calls OD MS over mTLS to validate the referenced ACTIVE OptimisationSpecification.
+7. OC MS calls OD MS over Istio mTLS to validate the referenced ACTIVE OptimisationSpecification.
 8. OC MS validates constraints[], targets[], and context[] against the OD MS request contract.
 9. OC MS persists runtime Optimisation with lifecycleStatus = ACKNOWLEDGED.
 10. OC MS writes OptimisationRequestedEvent with instruction = EXECUTE to outbox.
@@ -3593,8 +3522,7 @@ Detailed flow:
 #### 3.3.2 Cancellation optimisation:
 
 ```text
-Consumer
--> OEX
+Consumer / OEX
 -> OGW
 -> OEX APIs
 -> OEX GW
@@ -3625,8 +3553,7 @@ Detailed flow:
 #### 3.3.3 Retrial failed optimisation:
 
 ```text
-Consumer
--> OEX
+Consumer / OEX
 -> OGW
 -> OEX APIs
 -> OEX GW
@@ -3749,7 +3676,7 @@ OC MS calls OD MS to validate referenced `OptimisationSpecification` resources. 
 
 ```text
 OC MS
--> mTLS
+-> Istio mTLS
 -> OD MS
 ```
 
@@ -3933,7 +3860,7 @@ OD MS specification responses may use caching where appropriate. OC MS runtime r
 
 - NGW integrates with OD MS and OC MS using mTLS.
 
-- OC MS calls OD MS using mTLS for internal service-to-service validation.
+- OC MS calls OD MS using Istio mTLS for internal service-to-service validation.
 
 - Kafka is available as the event backbone.
 
@@ -4131,76 +4058,7 @@ This keeps the design clear: OD MS defines what is allowed; OC MS stores and ret
 
 ---
 
-## Logical view baseline:
-
-The agreed logical integration model is:
-
-```text
-User
--> Microsoft Entra ID SSO
--> OEX UI
--> OGW
--> OEX Screen Builder MS
--> NGW
--> OD MS / OC MS
--> Kafka
--> Python/Gurobi Worker
--> Gurobi Optimizer
-```
-
-Definition-management logical path:
-
-```text
-User
--> Microsoft Entra ID SSO
--> OEX UI
--> OGW
--> OEX Screen Builder MS
--> NGW
--> OD MS
-```
-
-Runtime-optimisation logical path:
-
-```text
-User
--> Microsoft Entra ID SSO
--> OEX UI
--> OGW
--> OEX Screen Builder MS
--> NGW
--> OC MS
--> Kafka
--> Python/Gurobi Worker
--> Gurobi Optimizer
-```
-
-Logical responsibility split:
-
-```text
-OD MS:
-  Owns OptimisationSpecification definitions using constraintSpecifications[], targetSpecifications[], and contextSpecifications[].
-
-OC MS:
-  Owns runtime Optimisation resources using constraints[], targets[], and context[].
-
-Kafka / Python/Gurobi Worker / Gurobi Optimizer:
-  Participate only in runtime execution flows after OC MS accepts the request.
-```
-
-API compliance rule:
-
-```text
-NGW-exposed OD MS and OC MS APIs are TMF-compliant.
-
-OEX UI and OGW are experience-layer access components and do not need to be TMF-compliant.
-
-Private MS-to-MS APIs and Kafka events are internal contracts unless separately exposed.
-```
-
----
-
-## Process view baseline:
+## Corrected process view baseline:
 
 The agreed runtime process view is:
 
@@ -4225,14 +4083,14 @@ Consumer
 -> Consumer polls GET /optimisation/{id}
 ```
 
-Detailed runtime process interpretation:
+Detailed interpretation:
 
 ```text
 1. Consumer initiates the optimisation journey through OEX.
-2. OEX sends the request to OGW.
+2. OEX routes the request to OGW.
 3. OGW routes to OEX APIs.
 4. OEX APIs route through OEX GW.
-5. OEX GW routes to OEX Screen Builder MS.
+5. OGW routes to OEX Screen Builder MS.
 6. OEX Screen Builder MS calls NGW.
 7. NGW calls OC MS.
 8. OC MS validates the runtime request against the ACTIVE OptimisationSpecification from OD MS.
@@ -4241,7 +4099,7 @@ Detailed runtime process interpretation:
 11. OC MS Outbox relay publishes the event to Kafka.
 12. Python/Gurobi Worker consumes the event from Kafka.
 13. Python/Gurobi Worker invokes Gurobi Optimizer.
-14. Worker publishes the outcome event back to Kafka.
+14. Worker publishes outcome event back to Kafka.
 15. OC MS Inbox consumes the outcome event from Kafka.
 16. OC MS Inbox updates OC MS DB with lifecycle/result projection.
 17. Consumer polls GET /optimisation/{id} to retrieve current status/result.
@@ -4255,12 +4113,27 @@ targets[]
 context[]
 ```
 
-Validation and outcome boundary:
+Runtime contract validation:
 
 ```text
 OC MS validates runtime constraints[], targets[], and context[] against the ACTIVE OD MS OptimisationSpecification.
-OC MS validates request structure, required fields, value types, supported names, supported enum values, and cardinality such as candidateResources minItems = 2.
+OC MS validates structure, required fields, value types, supported names, supported enum values, and cardinality such as candidateResources minItems = 2.
 OC MS does not perform solver feasibility, metric-vs-constraint evaluation, candidate ranking, or objective trade-off evaluation.
-Worker/model owns SUCCESS, INFEASIBLE, or FAILURE outcomes.
+```
+
+Outcome projection:
+
+```text
+SUCCESS -> COMPLETED
+INFEASIBLE -> INFEASIBLE
+FAILURE -> FAILED
+```
+
+Process view compliance rule:
+
+```text
+NGW-exposed OC MS and OD MS APIs are TMF-compliant.
+OEX / OGW / OEX APIs / OEX GW / OEX Screen Builder MS are experience-layer/private integration components and do not need to be TMF-compliant.
+Kafka events are internal contracts and do not need to be TMF-compliant unless separately required.
 ```
 

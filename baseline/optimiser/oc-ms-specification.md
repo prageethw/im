@@ -1497,7 +1497,7 @@ Detailed runtime process interpretation:
 2. OEX sends the request to OGW.
 3. OGW routes to OEX APIs.
 4. OEX APIs route through OEX GW.
-5. OEX GW routes to OEX Screen Builder MS.
+5. OGW routes to OEX Screen Builder MS.
 6. OEX Screen Builder MS calls NGW.
 7. NGW calls OC MS.
 8. OC MS validates the runtime request against the ACTIVE OptimisationSpecification from OD MS.
