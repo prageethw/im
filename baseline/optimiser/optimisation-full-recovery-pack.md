@@ -1,6 +1,6 @@
 # Optimisation Full Recovery Pack
 
-Generated: 2026-05-03T07:06:54
+Generated: 2026-05-03T07:33:09
 
 This file combines the current optimisation architecture recovery material into one place.
 
@@ -2973,137 +2973,59 @@ The old failed Optimisation remains unchanged except optional audit metadata suc
 
 ---
 
-## Baseline appended 2026-05-02T05:34:09 - OC MS endpoint set excludes PUT and DELETE
+## Baseline appended 2026-05-03T07:15:23 - Removed stale input terminology from active files
 
-For the optimisation architecture exercise, baseline that OC MS / Optimisation-Controller-MS does not support direct client-side `PUT /optimisation/{id}` or `DELETE /optimisation/{id}`.
+Cleaned active OD MS, OC MS, and E2E solution brief files to remove stale `input` / `inputs` terminology from the current design.
 
-Runtime `Optimisation` is an execution/audit record, not an editable draft definition.
-
-Do not support:
-
-```http
-PUT /optimisation/{id}
-DELETE /optimisation/{id}
-```
-
-Reason for no PUT:
-
+Current active model is:
 ```text
-Runtime Optimisation is not a draft/editable definition.
-It is an immutable request record plus lifecycle/result updates owned by OC MS.
-Client changes should be represented by creating a new Optimisation, cancelling, or retrying.
+constraints[]
+targets[]
+context[]
 ```
 
-Reason for no DELETE:
-
-```text
-Runtime Optimisation records should remain available for audit/history.
-Terminal records such as COMPLETED, FAILED, INFEASIBLE, and CANCELLED should not be deleted through the public API.
-```
-
-Final OC MS endpoint set:
-
-```http
-# List/search runtime Optimisation resources.
-GET /optimisation
-
-# Create a runtime Optimisation.
-POST /optimisation
-
-# Retrieve runtime Optimisation state/result.
-GET /optimisation/{id}
-
-# Request cancellation of an active runtime Optimisation.
-POST /optimisation/{id}/cancel
-
-# Retry a failed runtime Optimisation by creating a new linked Optimisation.
-POST /optimisation/{id}/retry
-```
-
-Unsupported operation response:
-
-```http
-HTTP/1.1 405 Method Not Allowed
-Allow: GET
-Content-Type: application/json
-```
-
-```jsonc
-{
-  // Runtime Optimisation resources are not directly replaced or deleted by clients.
-  "code": "METHOD_NOT_ALLOWED",
-  "reason": "METHOD_NOT_ALLOWED",
-  "message": "Runtime Optimisation resources cannot be replaced or deleted. Use cancel, retry, or create a new Optimisation.",
-  "status": "405",
-  "@type": "Error"
-}
-```
-
-For collection route `/optimisation`, allowed methods are:
-
-```text
-GET
-POST
-```
-
-For item route `/optimisation/{id}`, allowed method is:
-
-```text
-GET
-```
-
-Transition operations are exposed through HATEOAS action links:
-
-```text
-POST /optimisation/{id}/cancel
-POST /optimisation/{id}/retry
-```
+Any older `input` / `inputs` wording that appears before this baseline in `contextdump.md` is historical log content, not the active design.
 
 ---
 
-## Baseline appended 2026-05-02T05:37:57 - OC MS specification file created
+## Baseline appended 2026-05-03T07:33:09 - Happy and unhappy path optimisation examples
 
-Baselined the current OC MS / Optimisation-Controller-MS specification as a separate artifact:
+Baselined happy and unhappy path treatment for OD MS and OC MS.
 
+Current example constraints include both:
 ```text
-oc-ms-specification.md
+maxLatency:
+  constraintType maximum
+  ontologyPredicate icm:atMost
+  value 20 ms
+
+minReliability:
+  constraintType minimum
+  ontologyPredicate icm:atLeast
+  value 99.9 percent
 ```
 
-This artifact contains the current OC MS final specification, including:
-- OC MS ownership and non-ownership
-- endpoint set
-- exclusion of PUT and DELETE for runtime Optimisation
-- runtime lifecycle and transitions
-- HATEOAS by lifecycle state
-- POST /optimisation
-- GET /optimisation/{id}
-- GET /optimisation
-- POST /optimisation/{id}/cancel
-- POST /optimisation/{id}/retry
-- event model on t7.optimisation.events
-- OptimisationRequestedEvent with instruction EXECUTE and CANCEL
-- worker outcome events OptimisationCompletedEvent and OptimisationFailedEvent
-- outcome values SUCCESS, INFEASIBLE, FAILURE
-- ETag/If-Match concurrency rules
+Validation boundary:
+- OC MS performs structural and request-contract validation against the ACTIVE OptimisationSpecification.
+- This includes cardinality checks such as `candidateResources minItems = 2`.
+- Cardinality failure is a request contract violation and returns `422 OPTIMISATION_CONTRACT_VIOLATION`.
+- OC MS does not perform solver feasibility, candidate ranking, metric-vs-constraint evaluation, or objective trade-off evaluation.
+- Worker/model owns feasibility and returns `SUCCESS`, `INFEASIBLE`, or `FAILURE`.
 
----
+Happy path:
+- Valid request shape.
+- Valid constraints/targets/context.
+- Candidate set cardinality satisfies the OD MS contract.
+- Worker/model returns a successful selected outcome.
 
-## Baseline appended 2026-05-03T07:06:54 - TMF compliance validation passed for active files
+Unhappy path 1:
+- Structurally valid request violates OD MS contract, for example fewer than two candidate resources.
+- OC MS returns 422.
 
-TMF compliance validation passed for active current design files.
-
-Validation checks:
-```text
-OD MS: {'stale_/cancel_endpoint': False, 'stale_/retry_endpoint': False, 'cancellationlation_typo': False, 'active_operator_field': False, 'lessThanOrEqualTo_token': False, 'inputs_bracket_token': False, 'has_constraintType_maximum': True, 'has_ontologyPredicate_atMost': True, 'has_cancellation_endpoint': True, 'has_retrial_endpoint': True}
-OC MS: {'stale_/cancel_endpoint': False, 'stale_/retry_endpoint': False, 'cancellationlation_typo': False, 'active_operator_field': False, 'lessThanOrEqualTo_token': False, 'inputs_bracket_token': False, 'has_constraintType_maximum': True, 'has_ontologyPredicate_atMost': True, 'has_cancellation_endpoint': True, 'has_retrial_endpoint': True}
-E2E brief: {'stale_/cancel_endpoint': False, 'stale_/retry_endpoint': False, 'cancellationlation_typo': False, 'active_operator_field': False, 'lessThanOrEqualTo_token': False, 'inputs_bracket_token': False, 'has_constraintType_maximum': True, 'has_ontologyPredicate_atMost': True, 'has_cancellation_endpoint': True, 'has_retrial_endpoint': True}
-```
-
-Current active alignment:
-- Upper-bound optimisation constraints use `constraintType: maximum`.
-- TMF/TIO traceability uses `ontologyPredicate: icm:atMost`.
-- Runtime request model uses `constraints[]`, `targets[]`, and `context[]`.
-- Runtime command sub-resource endpoints use `/cancellation` and `/retrial`.
+Unhappy path 2:
+- Request satisfies contract and is accepted.
+- Worker/model determines no feasible solution.
+- Worker/model returns INFEASIBLE.
 
 
 ---
@@ -3132,7 +3054,7 @@ OD MS does not own:
 In one sentence:
 
 ```text
-OD MS is the governed catalogue of optimisation capabilities; it tells callers what inputs they must provide, while the platform privately owns how those inputs are translated into deterministic Gurobi execution.
+OD MS is the governed catalogue of optimisation capabilities; it tells callers what request contract they must satisfy, while the platform privately owns how those constraints, targets, and context are translated into deterministic Gurobi execution.
 ```
 
 ---
@@ -3251,7 +3173,7 @@ version
 lifecycleStatus
 creationDate
 lastUpdate
-inputs
+constraints, targets, and context
 _links
 ```
 
@@ -3307,42 +3229,52 @@ Example resource:
   // Public caller-facing request contract only.
   // This exposes what external callers must or may feed into POST /optimisation.
   // It does not expose objective logic, candidate rules, solver config, model binding, or Gurobi formulation.
-  "inputs": [
+  "constraints": [
     {
-      // Required latency threshold the caller must provide.
-      // The deterministic optimisation model knows how to apply it.
-      "name": "latency",
-      "description": "Maximum acceptable latency threshold.",
+      "name": "maxLatency",
+      "constraintType": "maximum",
+      "ontologyPredicate": "icm:atMost",
       "valueType": "number",
-      "unit": "ms",
-      "required": true
+      "value": 20,
+      "unit": "ms"
     },
     {
-      // Required reliability threshold the caller must provide.
-      // The deterministic optimisation model knows how to apply it.
-      "name": "reliability",
-      "description": "Minimum acceptable reliability threshold.",
+      "name": "minReliability",
+      "constraintType": "minimum",
+      "ontologyPredicate": "icm:atLeast",
       "valueType": "number",
-      "unit": "percent",
-      "required": true
-    },
-    {
-      // Optional caller-provided topology snapshot reference.
-      // The platform/model knows how to resolve and use it if supplied.
-      "name": "topologySnapshot",
-      "description": "Optional reference to the topology snapshot to use for optimisation.",
-      "valueType": "object",
-      "required": false
-    },
-    {
-      // Optional caller-provided traffic forecast reference.
-      // The platform/model knows how to resolve and use it if supplied.
-      "name": "trafficForecast",
-      "description": "Optional reference to the traffic forecast to use for optimisation.",
-      "valueType": "object",
-      "required": false
+      "value": 99.9,
+      "unit": "percent"
     }
   ],
+    "targets": [
+      {
+        "name": "cost",
+        "goal": "minimise",
+        "priority": 1
+      },
+      {
+        "name": "latency",
+        "goal": "minimise",
+        "priority": 2
+      },
+      {
+        "name": "reliability",
+        "goal": "maximise",
+        "priority": 3
+      }
+    ],
+    "context": [
+      {
+        "name": "topologySnapshot",
+        "valueType": "object",
+        "value": {
+          "dataset": "topology-snapshot",
+          "version": "2026-05-02T10:00:00Z",
+          "candidateResourceSetId": "candidate-paths-surgical-melbourne-20260502T100000Z"
+        }
+      }
+    ]
 
   // HATEOAS controls vary by lifecycleStatus.
   "_links": {
@@ -3404,38 +3336,52 @@ Content-Type: application/json
 
   // Public caller-facing request contract only.
   // This tells external callers what they need to feed into POST /optimisation.
-  "inputs": [
+  "constraints": [
     {
-      // Required latency threshold the caller must provide.
-      "name": "latency",
-      "description": "Maximum acceptable latency threshold.",
+      "name": "maxLatency",
+      "constraintType": "maximum",
+      "ontologyPredicate": "icm:atMost",
       "valueType": "number",
-      "unit": "ms",
-      "required": true
+      "value": 20,
+      "unit": "ms"
     },
     {
-      // Required reliability threshold the caller must provide.
-      "name": "reliability",
-      "description": "Minimum acceptable reliability threshold.",
+      "name": "minReliability",
+      "constraintType": "minimum",
+      "ontologyPredicate": "icm:atLeast",
       "valueType": "number",
-      "unit": "percent",
-      "required": true
-    },
-    {
-      // Optional caller-provided topology snapshot reference.
-      "name": "topologySnapshot",
-      "description": "Optional reference to the topology snapshot to use for optimisation.",
-      "valueType": "object",
-      "required": false
-    },
-    {
-      // Optional caller-provided traffic forecast reference.
-      "name": "trafficForecast",
-      "description": "Optional reference to the traffic forecast to use for optimisation.",
-      "valueType": "object",
-      "required": false
+      "value": 99.9,
+      "unit": "percent"
     }
   ],
+    "targets": [
+      {
+        "name": "cost",
+        "goal": "minimise",
+        "priority": 1
+      },
+      {
+        "name": "latency",
+        "goal": "minimise",
+        "priority": 2
+      },
+      {
+        "name": "reliability",
+        "goal": "maximise",
+        "priority": 3
+      }
+    ],
+    "context": [
+      {
+        "name": "topologySnapshot",
+        "valueType": "object",
+        "value": {
+          "dataset": "topology-snapshot",
+          "version": "2026-05-02T10:00:00Z",
+          "candidateResourceSetId": "candidate-paths-surgical-melbourne-20260502T100000Z"
+        }
+      }
+    ]
 
   // TMF-aligned typing.
   "type": "OptimisationSpecification",
@@ -3475,34 +3421,52 @@ Content-Type: application/json
   "lastUpdate": "2026-05-02T01:00:00Z",
 
   // Accepted public request contract.
-  "inputs": [
+  "constraints": [
     {
-      "name": "latency",
-      "description": "Maximum acceptable latency threshold.",
+      "name": "maxLatency",
+      "constraintType": "maximum",
+      "ontologyPredicate": "icm:atMost",
       "valueType": "number",
-      "unit": "ms",
-      "required": true
+      "value": 20,
+      "unit": "ms"
     },
     {
-      "name": "reliability",
-      "description": "Minimum acceptable reliability threshold.",
+      "name": "minReliability",
+      "constraintType": "minimum",
+      "ontologyPredicate": "icm:atLeast",
       "valueType": "number",
-      "unit": "percent",
-      "required": true
-    },
-    {
-      "name": "topologySnapshot",
-      "description": "Optional reference to the topology snapshot to use for optimisation.",
-      "valueType": "object",
-      "required": false
-    },
-    {
-      "name": "trafficForecast",
-      "description": "Optional reference to the traffic forecast to use for optimisation.",
-      "valueType": "object",
-      "required": false
+      "value": 99.9,
+      "unit": "percent"
     }
   ],
+    "targets": [
+      {
+        "name": "cost",
+        "goal": "minimise",
+        "priority": 1
+      },
+      {
+        "name": "latency",
+        "goal": "minimise",
+        "priority": 2
+      },
+      {
+        "name": "reliability",
+        "goal": "maximise",
+        "priority": 3
+      }
+    ],
+    "context": [
+      {
+        "name": "topologySnapshot",
+        "valueType": "object",
+        "value": {
+          "dataset": "topology-snapshot",
+          "version": "2026-05-02T10:00:00Z",
+          "candidateResourceSetId": "candidate-paths-surgical-melbourne-20260502T100000Z"
+        }
+      }
+    ]
 
   // DRAFT state exposes replace and delete.
   "_links": {
@@ -3568,38 +3532,52 @@ Cache-Control: max-age=3600
   "creationDate": "2026-05-02T01:00:00Z",
   "lastUpdate": "2026-05-02T02:00:00Z",
 
-  "inputs": [
+  "constraints": [
     {
-      // Required latency threshold the caller must provide.
-      "name": "latency",
-      "description": "Maximum acceptable latency threshold.",
+      "name": "maxLatency",
+      "constraintType": "maximum",
+      "ontologyPredicate": "icm:atMost",
       "valueType": "number",
-      "unit": "ms",
-      "required": true
+      "value": 20,
+      "unit": "ms"
     },
     {
-      // Required reliability threshold the caller must provide.
-      "name": "reliability",
-      "description": "Minimum acceptable reliability threshold.",
+      "name": "minReliability",
+      "constraintType": "minimum",
+      "ontologyPredicate": "icm:atLeast",
       "valueType": "number",
-      "unit": "percent",
-      "required": true
-    },
-    {
-      // Optional caller-provided topology snapshot reference.
-      "name": "topologySnapshot",
-      "description": "Optional reference to the topology snapshot to use for optimisation.",
-      "valueType": "object",
-      "required": false
-    },
-    {
-      // Optional caller-provided traffic forecast reference.
-      "name": "trafficForecast",
-      "description": "Optional reference to the traffic forecast to use for optimisation.",
-      "valueType": "object",
-      "required": false
+      "value": 99.9,
+      "unit": "percent"
     }
   ],
+    "targets": [
+      {
+        "name": "cost",
+        "goal": "minimise",
+        "priority": 1
+      },
+      {
+        "name": "latency",
+        "goal": "minimise",
+        "priority": 2
+      },
+      {
+        "name": "reliability",
+        "goal": "maximise",
+        "priority": 3
+      }
+    ],
+    "context": [
+      {
+        "name": "topologySnapshot",
+        "valueType": "object",
+        "value": {
+          "dataset": "topology-snapshot",
+          "version": "2026-05-02T10:00:00Z",
+          "candidateResourceSetId": "candidate-paths-surgical-melbourne-20260502T100000Z"
+        }
+      }
+    ]
 
   // ACTIVE exposes createOptimisation.
   // ACTIVE does not expose replace/delete because ACTIVE specifications are immutable.
@@ -3712,34 +3690,52 @@ Content-Type: application/json
   // with the same specificationKey in the same transaction.
   "lifecycleStatus": "ACTIVE",
 
-  "inputs": [
+  "constraints": [
     {
-      "name": "latency",
-      "description": "Maximum acceptable latency threshold.",
+      "name": "maxLatency",
+      "constraintType": "maximum",
+      "ontologyPredicate": "icm:atMost",
       "valueType": "number",
-      "unit": "ms",
-      "required": true
+      "value": 20,
+      "unit": "ms"
     },
     {
-      "name": "reliability",
-      "description": "Minimum acceptable reliability threshold.",
+      "name": "minReliability",
+      "constraintType": "minimum",
+      "ontologyPredicate": "icm:atLeast",
       "valueType": "number",
-      "unit": "percent",
-      "required": true
-    },
-    {
-      "name": "topologySnapshot",
-      "description": "Optional reference to the topology snapshot to use for optimisation.",
-      "valueType": "object",
-      "required": false
-    },
-    {
-      "name": "trafficForecast",
-      "description": "Optional reference to the traffic forecast to use for optimisation.",
-      "valueType": "object",
-      "required": false
+      "value": 99.9,
+      "unit": "percent"
     }
   ],
+    "targets": [
+      {
+        "name": "cost",
+        "goal": "minimise",
+        "priority": 1
+      },
+      {
+        "name": "latency",
+        "goal": "minimise",
+        "priority": 2
+      },
+      {
+        "name": "reliability",
+        "goal": "maximise",
+        "priority": 3
+      }
+    ],
+    "context": [
+      {
+        "name": "topologySnapshot",
+        "valueType": "object",
+        "value": {
+          "dataset": "topology-snapshot",
+          "version": "2026-05-02T10:00:00Z",
+          "candidateResourceSetId": "candidate-paths-surgical-melbourne-20260502T100000Z"
+        }
+      }
+    ]
 
   "type": "OptimisationSpecification",
   "baseType": "EntitySpecification",
@@ -3775,34 +3771,52 @@ Cache-Control: max-age=3600
   "creationDate": "2026-05-02T01:00:00Z",
   "lastUpdate": "2026-05-02T02:30:00Z",
 
-  "inputs": [
+  "constraints": [
     {
-      "name": "latency",
-      "description": "Maximum acceptable latency threshold.",
+      "name": "maxLatency",
+      "constraintType": "maximum",
+      "ontologyPredicate": "icm:atMost",
       "valueType": "number",
-      "unit": "ms",
-      "required": true
+      "value": 20,
+      "unit": "ms"
     },
     {
-      "name": "reliability",
-      "description": "Minimum acceptable reliability threshold.",
+      "name": "minReliability",
+      "constraintType": "minimum",
+      "ontologyPredicate": "icm:atLeast",
       "valueType": "number",
-      "unit": "percent",
-      "required": true
-    },
-    {
-      "name": "topologySnapshot",
-      "description": "Optional reference to the topology snapshot to use for optimisation.",
-      "valueType": "object",
-      "required": false
-    },
-    {
-      "name": "trafficForecast",
-      "description": "Optional reference to the traffic forecast to use for optimisation.",
-      "valueType": "object",
-      "required": false
+      "value": 99.9,
+      "unit": "percent"
     }
   ],
+    "targets": [
+      {
+        "name": "cost",
+        "goal": "minimise",
+        "priority": 1
+      },
+      {
+        "name": "latency",
+        "goal": "minimise",
+        "priority": 2
+      },
+      {
+        "name": "reliability",
+        "goal": "maximise",
+        "priority": 3
+      }
+    ],
+    "context": [
+      {
+        "name": "topologySnapshot",
+        "valueType": "object",
+        "value": {
+          "dataset": "topology-snapshot",
+          "version": "2026-05-02T10:00:00Z",
+          "candidateResourceSetId": "candidate-paths-surgical-melbourne-20260502T100000Z"
+        }
+      }
+    ]
 
   // ACTIVE exposes createOptimisation only.
   "_links": {
@@ -4052,7 +4066,7 @@ Expose only:
   lifecycleStatus
   creationDate
   lastUpdate
-  inputs
+  constraints, targets, and context
   _links
 
 Do not expose by default:
@@ -4117,6 +4131,189 @@ ontologyPredicate icm:atMost:
 ```
 
 Do not use a platform contract field named `operator` for this upper-bound constraint.
+
+---
+
+## Happy and unhappy path examples baseline:
+
+### Happy-path request contract example:
+
+Use both latency and reliability constraints in the OD MS request contract so the example is realistic and consistent.
+
+```json
+{
+  "constraints": [
+    {
+      "name": "maxLatency",
+      "constraintType": "maximum",
+      "ontologyPredicate": "icm:atMost",
+      "valueType": "number",
+      "value": 20,
+      "unit": "ms"
+    },
+    {
+      "name": "minReliability",
+      "constraintType": "minimum",
+      "ontologyPredicate": "icm:atLeast",
+      "valueType": "number",
+      "value": 99.9,
+      "unit": "percent"
+    }
+  ],
+  "targets": [
+    {
+      "name": "cost",
+      "goal": "minimise",
+      "priority": 1
+    },
+    {
+      "name": "latency",
+      "goal": "minimise",
+      "priority": 2
+    },
+    {
+      "name": "reliability",
+      "goal": "maximise",
+      "priority": 3
+    }
+  ],
+  "context": [
+    {
+      "name": "topologySnapshot",
+      "valueType": "object",
+      "value": {
+        "dataset": "topology-snapshot",
+        "version": "2026-05-02T10:00:00Z",
+        "candidateResourceSetId": "candidate-paths-surgical-melbourne-20260502T100000Z",
+        "candidateResources": [
+          {
+            "resourceId": "path-001",
+            "resourceType": "deliveryResource",
+            "resourceClass": "low-latency-path",
+            "resourceAttributes": {
+              "locationId": "melbourne-hospital"
+            },
+            "metrics": [
+              {
+                "name": "latency",
+                "value": 18,
+                "unit": "ms"
+              },
+              {
+                "name": "reliability",
+                "value": 99.95,
+                "unit": "percent"
+              },
+              {
+                "name": "cost",
+                "value": 70,
+                "unit": "costUnit"
+              }
+            ]
+          },
+          {
+            "resourceId": "path-002",
+            "resourceType": "deliveryResource",
+            "resourceClass": "high-reliability-path",
+            "resourceAttributes": {
+              "locationId": "melbourne-hospital"
+            },
+            "metrics": [
+              {
+                "name": "latency",
+                "value": 24,
+                "unit": "ms"
+              },
+              {
+                "name": "reliability",
+                "value": 99.995,
+                "unit": "percent"
+              },
+              {
+                "name": "cost",
+                "value": 90,
+                "unit": "costUnit"
+              }
+            ]
+          }
+        ]
+      }
+    }
+  ]
+}
+```
+
+Happy-path interpretation:
+
+```text
+The request satisfies the OptimisationSpecification contract.
+candidateResources has at least 2 candidates.
+OC MS accepts the request if all required fields, types, enums, and cardinality rules are valid.
+The worker/model owns the actual feasibility and selection decision.
+```
+
+### Unhappy-path contract violation example:
+
+This request is structurally valid JSON, but violates the ACTIVE OptimisationSpecification request contract because `candidateResources` has only one candidate where `minItems = 2` is required for this selection optimisation.
+
+```http
+HTTP/1.1 422 Unprocessable Entity
+Content-Type: application/json
+```
+
+```json
+{
+  "code": "OPTIMISATION_CONTRACT_VIOLATION",
+  "reason": "Optimisation request violates specification contract",
+  "message": "topologySnapshot.candidateResources must contain at least 2 candidate resources for this optimisation capability.",
+  "status": 422,
+  "@type": "Error"
+}
+```
+
+Rule:
+
+```text
+Cardinality failure is a request contract violation, not an optimisation outcome.
+
+OC MS performs structural and request-contract validation, including cardinality checks such as candidateResources minItems = 2.
+
+OC MS does not perform solver feasibility, candidate ranking, metric-vs-constraint evaluation, or objective trade-off evaluation.
+```
+
+
+### Unhappy-path optimiser outcome example:
+
+This request satisfies the OD MS request contract shape and cardinality. It has at least two candidate resources, so OC MS accepts it and sends it to the worker/model. The worker/model may still return `INFEASIBLE` if no candidate satisfies the optimisation constraints.
+
+```json
+{
+  "eventId": "evt-22346",
+  "eventType": "OptimisationCompletedEvent",
+  "eventVersion": "1.0",
+  "source": "gurobi-worker",
+  "eventTime": "2026-05-02T03:03:00Z",
+  "correlationId": "corr-12345",
+  "body": {
+    "optimisationId": "opt-12345",
+    "optimisationHref": "/optimisation/opt-12345",
+    "outcome": "INFEASIBLE",
+    "summary": "No feasible solution exists for the supplied constraints and context.",
+    "completedAt": "2026-05-02T03:03:00Z"
+  }
+}
+```
+
+Rule:
+
+```text
+A valid request can still produce INFEASIBLE.
+
+INFEASIBLE is an optimisation outcome produced by the worker/model.
+
+It is not a request contract validation error.
+```
+
 
 
 ---
@@ -4289,30 +4486,54 @@ Content-Type: application/json
   "description": "Optimise path selection for hospital surgical slice intent.",
   "priority": "1",
 
-  // Capability-specific caller-fed inputs.
-  // Validated syntactically against OD MS OptimisationSpecification.inputs.
-  "inputs": [
+  // Capability-specific caller-fed constraints, targets, and context.
+  // Validated syntactically against OD MS OptimisationSpecification.constraints, targets, and context.
+  "constraints": [
     {
-      "name": "latency",
+      "name": "maxLatency",
+      "constraintType": "maximum",
+      "ontologyPredicate": "icm:atMost",
       "valueType": "number",
       "value": 20,
       "unit": "ms"
     },
     {
-      "name": "reliability",
+      "name": "minReliability",
+      "constraintType": "minimum",
+      "ontologyPredicate": "icm:atLeast",
       "valueType": "number",
-      "value": 99.99,
+      "value": 99.9,
       "unit": "percent"
-    },
-    {
-      "name": "topologySnapshot",
-      "valueType": "object",
-      "value": {
-        "dataset": "topology-snapshot",
-        "version": "2026-05-02T10:00:00Z"
-      }
     }
   ],
+    "targets": [
+      {
+        "name": "cost",
+        "goal": "minimise",
+        "priority": 1
+      },
+      {
+        "name": "latency",
+        "goal": "minimise",
+        "priority": 2
+      },
+      {
+        "name": "reliability",
+        "goal": "maximise",
+        "priority": 3
+      }
+    ],
+    "context": [
+      {
+        "name": "topologySnapshot",
+        "valueType": "object",
+        "value": {
+          "dataset": "topology-snapshot",
+          "version": "2026-05-02T10:00:00Z",
+          "candidateResourceSetId": "candidate-paths-surgical-melbourne-20260502T100000Z"
+        }
+      }
+    ]
 
   // TMF-aligned REST resource typing.
   "@type": "Optimisation",
@@ -4365,20 +4586,52 @@ Content-Type: application/json
     "@referredType": "OptimisationSpecification"
   },
 
-  "inputs": [
+  "constraints": [
     {
-      "name": "latency",
+      "name": "maxLatency",
+      "constraintType": "maximum",
+      "ontologyPredicate": "icm:atMost",
       "valueType": "number",
       "value": 20,
       "unit": "ms"
     },
     {
-      "name": "reliability",
+      "name": "minReliability",
+      "constraintType": "minimum",
+      "ontologyPredicate": "icm:atLeast",
       "valueType": "number",
-      "value": 99.99,
+      "value": 99.9,
       "unit": "percent"
     }
   ],
+    "targets": [
+      {
+        "name": "cost",
+        "goal": "minimise",
+        "priority": 1
+      },
+      {
+        "name": "latency",
+        "goal": "minimise",
+        "priority": 2
+      },
+      {
+        "name": "reliability",
+        "goal": "maximise",
+        "priority": 3
+      }
+    ],
+    "context": [
+      {
+        "name": "topologySnapshot",
+        "valueType": "object",
+        "value": {
+          "dataset": "topology-snapshot",
+          "version": "2026-05-02T10:00:00Z",
+          "candidateResourceSetId": "candidate-paths-surgical-melbourne-20260502T100000Z"
+        }
+      }
+    ]
 
   "_links": {
     "self": {
@@ -4402,7 +4655,7 @@ OC MS validates:
   generic REST wrapper using its static API/OpenAPI contract
   referenced OptimisationSpecification exists in OD MS
   referenced OptimisationSpecification lifecycleStatus is ACTIVE
-  constraints[], targets[], and context[] against the referenced ACTIVE OptimisationSpecification.inputs
+  constraints[], targets[], and context[] against the referenced ACTIVE OptimisationSpecification.constraints, targets, and context
 
 OC MS does not validate:
   optimisation semantics
@@ -4454,14 +4707,52 @@ Active-state example:
     "@referredType": "OptimisationSpecification"
   },
 
-  "inputs": [
+  "constraints": [
     {
-      "name": "latency",
+      "name": "maxLatency",
+      "constraintType": "maximum",
+      "ontologyPredicate": "icm:atMost",
       "valueType": "number",
       "value": 20,
       "unit": "ms"
+    },
+    {
+      "name": "minReliability",
+      "constraintType": "minimum",
+      "ontologyPredicate": "icm:atLeast",
+      "valueType": "number",
+      "value": 99.9,
+      "unit": "percent"
     }
   ],
+    "targets": [
+      {
+        "name": "cost",
+        "goal": "minimise",
+        "priority": 1
+      },
+      {
+        "name": "latency",
+        "goal": "minimise",
+        "priority": 2
+      },
+      {
+        "name": "reliability",
+        "goal": "maximise",
+        "priority": 3
+      }
+    ],
+    "context": [
+      {
+        "name": "topologySnapshot",
+        "valueType": "object",
+        "value": {
+          "dataset": "topology-snapshot",
+          "version": "2026-05-02T10:00:00Z",
+          "candidateResourceSetId": "candidate-paths-surgical-melbourne-20260502T100000Z"
+        }
+      }
+    ]
 
   // No result field while lifecycleStatus is ACKNOWLEDGED, QUEUED, PROCESSING, or CANCELLING.
   "_links": {
@@ -4722,14 +5013,52 @@ Content-Type: application/json
     "@referredType": "OptimisationSpecification"
   },
 
-  "inputs": [
+  "constraints": [
     {
-      "name": "latency",
+      "name": "maxLatency",
+      "constraintType": "maximum",
+      "ontologyPredicate": "icm:atMost",
       "valueType": "number",
       "value": 20,
       "unit": "ms"
+    },
+    {
+      "name": "minReliability",
+      "constraintType": "minimum",
+      "ontologyPredicate": "icm:atLeast",
+      "valueType": "number",
+      "value": 99.9,
+      "unit": "percent"
     }
   ],
+    "targets": [
+      {
+        "name": "cost",
+        "goal": "minimise",
+        "priority": 1
+      },
+      {
+        "name": "latency",
+        "goal": "minimise",
+        "priority": 2
+      },
+      {
+        "name": "reliability",
+        "goal": "maximise",
+        "priority": 3
+      }
+    ],
+    "context": [
+      {
+        "name": "topologySnapshot",
+        "valueType": "object",
+        "value": {
+          "dataset": "topology-snapshot",
+          "version": "2026-05-02T10:00:00Z",
+          "candidateResourceSetId": "candidate-paths-surgical-melbourne-20260502T100000Z"
+        }
+      }
+    ]
 
   "_links": {
     "self": {
@@ -4841,14 +5170,52 @@ Payload:
       "href": "/optimisationSpecification/os-7f3a9c21"
     },
 
-    "inputs": [
-      {
-        "name": "latency",
-        "valueType": "number",
-        "value": 20,
-        "unit": "ms"
-      }
-    ]
+    "constraints": [
+    {
+      "name": "maxLatency",
+      "constraintType": "maximum",
+      "ontologyPredicate": "icm:atMost",
+      "valueType": "number",
+      "value": 20,
+      "unit": "ms"
+    },
+    {
+      "name": "minReliability",
+      "constraintType": "minimum",
+      "ontologyPredicate": "icm:atLeast",
+      "valueType": "number",
+      "value": 99.9,
+      "unit": "percent"
+    }
+  ],
+      "targets": [
+        {
+          "name": "cost",
+          "goal": "minimise",
+          "priority": 1
+        },
+        {
+          "name": "latency",
+          "goal": "minimise",
+          "priority": 2
+        },
+        {
+          "name": "reliability",
+          "goal": "maximise",
+          "priority": 3
+        }
+      ],
+      "context": [
+        {
+          "name": "topologySnapshot",
+          "valueType": "object",
+          "value": {
+            "dataset": "topology-snapshot",
+            "version": "2026-05-02T10:00:00Z",
+            "candidateResourceSetId": "candidate-paths-surgical-melbourne-20260502T100000Z"
+          }
+        }
+      ]
   }
 }
 ```
@@ -4956,7 +5323,7 @@ No `solutionStatus` by default.
     "optimisationId": "opt-12345",
     "optimisationHref": "/optimisation/opt-12345",
     "outcome": "INFEASIBLE",
-    "summary": "No feasible solution exists for the supplied inputs.",
+    "summary": "No feasible solution exists for the supplied constraints, targets, and context.",
     "completedAt": "2026-05-02T03:03:00Z"
   }
 }
@@ -5036,6 +5403,106 @@ For upper-bound constraints in runtime Optimisation requests, responses, and wor
 
 Do not use a platform contract field named `operator` for this upper-bound constraint.
 
+---
+
+## OC MS happy and unhappy path validation/outcome baseline:
+
+### Happy-path constraints:
+
+The runtime Optimisation request should include both latency and reliability constraints in examples:
+
+```json
+"constraints": [
+    {
+      "name": "maxLatency",
+      "constraintType": "maximum",
+      "ontologyPredicate": "icm:atMost",
+      "valueType": "number",
+      "value": 20,
+      "unit": "ms"
+    },
+    {
+      "name": "minReliability",
+      "constraintType": "minimum",
+      "ontologyPredicate": "icm:atLeast",
+      "valueType": "number",
+      "value": 99.9,
+      "unit": "percent"
+    }
+  ]
+```
+
+Happy-path rule:
+
+```text
+OC MS validates the request shape against the ACTIVE OptimisationSpecification.
+This includes required fields, enum/value-type validation, and cardinality rules such as candidateResources minItems = 2.
+OC MS does not evaluate which candidate wins.
+```
+
+### Unhappy-path contract violation example:
+
+This request is structurally valid JSON, but violates the ACTIVE OptimisationSpecification request contract because `candidateResources` has only one candidate where `minItems = 2` is required for this selection optimisation.
+
+```http
+HTTP/1.1 422 Unprocessable Entity
+Content-Type: application/json
+```
+
+```json
+{
+  "code": "OPTIMISATION_CONTRACT_VIOLATION",
+  "reason": "Optimisation request violates specification contract",
+  "message": "topologySnapshot.candidateResources must contain at least 2 candidate resources for this optimisation capability.",
+  "status": 422,
+  "@type": "Error"
+}
+```
+
+Rule:
+
+```text
+Cardinality failure is a request contract violation, not an optimisation outcome.
+
+OC MS performs structural and request-contract validation, including cardinality checks such as candidateResources minItems = 2.
+
+OC MS does not perform solver feasibility, candidate ranking, metric-vs-constraint evaluation, or objective trade-off evaluation.
+```
+
+
+### Unhappy-path optimiser outcome example:
+
+This request satisfies the OD MS request contract shape and cardinality. It has at least two candidate resources, so OC MS accepts it and sends it to the worker/model. The worker/model may still return `INFEASIBLE` if no candidate satisfies the optimisation constraints.
+
+```json
+{
+  "eventId": "evt-22346",
+  "eventType": "OptimisationCompletedEvent",
+  "eventVersion": "1.0",
+  "source": "gurobi-worker",
+  "eventTime": "2026-05-02T03:03:00Z",
+  "correlationId": "corr-12345",
+  "body": {
+    "optimisationId": "opt-12345",
+    "optimisationHref": "/optimisation/opt-12345",
+    "outcome": "INFEASIBLE",
+    "summary": "No feasible solution exists for the supplied constraints and context.",
+    "completedAt": "2026-05-02T03:03:00Z"
+  }
+}
+```
+
+Rule:
+
+```text
+A valid request can still produce INFEASIBLE.
+
+INFEASIBLE is an optimisation outcome produced by the worker/model.
+
+It is not a request contract validation error.
+```
+
+
 
 ---
 
@@ -5093,8 +5560,8 @@ The Python/Gurobi worker is responsible for executing the internal deterministic
 
 | **Use case** | **Actor** | **Summary** | **Outcome** |
 |---|---|---|---|
-| Discover optimisation capability | User / OEX / platform service | Retrieve available `OptimisationSpecification` records from OD MS and understand required inputs. | Caller knows which optimisation capability to use and what inputs to provide. |
-| Create runtime optimisation | User / OEX / platform service | Submit a runtime `Optimisation` request to OC MS using an ACTIVE specification and valid inputs. | OC MS returns `202 Accepted` and creates an `ACKNOWLEDGED` optimisation. |
+| Discover optimisation capability | User / OEX / platform service | Retrieve available `OptimisationSpecification` records from OD MS and understand required constraints, targets, and context. | Caller knows which optimisation capability to use and the required request contract. |
+| Create runtime optimisation | User / OEX / platform service | Submit a runtime `Optimisation` request to OC MS using an ACTIVE specification and valid constraints, targets, and context. | OC MS returns `202 Accepted` and creates an `ACKNOWLEDGED` optimisation. |
 | Monitor optimisation | User / OEX / platform service | Read current lifecycle state and result when available. | Caller can see whether the optimisation is pending, processing, completed, infeasible, failed, cancelling, or cancelled. |
 | Cancellation optimisation | User / OEX / platform service | Request cancellation for an eligible active optimisation. | OC MS moves the resource to `CANCELLING` and instructs the worker to cancellation where safely possible. |
 | Retrial failed optimisation | User / OEX / platform service | Retrial a `FAILED` optimisation by creating a new linked optimisation. | A new `ACKNOWLEDGED` optimisation is created with `retrialOf` pointing to the failed one. |
@@ -5284,14 +5751,14 @@ Detailed flow:
 | **Optimisation-Definition-MS / OD MS** | Owns the definition side of the optimisation platform through `OptimisationSpecification`. Publishes caller-facing request contracts, manages `DRAFT`, `ACTIVE`, and `RETIRED` specification lifecycle, and ensures only one ACTIVE specification exists per `specificationKey`. Does not expose solver/model internals. |
 | **OD MS Database** | Stores `OptimisationSpecification` records, version metadata, lifecycle state, request contracts, timestamps, ETag/revision data, and retained retired specifications for audit/history. |
 | **Optimisation-Controller-MS / OC MS** | Owns runtime `Optimisation` resources. Accepts requests, validates the generic wrapper and OD MS request contract, manages lifecycle, cancellation, retrial, outbox/inbox integration, and result projection. Performs syntactic and contract validation only. |
-| **OC MS Database** | Stores runtime `Optimisation` resources, accepted inputs, optional `sourceContext`, lifecycle state, status reasons, result projections, retrial links, timestamps, ETag/revision data, outbox records, and inbox records. |
+| **OC MS Database** | Stores runtime `Optimisation` resources, accepted constraints, targets, and context, optional `sourceContext`, lifecycle state, status reasons, result projections, retrial links, timestamps, ETag/revision data, outbox records, and inbox records. |
 | **OC MS Outbox Relay** | Publishes persisted OC MS outbox records to Kafka after DB commit. Publishes `OptimisationRequestedEvent` with `instruction = EXECUTE` or `instruction = CANCEL`. |
 | **Kafka topic** | Main internal event stream for worker instructions and outcomes between OC MS and the Python/Gurobi worker. Uses CloudEvents-style Kafka headers. |
 | **Kafka DLQ** | Holds events that cannot be safely processed after retrial handling. Preserves original event payload and failure metadata for operational investigation and replay decisions. |
 | **Python / Gurobi Worker** | Consumes `OptimisationRequestedEvent`. For `EXECUTE`, resolves the internal deterministic model binding, resolves required data, executes optimisation, and emits an outcome. For `CANCEL`, cancels/stops/ignores processing where safely possible. |
 | **Internal deterministic optimisation models** | Own solver-specific logic that is not exposed externally. Encapsulate objective formulation, constraints, candidate-resource rules, model binding, solver configuration, and Gurobi formulation. |
 | **Gurobi Optimizer** | Executes the mathematical optimisation model prepared by the worker/model layer. Produces solve outcomes that the worker maps into `SUCCESS`, `INFEASIBLE`, or `FAILURE`. |
-| **Analytics platform / data sources** | Provides authorised datasets required by the worker/model layer, such as topology snapshots, traffic forecasts, capacity information, inventory data, or other optimisation input datasets. |
+| **Analytics platform / data sources** | Provides authorised datasets required by the worker/model layer, such as topology snapshots, traffic forecasts, capacity information, inventory data, or other optimisation context datasets. |
 | **OC MS Inbox Consumer** | Consumes worker outcome events, applies idempotency and stale/late-event handling, maps outcomes to lifecycle states, and projects result/failure details into the runtime `Optimisation` resource. |
 | **Operational support / monitoring** | Monitors service health, Kafka lag, outbox/inbox processing, worker failures, solver failures, DLQ records, retrial counts, stale/late events, and optimisation lifecycle/result trends. |
 
@@ -5524,7 +5991,7 @@ OD MS specification responses may use caching where appropriate. OC MS runtime r
 | Long-running Gurobi executions | Delayed optimisation outcomes and increased worker capacity pressure. | Use asynchronous execution, worker scaling, queue monitoring, timeout controls, and operational alerting. |
 | Best-effort cancellation | A running optimisation may not stop immediately or may produce a late outcome. | Use `CANCELLING` state, worker cancellation handling, and late outcome idempotency rules. |
 | Kafka consumer lag | Execution or result projection may be delayed. | Monitor consumer lag, scale workers/inbox consumers, and alert on thresholds. |
-| Invalid or stale input datasets | Poor, infeasible, or failed optimisation outcomes. | Use request contract validation, dataset versioning, worker diagnostics, and operational monitoring. |
+| Invalid or stale context datasets | Poor, infeasible, or failed optimisation outcomes. | Use request contract validation, dataset versioning, worker diagnostics, and operational monitoring. |
 | DLQ growth | Indicates poison messages, schema drift, or repeated processing failures. | Monitor DLQ, preserve failure metadata, and define replay/remediation procedures. |
 | Misconfigured internal model binding | OD MS may expose a valid request contract while worker execution fails. | Add deployment validation, contract tests between OD MS and worker model binding, and pre-production model checks. |
 | Overexposure of solver details | Sensitive optimisation logic could leak externally. | Keep OD MS limited to caller-facing request contracts and keep solver details internal. |
@@ -5687,4 +6154,31 @@ optimisation-e2e-solution-brief.md
 
 TMF/TIO alignment note:
 Backend optimisation API examples use platform-readable constraint fields such as `constraintType: maximum` with `ontologyPredicate: icm:atMost` where semantic traceability to TMF/TIO upper-bound intent expressions is useful.
+
+---
+
+## Optimisation validation and outcome clarification:
+
+The active design distinguishes request-contract validation from optimiser outcome.
+
+```text
+OC MS validates:
+  required fields
+  enum/value-type rules
+  request contract shape
+  cardinality rules such as candidateResources minItems = 2
+
+OC MS does not evaluate:
+  solver feasibility
+  candidate ranking
+  metric-vs-constraint fit
+  objective trade-offs
+
+Worker/model returns:
+  SUCCESS
+  INFEASIBLE
+  FAILURE
+```
+
+Use `422 OPTIMISATION_CONTRACT_VIOLATION` for contract/cardinality failures, such as fewer than 2 candidate resources for a selection optimisation. Use `INFEASIBLE` only when the request is valid and the worker/model determines no feasible solution exists.
 

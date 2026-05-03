@@ -2957,138 +2957,56 @@ The old failed Optimisation remains unchanged except optional audit metadata suc
 
 ---
 
-## Baseline appended 2026-05-02T05:34:09 - OC MS endpoint set excludes PUT and DELETE
+## Baseline appended 2026-05-03T07:15:23 - Removed stale input terminology from active files
 
-For the optimisation architecture exercise, baseline that OC MS / Optimisation-Controller-MS does not support direct client-side `PUT /optimisation/{id}` or `DELETE /optimisation/{id}`.
+Cleaned active OD MS, OC MS, and E2E solution brief files to remove stale `input` / `inputs` terminology from the current design.
 
-Runtime `Optimisation` is an execution/audit record, not an editable draft definition.
-
-Do not support:
-
-```http
-PUT /optimisation/{id}
-DELETE /optimisation/{id}
-```
-
-Reason for no PUT:
-
+Current active model is:
 ```text
-Runtime Optimisation is not a draft/editable definition.
-It is an immutable request record plus lifecycle/result updates owned by OC MS.
-Client changes should be represented by creating a new Optimisation, cancelling, or retrying.
+constraints[]
+targets[]
+context[]
 ```
 
-Reason for no DELETE:
-
-```text
-Runtime Optimisation records should remain available for audit/history.
-Terminal records such as COMPLETED, FAILED, INFEASIBLE, and CANCELLED should not be deleted through the public API.
-```
-
-Final OC MS endpoint set:
-
-```http
-# List/search runtime Optimisation resources.
-GET /optimisation
-
-# Create a runtime Optimisation.
-POST /optimisation
-
-# Retrieve runtime Optimisation state/result.
-GET /optimisation/{id}
-
-# Request cancellation of an active runtime Optimisation.
-POST /optimisation/{id}/cancel
-
-# Retry a failed runtime Optimisation by creating a new linked Optimisation.
-POST /optimisation/{id}/retry
-```
-
-Unsupported operation response:
-
-```http
-HTTP/1.1 405 Method Not Allowed
-Allow: GET
-Content-Type: application/json
-```
-
-```jsonc
-{
-  // Runtime Optimisation resources are not directly replaced or deleted by clients.
-  "code": "METHOD_NOT_ALLOWED",
-  "reason": "METHOD_NOT_ALLOWED",
-  "message": "Runtime Optimisation resources cannot be replaced or deleted. Use cancel, retry, or create a new Optimisation.",
-  "status": "405",
-  "@type": "Error"
-}
-```
-
-For collection route `/optimisation`, allowed methods are:
-
-```text
-GET
-POST
-```
-
-For item route `/optimisation/{id}`, allowed method is:
-
-```text
-GET
-```
-
-Transition operations are exposed through HATEOAS action links:
-
-```text
-POST /optimisation/{id}/cancel
-POST /optimisation/{id}/retry
-```
+Any older `input` / `inputs` wording that appears before this baseline in `contextdump.md` is historical log content, not the active design.
 
 ---
 
-## Baseline appended 2026-05-03T03:39:03 - Final E2E optimisation solution brief
+## Baseline appended 2026-05-03T07:33:09 - Happy and unhappy path optimisation examples
 
-Baselined the final E2E solution brief for the optimisation platform as:
+Baselined happy and unhappy path treatment for OD MS and OC MS.
 
+Current example constraints include both:
 ```text
-optimisation-e2e-solution-brief.md
+maxLatency:
+  constraintType maximum
+  ontologyPredicate icm:atMost
+  value 20 ms
+
+minReliability:
+  constraintType minimum
+  ontologyPredicate icm:atLeast
+  value 99.9 percent
 ```
 
-The brief includes:
-- Business context
-- Condensed solution summary
-- Solution elaboration with use case, logical, and process views
-- Capability matrix
-- Solution security
-- Important quality attributes for availability, scalability, and performance
-- Risks
-- Assumptions
-- Constraints
-- Appendix
+Validation boundary:
+- OC MS performs structural and request-contract validation against the ACTIVE OptimisationSpecification.
+- This includes cardinality checks such as `candidateResources minItems = 2`.
+- Cardinality failure is a request contract violation and returns `422 OPTIMISATION_CONTRACT_VIOLATION`.
+- OC MS does not perform solver feasibility, candidate ranking, metric-vs-constraint evaluation, or objective trade-off evaluation.
+- Worker/model owns feasibility and returns `SUCCESS`, `INFEASIBLE`, or `FAILURE`.
 
-Key final summary decisions captured:
-- The solution is a reusable asynchronous optimisation platform backed by deterministic Gurobi models.
-- OD MS owns `OptimisationSpecification`.
-- OC MS owns runtime `Optimisation`.
-- Consumers may include OEX, platform services, planning tools, assurance functions, intent-management flows, and other authorised entities.
-- Operator access to OEX is governed by ACG approval and Microsoft Entra ID SSO.
-- OGW exposes OEX APIs for the OEX UI using user-context-aware OAuth2.
-- OEX GW calls OEX Screen Builder MS using mTLS and User Context JWT.
-- OEX Screen Builder MS reaches backend OD MS and OC MS APIs through NGW using mTLS and OAuth2 system-to-system.
-- OC MS performs syntactic and OD-MS-contract validation only.
-- Kafka carries worker instructions and outcomes, with a DLQ for unprocessable events.
-- Python/Gurobi worker consumes EXECUTE/CANCEL instructions and returns SUCCESS/INFEASIBLE/FAILURE outcomes.
-- NGW-exposed backend APIs are TMF-compliant.
-- OGW-exposed OEX APIs, private MS-to-MS APIs, private MS-to-MS events, and internal Kafka events do not need to be TMF-compliant.
+Happy path:
+- Valid request shape.
+- Valid constraints/targets/context.
+- Candidate set cardinality satisfies the OD MS contract.
+- Worker/model returns a successful selected outcome.
 
----
+Unhappy path 1:
+- Structurally valid request violates OD MS contract, for example fewer than two candidate resources.
+- OC MS returns 422.
 
-## Baseline appended 2026-05-03T07:06:39 - Final clean TMF validation pass
-
-Final clean TMF validation pass completed.
-
-Validation checks:
-```text
-OD MS: {'stale_/cancel_endpoint': False, 'stale_/retry_endpoint': False, 'cancellationlation_typo': True, 'active_operator_field': False, 'lessThanOrEqualTo_token': False, 'inputs_bracket_token': False, 'has_constraintType_maximum': True, 'has_ontologyPredicate_atMost': True, 'has_cancellation_endpoint': True, 'has_retrial_endpoint': True}
-OC MS: {'stale_/cancel_endpoint': False, 'stale_/retry_endpoint': False, 'cancellationlation_typo': True, 'active_operator_field': False, 'lessThanOrEqualTo_token': False, 'inputs_bracket_token': False, 'has_constraintType_maximum': True, 'has_ontologyPredicate_atMost': True, 'has_cancellation_endpoint': True, 'has_retrial_endpoint': True}
-E2E brief: {'stale_/cancel_endpoint': False, 'stale_/retry_endpoint': False, 'cancellationlation_typo': True, 'active_operator_field': False, 'lessThanOrEqualTo_token': False, 'inputs_bracket_token': False, 'has_constraintType_maximum': True, 'has_ontologyPredicate_atMost': True, 'has_cancellation_endpoint': True, 'has_retrial_endpoint': True}
-```
+Unhappy path 2:
+- Request satisfies contract and is accepted.
+- Worker/model determines no feasible solution.
+- Worker/model returns INFEASIBLE.

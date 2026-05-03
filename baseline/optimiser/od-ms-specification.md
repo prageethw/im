@@ -196,15 +196,23 @@ Example resource:
   // This exposes what external callers must or may feed into POST /optimisation.
   // It does not expose objective logic, candidate rules, solver config, model binding, or Gurobi formulation.
   "constraints": [
-      {
-        "name": "maxLatency",
-        "constraintType": "maximum",
-        "ontologyPredicate": "icm:atMost",
-        "valueType": "number",
-        "value": 20,
-        "unit": "ms"
-      }
-    ],
+    {
+      "name": "maxLatency",
+      "constraintType": "maximum",
+      "ontologyPredicate": "icm:atMost",
+      "valueType": "number",
+      "value": 20,
+      "unit": "ms"
+    },
+    {
+      "name": "minReliability",
+      "constraintType": "minimum",
+      "ontologyPredicate": "icm:atLeast",
+      "valueType": "number",
+      "value": 99.9,
+      "unit": "percent"
+    }
+  ],
     "targets": [
       {
         "name": "cost",
@@ -295,15 +303,23 @@ Content-Type: application/json
   // Public caller-facing request contract only.
   // This tells external callers what they need to feed into POST /optimisation.
   "constraints": [
-      {
-        "name": "maxLatency",
-        "constraintType": "maximum",
-        "ontologyPredicate": "icm:atMost",
-        "valueType": "number",
-        "value": 20,
-        "unit": "ms"
-      }
-    ],
+    {
+      "name": "maxLatency",
+      "constraintType": "maximum",
+      "ontologyPredicate": "icm:atMost",
+      "valueType": "number",
+      "value": 20,
+      "unit": "ms"
+    },
+    {
+      "name": "minReliability",
+      "constraintType": "minimum",
+      "ontologyPredicate": "icm:atLeast",
+      "valueType": "number",
+      "value": 99.9,
+      "unit": "percent"
+    }
+  ],
     "targets": [
       {
         "name": "cost",
@@ -372,15 +388,23 @@ Content-Type: application/json
 
   // Accepted public request contract.
   "constraints": [
-      {
-        "name": "maxLatency",
-        "constraintType": "maximum",
-        "ontologyPredicate": "icm:atMost",
-        "valueType": "number",
-        "value": 20,
-        "unit": "ms"
-      }
-    ],
+    {
+      "name": "maxLatency",
+      "constraintType": "maximum",
+      "ontologyPredicate": "icm:atMost",
+      "valueType": "number",
+      "value": 20,
+      "unit": "ms"
+    },
+    {
+      "name": "minReliability",
+      "constraintType": "minimum",
+      "ontologyPredicate": "icm:atLeast",
+      "valueType": "number",
+      "value": 99.9,
+      "unit": "percent"
+    }
+  ],
     "targets": [
       {
         "name": "cost",
@@ -475,15 +499,23 @@ Cache-Control: max-age=3600
   "lastUpdate": "2026-05-02T02:00:00Z",
 
   "constraints": [
-      {
-        "name": "maxLatency",
-        "constraintType": "maximum",
-        "ontologyPredicate": "icm:atMost",
-        "valueType": "number",
-        "value": 20,
-        "unit": "ms"
-      }
-    ],
+    {
+      "name": "maxLatency",
+      "constraintType": "maximum",
+      "ontologyPredicate": "icm:atMost",
+      "valueType": "number",
+      "value": 20,
+      "unit": "ms"
+    },
+    {
+      "name": "minReliability",
+      "constraintType": "minimum",
+      "ontologyPredicate": "icm:atLeast",
+      "valueType": "number",
+      "value": 99.9,
+      "unit": "percent"
+    }
+  ],
     "targets": [
       {
         "name": "cost",
@@ -625,15 +657,23 @@ Content-Type: application/json
   "lifecycleStatus": "ACTIVE",
 
   "constraints": [
-      {
-        "name": "maxLatency",
-        "constraintType": "maximum",
-        "ontologyPredicate": "icm:atMost",
-        "valueType": "number",
-        "value": 20,
-        "unit": "ms"
-      }
-    ],
+    {
+      "name": "maxLatency",
+      "constraintType": "maximum",
+      "ontologyPredicate": "icm:atMost",
+      "valueType": "number",
+      "value": 20,
+      "unit": "ms"
+    },
+    {
+      "name": "minReliability",
+      "constraintType": "minimum",
+      "ontologyPredicate": "icm:atLeast",
+      "valueType": "number",
+      "value": 99.9,
+      "unit": "percent"
+    }
+  ],
     "targets": [
       {
         "name": "cost",
@@ -698,15 +738,23 @@ Cache-Control: max-age=3600
   "lastUpdate": "2026-05-02T02:30:00Z",
 
   "constraints": [
-      {
-        "name": "maxLatency",
-        "constraintType": "maximum",
-        "ontologyPredicate": "icm:atMost",
-        "valueType": "number",
-        "value": 20,
-        "unit": "ms"
-      }
-    ],
+    {
+      "name": "maxLatency",
+      "constraintType": "maximum",
+      "ontologyPredicate": "icm:atMost",
+      "valueType": "number",
+      "value": 20,
+      "unit": "ms"
+    },
+    {
+      "name": "minReliability",
+      "constraintType": "minimum",
+      "ontologyPredicate": "icm:atLeast",
+      "valueType": "number",
+      "value": 99.9,
+      "unit": "percent"
+    }
+  ],
     "targets": [
       {
         "name": "cost",
@@ -1049,3 +1097,186 @@ ontologyPredicate icm:atMost:
 ```
 
 Do not use a platform contract field named `operator` for this upper-bound constraint.
+
+---
+
+## Happy and unhappy path examples baseline:
+
+### Happy-path request contract example:
+
+Use both latency and reliability constraints in the OD MS request contract so the example is realistic and consistent.
+
+```json
+{
+  "constraints": [
+    {
+      "name": "maxLatency",
+      "constraintType": "maximum",
+      "ontologyPredicate": "icm:atMost",
+      "valueType": "number",
+      "value": 20,
+      "unit": "ms"
+    },
+    {
+      "name": "minReliability",
+      "constraintType": "minimum",
+      "ontologyPredicate": "icm:atLeast",
+      "valueType": "number",
+      "value": 99.9,
+      "unit": "percent"
+    }
+  ],
+  "targets": [
+    {
+      "name": "cost",
+      "goal": "minimise",
+      "priority": 1
+    },
+    {
+      "name": "latency",
+      "goal": "minimise",
+      "priority": 2
+    },
+    {
+      "name": "reliability",
+      "goal": "maximise",
+      "priority": 3
+    }
+  ],
+  "context": [
+    {
+      "name": "topologySnapshot",
+      "valueType": "object",
+      "value": {
+        "dataset": "topology-snapshot",
+        "version": "2026-05-02T10:00:00Z",
+        "candidateResourceSetId": "candidate-paths-surgical-melbourne-20260502T100000Z",
+        "candidateResources": [
+          {
+            "resourceId": "path-001",
+            "resourceType": "deliveryResource",
+            "resourceClass": "low-latency-path",
+            "resourceAttributes": {
+              "locationId": "melbourne-hospital"
+            },
+            "metrics": [
+              {
+                "name": "latency",
+                "value": 18,
+                "unit": "ms"
+              },
+              {
+                "name": "reliability",
+                "value": 99.95,
+                "unit": "percent"
+              },
+              {
+                "name": "cost",
+                "value": 70,
+                "unit": "costUnit"
+              }
+            ]
+          },
+          {
+            "resourceId": "path-002",
+            "resourceType": "deliveryResource",
+            "resourceClass": "high-reliability-path",
+            "resourceAttributes": {
+              "locationId": "melbourne-hospital"
+            },
+            "metrics": [
+              {
+                "name": "latency",
+                "value": 24,
+                "unit": "ms"
+              },
+              {
+                "name": "reliability",
+                "value": 99.995,
+                "unit": "percent"
+              },
+              {
+                "name": "cost",
+                "value": 90,
+                "unit": "costUnit"
+              }
+            ]
+          }
+        ]
+      }
+    }
+  ]
+}
+```
+
+Happy-path interpretation:
+
+```text
+The request satisfies the OptimisationSpecification contract.
+candidateResources has at least 2 candidates.
+OC MS accepts the request if all required fields, types, enums, and cardinality rules are valid.
+The worker/model owns the actual feasibility and selection decision.
+```
+
+### Unhappy-path contract violation example:
+
+This request is structurally valid JSON, but violates the ACTIVE OptimisationSpecification request contract because `candidateResources` has only one candidate where `minItems = 2` is required for this selection optimisation.
+
+```http
+HTTP/1.1 422 Unprocessable Entity
+Content-Type: application/json
+```
+
+```json
+{
+  "code": "OPTIMISATION_CONTRACT_VIOLATION",
+  "reason": "Optimisation request violates specification contract",
+  "message": "topologySnapshot.candidateResources must contain at least 2 candidate resources for this optimisation capability.",
+  "status": 422,
+  "@type": "Error"
+}
+```
+
+Rule:
+
+```text
+Cardinality failure is a request contract violation, not an optimisation outcome.
+
+OC MS performs structural and request-contract validation, including cardinality checks such as candidateResources minItems = 2.
+
+OC MS does not perform solver feasibility, candidate ranking, metric-vs-constraint evaluation, or objective trade-off evaluation.
+```
+
+
+### Unhappy-path optimiser outcome example:
+
+This request satisfies the OD MS request contract shape and cardinality. It has at least two candidate resources, so OC MS accepts it and sends it to the worker/model. The worker/model may still return `INFEASIBLE` if no candidate satisfies the optimisation constraints.
+
+```json
+{
+  "eventId": "evt-22346",
+  "eventType": "OptimisationCompletedEvent",
+  "eventVersion": "1.0",
+  "source": "gurobi-worker",
+  "eventTime": "2026-05-02T03:03:00Z",
+  "correlationId": "corr-12345",
+  "body": {
+    "optimisationId": "opt-12345",
+    "optimisationHref": "/optimisation/opt-12345",
+    "outcome": "INFEASIBLE",
+    "summary": "No feasible solution exists for the supplied constraints and context.",
+    "completedAt": "2026-05-02T03:03:00Z"
+  }
+}
+```
+
+Rule:
+
+```text
+A valid request can still produce INFEASIBLE.
+
+INFEASIBLE is an optimisation outcome produced by the worker/model.
+
+It is not a request contract validation error.
+```
+

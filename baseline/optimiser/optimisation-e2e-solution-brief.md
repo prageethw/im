@@ -644,3 +644,30 @@ optimisation-e2e-solution-brief.md
 
 TMF/TIO alignment note:
 Backend optimisation API examples use platform-readable constraint fields such as `constraintType: maximum` with `ontologyPredicate: icm:atMost` where semantic traceability to TMF/TIO upper-bound intent expressions is useful.
+
+---
+
+## Optimisation validation and outcome clarification:
+
+The active design distinguishes request-contract validation from optimiser outcome.
+
+```text
+OC MS validates:
+  required fields
+  enum/value-type rules
+  request contract shape
+  cardinality rules such as candidateResources minItems = 2
+
+OC MS does not evaluate:
+  solver feasibility
+  candidate ranking
+  metric-vs-constraint fit
+  objective trade-offs
+
+Worker/model returns:
+  SUCCESS
+  INFEASIBLE
+  FAILURE
+```
+
+Use `422 OPTIMISATION_CONTRACT_VIOLATION` for contract/cardinality failures, such as fewer than 2 candidate resources for a selection optimisation. Use `INFEASIBLE` only when the request is valid and the worker/model determines no feasible solution exists.

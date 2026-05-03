@@ -167,15 +167,23 @@ Content-Type: application/json
   // Capability-specific caller-fed constraints, targets, and context.
   // Validated syntactically against OD MS OptimisationSpecification.constraints, targets, and context.
   "constraints": [
-      {
-        "name": "maxLatency",
-        "constraintType": "maximum",
-        "ontologyPredicate": "icm:atMost",
-        "valueType": "number",
-        "value": 20,
-        "unit": "ms"
-      }
-    ],
+    {
+      "name": "maxLatency",
+      "constraintType": "maximum",
+      "ontologyPredicate": "icm:atMost",
+      "valueType": "number",
+      "value": 20,
+      "unit": "ms"
+    },
+    {
+      "name": "minReliability",
+      "constraintType": "minimum",
+      "ontologyPredicate": "icm:atLeast",
+      "valueType": "number",
+      "value": 99.9,
+      "unit": "percent"
+    }
+  ],
     "targets": [
       {
         "name": "cost",
@@ -257,15 +265,23 @@ Content-Type: application/json
   },
 
   "constraints": [
-      {
-        "name": "maxLatency",
-        "constraintType": "maximum",
-        "ontologyPredicate": "icm:atMost",
-        "valueType": "number",
-        "value": 20,
-        "unit": "ms"
-      }
-    ],
+    {
+      "name": "maxLatency",
+      "constraintType": "maximum",
+      "ontologyPredicate": "icm:atMost",
+      "valueType": "number",
+      "value": 20,
+      "unit": "ms"
+    },
+    {
+      "name": "minReliability",
+      "constraintType": "minimum",
+      "ontologyPredicate": "icm:atLeast",
+      "valueType": "number",
+      "value": 99.9,
+      "unit": "percent"
+    }
+  ],
     "targets": [
       {
         "name": "cost",
@@ -370,15 +386,23 @@ Active-state example:
   },
 
   "constraints": [
-      {
-        "name": "maxLatency",
-        "constraintType": "maximum",
-        "ontologyPredicate": "icm:atMost",
-        "valueType": "number",
-        "value": 20,
-        "unit": "ms"
-      }
-    ],
+    {
+      "name": "maxLatency",
+      "constraintType": "maximum",
+      "ontologyPredicate": "icm:atMost",
+      "valueType": "number",
+      "value": 20,
+      "unit": "ms"
+    },
+    {
+      "name": "minReliability",
+      "constraintType": "minimum",
+      "ontologyPredicate": "icm:atLeast",
+      "valueType": "number",
+      "value": 99.9,
+      "unit": "percent"
+    }
+  ],
     "targets": [
       {
         "name": "cost",
@@ -668,15 +692,23 @@ Content-Type: application/json
   },
 
   "constraints": [
-      {
-        "name": "maxLatency",
-        "constraintType": "maximum",
-        "ontologyPredicate": "icm:atMost",
-        "valueType": "number",
-        "value": 20,
-        "unit": "ms"
-      }
-    ],
+    {
+      "name": "maxLatency",
+      "constraintType": "maximum",
+      "ontologyPredicate": "icm:atMost",
+      "valueType": "number",
+      "value": 20,
+      "unit": "ms"
+    },
+    {
+      "name": "minReliability",
+      "constraintType": "minimum",
+      "ontologyPredicate": "icm:atLeast",
+      "valueType": "number",
+      "value": 99.9,
+      "unit": "percent"
+    }
+  ],
     "targets": [
       {
         "name": "cost",
@@ -817,15 +849,23 @@ Payload:
     },
 
     "constraints": [
-        {
-          "name": "maxLatency",
-          "constraintType": "maximum",
-          "ontologyPredicate": "icm:atMost",
-          "valueType": "number",
-          "value": 20,
-          "unit": "ms"
-        }
-      ],
+    {
+      "name": "maxLatency",
+      "constraintType": "maximum",
+      "ontologyPredicate": "icm:atMost",
+      "valueType": "number",
+      "value": 20,
+      "unit": "ms"
+    },
+    {
+      "name": "minReliability",
+      "constraintType": "minimum",
+      "ontologyPredicate": "icm:atLeast",
+      "valueType": "number",
+      "value": 99.9,
+      "unit": "percent"
+    }
+  ],
       "targets": [
         {
           "name": "cost",
@@ -1040,3 +1080,103 @@ For upper-bound constraints in runtime Optimisation requests, responses, and wor
 ```
 
 Do not use a platform contract field named `operator` for this upper-bound constraint.
+
+---
+
+## OC MS happy and unhappy path validation/outcome baseline:
+
+### Happy-path constraints:
+
+The runtime Optimisation request should include both latency and reliability constraints in examples:
+
+```json
+"constraints": [
+    {
+      "name": "maxLatency",
+      "constraintType": "maximum",
+      "ontologyPredicate": "icm:atMost",
+      "valueType": "number",
+      "value": 20,
+      "unit": "ms"
+    },
+    {
+      "name": "minReliability",
+      "constraintType": "minimum",
+      "ontologyPredicate": "icm:atLeast",
+      "valueType": "number",
+      "value": 99.9,
+      "unit": "percent"
+    }
+  ]
+```
+
+Happy-path rule:
+
+```text
+OC MS validates the request shape against the ACTIVE OptimisationSpecification.
+This includes required fields, enum/value-type validation, and cardinality rules such as candidateResources minItems = 2.
+OC MS does not evaluate which candidate wins.
+```
+
+### Unhappy-path contract violation example:
+
+This request is structurally valid JSON, but violates the ACTIVE OptimisationSpecification request contract because `candidateResources` has only one candidate where `minItems = 2` is required for this selection optimisation.
+
+```http
+HTTP/1.1 422 Unprocessable Entity
+Content-Type: application/json
+```
+
+```json
+{
+  "code": "OPTIMISATION_CONTRACT_VIOLATION",
+  "reason": "Optimisation request violates specification contract",
+  "message": "topologySnapshot.candidateResources must contain at least 2 candidate resources for this optimisation capability.",
+  "status": 422,
+  "@type": "Error"
+}
+```
+
+Rule:
+
+```text
+Cardinality failure is a request contract violation, not an optimisation outcome.
+
+OC MS performs structural and request-contract validation, including cardinality checks such as candidateResources minItems = 2.
+
+OC MS does not perform solver feasibility, candidate ranking, metric-vs-constraint evaluation, or objective trade-off evaluation.
+```
+
+
+### Unhappy-path optimiser outcome example:
+
+This request satisfies the OD MS request contract shape and cardinality. It has at least two candidate resources, so OC MS accepts it and sends it to the worker/model. The worker/model may still return `INFEASIBLE` if no candidate satisfies the optimisation constraints.
+
+```json
+{
+  "eventId": "evt-22346",
+  "eventType": "OptimisationCompletedEvent",
+  "eventVersion": "1.0",
+  "source": "gurobi-worker",
+  "eventTime": "2026-05-02T03:03:00Z",
+  "correlationId": "corr-12345",
+  "body": {
+    "optimisationId": "opt-12345",
+    "optimisationHref": "/optimisation/opt-12345",
+    "outcome": "INFEASIBLE",
+    "summary": "No feasible solution exists for the supplied constraints and context.",
+    "completedAt": "2026-05-02T03:03:00Z"
+  }
+}
+```
+
+Rule:
+
+```text
+A valid request can still produce INFEASIBLE.
+
+INFEASIBLE is an optimisation outcome produced by the worker/model.
+
+It is not a request contract validation error.
+```
+
