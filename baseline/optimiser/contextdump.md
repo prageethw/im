@@ -1193,3 +1193,51 @@ Key corrections:
 - Worker execution is explicit through `Python/Gurobi Worker -> Gurobi Optimizer`.
 - Outcome path returns through `Kafka -> OC MS Inbox -> OC MS DB`.
 - Consumer observes outcome by polling `GET /optimisation/{id}`.
+
+---
+
+## Baseline appended 2026-05-03T11:20:21 - Reverted E2E sequence to agreed OEX/OGW path
+
+Reconfirmed the agreed logical E2E sequence:
+
+```text
+User
+-> Microsoft Entra ID SSO
+-> OEX UI
+-> OEX APIs
+-> OGW
+-> OEX Screen Builder MS
+-> NGW
+-> OD MS / OC MS
+-> Kafka
+-> Python/Gurobi Worker
+-> Gurobi Optimizer
+```
+
+Runtime process expansion now follows the same front-door path and removes the previously introduced extra `OEX GW` hop:
+
+```text
+User
+-> Microsoft Entra ID SSO
+-> OEX UI
+-> OEX APIs
+-> OGW
+-> OEX Screen Builder MS
+-> NGW
+-> OC MS
+-> OD MS
+-> OC MS DB
+-> OC MS Outbox
+-> Kafka
+-> Python/Gurobi Worker
+-> Gurobi Optimizer
+-> Kafka
+-> OC MS Inbox
+-> OC MS DB
+-> User polls GET /optimisation/{id}
+```
+
+Correction:
+- Use `User`, not `Consumer / OEX`, as the starting actor in this baseline.
+- Use `OEX UI -> OEX APIs -> OGW -> OEX Screen Builder MS`.
+- Do not include a separate `OEX GW` hop.

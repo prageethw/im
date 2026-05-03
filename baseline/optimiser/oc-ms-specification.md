@@ -1412,15 +1412,54 @@ The presence of `constraints[]` in OC MS is expected. In OC MS it is not the def
 
 ---
 
+## Logical and runtime process baseline:
+
+OC MS runtime access path:
+
+```text
+User
+-> Microsoft Entra ID SSO
+-> OEX UI
+-> OEX APIs
+-> OGW
+-> OEX Screen Builder MS
+-> NGW
+-> OC MS
+```
+
+OC MS asynchronous execution path:
+
+```text
+OC MS
+-> OC MS DB
+-> OC MS Outbox
+-> Kafka
+-> Python/Gurobi Worker
+-> Gurobi Optimizer
+-> Kafka
+-> OC MS Inbox
+-> OC MS DB
+```
+
+User status/result retrieval:
+
+```text
+User polls GET /optimisation/{id}
+```
+
+
+---
+
 ## Corrected runtime process flow baseline:
 
 The agreed runtime optimisation process flow is:
 
 ```text
-Consumer / OEX
--> OGW
+User
+-> Microsoft Entra ID SSO
+-> OEX UI
 -> OEX APIs
--> OEX GW
+-> OGW
 -> OEX Screen Builder MS
 -> NGW
 -> OC MS
@@ -1433,45 +1472,28 @@ Consumer / OEX
 -> Kafka
 -> OC MS Inbox
 -> OC MS DB
--> Consumer polls GET /optimisation/{id}
+-> User polls GET /optimisation/{id}
 ```
 
 Detailed interpretation:
 
 ```text
-1. Consumer / OEX initiates the runtime optimisation journey.
-2. Request enters OGW.
-3. OGW routes to OEX APIs.
-4. OEX APIs route through OEX GW.
-5. OEX GW routes to OEX Screen Builder MS.
-6. OEX Screen Builder MS calls NGW.
-7. NGW calls OC MS.
-8. OC MS validates the runtime request against OD MS OptimisationSpecification definitions.
-9. OC MS persists the accepted runtime Optimisation in OC MS DB.
-10. OC MS writes OptimisationRequestedEvent to OC MS Outbox in the same transaction.
-11. OC MS Outbox relay publishes the event to Kafka.
-12. Python/Gurobi Worker consumes the event from Kafka.
-13. Python/Gurobi Worker invokes Gurobi Optimizer.
-14. Worker publishes outcome event back to Kafka.
-15. OC MS Inbox consumes the outcome event from Kafka.
-16. OC MS Inbox updates OC MS DB with lifecycle/result projection.
-17. Consumer / OEX polls GET /optimisation/{id} to retrieve current status/result.
-```
-
-Runtime request model:
-
-```text
-constraints[]
-targets[]
-context[]
-```
-
-Runtime contract validation:
-
-```text
-OC MS validates runtime constraints[], targets[], and context[] against the ACTIVE OD MS OptimisationSpecification.
-OC MS validates structure, required fields, value types, supported names, supported enum values, and cardinality such as candidateResources minItems = 2.
-OC MS does not perform solver feasibility, metric-vs-constraint evaluation, candidate ranking, or objective trade-off evaluation.
+1. User authenticates through Microsoft Entra ID SSO and accesses OEX UI.
+2. OEX UI calls OEX APIs.
+3. OEX APIs route through OGW.
+4. OGW routes to OEX Screen Builder MS.
+5. OEX Screen Builder MS calls NGW.
+6. NGW calls OC MS.
+7. OC MS validates the runtime request against the ACTIVE OptimisationSpecification from OD MS.
+8. OC MS persists the accepted runtime Optimisation in OC MS DB.
+9. OC MS writes OptimisationRequestedEvent to OC MS Outbox in the same transaction.
+10. OC MS Outbox relay publishes the event to Kafka.
+11. Python/Gurobi Worker consumes the event from Kafka.
+12. Python/Gurobi Worker invokes Gurobi Optimizer.
+13. Worker publishes outcome event back to Kafka.
+14. OC MS Inbox consumes the outcome event from Kafka.
+15. OC MS Inbox updates OC MS DB with lifecycle/result projection.
+16. User polls GET /optimisation/{id} through OEX UI -> OEX APIs -> OGW -> OEX Screen Builder MS -> NGW -> OC MS.
 ```
 
 Outcome projection:
@@ -1480,12 +1502,4 @@ Outcome projection:
 SUCCESS -> COMPLETED
 INFEASIBLE -> INFEASIBLE
 FAILURE -> FAILED
-```
-
-API compliance rule:
-
-```text
-NGW-exposed OC MS and OD MS APIs are TMF-compliant.
-OEX/OGW/OEX GW/OEX API flows are private experience-layer flows and do not need to be TMF-compliant.
-Kafka events are internal contracts and do not need to be TMF-compliant unless separately required.
 ```

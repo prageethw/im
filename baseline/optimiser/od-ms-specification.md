@@ -421,16 +421,25 @@ OD MS does not participate in Kafka execution, Python/Gurobi Worker processing, 
 
 ---
 
-## Runtime process participation baseline:
+## Logical and process access baseline:
 
-OD MS participates in the runtime optimisation process as the OptimisationSpecification definition service.
-
-In the runtime flow:
+OD MS definition-management path:
 
 ```text
-... -> NGW -> OC MS -> OD MS -> OC MS DB -> OC MS Outbox -> Kafka ...
+User
+-> Microsoft Entra ID SSO
+-> OEX UI
+-> OEX APIs
+-> OGW
+-> OEX Screen Builder MS
+-> NGW
+-> OD MS
 ```
 
-OD MS provides the ACTIVE OptimisationSpecification used by OC MS for request-contract validation.
+OD MS also participates in OC MS runtime validation as the OptimisationSpecification definition source:
 
-OD MS does not persist runtime Optimisation resources, does not write OC MS outbox records, does not consume Kafka worker outcomes, and does not project runtime results.
+```text
+OC MS -> OD MS
+```
+
+OD MS does not participate in Kafka, Python/Gurobi Worker, Gurobi Optimizer, OC MS Inbox, or runtime result projection.
