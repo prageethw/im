@@ -1204,7 +1204,7 @@ Key corrections:
 ## Baseline appended 2026-05-03T11:37:21 - Standardised User and UI wording
 
 Updated active OD MS, OC MS, and E2E solution brief wording:
-- Use `User` instead of `User / Operator`.
+- Use `User` instead of `User`.
 - Use `UI` instead of `User / UI`.
 
 ---
@@ -1219,3 +1219,16 @@ Updated:
 - OD MS design brief with OD MS -> OD MS DB controls, plus cache/Kafka future-integration notes.
 - OC MS design brief with OC MS -> OC MS DB, OC MS -> OD MS, and OC MS -> Kafka controls.
 - E2E solution brief with cross-cutting infrastructure security requirements for service-to-database, service-to-cache, service-to-Kafka, and other platform infrastructure integrations.
+
+---
+
+## Baseline appended 2026-05-03T21:51:41 - Users wording and E2E summary security baseline
+
+Updated wording:
+- Replaced `Users` and common variants with `Users`.
+
+Updated E2E solution summary to include the infrastructure security baseline:
+- service-to-database, service-to-cache, service-to-Kafka, and other platform infrastructure integrations must explicitly capture security controls.
+- required controls include authenticated service identity, least-privilege authorisation, encrypted connectivity, resource-level scoping, no broad wildcard/admin/root access, approved secret/certificate management and rotation, environment separation, audit/monitoring, and clear ownership of allowed operations.
+- MS-to-Kafka controls include secured broker connectivity, service identity, Kafka ACLs, restricted DLQ permissions, CloudEvents-style headers, idempotent consumers, and monitoring/audit.
+- MS-to-DB controls include authenticated, authorised, encrypted, least-privilege access with per-service database identities/roles.

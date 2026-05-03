@@ -34,6 +34,15 @@ The solution separates the **definition of optimisation capabilities** from the 
 
 - NGW-exposed backend APIs are TMF-compliant. OGW-exposed OEX APIs, private MS-to-MS APIs, private MS-to-MS events, and internal Kafka events do not need to be TMF-compliant.
 
+
+- Infrastructure integrations must explicitly capture security controls in both the E2E solution brief and each individual service design brief. This includes service-to-database, service-to-cache, service-to-Kafka, and other platform infrastructure integrations.
+
+- Baseline infrastructure controls are authenticated service identity, least-privilege authorisation, encrypted connectivity, resource-level access scoping, no broad wildcard/admin/root access by default, approved secret/certificate management and rotation, environment separation, audit/monitoring, and clear ownership of allowed operations.
+
+- MS-to-Kafka integration uses secured broker connectivity, service identity, Kafka ACLs for topic/consumer-group access, restricted DLQ permissions, CloudEvents-style event identity/correlation headers, idempotent consumers, and monitored/audited produce/consume failures.
+
+- MS-to-DB access is authenticated, authorised, encrypted, and least-privilege. OD MS and OC MS use their own service identities and database roles; OEX, OGW, NGW, and workers do not receive broad or direct database access unless explicitly designed and approved.
+
 ---
 
 ## 3. Solution elaboration:
@@ -231,10 +240,10 @@ Detailed flow:
 
 | **Component** | **Responsibility** |
 |---|---|
-| **Microsoft Entra ID** | Provides SSO authentication for users/operators before they access OEX. Supplies identity context used by the user-facing access path. |
+| **Microsoft Entra ID** | Provides SSO authentication for users before they access OEX. Supplies identity context used by the user-facing access path. |
 | **ACG approval process** | Governs operator access to OEX. Users must be approved through the organisational access-control process before they can use the OEX optimisation experience. |
 | **OGW** | User-context-aware gateway for OEX APIs and OEX UI integration. Uses user SSO OAuth2 from the UI/OEX API path and propagates user identity context into the OEX layer. |
-| **OEX APIs / OEX UI** | Provides the user/operator-facing experience for discovering optimisation capabilities, submitting requests, monitoring state, cancelling, retrying, and viewing results. |
+| **OEX APIs / OEX UI** | Provides the user-facing experience for discovering optimisation capabilities, submitting requests, monitoring state, cancelling, retrying, and viewing results. |
 | **OWG** | Secures internal OEX access to OEX Screen Builder MS using mTLS and User Context JWT. Preserves user context across the OEX backend interaction. |
 | **OEX Screen Builder MS** | Builds and orchestrates the OEX screen/backend experience. Integrates with NGW using mTLS and OAuth2 system-to-system to call backend optimisation APIs. |
 | **NGW** | NAAS Gateway exposing backend optimisation domain APIs for OD MS and OC MS. Provides the controlled backend API entry point for OEX Screen Builder MS and other authorised system consumers. NGW-exposed backend APIs are TMF-compliant. |
@@ -258,7 +267,7 @@ Detailed flow:
 
 ### 5.1 User authentication and access governance:
 
-Users/operators access the OEX experience through the organisational ACG approval process and SSO using Microsoft Entra ID.
+Users access the OEX experience through the organisational ACG approval process and SSO using Microsoft Entra ID.
 
 ```text
 User
@@ -494,7 +503,7 @@ OD MS specification responses may use caching where appropriate. OC MS runtime r
 
 - Operators access OEX only after ACG approval.
 
-- User/operator authentication uses Microsoft Entra ID SSO.
+- User authentication uses Microsoft Entra ID SSO.
 
 - OGW is the user-context-aware gateway for OEX APIs and OEX UI integration.
 
