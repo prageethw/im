@@ -1127,74 +1127,33 @@ Validation intent:
 
 ---
 
-## Baseline appended 2026-05-03T08:08:22 - Shared location moved to topologySnapshot level
+## Baseline appended 2026-05-03T10:59:36 - Process views updated
 
-Baselined the shared versus candidate-specific context rule.
+Updated process views to match the agreed OEX/OGW/Screen Builder/NGW sequence and OD/OC responsibility split.
 
-Rule:
-- Put shared context attributes at `context.topologySnapshot` level.
-- Use `candidateResources[].resourceAttributes` only for attributes that vary per candidate.
-- Do not repeat the same `locationId` under every candidate if all candidate paths belong to the same optimisation scope/location.
-
-For the current examples:
-- `location.locationId = melbourne-hospital` is placed at `topologySnapshot` level.
-- Repeated candidate-level `resourceAttributes.locationId` blocks are removed from OC MS runtime examples.
-
----
-
-## Baseline appended 2026-05-03T10:53:26 - Corrected E2E logical integration sequence
-
-Baselined the E2E logical integration sequence as:
-
+Common access path:
 ```text
-User
--> Microsoft Entra ID SSO
--> OEX UI
--> OEX APIs
--> OGW
--> OEX Screen Builder MS
--> NGW
--> OD MS / OC MS
--> Kafka
--> Python/Gurobi Worker
--> Gurobi Optimizer
+User -> Microsoft Entra ID SSO -> OEX UI -> OEX APIs -> OGW -> OEX Screen Builder MS -> NGW
 ```
 
-Rules:
-- User authentication starts with Microsoft Entra ID SSO.
-- OEX UI calls OEX APIs.
-- OEX APIs are exposed through OGW.
-- OGW routes to OEX Screen Builder MS.
-- OEX Screen Builder MS integrates with NGW.
-- NGW exposes TMF-compliant backend APIs for OD MS and OC MS.
-- Runtime OC MS execution continues through Kafka, Python/Gurobi Worker, and Gurobi Optimizer.
-- OD MS definition-management flows stop at OD MS and do not continue to Kafka/worker/optimizer unless a runtime optimisation is created through OC MS.
-
----
-
-## Baseline appended 2026-05-03T10:56:14 - E2E flows updated to corrected OEX/OGW/Screen Builder/NGW sequence
-
-Updated the active E2E process flows to follow the agreed sequence:
-
+OD MS process path:
 ```text
-User
--> Microsoft Entra ID SSO
--> OEX UI
--> OEX APIs
--> OGW
--> OEX Screen Builder MS
--> NGW
--> OD MS / OC MS
--> Kafka
--> Python/Gurobi Worker
--> Gurobi Optimizer
+... -> NGW -> OD MS
 ```
 
-Key corrections:
-- OEX UI appears before OEX APIs.
-- OEX APIs are exposed through OGW.
-- OGW routes to OEX Screen Builder MS.
-- OEX Screen Builder MS calls NGW.
-- NGW exposes TMF-compliant OD MS / OC MS backend APIs.
-- Runtime OC MS flows continue to Kafka, Python/Gurobi Worker, and Gurobi Optimizer.
-- OD MS definition flows stop at OD MS unless a runtime optimisation is created through OC MS.
+OC MS runtime process path:
+```text
+... -> NGW -> OC MS -> Kafka -> Python/Gurobi Worker -> Gurobi Optimizer
+```
+
+Process views now cover:
+- capability discovery
+- OptimisationSpecification create/activate
+- runtime Optimisation create
+- 422 contract validation failure
+- SUCCESS
+- INFEASIBLE
+- FAILURE
+- cancellation
+- retrial
+- late worker outcome after cancellation

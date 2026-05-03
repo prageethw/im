@@ -393,46 +393,9 @@ This OD MS specification intentionally does not include actual runtime candidate
 
 ---
 
-## Shared versus candidate-specific context attributes:
+## Process view baseline:
 
-Shared context attributes should be modelled at the `topologySnapshot` level.
-
-Candidate-specific attributes should be modelled under `candidateResources[].resourceAttributes` only when they vary per candidate.
-
-For this example, `location.locationId` belongs at `topologySnapshot` level because all candidate paths belong to the same optimisation scope/location.
-
-Do not repeat the same `locationId` under every candidate resource.
-
-Example runtime context shape:
-
-```json
-{
-  "name": "topologySnapshot",
-  "valueType": "object",
-  "value": {
-    "dataset": "topology-snapshot",
-    "version": "2026-05-02T10:00:00Z",
-    "candidateResourceSetId": "candidate-paths-surgical-melbourne-20260502T100000Z",
-    "location": {
-      "locationId": "melbourne-hospital"
-    },
-    "candidateResources": [
-      {
-        "resourceId": "path-001",
-        "resourceType": "deliveryResource",
-        "resourceClass": "low-latency-path",
-        "metrics": []
-      }
-    ]
-  }
-}
-```
-
----
-
-## Definition E2E access path baseline:
-
-OD MS definition access follows this path:
+OD MS participates in definition/specification processes only.
 
 ```text
 User
@@ -445,4 +408,13 @@ User
 -> OD MS
 ```
 
-OD MS sits behind NGW. OD MS does not participate in Kafka, Python/Gurobi Worker, or Gurobi Optimizer runtime execution flows.
+OD MS process responsibilities:
+```text
+create OptimisationSpecification
+validate definition shape
+store as DRAFT
+activate as ACTIVE
+serve ACTIVE definitions to OC MS and authorised consumers
+```
+
+OD MS does not participate in Kafka execution, Python/Gurobi Worker processing, Gurobi Optimizer execution, runtime cancellation, runtime retrial, or runtime outcome projection.
