@@ -1253,3 +1253,20 @@ Manage optimisation catalogue
 ```
 
 Also added the `Optimisation catalogue governance use case` section to make the use case visible outside the security section.
+
+---
+
+## Baseline appended 2026-05-03T23:43:48 - OSB MS design baseline
+
+Created `osb-ms-specification.md` as the baseline design for OSB MS / Optimisation Screen Builder MS.
+
+Baselined:
+- OSB MS is the context-aware OEX facade/backend-for-frontend for optimisation experiences.
+- Access path: User -> OEX UI -> OGW -> OSB MS -> NGW -> OC MS -> OD MS.
+- OSB APIs use `/optimisationExperience/v1`.
+- Phase one endpoints cover home, capabilities, request-form, runtime optimisation create/list/detail, cancellation, and retrial.
+- Phase two endpoints cover governed catalogue/specification journeys.
+- Catalogue write/activate/retire journeys are restricted to approved optimisation domain engineers and remain governed by OD MS.
+- OSB MS is not source of truth for OptimisationSpecification or runtime Optimisation.
+- OSB MS uses mTLS and User Context JWT from OGW, and mTLS plus OAuth2 system-to-system to NGW.
+- OSB MS initially has no DB/cache/Kafka integration; future infrastructure integrations must explicitly capture the shared security controls.
