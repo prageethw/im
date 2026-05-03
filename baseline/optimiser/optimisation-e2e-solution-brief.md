@@ -671,3 +671,11 @@ Worker/model returns:
 ```
 
 Use `422 OPTIMISATION_CONTRACT_VIOLATION` for contract/cardinality failures, such as fewer than 2 candidate resources for a selection optimisation. Use `INFEASIBLE` only when the request is valid and the worker/model determines no feasible solution exists.
+
+---
+
+## Contract definition versus runtime values:
+
+OD MS defines the optimisation request contract, including the allowed candidate resource structure under `context[]`.
+
+OC MS carries the actual runtime `constraints[]`, `targets[]`, and `context[]` values accepted from the caller. For resource/path selection, the runtime context should include or reference candidate resources as defined by OD MS.

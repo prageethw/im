@@ -208,7 +208,59 @@ Content-Type: application/json
         "value": {
           "dataset": "topology-snapshot",
           "version": "2026-05-02T10:00:00Z",
-          "candidateResourceSetId": "candidate-paths-surgical-melbourne-20260502T100000Z"
+          "candidateResourceSetId": "candidate-paths-surgical-melbourne-20260502T100000Z",
+          "candidateResources": [
+            {
+              "resourceId": "path-001",
+              "resourceType": "deliveryResource",
+              "resourceClass": "low-latency-path",
+              "resourceAttributes": {
+                "locationId": "melbourne-hospital"
+              },
+              "metrics": [
+                {
+                  "name": "latency",
+                  "value": 18,
+                  "unit": "ms"
+                },
+                {
+                  "name": "reliability",
+                  "value": 99.95,
+                  "unit": "percent"
+                },
+                {
+                  "name": "cost",
+                  "value": 70,
+                  "unit": "costUnit"
+                }
+              ]
+            },
+            {
+              "resourceId": "path-002",
+              "resourceType": "deliveryResource",
+              "resourceClass": "high-reliability-path",
+              "resourceAttributes": {
+                "locationId": "melbourne-hospital"
+              },
+              "metrics": [
+                {
+                  "name": "latency",
+                  "value": 24,
+                  "unit": "ms"
+                },
+                {
+                  "name": "reliability",
+                  "value": 99.995,
+                  "unit": "percent"
+                },
+                {
+                  "name": "cost",
+                  "value": 90,
+                  "unit": "costUnit"
+                }
+              ]
+            }
+          ]
         }
       }
     ]
@@ -306,7 +358,59 @@ Content-Type: application/json
         "value": {
           "dataset": "topology-snapshot",
           "version": "2026-05-02T10:00:00Z",
-          "candidateResourceSetId": "candidate-paths-surgical-melbourne-20260502T100000Z"
+          "candidateResourceSetId": "candidate-paths-surgical-melbourne-20260502T100000Z",
+          "candidateResources": [
+            {
+              "resourceId": "path-001",
+              "resourceType": "deliveryResource",
+              "resourceClass": "low-latency-path",
+              "resourceAttributes": {
+                "locationId": "melbourne-hospital"
+              },
+              "metrics": [
+                {
+                  "name": "latency",
+                  "value": 18,
+                  "unit": "ms"
+                },
+                {
+                  "name": "reliability",
+                  "value": 99.95,
+                  "unit": "percent"
+                },
+                {
+                  "name": "cost",
+                  "value": 70,
+                  "unit": "costUnit"
+                }
+              ]
+            },
+            {
+              "resourceId": "path-002",
+              "resourceType": "deliveryResource",
+              "resourceClass": "high-reliability-path",
+              "resourceAttributes": {
+                "locationId": "melbourne-hospital"
+              },
+              "metrics": [
+                {
+                  "name": "latency",
+                  "value": 24,
+                  "unit": "ms"
+                },
+                {
+                  "name": "reliability",
+                  "value": 99.995,
+                  "unit": "percent"
+                },
+                {
+                  "name": "cost",
+                  "value": 90,
+                  "unit": "costUnit"
+                }
+              ]
+            }
+          ]
         }
       }
     ]
@@ -427,7 +531,59 @@ Active-state example:
         "value": {
           "dataset": "topology-snapshot",
           "version": "2026-05-02T10:00:00Z",
-          "candidateResourceSetId": "candidate-paths-surgical-melbourne-20260502T100000Z"
+          "candidateResourceSetId": "candidate-paths-surgical-melbourne-20260502T100000Z",
+          "candidateResources": [
+            {
+              "resourceId": "path-001",
+              "resourceType": "deliveryResource",
+              "resourceClass": "low-latency-path",
+              "resourceAttributes": {
+                "locationId": "melbourne-hospital"
+              },
+              "metrics": [
+                {
+                  "name": "latency",
+                  "value": 18,
+                  "unit": "ms"
+                },
+                {
+                  "name": "reliability",
+                  "value": 99.95,
+                  "unit": "percent"
+                },
+                {
+                  "name": "cost",
+                  "value": 70,
+                  "unit": "costUnit"
+                }
+              ]
+            },
+            {
+              "resourceId": "path-002",
+              "resourceType": "deliveryResource",
+              "resourceClass": "high-reliability-path",
+              "resourceAttributes": {
+                "locationId": "melbourne-hospital"
+              },
+              "metrics": [
+                {
+                  "name": "latency",
+                  "value": 24,
+                  "unit": "ms"
+                },
+                {
+                  "name": "reliability",
+                  "value": 99.995,
+                  "unit": "percent"
+                },
+                {
+                  "name": "cost",
+                  "value": 90,
+                  "unit": "costUnit"
+                }
+              ]
+            }
+          ]
         }
       }
     ]
@@ -733,7 +889,59 @@ Content-Type: application/json
         "value": {
           "dataset": "topology-snapshot",
           "version": "2026-05-02T10:00:00Z",
-          "candidateResourceSetId": "candidate-paths-surgical-melbourne-20260502T100000Z"
+          "candidateResourceSetId": "candidate-paths-surgical-melbourne-20260502T100000Z",
+          "candidateResources": [
+            {
+              "resourceId": "path-001",
+              "resourceType": "deliveryResource",
+              "resourceClass": "low-latency-path",
+              "resourceAttributes": {
+                "locationId": "melbourne-hospital"
+              },
+              "metrics": [
+                {
+                  "name": "latency",
+                  "value": 18,
+                  "unit": "ms"
+                },
+                {
+                  "name": "reliability",
+                  "value": 99.95,
+                  "unit": "percent"
+                },
+                {
+                  "name": "cost",
+                  "value": 70,
+                  "unit": "costUnit"
+                }
+              ]
+            },
+            {
+              "resourceId": "path-002",
+              "resourceType": "deliveryResource",
+              "resourceClass": "high-reliability-path",
+              "resourceAttributes": {
+                "locationId": "melbourne-hospital"
+              },
+              "metrics": [
+                {
+                  "name": "latency",
+                  "value": 24,
+                  "unit": "ms"
+                },
+                {
+                  "name": "reliability",
+                  "value": 99.995,
+                  "unit": "percent"
+                },
+                {
+                  "name": "cost",
+                  "value": 90,
+                  "unit": "costUnit"
+                }
+              ]
+            }
+          ]
         }
       }
     ]
@@ -1180,3 +1388,24 @@ INFEASIBLE is an optimisation outcome produced by the worker/model.
 It is not a request contract validation error.
 ```
 
+---
+
+## Runtime context versus specification contract clarification:
+
+OD MS defines the allowed structure of `constraints[]`, `targets[]`, and `context[]`.
+
+OC MS runtime requests and responses carry the actual accepted values for those sections.
+
+Therefore:
+```text
+OD MS:
+  defines the candidate resource schema, including candidateResources, resourceAttributes, and metrics.
+
+OC MS:
+  carries the actual candidateResources inside context.topologySnapshot.
+  carries the actual constraints[] values supplied by the caller.
+  validates structure/cardinality against OD MS.
+  does not perform candidate ranking or metric-vs-constraint feasibility evaluation.
+```
+
+The presence of `constraints[]` in OC MS is expected. In OC MS it is not the definition; it is the runtime request instance.
