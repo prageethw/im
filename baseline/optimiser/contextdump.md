@@ -1157,3 +1157,39 @@ Process views now cover:
 - cancellation
 - retrial
 - late worker outcome after cancellation
+
+---
+
+## Baseline appended 2026-05-03T11:06:58 - Runtime process flow updated with OC DB outbox inbox
+
+Baselined the runtime process flow as:
+
+```text
+Consumer / OEX
+-> OGW
+-> OEX APIs
+-> OEX GW
+-> OEX Screen Builder MS
+-> NGW
+-> OC MS
+-> OD MS
+-> OC MS DB
+-> OC MS Outbox
+-> Kafka
+-> Python/Gurobi Worker
+-> Gurobi Optimizer
+-> Kafka
+-> OC MS Inbox
+-> OC MS DB
+-> Consumer polls GET /optimisation/{id}
+```
+
+Key corrections:
+- Runtime flow starts from `Consumer / OEX`, not just generic user.
+- Runtime flow includes `OGW -> OEX APIs -> OEX GW -> OEX Screen Builder MS -> NGW`.
+- OC MS validates against OD MS before persisting the accepted runtime Optimisation.
+- Runtime persistence is explicit through `OC MS DB`.
+- Outbox pattern is explicit through `OC MS Outbox -> Kafka`.
+- Worker execution is explicit through `Python/Gurobi Worker -> Gurobi Optimizer`.
+- Outcome path returns through `Kafka -> OC MS Inbox -> OC MS DB`.
+- Consumer observes outcome by polling `GET /optimisation/{id}`.

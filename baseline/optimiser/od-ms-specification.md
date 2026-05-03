@@ -418,3 +418,19 @@ serve ACTIVE definitions to OC MS and authorised consumers
 ```
 
 OD MS does not participate in Kafka execution, Python/Gurobi Worker processing, Gurobi Optimizer execution, runtime cancellation, runtime retrial, or runtime outcome projection.
+
+---
+
+## Runtime process participation baseline:
+
+OD MS participates in the runtime optimisation process as the OptimisationSpecification definition service.
+
+In the runtime flow:
+
+```text
+... -> NGW -> OC MS -> OD MS -> OC MS DB -> OC MS Outbox -> Kafka ...
+```
+
+OD MS provides the ACTIVE OptimisationSpecification used by OC MS for request-contract validation.
+
+OD MS does not persist runtime Optimisation resources, does not write OC MS outbox records, does not consume Kafka worker outcomes, and does not project runtime results.
