@@ -704,8 +704,93 @@ This keeps the design clear: OD MS defines what is allowed; OC MS stores and ret
 
 ---
 
-## Shared context attributes:
+## Corrected E2E logical integration flow:
 
-Shared optimisation-scope attributes, such as a common `locationId`, should sit at the runtime `context.topologySnapshot` level.
+The agreed end-to-end logical integration sequence is:
 
-Candidate-level `resourceAttributes` should be used only for attributes that vary by candidate resource.
+```text
+User
+-> Microsoft Entra ID SSO
+-> OEX UI
+-> OEX APIs
+-> OGW
+-> OEX Screen Builder MS
+-> NGW
+-> OD MS / OC MS
+-> Kafka
+-> Python/Gurobi Worker
+-> Gurobi Optimizer
+```
+
+Meaning:
+
+```text
+User:
+  Operator or authorised consumer initiating the optimisation journey.
+
+Microsoft Entra ID SSO:
+  Authenticates the user and provides SSO identity context.
+
+OEX UI:
+  User-facing optimisation experience.
+
+OEX APIs:
+  Private OEX-facing APIs supporting the OEX UI experience.
+
+OGW:
+  User-context-aware gateway path for OEX APIs.
+
+OEX Screen Builder MS:
+  Builds and coordinates OEX screens and user journeys.
+
+NGW:
+  TMF-compliant gateway exposing backend OD MS and OC MS API contracts.
+
+OD MS / OC MS:
+  OD MS provides OptimisationSpecification definitions.
+  OC MS provides runtime Optimisation execution control.
+
+Kafka:
+  Asynchronous event backbone for worker instructions and outcomes.
+
+Python/Gurobi Worker:
+  Worker component consuming optimisation events and invoking the solver/model.
+
+Gurobi Optimizer:
+  Optimisation solver engine used by the worker/model.
+```
+
+Gateway/API compliance rule:
+
+```text
+NGW-exposed backend APIs are TMF-compliant.
+
+OEX APIs exposed via OGW are OEX/private experience APIs and do not need to be TMF-compliant.
+
+Private MS-to-MS APIs and internal Kafka events do not need to be TMF-compliant unless explicitly required by a separate contract.
+```
+
+
+---
+
+## E2E flow access path baseline:
+
+All E2E solution flows should use the following access and integration path as the logical sequence:
+
+```text
+User
+-> Microsoft Entra ID SSO
+-> OEX UI
+-> OEX APIs
+-> OGW
+-> OEX Screen Builder MS
+-> NGW
+-> OD MS / OC MS
+-> Kafka
+-> Python/Gurobi Worker
+-> Gurobi Optimizer
+```
+
+When a flow is specifically about OD MS definition management, the sequence stops at OD MS unless runtime optimisation is created.
+
+When a flow is specifically about OC MS runtime execution, the sequence continues from OC MS to Kafka, Python/Gurobi Worker, and Gurobi Optimizer.

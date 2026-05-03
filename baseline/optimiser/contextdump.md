@@ -1142,25 +1142,30 @@ For the current examples:
 
 ---
 
-## Baseline appended 2026-05-03T08:41:32 - Removed DEPRECATED from OD MS lifecycle
+## Baseline appended 2026-05-03T10:53:26 - Corrected E2E logical integration sequence
 
-Confirmed the OD MS OptimisationSpecification lifecycle should not include `DEPRECATED` in the current baseline.
+Baselined the E2E logical integration sequence as:
 
-Active lifecycle model:
 ```text
-DRAFT
-ACTIVE
-RETIRED
+User
+-> Microsoft Entra ID SSO
+-> OEX UI
+-> OEX APIs
+-> OGW
+-> OEX Screen Builder MS
+-> NGW
+-> OD MS / OC MS
+-> Kafka
+-> Python/Gurobi Worker
+-> Gurobi Optimizer
 ```
 
-Meaning:
-- `DRAFT`: editable.
-- `ACTIVE`: usable by OC MS for runtime Optimisation creation and should be immutable except lifecycle metadata.
-- `RETIRED`: not available for new runtime Optimisation creation.
-
-Removed the previously shown `DEPRECATED` state and its wording:
-```text
-DEPRECATED:
-  Existing runtime use may continue where already accepted.
-  New runtime use should be prevented unless explicitly allowed by policy.
-```
+Rules:
+- User authentication starts with Microsoft Entra ID SSO.
+- OEX UI calls OEX APIs.
+- OEX APIs are exposed through OGW.
+- OGW routes to OEX Screen Builder MS.
+- OEX Screen Builder MS integrates with NGW.
+- NGW exposes TMF-compliant backend APIs for OD MS and OC MS.
+- Runtime OC MS execution continues through Kafka, Python/Gurobi Worker, and Gurobi Optimizer.
+- OD MS definition-management flows stop at OD MS and do not continue to Kafka/worker/optimizer unless a runtime optimisation is created through OC MS.

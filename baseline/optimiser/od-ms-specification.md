@@ -123,6 +123,7 @@ _links
 ```text
 DRAFT
 ACTIVE
+DEPRECATED
 RETIRED
 ```
 
@@ -136,6 +137,9 @@ ACTIVE:
   Can be used by OC MS for runtime Optimisation creation.
   Should be immutable except lifecycle transition metadata.
 
+DEPRECATED:
+  Existing runtime use may continue where already accepted.
+  New runtime use should be prevented unless explicitly allowed by policy.
 
 RETIRED:
   Not available for new runtime Optimisation creation.
@@ -426,28 +430,19 @@ Example runtime context shape:
 
 ---
 
-## OptimisationSpecification lifecycle baseline:
+## Definition access/integration sequence baseline:
 
-The active OD MS lifecycle model is:
-
-```text
-DRAFT
-ACTIVE
-RETIRED
-```
-
-Do not use `DEPRECATED` for the current baseline.
-
-Meaning:
+OptimisationSpecification definition access follows the same front-door path and stops at OD MS:
 
 ```text
-DRAFT:
-  Editable.
-
-ACTIVE:
-  Can be used by OC MS to create runtime Optimisation resources.
-  Should be immutable except lifecycle transition metadata.
-
-RETIRED:
-  Not available for new runtime Optimisation creation.
+User
+-> Microsoft Entra ID SSO
+-> OEX UI
+-> OEX APIs
+-> OGW
+-> OEX Screen Builder MS
+-> NGW
+-> OD MS
 ```
+
+OD MS is reached through NGW. OD MS does not participate in Kafka, Python/Gurobi Worker, or Gurobi Optimizer runtime execution flows.

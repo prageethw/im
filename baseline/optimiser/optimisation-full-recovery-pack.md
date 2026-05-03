@@ -1,6 +1,6 @@
 # Optimisation Full Recovery Pack
 
-Generated: 2026-05-03T08:41:47
+Generated: 2026-05-03T10:53:26
 
 This file combines the current optimisation architecture recovery material into one place.
 
@@ -121,180 +121,165 @@ Example stale ETag response:
 HTTP/1.1 412 Precondition Failed
 ```
 
-## Baseline Update — Optimisation REST PUT/DELETE and ETag/HATEOAS Header Handling
-
-- Include `PUT` and `DELETE` in the `/optimisation` REST interface alongside the existing create, retrieve, list, cancel, and retry operations.
-- Active endpoint set:
-  - `POST /optimisation`
-  - `GET /optimisation`
-  - `GET /optimisation/{optimisationId}`
-  - `PUT /optimisation/{optimisationId}`
-  - `DELETE /optimisation/{optimisationId}`
-  - `POST /optimisation/{optimisationId}/cancel`
-  - `POST /optimisation/{optimisationId}/retry`
-- `PUT /optimisation/{optimisationId}` is used to create or replace an optimisation resource at a client-supplied identifier where allowed. It must be idempotent.
-- For an existing mutable optimisation resource, `PUT` must require `If-Match` with the latest ETag.
-- `DELETE /optimisation/{optimisationId}` is used for resource lifecycle removal/withdrawal/archive semantics, not necessarily physical database deletion. Physical deletion is not assumed by default.
-- `DELETE` is different from `POST /optimisation/{optimisationId}/cancel`:
-  - `cancel` is a business transition to stop or request stopping an in-flight optimisation.
-  - `DELETE` is a resource lifecycle action to remove, withdraw, or archive the optimisation representation where policy allows.
-- HATEOAS representations should expose valid links/actions according to current resource state.
-- Do not duplicate `If-Match` header values inside each HATEOAS link object by default.
-- ETag is returned as an HTTP response header on mutable resource representations.
-- Clients must use the latest returned ETag value in the `If-Match` request header for unsafe state-changing operations such as `PUT`, `DELETE`, `POST /cancel`, and `POST /retry`.
-- Missing required `If-Match` returns `428 Precondition Required`.
-- Stale or incorrect `If-Match` returns `412 Precondition Failed`.
-- Keep HATEOAS link objects clean, for example with `href` and `method`; do not include repetitive `headers: { If-Match: ... }` unless a specific need is identified later.
-
-Example representation:
-
-```json
-{
-  "id": "opt-123",
-  "status": "PROCESSING",
-  "_links": {
-    "self": {
-      "href": "/optimisation/opt-123",
-      "method": "GET"
-    },
-    "cancel": {
-      "href": "/optimisation/opt-123/cancel",
-      "method": "POST"
-    }
-  }
-}
-```
-
-Example concurrency use:
-
-```http
-GET /optimisation/opt-123
-
-HTTP/1.1 200 OK
-Content-Type: application/json
-ETag: "opt-123-v3"
-```
-
-```http
-POST /optimisation/opt-123/cancel
-If-Match: "opt-123-v3"
-```
-
 ---
 
-## Baseline Update - Lean TMF-Aligned Optimisation REST API
+# Baselined OD MS / Optimisation-Definition-MS REST Specification
 
-The active optimisation REST API must remain lean and focused. Do not expose the following TMF-style hub/listener/report endpoints for now:
+## 1. OD MS summary
 
-```http
-POST   /hub
-DELETE /hub/{id}
-POST   /listener/optimisationCreateEvent
-POST   /listener/optimisationAttributeValueChangeEvent
-POST   /listener/optimisationStatusChangeEvent
-POST   /listener/optimisationDeleteEvent
-POST   /listener/optimisationReportCreateEvent
-GET    /optimisation/{optimisationId}/optimisationReport
-GET    /optimisation/{optimisationId}/optimisationReport/{id}
+Optimisation-Definition-MS (OD MS) owns the definition side of the optimisation platform. Its responsibility is to publish and govern the externally visible optimisation capability contract, called `OptimisationSpecification`.
+
+OD MS does not expose the Gurobi model, objective logic, candidate-resource rules, solver configuration, model binding, or internal optimisation formulation. It only exposes what a caller needs to know to create a valid runtime optimisation through OC MS.
+
+```text
+OD MS owns:
+  OptimisationSpecification
+
+OD MS does not own:
+  Runtime Optimisation execution
+  Kafka outbox/inbox processing
+  Gurobi solver execution
+  Optimisation result projection
 ```
 
-The active optimisation REST API endpoint set is:
+In one sentence:
 
-```http
-GET    /optimisation
-POST   /optimisation
-GET    /optimisation/{id}
-PUT    /optimisation/{id}
-DELETE /optimisation/{id}
-POST   /optimisation/{id}/cancel
-POST   /optimisation/{id}/retry
+```text
+OD MS is the governed catalogue of optimisation capabilities; it tells callers what inputs they must provide, while the platform privately owns how those inputs are translated into deterministic Gurobi execution.
 ```
 
-The optimisation API remains TMF-aligned in resource modelling, but does not copy the full TMF921 event subscription, listener, or separate report endpoint model unless later required.
+## 2. OD MS endpoint set
 
-Use TMF-style resource representation fields where useful:
+```http
+# List/search OptimisationSpecification resources.
+GET /optimisationSpecification
 
-- `id`
-- `href`
-- `@type`
-- `@baseType`
-- `@schemaLocation`
-- `name`
-- `description`
-- `creationDate`
-- `lastUpdate`
-- `statusChangeDate`
-- `lifecycleStatus`
-- `version`
-- `priority`
-- `context`
-- `intent` reference
-- `optimisationSpecification` reference
-- `characteristic`
-- `expression` where useful
-- `result` where useful
+# Create a new OptimisationSpecification.
+# ID is generated by OD MS.
+POST /optimisationSpecification
 
-Result/report-style information should be embedded directly in the `Optimisation` resource when available rather than exposed through separate `optimisationReport` endpoints.
+# Retrieve one OptimisationSpecification.
+GET /optimisationSpecification/{id}
 
-Example completed resource style:
+# Full replacement/update.
+# Allowed only while lifecycleStatus is DRAFT.
+PUT /optimisationSpecification/{id}
 
-```json
+# Delete a DRAFT OptimisationSpecification.
+# ACTIVE and RETIRED specifications cannot be deleted.
+DELETE /optimisationSpecification/{id}
+```
+
+## 3. OptimisationSpecification lifecycle
+
+```text
+DRAFT
+ACTIVE
+RETIRED
+```
+
+```text
+DRAFT:
+  Specification is being prepared.
+  It can be updated or deleted with If-Match.
+
+ACTIVE:
+  Specification can be used by OC MS to create runtime Optimisation resources.
+  ACTIVE specifications are immutable.
+  PUT and DELETE are not allowed.
+
+RETIRED:
+  Specification is no longer usable for new runtime Optimisation resources.
+  It remains available for audit/history and existing Optimisation references.
+```
+
+No normal lifecycle state called:
+
+```text
+DELETED
+ARCHIVED
+```
+
+## 4. Version activation rule
+
+```text
+Only one ACTIVE OptimisationSpecification is allowed per specificationKey.
+
+When a DRAFT specification is promoted to ACTIVE, OD MS must transactionally retire the previous ACTIVE specification with the same specificationKey.
+```
+
+Example:
+
+```jsonc
 {
-  "id": "opt-12345",
-  "href": "/optimisation/opt-12345",
-  "@type": "Optimisation",
-  "lifecycleStatus": "completed",
-  "result": {
-    "solutionStatus": "optimal",
-    "objectiveValue": 7.42,
-    "selectedResources": [
-      {
-        "resourceId": "path-002",
-        "roles": ["primary"]
-      }
-    ],
-    "solver": {
-      "name": "Gurobi",
-      "runtimeMs": 842,
-      "gapPercent": 0
-    }
-  },
-  "_links": {
-    "self": {
-      "href": "/optimisation/opt-12345",
-      "method": "GET"
-    }
-  }
+  // Stable family/key shared by all versions of the same optimisation capability.
+  "specificationKey": "hospital-surgical-slice-path-optimisation",
+
+  // Version of this specific specification.
+  "version": "1.1",
+
+  // Promoting this version to ACTIVE retires the previous ACTIVE version
+  // with the same specificationKey.
+  "lifecycleStatus": "ACTIVE"
 }
 ```
 
-Existing REST baselines remain active:
+Transactional activation logic:
 
-- HATEOAS links/actions in resource representations.
-- ETag on mutable resource responses.
-- `If-Match` required for unsafe state-changing operations.
-- `428 Precondition Required` when required `If-Match` is missing.
-- `412 Precondition Failed` when `If-Match` is stale or wrong.
-- Do not include response `Cache-Control` headers for now.
-
-
-## Baseline Update — OD MS OptimisationSpecification GET Contracts and Cache/ETag Rules
-
-### Final `GET /optimisationSpecification/{id}`
-
-```http
-# Client may send Cache-Control: no-cache when it wants to bypass/revalidate cache.
-# No If-None-Match in our active baseline.
-GET /optimisationSpecification/os-7f3a9c21
-Cache-Control: no-cache
+```text
+1. Validate If-Match for the target DRAFT specification.
+2. Validate target specification is currently DRAFT.
+3. Validate requested lifecycleStatus is ACTIVE.
+4. Find current ACTIVE specification with the same specificationKey.
+5. Move old ACTIVE specification to RETIRED.
+6. Move target DRAFT specification to ACTIVE.
+7. Update ETags and lastUpdate timestamps for changed resources.
+8. Commit atomically.
 ```
 
-```http
-HTTP/1.1 200 OK
-Content-Type: application/json
-ETag: "os-7f3a9c21-v3"
-Cache-Control: max-age=3600
+## 5. Public OptimisationSpecification shape
+
+The public OD MS resource exposes only the caller-facing input contract.
+
+It exposes:
+
+```text
+id
+href
+specificationKey
+type
+baseType
+schemaLocation
+name
+description
+version
+lifecycleStatus
+creationDate
+lastUpdate
+inputs
+_links
 ```
+
+It does not expose by default:
+
+```text
+supportedInputModes
+allowedObjectives
+candidateResourceRules
+solverConfiguration
+modelBinding
+resultSchema
+inputType
+sourceType
+operator
+inputTypeVocabulary
+operatorVocabulary
+full Gurobi formulation
+internal objective logic
+resource selection logic
+```
+
+Example resource:
 
 ```jsonc
 {
@@ -302,10 +287,14 @@ Cache-Control: max-age=3600
   "id": "os-7f3a9c21",
   "href": "/optimisationSpecification/os-7f3a9c21",
 
+  // Stable capability family key.
+  // Only one ACTIVE version is allowed per specificationKey.
+  "specificationKey": "hospital-surgical-slice-path-optimisation",
+
   // TMF-aligned typing.
-  "@type": "OptimisationSpecification",
-  "@baseType": "EntitySpecification",
-  "@schemaLocation": "/schema/OptimisationSpecification.schema.json",
+  "type": "OptimisationSpecification",
+  "baseType": "EntitySpecification",
+  "schemaLocation": "/schema/OptimisationSpecification.schema.json",
 
   // Public capability metadata.
   "name": "Hospital surgical slice path optimisation",
@@ -313,9 +302,7 @@ Cache-Control: max-age=3600
   "version": "1.0",
 
   // Specification lifecycle.
-  // DRAFT   = editable; not available for runtime optimisation creation.
-  // ACTIVE  = usable by OC MS to create Optimisation resources; immutable.
-  // RETIRED = not usable for new Optimisation resources; retained for audit/history.
+  // DRAFT, ACTIVE, or RETIRED.
   "lifecycleStatus": "ACTIVE",
 
   // Server-owned timestamps.
@@ -363,8 +350,6 @@ Cache-Control: max-age=3600
   ],
 
   // HATEOAS controls vary by lifecycleStatus.
-  // ACTIVE exposes createOptimisation.
-  // ACTIVE does not expose replace/delete because ACTIVE specifications are immutable.
   "_links": {
     "self": {
       "href": "/optimisationSpecification/os-7f3a9c21",
@@ -378,141 +363,50 @@ Cache-Control: max-age=3600
 }
 ```
 
-### Final `GET /optimisationSpecification`
+## 6. POST /optimisationSpecification
 
-```http
-# List/search OptimisationSpecification resources.
-# Client may use Cache-Control: no-cache when it wants to bypass/revalidate cache.
-GET /optimisationSpecification?lifecycleStatus=ACTIVE&offset=0&limit=20
-Cache-Control: no-cache
-```
+Creates a new `OptimisationSpecification`.
 
-```http
-HTTP/1.1 200 OK
-Content-Type: application/json
-Cache-Control: max-age=3600
-X-Total-Count: 1
-X-Result-Count: 1
-```
-
-```jsonc
-[
-  {
-    // Summary item only.
-    // Client follows self to retrieve the full input contract.
-    "id": "os-7f3a9c21",
-    "href": "/optimisationSpecification/os-7f3a9c21",
-
-    // TMF-aligned typing.
-    "@type": "OptimisationSpecification",
-    "@baseType": "EntitySpecification",
-    "@schemaLocation": "/schema/OptimisationSpecification.schema.json",
-
-    // Public capability summary.
-    "name": "Hospital surgical slice path optimisation",
-    "description": "Optimisation capability for hospital surgical slice path selection.",
-    "version": "1.0",
-    "lifecycleStatus": "ACTIVE",
-
-    // Server-owned timestamps.
-    "creationDate": "2026-05-02T01:00:00Z",
-    "lastUpdate": "2026-05-02T02:00:00Z",
-
-    // HATEOAS summary controls.
-    "_links": {
-      "self": {
-        "href": "/optimisationSpecification/os-7f3a9c21",
-        "method": "GET"
-      },
-      "createOptimisation": {
-        "href": "/optimisation",
-        "method": "POST"
-      }
-    }
-  }
-]
-```
-
-### Active GET/Header Rule
+OD MS generates:
 
 ```text
-GET /optimisationSpecification/{id}
-  Response:
-    ETag required
-    Cache-Control: max-age=3600
-
-GET /optimisationSpecification
-  Response:
-    Cache-Control: max-age=3600
-    X-Total-Count and X-Result-Count for list pagination
-
-GET request cache bypass:
-  Client may send Cache-Control: no-cache
-
-No If-None-Match in the active baseline.
-
-ETag is used for unsafe concurrency only:
-  PUT /optimisationSpecification/{id}
-  DELETE /optimisationSpecification/{id}
-  POST /optimisation/{id}/cancel
-  POST /optimisation/{id}/retry
-
-Missing If-Match on unsafe operation:
-  428 Precondition Required
-
-Stale/wrong If-Match:
-  412 Precondition Failed
+id
+href
+creationDate
+lastUpdate
+ETag
 ```
 
----
-
-## Baseline Update — OD MS `PUT /optimisationSpecification/{id}`
-
-`PUT /optimisationSpecification/{id}` is the OD MS full-replacement operation for an `OptimisationSpecification`.
-
-### Rules
-
-```text
-PUT /optimisationSpecification/{id}
-  Full replacement only.
-  Requires If-Match.
-  Allowed only when current lifecycleStatus is DRAFT.
-  Used for editing DRAFT content and for promoting DRAFT -> ACTIVE.
-  Not allowed once lifecycleStatus is ACTIVE or RETIRED.
-```
-
-`PUT` may promote a specification from `DRAFT` to `ACTIVE`. Once the specification is `ACTIVE`, future `PUT` and `DELETE` are not allowed. Meaningful change after activation requires a new versioned `OptimisationSpecification` resource.
-
-### Example request
+### Request
 
 ```http
-GET /optimisationSpecification/os-7f3a9c21
-```
-
-```http
-HTTP/1.1 200 OK
-ETag: "os-7f3a9c21-v1"
-```
-
-```http
-PUT /optimisationSpecification/os-7f3a9c21
-If-Match: "os-7f3a9c21-v1"
+POST /optimisationSpecification
 Content-Type: application/json
 ```
 
 ```jsonc
 {
-  // Full replacement of the DRAFT specification.
-  // No id/href in request body; id comes from the path.
+  // Stable family/key shared by all versions of this optimisation capability.
+  // OD MS uses this to enforce one ACTIVE version per capability family.
+  "specificationKey": "hospital-surgical-slice-path-optimisation",
+
+  // Human-readable capability name.
+  // Caller does not send id; OD MS generates id/href.
   "name": "Hospital surgical slice path optimisation",
+
+  // External description of what this optimisation capability does.
+  // Do not expose Gurobi model internals here.
   "description": "Optimisation capability for hospital surgical slice path selection.",
+
+  // Version of this externally visible optimisation capability contract.
   "version": "1.0",
 
-  // Promotion to ACTIVE through PUT.
-  // Once ACTIVE, future PUT/DELETE is not allowed.
-  "lifecycleStatus": "ACTIVE",
+  // New specifications normally start as DRAFT.
+  // DRAFT can be edited. ACTIVE is immutable.
+  "lifecycleStatus": "DRAFT",
 
   // Public caller-facing input contract only.
+  // This tells external callers what they need to feed into POST /optimisation.
   "inputs": [
     {
       // Required latency threshold the caller must provide.
@@ -546,9 +440,307 @@ Content-Type: application/json
     }
   ],
 
-  "@type": "OptimisationSpecification",
-  "@baseType": "EntitySpecification",
-  "@schemaLocation": "/schema/OptimisationSpecification.schema.json"
+  // TMF-aligned typing.
+  "type": "OptimisationSpecification",
+  "baseType": "EntitySpecification",
+  "schemaLocation": "/schema/OptimisationSpecification.schema.json"
+}
+```
+
+### Successful response
+
+```http
+HTTP/1.1 201 Created
+Location: /optimisationSpecification/os-7f3a9c21
+ETag: "os-7f3a9c21-v1"
+Content-Type: application/json
+```
+
+```jsonc
+{
+  // Server-generated identity.
+  "id": "os-7f3a9c21",
+  "href": "/optimisationSpecification/os-7f3a9c21",
+
+  "specificationKey": "hospital-surgical-slice-path-optimisation",
+
+  "type": "OptimisationSpecification",
+  "baseType": "EntitySpecification",
+  "schemaLocation": "/schema/OptimisationSpecification.schema.json",
+
+  "name": "Hospital surgical slice path optimisation",
+  "description": "Optimisation capability for hospital surgical slice path selection.",
+  "version": "1.0",
+  "lifecycleStatus": "DRAFT",
+
+  // Server-owned timestamps.
+  "creationDate": "2026-05-02T01:00:00Z",
+  "lastUpdate": "2026-05-02T01:00:00Z",
+
+  // Accepted public input contract.
+  "inputs": [
+    {
+      "name": "latency",
+      "description": "Maximum acceptable latency threshold.",
+      "valueType": "number",
+      "unit": "ms",
+      "required": true
+    },
+    {
+      "name": "reliability",
+      "description": "Minimum acceptable reliability threshold.",
+      "valueType": "number",
+      "unit": "percent",
+      "required": true
+    },
+    {
+      "name": "topologySnapshot",
+      "description": "Optional reference to the topology snapshot to use for optimisation.",
+      "valueType": "object",
+      "required": false
+    },
+    {
+      "name": "trafficForecast",
+      "description": "Optional reference to the traffic forecast to use for optimisation.",
+      "valueType": "object",
+      "required": false
+    }
+  ],
+
+  // DRAFT state exposes replace and delete.
+  "_links": {
+    "self": {
+      "href": "/optimisationSpecification/os-7f3a9c21",
+      "method": "GET"
+    },
+    "replace": {
+      "href": "/optimisationSpecification/os-7f3a9c21",
+      "method": "PUT"
+    },
+    "delete": {
+      "href": "/optimisationSpecification/os-7f3a9c21",
+      "method": "DELETE"
+    }
+  }
+}
+```
+
+## 7. GET /optimisationSpecification/{id}
+
+Retrieves one `OptimisationSpecification`.
+
+### Request
+
+```http
+# Client may send Cache-Control: no-cache when it wants to bypass/revalidate cache.
+# No If-None-Match in the active baseline.
+GET /optimisationSpecification/os-7f3a9c21
+Cache-Control: no-cache
+```
+
+### Response
+
+```http
+HTTP/1.1 200 OK
+Content-Type: application/json
+ETag: "os-7f3a9c21-v3"
+Cache-Control: max-age=3600
+```
+
+```jsonc
+{
+  // Server-generated identity.
+  "id": "os-7f3a9c21",
+  "href": "/optimisationSpecification/os-7f3a9c21",
+
+  "specificationKey": "hospital-surgical-slice-path-optimisation",
+
+  "type": "OptimisationSpecification",
+  "baseType": "EntitySpecification",
+  "schemaLocation": "/schema/OptimisationSpecification.schema.json",
+
+  "name": "Hospital surgical slice path optimisation",
+  "description": "Optimisation capability for hospital surgical slice path selection.",
+  "version": "1.0",
+
+  // ACTIVE specs can be used by OC MS to create runtime Optimisation resources.
+  "lifecycleStatus": "ACTIVE",
+
+  "creationDate": "2026-05-02T01:00:00Z",
+  "lastUpdate": "2026-05-02T02:00:00Z",
+
+  "inputs": [
+    {
+      // Required latency threshold the caller must provide.
+      "name": "latency",
+      "description": "Maximum acceptable latency threshold.",
+      "valueType": "number",
+      "unit": "ms",
+      "required": true
+    },
+    {
+      // Required reliability threshold the caller must provide.
+      "name": "reliability",
+      "description": "Minimum acceptable reliability threshold.",
+      "valueType": "number",
+      "unit": "percent",
+      "required": true
+    },
+    {
+      // Optional caller-provided topology snapshot reference.
+      "name": "topologySnapshot",
+      "description": "Optional reference to the topology snapshot to use for optimisation.",
+      "valueType": "object",
+      "required": false
+    },
+    {
+      // Optional caller-provided traffic forecast reference.
+      "name": "trafficForecast",
+      "description": "Optional reference to the traffic forecast to use for optimisation.",
+      "valueType": "object",
+      "required": false
+    }
+  ],
+
+  // ACTIVE exposes createOptimisation.
+  // ACTIVE does not expose replace/delete because ACTIVE specifications are immutable.
+  "_links": {
+    "self": {
+      "href": "/optimisationSpecification/os-7f3a9c21",
+      "method": "GET"
+    },
+    "createOptimisation": {
+      "href": "/optimisation",
+      "method": "POST"
+    }
+  }
+}
+```
+
+## 8. GET /optimisationSpecification
+
+Lists/searches `OptimisationSpecification` resources.
+
+List response is summary-only by default. Caller follows `self` to get the full input contract.
+
+### Request
+
+```http
+# Client may use Cache-Control: no-cache when it wants to bypass/revalidate cache.
+GET /optimisationSpecification?lifecycleStatus=ACTIVE&offset=0&limit=20
+Cache-Control: no-cache
+```
+
+### Response
+
+```http
+HTTP/1.1 200 OK
+Content-Type: application/json
+Cache-Control: max-age=3600
+X-Total-Count: 1
+X-Result-Count: 1
+```
+
+```jsonc
+[
+  {
+    // Summary item only.
+    "id": "os-7f3a9c21",
+    "href": "/optimisationSpecification/os-7f3a9c21",
+
+    "specificationKey": "hospital-surgical-slice-path-optimisation",
+
+    "type": "OptimisationSpecification",
+    "baseType": "EntitySpecification",
+    "schemaLocation": "/schema/OptimisationSpecification.schema.json",
+
+    "name": "Hospital surgical slice path optimisation",
+    "description": "Optimisation capability for hospital surgical slice path selection.",
+    "version": "1.0",
+    "lifecycleStatus": "ACTIVE",
+
+    "creationDate": "2026-05-02T01:00:00Z",
+    "lastUpdate": "2026-05-02T02:00:00Z",
+
+    // Client follows self to retrieve the full input contract.
+    "_links": {
+      "self": {
+        "href": "/optimisationSpecification/os-7f3a9c21",
+        "method": "GET"
+      },
+      "createOptimisation": {
+        "href": "/optimisation",
+        "method": "POST"
+      }
+    }
+  }
+]
+```
+
+## 9. PUT /optimisationSpecification/{id}
+
+Full replacement only.
+
+Allowed only when current lifecycle state is `DRAFT`.
+
+Can also promote `DRAFT -> ACTIVE`.
+
+### Request
+
+```http
+PUT /optimisationSpecification/os-7f3a9c21
+If-Match: "os-7f3a9c21-v1"
+Content-Type: application/json
+```
+
+```jsonc
+{
+  // Full replacement of the DRAFT specification.
+  // No id/href in request body; id comes from the path.
+  "specificationKey": "hospital-surgical-slice-path-optimisation",
+
+  "name": "Hospital surgical slice path optimisation",
+  "description": "Optimisation capability for hospital surgical slice path selection.",
+  "version": "1.0",
+
+  // PUT may promote DRAFT to ACTIVE.
+  // Once ACTIVE, future PUT/DELETE is not allowed.
+  // When promoted to ACTIVE, OD MS retires the previous ACTIVE version
+  // with the same specificationKey in the same transaction.
+  "lifecycleStatus": "ACTIVE",
+
+  "inputs": [
+    {
+      "name": "latency",
+      "description": "Maximum acceptable latency threshold.",
+      "valueType": "number",
+      "unit": "ms",
+      "required": true
+    },
+    {
+      "name": "reliability",
+      "description": "Minimum acceptable reliability threshold.",
+      "valueType": "number",
+      "unit": "percent",
+      "required": true
+    },
+    {
+      "name": "topologySnapshot",
+      "description": "Optional reference to the topology snapshot to use for optimisation.",
+      "valueType": "object",
+      "required": false
+    },
+    {
+      "name": "trafficForecast",
+      "description": "Optional reference to the traffic forecast to use for optimisation.",
+      "valueType": "object",
+      "required": false
+    }
+  ],
+
+  "type": "OptimisationSpecification",
+  "baseType": "EntitySpecification",
+  "schemaLocation": "/schema/OptimisationSpecification.schema.json"
 }
 ```
 
@@ -563,26 +755,23 @@ Cache-Control: max-age=3600
 
 ```jsonc
 {
-  // Server-generated identity.
   "id": "os-7f3a9c21",
   "href": "/optimisationSpecification/os-7f3a9c21",
 
-  // TMF-aligned typing.
-  "@type": "OptimisationSpecification",
-  "@baseType": "EntitySpecification",
-  "@schemaLocation": "/schema/OptimisationSpecification.schema.json",
+  "specificationKey": "hospital-surgical-slice-path-optimisation",
 
-  // Updated public capability metadata.
+  "type": "OptimisationSpecification",
+  "baseType": "EntitySpecification",
+  "schemaLocation": "/schema/OptimisationSpecification.schema.json",
+
   "name": "Hospital surgical slice path optimisation",
   "description": "Optimisation capability for hospital surgical slice path selection.",
   "version": "1.0",
   "lifecycleStatus": "ACTIVE",
 
-  // Server-owned timestamps.
   "creationDate": "2026-05-02T01:00:00Z",
   "lastUpdate": "2026-05-02T02:30:00Z",
 
-  // Updated public input contract.
   "inputs": [
     {
       "name": "latency",
@@ -613,7 +802,6 @@ Cache-Control: max-age=3600
   ],
 
   // ACTIVE exposes createOptimisation only.
-  // ACTIVE does not expose replace/delete.
   "_links": {
     "self": {
       "href": "/optimisationSpecification/os-7f3a9c21",
@@ -627,7 +815,7 @@ Cache-Control: max-age=3600
 }
 ```
 
-### Failure responses
+### PUT failure responses
 
 ```http
 HTTP/1.1 428 Precondition Required
@@ -641,7 +829,7 @@ Content-Type: application/json
   "reason": "IF_MATCH_REQUIRED",
   "message": "If-Match header is required when updating an OptimisationSpecification.",
   "status": "428",
-  "@type": "Error"
+  "type": "Error"
 }
 ```
 
@@ -657,7 +845,7 @@ Content-Type: application/json
   "reason": "ETAG_MISMATCH",
   "message": "The supplied ETag does not match the current OptimisationSpecification version.",
   "status": "412",
-  "@type": "Error"
+  "type": "Error"
 }
 ```
 
@@ -673,311 +861,260 @@ Content-Type: application/json
   "reason": "SPECIFICATION_IMMUTABLE",
   "message": "Only DRAFT OptimisationSpecification resources can be updated.",
   "status": "409",
-  "@type": "Error"
+  "type": "Error"
 }
 ```
 
----
+## 10. DELETE /optimisationSpecification/{id}
 
-## Baseline appended 2026-05-02T03:55:13 - OC MS sourceContext optional and POST /optimisation direction
+Delete is only for DRAFT cleanup.
 
-For the optimisation architecture exercise, OC MS / Optimisation-Controller-MS is a generic optimisation controller, not an intent-only controller.
-
-`sourceContext` is optional.
-
-```text
-sourceContext:
-  Optional.
-  Used only when the caller wants to link the optimisation to an upstream domain/resource.
-  Intent is only one possible source context.
-```
-
-A valid `POST /optimisation` request does not need to include an intent reference or `sourceContext`.
-
-Minimal valid request shape:
-
-```jsonc
-{
-  // Required ACTIVE OptimisationSpecification from OD MS.
-  "optimisationSpecification": {
-    "id": "os-7f3a9c21",
-    "href": "/optimisationSpecification/os-7f3a9c21",
-    "@type": "OptimisationSpecificationRef",
-    "@referredType": "OptimisationSpecification"
-  },
-
-  // Runtime metadata.
-  "name": "Network path optimisation request",
-  "description": "Optimise path selection using the supplied thresholds.",
-  "priority": "1",
-
-  // Capability-specific caller-fed inputs.
-  // These are validated against the referenced OD MS OptimisationSpecification.inputs.
-  "inputs": [
-    {
-      "name": "latency",
-      "valueType": "number",
-      "value": 20,
-      "unit": "ms"
-    },
-    {
-      "name": "reliability",
-      "valueType": "number",
-      "value": 99.99,
-      "unit": "percent"
-    }
-  ],
-
-  // TMF-aligned REST typing.
-  "@type": "Optimisation",
-  "@baseType": "Entity",
-  "@schemaLocation": "/schema/Optimisation.schema.json"
-}
-```
-
-Request shape with optional source context:
-
-```jsonc
-{
-  // Optional generic source context that triggered this optimisation.
-  // Intent is only one possible upstream source.
-  "sourceContext": {
-    "domain": "intent-management",
-    "resource": {
-      "id": "intent-789",
-      "href": "/intentManagement/v5/intent/intent-789",
-      "@type": "IntentRef",
-      "@referredType": "Intent"
-    }
-  },
-
-  "optimisationSpecification": {
-    "id": "os-7f3a9c21",
-    "href": "/optimisationSpecification/os-7f3a9c21",
-    "@type": "OptimisationSpecificationRef",
-    "@referredType": "OptimisationSpecification"
-  },
-
-  "name": "Hospital surgical slice path optimisation request",
-  "description": "Optimise path selection for hospital surgical slice intent.",
-  "priority": "1",
-
-  "inputs": [
-    {
-      "name": "latency",
-      "valueType": "number",
-      "value": 20,
-      "unit": "ms"
-    },
-    {
-      "name": "reliability",
-      "valueType": "number",
-      "value": 99.99,
-      "unit": "percent"
-    }
-  ],
-
-  "@type": "Optimisation",
-  "@baseType": "Entity",
-  "@schemaLocation": "/schema/Optimisation.schema.json"
-}
-```
-
-OC MS request contract split:
-
-```text
-OC MS OpenAPI/static contract:
-  Defines the generic runtime wrapper and metadata:
-    sourceContext
-    optimisationSpecification
-    name
-    description
-    priority
-    inputs
-    @type
-    @baseType
-    @schemaLocation
-
-OD MS OptimisationSpecification:
-  Defines the capability-specific inputs inside inputs[].
-```
-
-Validation split:
-
-```text
-OC MS validates generic runtime metadata using OC MS rules.
-
-OC MS validates inputs[] against the referenced ACTIVE OptimisationSpecification from OD MS.
-```
-
----
-
-## Baseline appended 2026-05-02T04:21:42 - OC MS POST /optimisation contract candidate
-
-For the optimisation architecture exercise, baseline the `POST /optimisation` direction for OC MS.
-
-`POST /optimisation`:
-
-```text
-Performs syntactic and OD-MS-contract validation only.
-Does not perform solver feasibility or optimisation semantic validation.
-Persists the runtime Optimisation resource.
-Writes OptimisationRequestedEvent to OC MS outbox in the same database transaction.
-Returns 202 Accepted.
-```
-
-Create request shape:
+### Request
 
 ```http
-POST /optimisation
+DELETE /optimisationSpecification/os-7f3a9c21
+If-Match: "os-7f3a9c21-v1"
+```
+
+### Successful response
+
+```http
+HTTP/1.1 204 No Content
+```
+
+### DELETE rules
+
+```text
+DELETE /optimisationSpecification/{id}
+  Requires If-Match.
+  Allowed only when lifecycleStatus is DRAFT.
+  Removes a draft specification that has not become ACTIVE.
+  Not allowed for ACTIVE.
+  Not allowed for RETIRED.
+```
+
+### DELETE failure responses
+
+```http
+HTTP/1.1 428 Precondition Required
 Content-Type: application/json
 ```
 
 ```jsonc
 {
-  // Optional source context.
-  // Used only when the caller wants to link this optimisation to an upstream domain/resource.
-  // Intent is only one possible source context.
-  "sourceContext": {
-    "domain": "intent-management",
-    "resource": {
-      "id": "intent-789",
-      "href": "/intentManagement/v5/intent/intent-789",
-      "@type": "IntentRef",
-      "@referredType": "Intent"
-    }
-  },
-
-  // Required optimisation capability reference.
-  // Must point to an ACTIVE OptimisationSpecification owned by OD MS.
-  "optimisationSpecification": {
-    "id": "os-7f3a9c21",
-    "href": "/optimisationSpecification/os-7f3a9c21",
-    "@type": "OptimisationSpecificationRef",
-    "@referredType": "OptimisationSpecification"
-  },
-
-  // Human-readable runtime metadata.
-  "name": "Hospital surgical slice path optimisation request",
-  "description": "Optimise path selection for hospital surgical slice intent.",
-
-  // Runtime priority for scheduling/handling.
-  // OC MS owns the allowed priority model.
-  "priority": "1",
-
-  // Capability-specific caller-fed inputs.
-  // These are validated syntactically against the referenced OD MS OptimisationSpecification.inputs.
-  // Feasibility/semantic checks are left to the Python/Gurobi worker.
-  "inputs": [
-    {
-      // Required by the referenced OptimisationSpecification.
-      "name": "latency",
-      "valueType": "number",
-      "value": 20,
-      "unit": "ms"
-    },
-    {
-      // Required by the referenced OptimisationSpecification.
-      "name": "reliability",
-      "valueType": "number",
-      "value": 99.99,
-      "unit": "percent"
-    },
-    {
-      // Optional input allowed by the referenced OptimisationSpecification.
-      "name": "topologySnapshot",
-      "valueType": "object",
-      "value": {
-        "dataset": "topology-snapshot",
-        "version": "2026-05-02T10:00:00Z"
-      }
-    }
-  ],
-
-  // TMF-aligned REST resource typing.
-  "@type": "Optimisation",
-  "@baseType": "Entity",
-  "@schemaLocation": "/schema/Optimisation.schema.json"
+  // If-Match is mandatory for unsafe delete operations.
+  "code": "PRECONDITION_REQUIRED",
+  "reason": "IF_MATCH_REQUIRED",
+  "message": "If-Match header is required when deleting an OptimisationSpecification.",
+  "status": "428",
+  "type": "Error"
 }
 ```
 
-Successful response:
-
 ```http
-HTTP/1.1 202 Accepted
-Location: /optimisation/opt-12345
-ETag: "opt-12345-rev1"
+HTTP/1.1 412 Precondition Failed
 Content-Type: application/json
 ```
 
 ```jsonc
 {
-  // Server-generated runtime optimisation identity.
-  "id": "opt-12345",
-  "href": "/optimisation/opt-12345",
+  // Supplied ETag does not match the current resource version.
+  "code": "PRECONDITION_FAILED",
+  "reason": "ETAG_MISMATCH",
+  "message": "The supplied ETag does not match the current OptimisationSpecification version.",
+  "status": "412",
+  "type": "Error"
+}
+```
 
-  // TMF-aligned REST resource typing.
-  "@type": "Optimisation",
-  "@baseType": "Entity",
-  "@schemaLocation": "/schema/Optimisation.schema.json",
+```http
+HTTP/1.1 409 Conflict
+Content-Type: application/json
+```
 
-  // Optional source context copied from request when supplied.
-  "sourceContext": {
-    "domain": "intent-management",
-    "resource": {
-      "id": "intent-789",
-      "href": "/intentManagement/v5/intent/intent-789",
-      "@type": "IntentRef",
-      "@referredType": "Intent"
-    }
-  },
+```jsonc
+{
+  // ACTIVE and RETIRED specifications are retained for governance and audit.
+  "code": "CONFLICT",
+  "reason": "SPECIFICATION_IMMUTABLE",
+  "message": "Only DRAFT OptimisationSpecification resources can be deleted.",
+  "status": "409",
+  "type": "Error"
+}
+```
 
-  // Accepted runtime metadata.
-  "name": "Hospital surgical slice path optimisation request",
-  "description": "Optimise path selection for hospital surgical slice intent.",
-  "priority": "1",
+## 11. HATEOAS by lifecycle state
 
-  // Runtime lifecycle owned by OC MS.
-  // Runtime Optimisation does not expose a version field.
-  "lifecycleStatus": "ACKNOWLEDGED",
-  "creationDate": "2026-05-02T03:00:00Z",
-  "lastUpdate": "2026-05-02T03:00:00Z",
-  "statusChangeDate": "2026-05-02T03:00:00Z",
+### DRAFT
 
-  // Specification used to validate and trigger this optimisation.
-  "optimisationSpecification": {
-    "id": "os-7f3a9c21",
+```jsonc
+"_links": {
+  "self": {
     "href": "/optimisationSpecification/os-7f3a9c21",
-    "@type": "OptimisationSpecificationRef",
-    "@referredType": "OptimisationSpecification"
+    "method": "GET"
   },
+  "replace": {
+    "href": "/optimisationSpecification/os-7f3a9c21",
+    "method": "PUT"
+  },
+  "delete": {
+    "href": "/optimisationSpecification/os-7f3a9c21",
+    "method": "DELETE"
+  }
+}
+```
 
-  // Accepted caller-fed inputs.
-  "inputs": [
-    {
-      "name": "latency",
-      "valueType": "number",
-      "value": 20,
-      "unit": "ms"
-    },
-    {
-      "name": "reliability",
-      "valueType": "number",
-      "value": 99.99,
-      "unit": "percent"
-    },
-    {
-      "name": "topologySnapshot",
-      "valueType": "object",
-      "value": {
-        "dataset": "topology-snapshot",
-        "version": "2026-05-02T10:00:00Z"
-      }
-    }
-  ],
+### ACTIVE
 
-  // HATEOAS controls for ACKNOWLEDGED state.
-  // Unsafe transitions require If-Match using the latest ETag response header.
+```jsonc
+"_links": {
+  "self": {
+    "href": "/optimisationSpecification/os-7f3a9c21",
+    "method": "GET"
+  },
+  "createOptimisation": {
+    "href": "/optimisation",
+    "method": "POST"
+  }
+}
+```
+
+### RETIRED
+
+```jsonc
+"_links": {
+  "self": {
+    "href": "/optimisationSpecification/os-7f3a9c21",
+    "method": "GET"
+  }
+}
+```
+
+## 12. Header rules
+
+```text
+GET /optimisationSpecification/{id}
+  Response:
+    ETag required
+    Cache-Control: max-age=3600
+
+GET /optimisationSpecification
+  Response:
+    Cache-Control: max-age=3600
+    X-Total-Count and X-Result-Count for pagination
+
+GET request cache bypass:
+  Client may send Cache-Control: no-cache
+
+No If-None-Match in the active baseline.
+
+ETag is used for unsafe concurrency only:
+  PUT /optimisationSpecification/{id}
+  DELETE /optimisationSpecification/{id}
+  POST /optimisation/{id}/cancel
+  POST /optimisation/{id}/retry
+
+Missing If-Match on unsafe operation:
+  428 Precondition Required
+
+Stale/wrong If-Match:
+  412 Precondition Failed
+```
+
+## 13. Key OD MS baseline summary
+
+```text
+OD MS owns OptimisationSpecification.
+
+OptimisationSpecification is a public capability/input contract, not a public Gurobi model definition.
+
+Expose only:
+  id
+  href
+  specificationKey
+  type
+  baseType
+  schemaLocation
+  name
+  description
+  version
+  lifecycleStatus
+  creationDate
+  lastUpdate
+  inputs
+  _links
+
+Do not expose by default:
+  supportedInputModes
+  allowedObjectives
+  candidateResourceRules
+  solverConfiguration
+  modelBinding
+  resultSchema
+  inputType
+  sourceType
+  operator
+  inputTypeVocabulary
+  operatorVocabulary
+
+POST uses server-generated IDs only.
+
+Use lifecycleStatus:
+  DRAFT
+  ACTIVE
+  RETIRED
+
+Only DRAFT specifications are editable/deletable.
+
+ACTIVE specifications are immutable.
+
+When a DRAFT version is promoted to ACTIVE:
+  previous ACTIVE version with the same specificationKey is moved to RETIRED.
+
+Only one ACTIVE specification is allowed per specificationKey.
+
+RETIRED specifications are retained for audit/history and existing Optimisation references.
+
+No DELETED or ARCHIVED lifecycle status in the active baseline.
+```
+
+---
+
+## Baseline appended 2026-05-02T04:29:57 - Runtime Optimisation result visibility rule
+
+For the optimisation architecture exercise, runtime `Optimisation` resources do not expose `result: null` or `resultPending`.
+
+Use `lifecycleStatus` to indicate progress.
+
+Result visibility rule:
+
+```text
+If lifecycleStatus is ACKNOWLEDGED, QUEUED, PROCESSING, or CANCELLING:
+  result is omitted.
+
+If lifecycleStatus is COMPLETED, INFEASIBLE, or FAILED:
+  result/outcome details may be included.
+
+If lifecycleStatus is CANCELLED:
+  result is omitted, but cancellation/status reason may be included if useful.
+```
+
+Rationale:
+
+```text
+The lifecycle state already tells the caller whether the optimisation is pending, running, completed, infeasible, failed, cancelling, or cancelled.
+
+Do not duplicate that state with result:null or resultPending:true.
+```
+
+Example active state:
+
+```jsonc
+{
+  // Runtime lifecycle tells the caller the optimisation is still in progress.
+  "lifecycleStatus": "PROCESSING",
+
+  // No result field is included until a worker outcome exists.
   "_links": {
     "self": {
       "href": "/optimisation/opt-12345",
@@ -991,193 +1128,63 @@ Content-Type: application/json
 }
 ```
 
-Acceptance rule:
+---
 
-```text
-202 Accepted means:
-  OC MS accepted the request for asynchronous optimisation execution.
+## Baseline appended 2026-05-03T07:55:57 - Rebuilt OD MS specification as clean definition model
 
-It does not mean:
-  the optimisation is feasible
-  Gurobi has started
-  Gurobi can solve the model
-  a valid result will definitely be produced
-```
+Rebuilt OD MS specification to remove runtime request-instance drift.
 
-After successful acceptance, OC MS writes an `OptimisationRequestedEvent` to its outbox. The outbox relay later publishes it to:
-
-```text
-t7.optimisation.events
-```
+Validation intent:
+- OD MS contains `constraintSpecifications[]`, `targetSpecifications[]`, and `contextSpecifications[]`.
+- OD MS does not contain runtime `constraints[]`, `targets[]`, or `context[]` instance sections.
+- OD MS does not contain actual candidate IDs such as path-001/path-002.
+- OD MS does not contain runtime request values such as `"value": 20` or `"value": 99.9`.
+- OD MS defines candidate resource schema and minItems cardinality only.
 
 ---
 
-## Baseline appended 2026-05-02T04:26:38 - OptimisationRequestedEvent on t7.optimisation.events
+## Baseline appended 2026-05-03T08:08:22 - Shared location moved to topologySnapshot level
 
-For the optimisation architecture exercise, baseline `OptimisationRequestedEvent` as the minimal worker input event written by OC MS to its outbox after `POST /optimisation` is accepted. The OC MS outbox relay publishes this event to Kafka topic `t7.optimisation.events`.
+Baselined the shared versus candidate-specific context rule.
 
-Topic:
+Rule:
+- Put shared context attributes at `context.topologySnapshot` level.
+- Use `candidateResources[].resourceAttributes` only for attributes that vary per candidate.
+- Do not repeat the same `locationId` under every candidate if all candidate paths belong to the same optimisation scope/location.
 
-```text
-t7.optimisation.events
-```
-
-Kafka headers follow the same CloudEvents-style internal-event guidance used for the intent domain:
-
-```text
-ce-specversion: 1.0
-ce-id: evt-12345
-ce-type: au.com.mycsp.optimisation.requested.v1
-ce-source: optimisation-controller-ms
-ce-time: 2026-05-02T03:00:00Z
-ce-subject: optimisation/opt-12345
-ce-datacontenttype: application/json
-ce-correlationid: corr-12345
-ce-eventversion: 1.0
-content-type: application/json
-```
-
-Payload shape:
-
-```jsonc
-{
-  // Internal event identity.
-  // Kafka events do not use TMF REST @type/@baseType/@schemaLocation.
-  "eventId": "evt-12345",
-  "eventType": "OptimisationRequestedEvent",
-  "eventVersion": "1.0",
-
-  // Producer service.
-  "source": "optimisation-controller-ms",
-
-  // Event creation time.
-  "eventTime": "2026-05-02T03:00:00Z",
-
-  // Correlation across request, worker execution, and result events.
-  "correlationId": "corr-12345",
-
-  // Minimal worker input payload.
-  "body": {
-    // Runtime Optimisation resource created by OC MS.
-    "optimisationId": "opt-12345",
-
-    // REST location for traceability.
-    "optimisationHref": "/optimisation/opt-12345",
-
-    // ACTIVE OptimisationSpecification used to validate this request.
-    // Worker resolves internal deterministic model binding from this reference.
-    "optimisationSpecification": {
-      "id": "os-7f3a9c21",
-      "href": "/optimisationSpecification/os-7f3a9c21"
-    },
-
-    // Optional upstream context copied from runtime Optimisation if supplied.
-    "sourceContext": {
-      "domain": "intent-management",
-      "resource": {
-        "id": "intent-789",
-        "href": "/intentManagement/v5/intent/intent-789",
-        "resourceType": "Intent"
-      }
-    },
-
-    // Caller-fed inputs accepted by OC MS.
-    "inputs": [
-      {
-        "name": "latency",
-        "valueType": "number",
-        "value": 20,
-        "unit": "ms"
-      },
-      {
-        "name": "reliability",
-        "valueType": "number",
-        "value": 99.99,
-        "unit": "percent"
-      },
-      {
-        "name": "topologySnapshot",
-        "valueType": "object",
-        "value": {
-          "dataset": "topology-snapshot",
-          "version": "2026-05-02T10:00:00Z"
-        }
-      }
-    ]
-  }
-}
-```
-
-Event boundary rule:
-
-```text
-OptimisationRequestedEvent carries the minimal worker input payload.
-
-It includes:
-  optimisationId
-  optimisationHref
-  optimisationSpecification reference
-  optional sourceContext
-  inputs
-
-It does not include:
-  full Optimisation REST representation
-  HATEOAS links
-  ETag
-  solver configuration
-  objective internals
-  candidate-resource rules
-  model formulation
-  result
-```
-
-CloudEvents header mapping rule:
-
-```text
-ce-id:
-  Same value as payload.eventId.
-
-ce-type:
-  Stable technical event type.
-  For requested event:
-    au.com.mycsp.optimisation.requested.v1
-
-ce-source:
-  Producer component.
-  For requested event:
-    optimisation-controller-ms
-
-ce-subject:
-  Business subject of the event.
-  For requested event:
-    optimisation/{optimisationId}
-
-ce-time:
-  Same instant as payload.eventTime.
-
-ce-correlationid:
-  Same value as payload.correlationId.
-
-ce-eventversion:
-  Same value as payload.eventVersion.
-
-ce-datacontenttype and content-type:
-  application/json
-```
+For the current examples:
+- `location.locationId = melbourne-hospital` is placed at `topologySnapshot` level.
+- Repeated candidate-level `resourceAttributes.locationId` blocks are removed from OC MS runtime examples.
 
 ---
 
-## Baseline appended 2026-05-03T08:41:47 - OD lifecycle active spec cleaned
+## Baseline appended 2026-05-03T10:53:26 - Corrected E2E logical integration sequence
 
-Cleaned the active OD MS specification so the current lifecycle is shown only as:
+Baselined the E2E logical integration sequence as:
 
 ```text
-DRAFT
-ACTIVE
-RETIRED
+User
+-> Microsoft Entra ID SSO
+-> OEX UI
+-> OEX APIs
+-> OGW
+-> OEX Screen Builder MS
+-> NGW
+-> OD MS / OC MS
+-> Kafka
+-> Python/Gurobi Worker
+-> Gurobi Optimizer
 ```
 
-The intermediate deprecated-style lifecycle state is not part of the active OD MS baseline.
+Rules:
+- User authentication starts with Microsoft Entra ID SSO.
+- OEX UI calls OEX APIs.
+- OEX APIs are exposed through OGW.
+- OGW routes to OEX Screen Builder MS.
+- OEX Screen Builder MS integrates with NGW.
+- NGW exposes TMF-compliant backend APIs for OD MS and OC MS.
+- Runtime OC MS execution continues through Kafka, Python/Gurobi Worker, and Gurobi Optimizer.
+- OD MS definition-management flows stop at OD MS and do not continue to Kafka/worker/optimizer unless a runtime optimisation is created through OC MS.
 
 
 ---
@@ -1309,6 +1316,7 @@ _links
 ```text
 DRAFT
 ACTIVE
+DEPRECATED
 RETIRED
 ```
 
@@ -1321,6 +1329,10 @@ DRAFT:
 ACTIVE:
   Can be used by OC MS for runtime Optimisation creation.
   Should be immutable except lifecycle transition metadata.
+
+DEPRECATED:
+  Existing runtime use may continue where already accepted.
+  New runtime use should be prevented unless explicitly allowed by policy.
 
 RETIRED:
   Not available for new runtime Optimisation creation.
@@ -1611,31 +1623,22 @@ Example runtime context shape:
 
 ---
 
-## OptimisationSpecification lifecycle baseline:
+## Definition access/integration sequence baseline:
 
-The active OD MS lifecycle model is:
-
-```text
-DRAFT
-ACTIVE
-RETIRED
-```
-
-No intermediate deprecated state is used in the current baseline.
-
-Meaning:
+OptimisationSpecification definition access follows the same front-door path and stops at OD MS:
 
 ```text
-DRAFT:
-  Editable.
-
-ACTIVE:
-  Can be used by OC MS to create runtime Optimisation resources.
-  Should be immutable except lifecycle transition metadata.
-
-RETIRED:
-  Not available for new runtime Optimisation creation.
+User
+-> Microsoft Entra ID SSO
+-> OEX UI
+-> OEX APIs
+-> OGW
+-> OEX Screen Builder MS
+-> NGW
+-> OD MS
 ```
+
+OD MS is reached through NGW. OD MS does not participate in Kafka, Python/Gurobi Worker, or Gurobi Optimizer runtime execution flows.
 
 
 ---
@@ -1853,14 +1856,14 @@ Content-Type: application/json
           "dataset": "topology-snapshot",
           "version": "2026-05-02T10:00:00Z",
           "candidateResourceSetId": "candidate-paths-surgical-melbourne-20260502T100000Z",
-          "location": {
-            "locationId": "melbourne-hospital"
-          },
           "candidateResources": [
             {
               "resourceId": "path-001",
               "resourceType": "deliveryResource",
               "resourceClass": "low-latency-path",
+              "resourceAttributes": {
+                "locationId": "melbourne-hospital"
+              },
               "metrics": [
                 {
                   "name": "latency",
@@ -1883,6 +1886,9 @@ Content-Type: application/json
               "resourceId": "path-002",
               "resourceType": "deliveryResource",
               "resourceClass": "high-reliability-path",
+              "resourceAttributes": {
+                "locationId": "melbourne-hospital"
+              },
               "metrics": [
                 {
                   "name": "latency",
@@ -2000,14 +2006,14 @@ Content-Type: application/json
           "dataset": "topology-snapshot",
           "version": "2026-05-02T10:00:00Z",
           "candidateResourceSetId": "candidate-paths-surgical-melbourne-20260502T100000Z",
-          "location": {
-            "locationId": "melbourne-hospital"
-          },
           "candidateResources": [
             {
               "resourceId": "path-001",
               "resourceType": "deliveryResource",
               "resourceClass": "low-latency-path",
+              "resourceAttributes": {
+                "locationId": "melbourne-hospital"
+              },
               "metrics": [
                 {
                   "name": "latency",
@@ -2030,6 +2036,9 @@ Content-Type: application/json
               "resourceId": "path-002",
               "resourceType": "deliveryResource",
               "resourceClass": "high-reliability-path",
+              "resourceAttributes": {
+                "locationId": "melbourne-hospital"
+              },
               "metrics": [
                 {
                   "name": "latency",
@@ -2170,14 +2179,14 @@ Active-state example:
           "dataset": "topology-snapshot",
           "version": "2026-05-02T10:00:00Z",
           "candidateResourceSetId": "candidate-paths-surgical-melbourne-20260502T100000Z",
-          "location": {
-            "locationId": "melbourne-hospital"
-          },
           "candidateResources": [
             {
               "resourceId": "path-001",
               "resourceType": "deliveryResource",
               "resourceClass": "low-latency-path",
+              "resourceAttributes": {
+                "locationId": "melbourne-hospital"
+              },
               "metrics": [
                 {
                   "name": "latency",
@@ -2200,6 +2209,9 @@ Active-state example:
               "resourceId": "path-002",
               "resourceType": "deliveryResource",
               "resourceClass": "high-reliability-path",
+              "resourceAttributes": {
+                "locationId": "melbourne-hospital"
+              },
               "metrics": [
                 {
                   "name": "latency",
@@ -2525,14 +2537,14 @@ Content-Type: application/json
           "dataset": "topology-snapshot",
           "version": "2026-05-02T10:00:00Z",
           "candidateResourceSetId": "candidate-paths-surgical-melbourne-20260502T100000Z",
-          "location": {
-            "locationId": "melbourne-hospital"
-          },
           "candidateResources": [
             {
               "resourceId": "path-001",
               "resourceType": "deliveryResource",
               "resourceClass": "low-latency-path",
+              "resourceAttributes": {
+                "locationId": "melbourne-hospital"
+              },
               "metrics": [
                 {
                   "name": "latency",
@@ -2555,6 +2567,9 @@ Content-Type: application/json
               "resourceId": "path-002",
               "resourceType": "deliveryResource",
               "resourceClass": "high-reliability-path",
+              "resourceAttributes": {
+                "locationId": "melbourne-hospital"
+              },
               "metrics": [
                 {
                   "name": "latency",
@@ -2730,10 +2745,7 @@ Payload:
           "value": {
             "dataset": "topology-snapshot",
             "version": "2026-05-02T10:00:00Z",
-            "candidateResourceSetId": "candidate-paths-surgical-melbourne-20260502T100000Z",
-          "location": {
-            "locationId": "melbourne-hospital"
-          }
+            "candidateResourceSetId": "candidate-paths-surgical-melbourne-20260502T100000Z"
           }
         }
       ]
@@ -3076,6 +3088,30 @@ runtime context[] -> OD contextSpecifications[]
 OC MS validates structure, required fields, enum/value type rules, and cardinality against the ACTIVE OptimisationSpecification. This includes candidateResources minItems = 2 for selection optimisation.
 
 OC MS does not perform solver feasibility, candidate ranking, metric-vs-constraint evaluation, or objective trade-off evaluation.
+
+---
+
+## Runtime access/integration sequence baseline:
+
+Runtime optimisation access should follow this logical sequence:
+
+```text
+User
+-> Microsoft Entra ID SSO
+-> OEX UI
+-> OEX APIs
+-> OGW
+-> OEX Screen Builder MS
+-> NGW
+-> OD MS / OC MS
+-> Kafka
+-> Python/Gurobi Worker
+-> Gurobi Optimizer
+```
+
+OC MS appears behind NGW. OC MS does not directly authenticate end users; user access is handled through Entra ID SSO, OEX UI/APIs, OGW, OEX Screen Builder MS, and NGW before the request reaches OC MS.
+
+After OC MS accepts a runtime Optimisation request, asynchronous execution continues through Kafka, Python/Gurobi Worker, and Gurobi Optimizer.
 
 
 ---
@@ -3788,9 +3824,94 @@ This keeps the design clear: OD MS defines what is allowed; OC MS stores and ret
 
 ---
 
-## Shared context attributes:
+## Corrected E2E logical integration flow:
 
-Shared optimisation-scope attributes, such as a common `locationId`, should sit at the runtime `context.topologySnapshot` level.
+The agreed end-to-end logical integration sequence is:
 
-Candidate-level `resourceAttributes` should be used only for attributes that vary by candidate resource.
+```text
+User
+-> Microsoft Entra ID SSO
+-> OEX UI
+-> OEX APIs
+-> OGW
+-> OEX Screen Builder MS
+-> NGW
+-> OD MS / OC MS
+-> Kafka
+-> Python/Gurobi Worker
+-> Gurobi Optimizer
+```
+
+Meaning:
+
+```text
+User:
+  Operator or authorised consumer initiating the optimisation journey.
+
+Microsoft Entra ID SSO:
+  Authenticates the user and provides SSO identity context.
+
+OEX UI:
+  User-facing optimisation experience.
+
+OEX APIs:
+  Private OEX-facing APIs supporting the OEX UI experience.
+
+OGW:
+  User-context-aware gateway path for OEX APIs.
+
+OEX Screen Builder MS:
+  Builds and coordinates OEX screens and user journeys.
+
+NGW:
+  TMF-compliant gateway exposing backend OD MS and OC MS API contracts.
+
+OD MS / OC MS:
+  OD MS provides OptimisationSpecification definitions.
+  OC MS provides runtime Optimisation execution control.
+
+Kafka:
+  Asynchronous event backbone for worker instructions and outcomes.
+
+Python/Gurobi Worker:
+  Worker component consuming optimisation events and invoking the solver/model.
+
+Gurobi Optimizer:
+  Optimisation solver engine used by the worker/model.
+```
+
+Gateway/API compliance rule:
+
+```text
+NGW-exposed backend APIs are TMF-compliant.
+
+OEX APIs exposed via OGW are OEX/private experience APIs and do not need to be TMF-compliant.
+
+Private MS-to-MS APIs and internal Kafka events do not need to be TMF-compliant unless explicitly required by a separate contract.
+```
+
+
+---
+
+## E2E flow access path baseline:
+
+All E2E solution flows should use the following access and integration path as the logical sequence:
+
+```text
+User
+-> Microsoft Entra ID SSO
+-> OEX UI
+-> OEX APIs
+-> OGW
+-> OEX Screen Builder MS
+-> NGW
+-> OD MS / OC MS
+-> Kafka
+-> Python/Gurobi Worker
+-> Gurobi Optimizer
+```
+
+When a flow is specifically about OD MS definition management, the sequence stops at OD MS unless runtime optimisation is created.
+
+When a flow is specifically about OC MS runtime execution, the sequence continues from OC MS to Kafka, Python/Gurobi Worker, and Gurobi Optimizer.
 

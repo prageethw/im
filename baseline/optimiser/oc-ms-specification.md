@@ -209,14 +209,14 @@ Content-Type: application/json
           "dataset": "topology-snapshot",
           "version": "2026-05-02T10:00:00Z",
           "candidateResourceSetId": "candidate-paths-surgical-melbourne-20260502T100000Z",
-          "location": {
-            "locationId": "melbourne-hospital"
-          },
           "candidateResources": [
             {
               "resourceId": "path-001",
               "resourceType": "deliveryResource",
               "resourceClass": "low-latency-path",
+              "resourceAttributes": {
+                "locationId": "melbourne-hospital"
+              },
               "metrics": [
                 {
                   "name": "latency",
@@ -239,6 +239,9 @@ Content-Type: application/json
               "resourceId": "path-002",
               "resourceType": "deliveryResource",
               "resourceClass": "high-reliability-path",
+              "resourceAttributes": {
+                "locationId": "melbourne-hospital"
+              },
               "metrics": [
                 {
                   "name": "latency",
@@ -356,14 +359,14 @@ Content-Type: application/json
           "dataset": "topology-snapshot",
           "version": "2026-05-02T10:00:00Z",
           "candidateResourceSetId": "candidate-paths-surgical-melbourne-20260502T100000Z",
-          "location": {
-            "locationId": "melbourne-hospital"
-          },
           "candidateResources": [
             {
               "resourceId": "path-001",
               "resourceType": "deliveryResource",
               "resourceClass": "low-latency-path",
+              "resourceAttributes": {
+                "locationId": "melbourne-hospital"
+              },
               "metrics": [
                 {
                   "name": "latency",
@@ -386,6 +389,9 @@ Content-Type: application/json
               "resourceId": "path-002",
               "resourceType": "deliveryResource",
               "resourceClass": "high-reliability-path",
+              "resourceAttributes": {
+                "locationId": "melbourne-hospital"
+              },
               "metrics": [
                 {
                   "name": "latency",
@@ -526,14 +532,14 @@ Active-state example:
           "dataset": "topology-snapshot",
           "version": "2026-05-02T10:00:00Z",
           "candidateResourceSetId": "candidate-paths-surgical-melbourne-20260502T100000Z",
-          "location": {
-            "locationId": "melbourne-hospital"
-          },
           "candidateResources": [
             {
               "resourceId": "path-001",
               "resourceType": "deliveryResource",
               "resourceClass": "low-latency-path",
+              "resourceAttributes": {
+                "locationId": "melbourne-hospital"
+              },
               "metrics": [
                 {
                   "name": "latency",
@@ -556,6 +562,9 @@ Active-state example:
               "resourceId": "path-002",
               "resourceType": "deliveryResource",
               "resourceClass": "high-reliability-path",
+              "resourceAttributes": {
+                "locationId": "melbourne-hospital"
+              },
               "metrics": [
                 {
                   "name": "latency",
@@ -881,14 +890,14 @@ Content-Type: application/json
           "dataset": "topology-snapshot",
           "version": "2026-05-02T10:00:00Z",
           "candidateResourceSetId": "candidate-paths-surgical-melbourne-20260502T100000Z",
-          "location": {
-            "locationId": "melbourne-hospital"
-          },
           "candidateResources": [
             {
               "resourceId": "path-001",
               "resourceType": "deliveryResource",
               "resourceClass": "low-latency-path",
+              "resourceAttributes": {
+                "locationId": "melbourne-hospital"
+              },
               "metrics": [
                 {
                   "name": "latency",
@@ -911,6 +920,9 @@ Content-Type: application/json
               "resourceId": "path-002",
               "resourceType": "deliveryResource",
               "resourceClass": "high-reliability-path",
+              "resourceAttributes": {
+                "locationId": "melbourne-hospital"
+              },
               "metrics": [
                 {
                   "name": "latency",
@@ -1086,10 +1098,7 @@ Payload:
           "value": {
             "dataset": "topology-snapshot",
             "version": "2026-05-02T10:00:00Z",
-            "candidateResourceSetId": "candidate-paths-surgical-melbourne-20260502T100000Z",
-          "location": {
-            "locationId": "melbourne-hospital"
-          }
+            "candidateResourceSetId": "candidate-paths-surgical-melbourne-20260502T100000Z"
           }
         }
       ]
@@ -1432,3 +1441,27 @@ runtime context[] -> OD contextSpecifications[]
 OC MS validates structure, required fields, enum/value type rules, and cardinality against the ACTIVE OptimisationSpecification. This includes candidateResources minItems = 2 for selection optimisation.
 
 OC MS does not perform solver feasibility, candidate ranking, metric-vs-constraint evaluation, or objective trade-off evaluation.
+
+---
+
+## Runtime access/integration sequence baseline:
+
+Runtime optimisation access should follow this logical sequence:
+
+```text
+User
+-> Microsoft Entra ID SSO
+-> OEX UI
+-> OEX APIs
+-> OGW
+-> OEX Screen Builder MS
+-> NGW
+-> OD MS / OC MS
+-> Kafka
+-> Python/Gurobi Worker
+-> Gurobi Optimizer
+```
+
+OC MS appears behind NGW. OC MS does not directly authenticate end users; user access is handled through Entra ID SSO, OEX UI/APIs, OGW, OEX Screen Builder MS, and NGW before the request reaches OC MS.
+
+After OC MS accepts a runtime Optimisation request, asynchronous execution continues through Kafka, Python/Gurobi Worker, and Gurobi Optimizer.
