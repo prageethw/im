@@ -1332,3 +1332,19 @@ Consumer
 ```
 
 The process view must not combine these as a single `Consumer / OEX` node.
+
+---
+
+## Baseline appended 2026-05-03T12:21:37 - Corrected Screen Builder invocation responsibility
+
+Corrected the security/integration wording:
+
+```text
+OGW invokes OEX Screen Builder MS with mTLS and User Context JWT.
+```
+
+The previous wording incorrectly said:
+
+```text
+OEX GW invokes OEX Screen Builder MS with mTLS and User Context JWT.
+```

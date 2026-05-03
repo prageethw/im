@@ -1,6 +1,6 @@
 # Optimisation Full Recovery Pack
 
-Generated: 2026-05-03T12:00:03
+Generated: 2026-05-03T12:21:37
 
 This file combines the current optimisation architecture recovery material into one place.
 
@@ -1348,6 +1348,22 @@ Consumer
 ```
 
 The process view must not combine these as a single `Consumer / OEX` node.
+
+---
+
+## Baseline appended 2026-05-03T12:21:37 - Corrected Screen Builder invocation responsibility
+
+Corrected the security/integration wording:
+
+```text
+OGW invokes OEX Screen Builder MS with mTLS and User Context JWT.
+```
+
+The previous wording incorrectly said:
+
+```text
+OEX GW invokes OEX Screen Builder MS with mTLS and User Context JWT.
+```
 
 
 ---
@@ -3369,7 +3385,7 @@ Detailed runtime process interpretation:
 2. OEX sends the request to OGW.
 3. OGW routes to OEX APIs.
 4. OEX APIs route through OEX GW.
-5. OEX GW routes to OEX Screen Builder MS.
+5. OGW routes to OEX Screen Builder MS.
 6. OEX Screen Builder MS calls NGW.
 7. NGW calls OC MS.
 8. OC MS validates the runtime request against the ACTIVE OptimisationSpecification from OD MS.
@@ -3556,7 +3572,7 @@ Detailed flow:
 ```text
 1. Consumer submits an optimisation request through the OEX experience or another authorised integration path.
 2. User-facing access is handled through OGW and OEX APIs.
-3. OEX GW invokes OEX Screen Builder MS with mTLS and User Context JWT.
+3. OGW invokes OEX Screen Builder MS with mTLS and User Context JWT.
 4. OEX Screen Builder MS calls NGW using mTLS and OAuth2 system-to-system.
 5. NGW routes the request to OC MS.
 6. OC MS validates request structure.
@@ -4216,7 +4232,7 @@ Detailed runtime process interpretation:
 2. OEX sends the request to OGW.
 3. OGW routes to OEX APIs.
 4. OEX APIs route through OEX GW.
-5. OEX GW routes to OEX Screen Builder MS.
+5. OGW routes to OEX Screen Builder MS.
 6. OEX Screen Builder MS calls NGW.
 7. NGW calls OC MS.
 8. OC MS validates the runtime request against the ACTIVE OptimisationSpecification from OD MS.
