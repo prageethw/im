@@ -1124,3 +1124,18 @@ Validation intent:
 - OD MS does not contain actual candidate IDs such as path-001/path-002.
 - OD MS does not contain runtime request values such as `"value": 20` or `"value": 99.9`.
 - OD MS defines candidate resource schema and minItems cardinality only.
+
+---
+
+## Baseline appended 2026-05-03T08:08:22 - Shared location moved to topologySnapshot level
+
+Baselined the shared versus candidate-specific context rule.
+
+Rule:
+- Put shared context attributes at `context.topologySnapshot` level.
+- Use `candidateResources[].resourceAttributes` only for attributes that vary per candidate.
+- Do not repeat the same `locationId` under every candidate if all candidate paths belong to the same optimisation scope/location.
+
+For the current examples:
+- `location.locationId = melbourne-hospital` is placed at `topologySnapshot` level.
+- Repeated candidate-level `resourceAttributes.locationId` blocks are removed from OC MS runtime examples.

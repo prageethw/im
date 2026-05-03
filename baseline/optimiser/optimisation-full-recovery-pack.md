@@ -1,6 +1,6 @@
 # Optimisation Full Recovery Pack
 
-Generated: 2026-05-03T07:55:57
+Generated: 2026-05-03T08:08:22
 
 This file combines the current optimisation architecture recovery material into one place.
 
@@ -1141,6 +1141,21 @@ Validation intent:
 - OD MS does not contain runtime request values such as `"value": 20` or `"value": 99.9`.
 - OD MS defines candidate resource schema and minItems cardinality only.
 
+---
+
+## Baseline appended 2026-05-03T08:08:22 - Shared location moved to topologySnapshot level
+
+Baselined the shared versus candidate-specific context rule.
+
+Rule:
+- Put shared context attributes at `context.topologySnapshot` level.
+- Use `candidateResources[].resourceAttributes` only for attributes that vary per candidate.
+- Do not repeat the same `locationId` under every candidate if all candidate paths belong to the same optimisation scope/location.
+
+For the current examples:
+- `location.locationId = melbourne-hospital` is placed at `topologySnapshot` level.
+- Repeated candidate-level `resourceAttributes.locationId` blocks are removed from OC MS runtime examples.
+
 
 ---
 
@@ -1539,6 +1554,43 @@ Worker/model:
 
 This OD MS specification intentionally does not include actual runtime candidate resources such as path identifiers, candidate metric values, selected resources, or runtime constraint values. Those belong in OC MS runtime Optimisation examples.
 
+---
+
+## Shared versus candidate-specific context attributes:
+
+Shared context attributes should be modelled at the `topologySnapshot` level.
+
+Candidate-specific attributes should be modelled under `candidateResources[].resourceAttributes` only when they vary per candidate.
+
+For this example, `location.locationId` belongs at `topologySnapshot` level because all candidate paths belong to the same optimisation scope/location.
+
+Do not repeat the same `locationId` under every candidate resource.
+
+Example runtime context shape:
+
+```json
+{
+  "name": "topologySnapshot",
+  "valueType": "object",
+  "value": {
+    "dataset": "topology-snapshot",
+    "version": "2026-05-02T10:00:00Z",
+    "candidateResourceSetId": "candidate-paths-surgical-melbourne-20260502T100000Z",
+    "location": {
+      "locationId": "melbourne-hospital"
+    },
+    "candidateResources": [
+      {
+        "resourceId": "path-001",
+        "resourceType": "deliveryResource",
+        "resourceClass": "low-latency-path",
+        "metrics": []
+      }
+    ]
+  }
+}
+```
+
 
 ---
 
@@ -1755,14 +1807,14 @@ Content-Type: application/json
           "dataset": "topology-snapshot",
           "version": "2026-05-02T10:00:00Z",
           "candidateResourceSetId": "candidate-paths-surgical-melbourne-20260502T100000Z",
+          "location": {
+            "locationId": "melbourne-hospital"
+          },
           "candidateResources": [
             {
               "resourceId": "path-001",
               "resourceType": "deliveryResource",
               "resourceClass": "low-latency-path",
-              "resourceAttributes": {
-                "locationId": "melbourne-hospital"
-              },
               "metrics": [
                 {
                   "name": "latency",
@@ -1785,9 +1837,6 @@ Content-Type: application/json
               "resourceId": "path-002",
               "resourceType": "deliveryResource",
               "resourceClass": "high-reliability-path",
-              "resourceAttributes": {
-                "locationId": "melbourne-hospital"
-              },
               "metrics": [
                 {
                   "name": "latency",
@@ -1905,14 +1954,14 @@ Content-Type: application/json
           "dataset": "topology-snapshot",
           "version": "2026-05-02T10:00:00Z",
           "candidateResourceSetId": "candidate-paths-surgical-melbourne-20260502T100000Z",
+          "location": {
+            "locationId": "melbourne-hospital"
+          },
           "candidateResources": [
             {
               "resourceId": "path-001",
               "resourceType": "deliveryResource",
               "resourceClass": "low-latency-path",
-              "resourceAttributes": {
-                "locationId": "melbourne-hospital"
-              },
               "metrics": [
                 {
                   "name": "latency",
@@ -1935,9 +1984,6 @@ Content-Type: application/json
               "resourceId": "path-002",
               "resourceType": "deliveryResource",
               "resourceClass": "high-reliability-path",
-              "resourceAttributes": {
-                "locationId": "melbourne-hospital"
-              },
               "metrics": [
                 {
                   "name": "latency",
@@ -2078,14 +2124,14 @@ Active-state example:
           "dataset": "topology-snapshot",
           "version": "2026-05-02T10:00:00Z",
           "candidateResourceSetId": "candidate-paths-surgical-melbourne-20260502T100000Z",
+          "location": {
+            "locationId": "melbourne-hospital"
+          },
           "candidateResources": [
             {
               "resourceId": "path-001",
               "resourceType": "deliveryResource",
               "resourceClass": "low-latency-path",
-              "resourceAttributes": {
-                "locationId": "melbourne-hospital"
-              },
               "metrics": [
                 {
                   "name": "latency",
@@ -2108,9 +2154,6 @@ Active-state example:
               "resourceId": "path-002",
               "resourceType": "deliveryResource",
               "resourceClass": "high-reliability-path",
-              "resourceAttributes": {
-                "locationId": "melbourne-hospital"
-              },
               "metrics": [
                 {
                   "name": "latency",
@@ -2436,14 +2479,14 @@ Content-Type: application/json
           "dataset": "topology-snapshot",
           "version": "2026-05-02T10:00:00Z",
           "candidateResourceSetId": "candidate-paths-surgical-melbourne-20260502T100000Z",
+          "location": {
+            "locationId": "melbourne-hospital"
+          },
           "candidateResources": [
             {
               "resourceId": "path-001",
               "resourceType": "deliveryResource",
               "resourceClass": "low-latency-path",
-              "resourceAttributes": {
-                "locationId": "melbourne-hospital"
-              },
               "metrics": [
                 {
                   "name": "latency",
@@ -2466,9 +2509,6 @@ Content-Type: application/json
               "resourceId": "path-002",
               "resourceType": "deliveryResource",
               "resourceClass": "high-reliability-path",
-              "resourceAttributes": {
-                "locationId": "melbourne-hospital"
-              },
               "metrics": [
                 {
                   "name": "latency",
@@ -2644,7 +2684,10 @@ Payload:
           "value": {
             "dataset": "topology-snapshot",
             "version": "2026-05-02T10:00:00Z",
-            "candidateResourceSetId": "candidate-paths-surgical-melbourne-20260502T100000Z"
+            "candidateResourceSetId": "candidate-paths-surgical-melbourne-20260502T100000Z",
+          "location": {
+            "locationId": "melbourne-hospital"
+          }
           }
         }
       ]
@@ -3696,4 +3739,12 @@ context[]
 ```
 
 This keeps the design clear: OD MS defines what is allowed; OC MS stores and returns what was accepted at runtime.
+
+---
+
+## Shared context attributes:
+
+Shared optimisation-scope attributes, such as a common `locationId`, should sit at the runtime `context.topologySnapshot` level.
+
+Candidate-level `resourceAttributes` should be used only for attributes that vary by candidate resource.
 

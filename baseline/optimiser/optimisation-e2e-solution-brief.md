@@ -701,3 +701,11 @@ context[]
 ```
 
 This keeps the design clear: OD MS defines what is allowed; OC MS stores and returns what was accepted at runtime.
+
+---
+
+## Shared context attributes:
+
+Shared optimisation-scope attributes, such as a common `locationId`, should sit at the runtime `context.topologySnapshot` level.
+
+Candidate-level `resourceAttributes` should be used only for attributes that vary by candidate resource.

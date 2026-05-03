@@ -209,14 +209,14 @@ Content-Type: application/json
           "dataset": "topology-snapshot",
           "version": "2026-05-02T10:00:00Z",
           "candidateResourceSetId": "candidate-paths-surgical-melbourne-20260502T100000Z",
+          "location": {
+            "locationId": "melbourne-hospital"
+          },
           "candidateResources": [
             {
               "resourceId": "path-001",
               "resourceType": "deliveryResource",
               "resourceClass": "low-latency-path",
-              "resourceAttributes": {
-                "locationId": "melbourne-hospital"
-              },
               "metrics": [
                 {
                   "name": "latency",
@@ -239,9 +239,6 @@ Content-Type: application/json
               "resourceId": "path-002",
               "resourceType": "deliveryResource",
               "resourceClass": "high-reliability-path",
-              "resourceAttributes": {
-                "locationId": "melbourne-hospital"
-              },
               "metrics": [
                 {
                   "name": "latency",
@@ -359,14 +356,14 @@ Content-Type: application/json
           "dataset": "topology-snapshot",
           "version": "2026-05-02T10:00:00Z",
           "candidateResourceSetId": "candidate-paths-surgical-melbourne-20260502T100000Z",
+          "location": {
+            "locationId": "melbourne-hospital"
+          },
           "candidateResources": [
             {
               "resourceId": "path-001",
               "resourceType": "deliveryResource",
               "resourceClass": "low-latency-path",
-              "resourceAttributes": {
-                "locationId": "melbourne-hospital"
-              },
               "metrics": [
                 {
                   "name": "latency",
@@ -389,9 +386,6 @@ Content-Type: application/json
               "resourceId": "path-002",
               "resourceType": "deliveryResource",
               "resourceClass": "high-reliability-path",
-              "resourceAttributes": {
-                "locationId": "melbourne-hospital"
-              },
               "metrics": [
                 {
                   "name": "latency",
@@ -532,14 +526,14 @@ Active-state example:
           "dataset": "topology-snapshot",
           "version": "2026-05-02T10:00:00Z",
           "candidateResourceSetId": "candidate-paths-surgical-melbourne-20260502T100000Z",
+          "location": {
+            "locationId": "melbourne-hospital"
+          },
           "candidateResources": [
             {
               "resourceId": "path-001",
               "resourceType": "deliveryResource",
               "resourceClass": "low-latency-path",
-              "resourceAttributes": {
-                "locationId": "melbourne-hospital"
-              },
               "metrics": [
                 {
                   "name": "latency",
@@ -562,9 +556,6 @@ Active-state example:
               "resourceId": "path-002",
               "resourceType": "deliveryResource",
               "resourceClass": "high-reliability-path",
-              "resourceAttributes": {
-                "locationId": "melbourne-hospital"
-              },
               "metrics": [
                 {
                   "name": "latency",
@@ -890,14 +881,14 @@ Content-Type: application/json
           "dataset": "topology-snapshot",
           "version": "2026-05-02T10:00:00Z",
           "candidateResourceSetId": "candidate-paths-surgical-melbourne-20260502T100000Z",
+          "location": {
+            "locationId": "melbourne-hospital"
+          },
           "candidateResources": [
             {
               "resourceId": "path-001",
               "resourceType": "deliveryResource",
               "resourceClass": "low-latency-path",
-              "resourceAttributes": {
-                "locationId": "melbourne-hospital"
-              },
               "metrics": [
                 {
                   "name": "latency",
@@ -920,9 +911,6 @@ Content-Type: application/json
               "resourceId": "path-002",
               "resourceType": "deliveryResource",
               "resourceClass": "high-reliability-path",
-              "resourceAttributes": {
-                "locationId": "melbourne-hospital"
-              },
               "metrics": [
                 {
                   "name": "latency",
@@ -1098,7 +1086,10 @@ Payload:
           "value": {
             "dataset": "topology-snapshot",
             "version": "2026-05-02T10:00:00Z",
-            "candidateResourceSetId": "candidate-paths-surgical-melbourne-20260502T100000Z"
+            "candidateResourceSetId": "candidate-paths-surgical-melbourne-20260502T100000Z",
+          "location": {
+            "locationId": "melbourne-hospital"
+          }
           }
         }
       ]

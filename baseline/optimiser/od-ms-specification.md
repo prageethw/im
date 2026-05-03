@@ -390,3 +390,40 @@ Worker/model:
 ## Baseline validation note:
 
 This OD MS specification intentionally does not include actual runtime candidate resources such as path identifiers, candidate metric values, selected resources, or runtime constraint values. Those belong in OC MS runtime Optimisation examples.
+
+---
+
+## Shared versus candidate-specific context attributes:
+
+Shared context attributes should be modelled at the `topologySnapshot` level.
+
+Candidate-specific attributes should be modelled under `candidateResources[].resourceAttributes` only when they vary per candidate.
+
+For this example, `location.locationId` belongs at `topologySnapshot` level because all candidate paths belong to the same optimisation scope/location.
+
+Do not repeat the same `locationId` under every candidate resource.
+
+Example runtime context shape:
+
+```json
+{
+  "name": "topologySnapshot",
+  "valueType": "object",
+  "value": {
+    "dataset": "topology-snapshot",
+    "version": "2026-05-02T10:00:00Z",
+    "candidateResourceSetId": "candidate-paths-surgical-melbourne-20260502T100000Z",
+    "location": {
+      "locationId": "melbourne-hospital"
+    },
+    "candidateResources": [
+      {
+        "resourceId": "path-001",
+        "resourceType": "deliveryResource",
+        "resourceClass": "low-latency-path",
+        "metrics": []
+      }
+    ]
+  }
+}
+```
