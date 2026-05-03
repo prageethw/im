@@ -976,3 +976,153 @@ RETIRED specifications are retained for audit/history and existing Optimisation 
 
 No DELETED or ARCHIVED lifecycle status in the active baseline.
 ```
+
+---
+
+## Optimisation request definition contract baseline:
+
+OD MS defines the caller-facing contract for the runtime optimisation request. For the current path/resource-selection capability, the contract is split into:
+
+```text
+constraints[]:
+  Hard pass/fail rules that must be satisfied.
+  Example: maxLatency lessThanOrEqualTo 20ms.
+
+targets[]:
+  Optimisation goals or preferences applied among valid candidates.
+  Example: minimise cost first, minimise latency second, maximise reliability third.
+
+context[]:
+  Data used by the optimiser, including candidate resources and their metrics.
+  Example: topologySnapshot with candidateResourceSetId and at least two candidateResources.
+```
+
+The previous generic `inputs[]` model is replaced by the clearer top-level model:
+
+```text
+constraints[]
+targets[]
+context[]
+```
+
+Example runtime contract values:
+
+```json
+{
+  "constraints": [
+    {
+      "name": "maxLatency",
+      "operator": "lessThanOrEqualTo",
+      "valueType": "number",
+      "value": 20,
+      "unit": "ms"
+    }
+  ],
+  "targets": [
+    {
+      "name": "cost",
+      "goal": "minimise",
+      "priority": 1
+    },
+    {
+      "name": "latency",
+      "goal": "minimise",
+      "priority": 2
+    },
+    {
+      "name": "reliability",
+      "goal": "maximise",
+      "priority": 3
+    }
+  ],
+  "context": [
+    {
+      "name": "topologySnapshot",
+      "valueType": "object",
+      "value": {
+        "dataset": "topology-snapshot",
+        "version": "2026-05-02T10:00:00Z",
+        "candidateResourceSetId": "candidate-paths-surgical-melbourne-20260502T100000Z",
+        "candidateResources": [
+          {
+            "resourceId": "path-001",
+            "resourceType": "deliveryResource",
+            "resourceClass": "low-latency-path",
+            "resourceAttributes": {
+              "locationId": "melbourne-hospital"
+            },
+            "metrics": [
+              {
+                "name": "latency",
+                "value": 18,
+                "unit": "ms"
+              },
+              {
+                "name": "reliability",
+                "value": 99.95,
+                "unit": "percent"
+              },
+              {
+                "name": "cost",
+                "value": 70,
+                "unit": "costUnit"
+              }
+            ]
+          },
+          {
+            "resourceId": "path-002",
+            "resourceType": "deliveryResource",
+            "resourceClass": "high-reliability-path",
+            "resourceAttributes": {
+              "locationId": "melbourne-hospital"
+            },
+            "metrics": [
+              {
+                "name": "latency",
+                "value": 24,
+                "unit": "ms"
+              },
+              {
+                "name": "reliability",
+                "value": 99.995,
+                "unit": "percent"
+              },
+              {
+                "name": "cost",
+                "value": 90,
+                "unit": "costUnit"
+              }
+            ]
+          }
+        ]
+      }
+    }
+  ]
+}
+```
+
+Candidate-set rule:
+
+```text
+For optimisation capabilities that select a resource, route, path, placement, or option, the context contract must provide or reference a candidate set with at least two candidate options.
+
+A single candidate option is not a meaningful optimisation problem unless the capability is explicitly feasibility-validation-only.
+
+Use metrics for measured or computed candidate values such as latency, reliability, cost, or utilisation.
+
+Use resourceAttributes for stable descriptive candidate properties such as locationId or pathClass.
+```
+
+Selection consistency for the example:
+
+```text
+path-001 passes maxLatency because latency 18ms <= 20ms.
+path-002 fails maxLatency because latency 24ms > 20ms.
+
+Among valid candidates, targets are applied:
+  cost minimise priority 1
+  latency minimise priority 2
+  reliability maximise priority 3
+
+Therefore path-001 is the consistent selectedResource in the example result.
+```
