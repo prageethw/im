@@ -1244,87 +1244,12 @@ Correction:
 
 ---
 
-## Baseline appended 2026-05-03T11:23:51 - All logical and process views aligned
+## Baseline appended 2026-05-03T22:42:08 - Re-added visible Manage optimisation catalogue use case
 
-Updated all active logical and process views to the agreed baseline.
+Confirmed and re-added the visible use case row in the E2E use case view:
 
-Logical sequence:
 ```text
-User
--> Microsoft Entra ID SSO
--> OEX UI
--> OEX APIs
--> OGW
--> OEX Screen Builder MS
--> NGW
--> OD MS / OC MS
--> Kafka
--> Python/Gurobi Worker
--> Gurobi Optimizer
+Manage optimisation catalogue
 ```
 
-Definition path:
-```text
-User
--> Microsoft Entra ID SSO
--> OEX UI
--> OEX APIs
--> OGW
--> OEX Screen Builder MS
--> NGW
--> OD MS
-```
-
-Runtime logical path:
-```text
-User
--> Microsoft Entra ID SSO
--> OEX UI
--> OEX APIs
--> OGW
--> OEX Screen Builder MS
--> NGW
--> OC MS
--> Kafka
--> Python/Gurobi Worker
--> Gurobi Optimizer
-```
-
-Runtime process expansion:
-```text
-User
--> Microsoft Entra ID SSO
--> OEX UI
--> OEX APIs
--> OGW
--> OEX Screen Builder MS
--> NGW
--> OC MS
--> OD MS
--> OC MS DB
--> OC MS Outbox
--> Kafka
--> Python/Gurobi Worker
--> Gurobi Optimizer
--> Kafka
--> OC MS Inbox
--> OC MS DB
--> User polls GET /optimisation/{id}
-```
-
-Removed prior drift:
-- no `Consumer / OEX` actor in the baseline
-- no separate `OEX GW` hop
-- no stale `/cancel` or `/retry` endpoint references
-
----
-
-## Baseline appended 2026-05-03T22:04:55 - Catalogue governance highlighted in summary and security
-
-Updated the E2E solution brief summary and security section to highlight that managing the optimisation catalogue is an internal governed capability.
-
-Baseline:
-- Only approved optimisation domain engineers can create, update, activate, or retire OptimisationSpecification records.
-- Catalogue changes require agreement with broader E2E teams before becoming ACTIVE.
-- General users, OEX consumers, runtime callers, platform services, OC MS, and workers cannot self-author OptimisationSpecification records.
-- Catalogue write/activation/retirement operations require authenticated, authorised, audited access and ETag / If-Match where applicable.
+Also added the `Optimisation catalogue governance use case` section to make the use case visible outside the security section.
