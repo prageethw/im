@@ -679,3 +679,25 @@ Use `422 OPTIMISATION_CONTRACT_VIOLATION` for contract/cardinality failures, suc
 OD MS defines the optimisation request contract, including the allowed candidate resource structure under `context[]`.
 
 OC MS carries the actual runtime `constraints[]`, `targets[]`, and `context[]` values accepted from the caller. For resource/path selection, the runtime context should include or reference candidate resources as defined by OD MS.
+
+---
+
+## Definition versus runtime contract naming:
+
+OD MS defines the optimisation request contract using:
+
+```text
+constraintSpecifications[]
+targetSpecifications[]
+contextSpecifications[]
+```
+
+OC MS carries the runtime request instance using:
+
+```text
+constraints[]
+targets[]
+context[]
+```
+
+This keeps the design clear: OD MS defines what is allowed; OC MS stores and returns what was accepted at runtime.

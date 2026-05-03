@@ -165,7 +165,7 @@ Content-Type: application/json
   "priority": "1",
 
   // Capability-specific caller-fed constraints, targets, and context.
-  // Validated syntactically against OD MS OptimisationSpecification.constraints, targets, and context.
+  // Validated syntactically against OD MS OptimisationSpecification constraintSpecifications, targetSpecifications, and contextSpecifications.
   "constraints": [
     {
       "name": "maxLatency",
@@ -437,7 +437,7 @@ OC MS validates:
   generic REST wrapper using its static API/OpenAPI contract
   referenced OptimisationSpecification exists in OD MS
   referenced OptimisationSpecification lifecycleStatus is ACTIVE
-  constraints[], targets[], and context[] against the referenced ACTIVE OptimisationSpecification.constraints, targets, and context
+  runtime constraints[], targets[], and context[] against the referenced ACTIVE OptimisationSpecification contract definitions.constraints, targets, and context
 
 OC MS does not validate:
   optimisation semantics
@@ -1409,3 +1409,35 @@ OC MS:
 ```
 
 The presence of `constraints[]` in OC MS is expected. In OC MS it is not the definition; it is the runtime request instance.
+
+---
+
+## OD definition versus OC runtime model baseline:
+
+OD MS defines the contract using:
+
+```text
+constraintSpecifications[]
+targetSpecifications[]
+contextSpecifications[]
+```
+
+OC MS runtime Optimisation resources carry actual accepted values using:
+
+```text
+constraints[]
+targets[]
+context[]
+```
+
+OC MS validation mapping:
+
+```text
+runtime constraints[] -> OD constraintSpecifications[]
+runtime targets[] -> OD targetSpecifications[]
+runtime context[] -> OD contextSpecifications[]
+```
+
+OC MS validates structure, required fields, enum/value type rules, and cardinality against the ACTIVE OptimisationSpecification. This includes candidateResources minItems = 2 for selection optimisation.
+
+OC MS does not perform solver feasibility, candidate ranking, metric-vs-constraint evaluation, or objective trade-off evaluation.

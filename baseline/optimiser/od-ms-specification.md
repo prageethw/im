@@ -1412,204 +1412,172 @@ Do not use a platform contract field named `operator` for this upper-bound const
 
 ---
 
-## Happy and unhappy path examples baseline:
+## OptimisationSpecification contract model baseline:
 
-### Happy-path request contract example:
+OD MS owns the definition of the optimisation request contract. It defines what a valid runtime request may contain, but it does not contain runtime values or actual candidate resources.
 
-Use both latency and reliability constraints in the OD MS request contract so the example is realistic and consistent.
+OD MS uses definition/specification sections:
+
+```text
+constraintSpecifications[]:
+  Defines allowed and required hard constraints.
+  Does not contain caller-supplied runtime values.
+
+targetSpecifications[]:
+  Defines allowed optimisation goals and default/allowed priority ordering.
+  Does not contain runtime optimisation results.
+
+contextSpecifications[]:
+  Defines required context objects and their schema.
+  Defines candidate resource structure, cardinality, resourceAttributes, and metrics.
+  Does not contain actual path-001/path-002 candidate data.
+```
+
+OC MS runtime resources use instance sections:
+
+```text
+constraints[]:
+  Actual caller-supplied constraint values.
+
+targets[]:
+  Actual caller-supplied or defaulted target priorities/goals.
+
+context[]:
+  Actual caller-supplied context values, including candidateResources when embedded.
+```
+
+Canonical OD MS contract fragment:
 
 ```json
 {
-  "constraints": [
+  "constraintSpecifications": [
     {
       "name": "maxLatency",
       "constraintType": "maximum",
       "ontologyPredicate": "icm:atMost",
       "valueType": "number",
-      "value": 20,
-      "unit": "ms"
+      "required": true,
+      "unit": "ms",
+      "description": "Maximum allowed latency for a candidate resource."
     },
     {
       "name": "minReliability",
       "constraintType": "minimum",
       "ontologyPredicate": "icm:atLeast",
       "valueType": "number",
-      "value": 99.9,
-      "unit": "percent"
+      "required": true,
+      "unit": "percent",
+      "description": "Minimum required reliability for a candidate resource."
     }
   ],
-  "targets": [
+  "targetSpecifications": [
     {
       "name": "cost",
       "goal": "minimise",
-      "priority": 1
+      "required": true,
+      "priority": 1,
+      "description": "Primary optimisation target is to minimise cost among valid candidates."
     },
     {
       "name": "latency",
       "goal": "minimise",
-      "priority": 2
+      "required": false,
+      "priority": 2,
+      "description": "Secondary optimisation target is to minimise latency among valid candidates."
     },
     {
       "name": "reliability",
       "goal": "maximise",
-      "priority": 3
+      "required": false,
+      "priority": 3,
+      "description": "Tertiary optimisation target is to maximise reliability among valid candidates."
     }
   ],
-  "context": [
+  "contextSpecifications": [
     {
       "name": "topologySnapshot",
       "valueType": "object",
-      "value": {
-        "dataset": "topology-snapshot",
-        "version": "2026-05-02T10:00:00Z",
-        "candidateResourceSetId": "candidate-paths-surgical-melbourne-20260502T100000Z",
-        "candidateResources": [
-          {
-            "resourceId": "path-001",
-            "resourceType": "deliveryResource",
-            "resourceClass": "low-latency-path",
-            "resourceAttributes": {
-              "locationId": "melbourne-hospital"
-            },
-            "metrics": [
-              {
-                "name": "latency",
-                "value": 18,
-                "unit": "ms"
-              },
-              {
-                "name": "reliability",
-                "value": 99.95,
-                "unit": "percent"
-              },
-              {
-                "name": "cost",
-                "value": 70,
-                "unit": "costUnit"
-              }
-            ]
+      "required": true,
+      "description": "Topology snapshot containing or referencing the candidate resource set available for optimisation.",
+      "schema": {
+        "type": "object",
+        "required": [
+          "dataset",
+          "version",
+          "candidateResourceSetId",
+          "candidateResources"
+        ],
+        "properties": {
+          "dataset": {
+            "type": "string"
           },
-          {
-            "resourceId": "path-002",
-            "resourceType": "deliveryResource",
-            "resourceClass": "high-reliability-path",
-            "resourceAttributes": {
-              "locationId": "melbourne-hospital"
-            },
-            "metrics": [
-              {
-                "name": "latency",
-                "value": 24,
-                "unit": "ms"
-              },
-              {
-                "name": "reliability",
-                "value": 99.995,
-                "unit": "percent"
-              },
-              {
-                "name": "cost",
-                "value": 90,
-                "unit": "costUnit"
+          "version": {
+            "type": "string"
+          },
+          "candidateResourceSetId": {
+            "type": "string"
+          },
+          "candidateResources": {
+            "type": "array",
+            "minItems": 2,
+            "description": "Candidate resources available to the optimiser. At least two candidate options are required for resource/path/option-selection optimisation unless the capability is explicitly feasibility-validation-only.",
+            "items": {
+              "type": "object",
+              "required": [
+                "resourceId",
+                "resourceType",
+                "metrics"
+              ],
+              "properties": {
+                "resourceId": {
+                  "type": "string"
+                },
+                "resourceType": {
+                  "type": "string"
+                },
+                "resourceClass": {
+                  "type": "string"
+                },
+                "resourceAttributes": {
+                  "type": "object",
+                  "description": "Stable descriptive properties of the resource, such as locationId or pathClass."
+                },
+                "metrics": {
+                  "type": "array",
+                  "description": "Measured or computed values used for evaluation/optimisation, such as latency, reliability, cost, or utilisation.",
+                  "items": {
+                    "type": "object",
+                    "required": [
+                      "name",
+                      "value"
+                    ],
+                    "properties": {
+                      "name": {
+                        "type": "string"
+                      },
+                      "value": {},
+                      "unit": {
+                        "type": "string"
+                      }
+                    }
+                  }
+                }
               }
-            ]
+            }
           }
-        ]
+        }
       }
     }
   ]
 }
 ```
 
-Happy-path interpretation:
+Contract validation rule:
 
 ```text
-The request satisfies the OptimisationSpecification contract.
-candidateResources has at least 2 candidates.
-OC MS accepts the request if all required fields, types, enums, and cardinality rules are valid.
-The worker/model owns the actual feasibility and selection decision.
-```
+OC MS validates runtime constraints[], targets[], and context[] against OD MS constraintSpecifications[], targetSpecifications[], and contextSpecifications[].
 
-### Unhappy-path contract violation example:
-
-This request is structurally valid JSON, but violates the ACTIVE OptimisationSpecification request contract because `candidateResources` has only one candidate where `minItems = 2` is required for this selection optimisation.
-
-```http
-HTTP/1.1 422 Unprocessable Entity
-Content-Type: application/json
-```
-
-```json
-{
-  "code": "OPTIMISATION_CONTRACT_VIOLATION",
-  "reason": "Optimisation request violates specification contract",
-  "message": "topologySnapshot.candidateResources must contain at least 2 candidate resources for this optimisation capability.",
-  "status": 422,
-  "@type": "Error"
-}
-```
-
-Rule:
-
-```text
-Cardinality failure is a request contract violation, not an optimisation outcome.
-
-OC MS performs structural and request-contract validation, including cardinality checks such as candidateResources minItems = 2.
+OC MS may reject structural/request-contract violations such as candidateResources minItems < 2 with 422 OPTIMISATION_CONTRACT_VIOLATION.
 
 OC MS does not perform solver feasibility, candidate ranking, metric-vs-constraint evaluation, or objective trade-off evaluation.
 ```
-
-
-### Unhappy-path optimiser outcome example:
-
-This request satisfies the OD MS request contract shape and cardinality. It has at least two candidate resources, so OC MS accepts it and sends it to the worker/model. The worker/model may still return `INFEASIBLE` if no candidate satisfies the optimisation constraints.
-
-```json
-{
-  "eventId": "evt-22346",
-  "eventType": "OptimisationCompletedEvent",
-  "eventVersion": "1.0",
-  "source": "gurobi-worker",
-  "eventTime": "2026-05-02T03:03:00Z",
-  "correlationId": "corr-12345",
-  "body": {
-    "optimisationId": "opt-12345",
-    "optimisationHref": "/optimisation/opt-12345",
-    "outcome": "INFEASIBLE",
-    "summary": "No feasible solution exists for the supplied constraints and context.",
-    "completedAt": "2026-05-02T03:03:00Z"
-  }
-}
-```
-
-Rule:
-
-```text
-A valid request can still produce INFEASIBLE.
-
-INFEASIBLE is an optimisation outcome produced by the worker/model.
-
-It is not a request contract validation error.
-```
-
----
-
-## Runtime context versus specification contract clarification:
-
-OD MS defines the allowed structure of `constraints[]`, `targets[]`, and `context[]`.
-
-OC MS runtime requests and responses carry the actual accepted values for those sections.
-
-Therefore:
-```text
-OD MS:
-  defines the candidate resource schema, including candidateResources, resourceAttributes, and metrics.
-
-OC MS:
-  carries the actual candidateResources inside context.topologySnapshot.
-  carries the actual constraints[] values supplied by the caller.
-  validates structure/cardinality against OD MS.
-  does not perform candidate ranking or metric-vs-constraint feasibility evaluation.
-```
-
-The presence of `constraints[]` in OC MS is expected. In OC MS it is not the definition; it is the runtime request instance.

@@ -1,6 +1,6 @@
 # Optimisation Full Recovery Pack
 
-Generated: 2026-05-03T07:43:43
+Generated: 2026-05-03T07:52:48
 
 This file combines the current optimisation architecture recovery material into one place.
 
@@ -1507,593 +1507,24 @@ GET /optimisation/{id} is the detail endpoint.
 
 ---
 
-## Baseline appended {timestamp} - OC MS execute/cancel API requests and OptimisationRequestedEvent instructions
+## Baseline appended 2026-05-03T07:52:48 - OD MS definition model corrected
 
-For the optimisation architecture exercise, baseline the OC MS API and event model for both starting optimisation processing and requesting cancellation.
-
-Use one Kafka topic:
-
-```text
-t7.optimisation.events
-```
-
-Use one worker request/instruction event type:
-
-```text
-OptimisationRequestedEvent
-```
-
-Use `body.instruction` to tell the Python/Gurobi worker what action is requested:
-
-```text
-EXECUTE:
-  Worker should execute/start the optimisation.
-
-CANCEL:
-  Worker should cancel/stop/ignore the optimisation where safely possible.
-```
-
-Do not introduce separate cancel event types by default:
-
-```text
-Do not use:
-  OptimisationCancelRequestedEvent
-  OptimisationControlEvent
-```
-
-Outcome events remain separate:
-
-```text
-OptimisationCompletedEvent
-OptimisationFailedEvent
-```
-
----
-
-### Processing API request: POST /optimisation
-
-```http
-POST /optimisation
-Content-Type: application/json
-```
-
-```jsonc
-{
-  // Optional source context.
-  // Used only when the caller wants to link this optimisation to an upstream domain/resource.
-  // Intent is only one possible source context.
-  "sourceContext": {
-    "domain": "intent-management",
-    "resource": {
-      "id": "intent-789",
-      "href": "/intentManagement/v5/intent/intent-789",
-      "@type": "IntentRef",
-      "@referredType": "Intent"
-    }
-  },
-
-  // Required optimisation capability reference.
-  // Must point to an ACTIVE OptimisationSpecification owned by OD MS.
-  "optimisationSpecification": {
-    "id": "os-7f3a9c21",
-    "href": "/optimisationSpecification/os-7f3a9c21",
-    "@type": "OptimisationSpecificationRef",
-    "@referredType": "OptimisationSpecification"
-  },
-
-  // Human-readable runtime metadata.
-  "name": "Hospital surgical slice path optimisation request",
-  "description": "Optimise path selection for hospital surgical slice intent.",
-
-  // Runtime priority for scheduling/handling.
-  // OC MS owns the allowed priority model.
-  "priority": "1",
-
-  // Capability-specific caller-fed inputs.
-  // These are validated syntactically against the referenced OD MS OptimisationSpecification.inputs.
-  // Feasibility/semantic checks are left to the Python/Gurobi worker.
-  "inputs": [
-    {
-      // Required by the referenced OptimisationSpecification.
-      "name": "latency",
-      "valueType": "number",
-      "value": 20,
-      "unit": "ms"
-    },
-    {
-      // Required by the referenced OptimisationSpecification.
-      "name": "reliability",
-      "valueType": "number",
-      "value": 99.99,
-      "unit": "percent"
-    },
-    {
-      // Optional input allowed by the referenced OptimisationSpecification.
-      "name": "topologySnapshot",
-      "valueType": "object",
-      "value": {
-        "dataset": "topology-snapshot",
-        "version": "2026-05-02T10:00:00Z"
-      }
-    }
-  ],
-
-  // TMF-aligned REST resource typing.
-  "@type": "Optimisation",
-  "@baseType": "Entity",
-  "@schemaLocation": "/schema/Optimisation.schema.json"
-}
-```
-
-Successful response:
-
-```http
-HTTP/1.1 202 Accepted
-Location: /optimisation/opt-12345
-ETag: "opt-12345-rev1"
-Content-Type: application/json
-```
-
-```jsonc
-{
-  // Server-generated runtime optimisation identity.
-  "id": "opt-12345",
-  "href": "/optimisation/opt-12345",
-
-  // TMF-aligned REST resource typing.
-  "@type": "Optimisation",
-  "@baseType": "Entity",
-  "@schemaLocation": "/schema/Optimisation.schema.json",
-
-  // Optional source context copied from request when supplied.
-  "sourceContext": {
-    "domain": "intent-management",
-    "resource": {
-      "id": "intent-789",
-      "href": "/intentManagement/v5/intent/intent-789",
-      "@type": "IntentRef",
-      "@referredType": "Intent"
-    }
-  },
-
-  // Accepted runtime metadata.
-  "name": "Hospital surgical slice path optimisation request",
-  "description": "Optimise path selection for hospital surgical slice intent.",
-  "priority": "1",
-
-  // Runtime lifecycle owned by OC MS.
-  // Runtime Optimisation does not expose a version field.
-  "lifecycleStatus": "ACKNOWLEDGED",
-  "creationDate": "2026-05-02T03:00:00Z",
-  "lastUpdate": "2026-05-02T03:00:00Z",
-  "statusChangeDate": "2026-05-02T03:00:00Z",
-
-  // Specification used to validate and trigger this optimisation.
-  "optimisationSpecification": {
-    "id": "os-7f3a9c21",
-    "href": "/optimisationSpecification/os-7f3a9c21",
-    "@type": "OptimisationSpecificationRef",
-    "@referredType": "OptimisationSpecification"
-  },
-
-  // Accepted caller-fed inputs.
-  "inputs": [
-    {
-      "name": "latency",
-      "valueType": "number",
-      "value": 20,
-      "unit": "ms"
-    },
-    {
-      "name": "reliability",
-      "valueType": "number",
-      "value": 99.99,
-      "unit": "percent"
-    },
-    {
-      "name": "topologySnapshot",
-      "valueType": "object",
-      "value": {
-        "dataset": "topology-snapshot",
-        "version": "2026-05-02T10:00:00Z"
-      }
-    }
-  ],
-
-  // ACKNOWLEDGED can still be cancelled.
-  // Unsafe transitions require If-Match using the latest ETag response header.
-  "_links": {
-    "self": {
-      "href": "/optimisation/opt-12345",
-      "method": "GET"
-    },
-    "cancel": {
-      "href": "/optimisation/opt-12345/cancel",
-      "method": "POST"
-    }
-  }
-}
-```
-
-Acceptance rule:
-
-```text
-202 Accepted means OC MS accepted the request for asynchronous optimisation execution.
-
-It does not mean:
-  the optimisation is feasible
-  Gurobi has started
-  Gurobi can solve the model
-  a valid result will definitely be produced
-```
-
-OC MS acceptance processing:
-
-```text
-1. Perform syntactic and OD-MS-contract validation only.
-2. Persist runtime Optimisation with lifecycleStatus = ACKNOWLEDGED.
-3. Write OptimisationRequestedEvent with instruction = EXECUTE to OC MS outbox in the same database transaction.
-4. Return 202 Accepted.
-5. Outbox relay later publishes the event to t7.optimisation.events.
-```
-
----
-
-### Processing event: OptimisationRequestedEvent / instruction EXECUTE
-
-Kafka topic:
-
-```text
-t7.optimisation.events
-```
-
-Kafka headers:
-
-```text
-ce-specversion: 1.0
-ce-id: evt-12345
-ce-type: au.com.mycsp.optimisation.requested.v1
-ce-source: optimisation-controller-ms
-ce-time: 2026-05-02T03:00:00Z
-ce-subject: optimisation/opt-12345
-ce-datacontenttype: application/json
-ce-correlationid: corr-12345
-ce-eventversion: 1.0
-content-type: application/json
-```
-
-Payload:
-
-```jsonc
-{
-  // Internal event identity.
-  // Kafka events do not use TMF REST @type/@baseType/@schemaLocation.
-  "eventId": "evt-12345",
-  "eventType": "OptimisationRequestedEvent",
-  "eventVersion": "1.0",
-
-  // Producer service.
-  "source": "optimisation-controller-ms",
-
-  // Event creation time.
-  "eventTime": "2026-05-02T03:00:00Z",
-
-  // Correlation across request, worker execution, and result events.
-  "correlationId": "corr-12345",
-
-  // Minimal worker instruction payload.
-  "body": {
-    // Runtime Optimisation this instruction applies to.
-    "optimisationId": "opt-12345",
-
-    // REST location for traceability.
-    "optimisationHref": "/optimisation/opt-12345",
-
-    // Explicit worker instruction.
-    "instruction": "EXECUTE",
-
-    // ACTIVE OptimisationSpecification used to validate this request.
-    // Worker resolves internal deterministic model binding from this reference.
-    "optimisationSpecification": {
-      "id": "os-7f3a9c21",
-      "href": "/optimisationSpecification/os-7f3a9c21"
-    },
-
-    // Optional upstream context copied from runtime Optimisation if supplied.
-    "sourceContext": {
-      "domain": "intent-management",
-      "resource": {
-        "id": "intent-789",
-        "href": "/intentManagement/v5/intent/intent-789",
-        "resourceType": "Intent"
-      }
-    },
-
-    // Caller-fed inputs accepted by OC MS.
-    "inputs": [
-      {
-        "name": "latency",
-        "valueType": "number",
-        "value": 20,
-        "unit": "ms"
-      },
-      {
-        "name": "reliability",
-        "valueType": "number",
-        "value": 99.99,
-        "unit": "percent"
-      },
-      {
-        "name": "topologySnapshot",
-        "valueType": "object",
-        "value": {
-          "dataset": "topology-snapshot",
-          "version": "2026-05-02T10:00:00Z"
-        }
-      }
-    ]
-  }
-}
-```
-
-EXECUTE event boundary:
-
-```text
-OptimisationRequestedEvent with instruction = EXECUTE includes:
-  optimisationId
-  optimisationHref
-  instruction
-  optimisationSpecification reference
-  optional sourceContext
-  inputs
-
-It does not include:
-  full Optimisation REST representation
-  HATEOAS links
-  ETag
-  solver configuration
-  objective internals
-  candidate-resource rules
-  model formulation
-  result
-```
-
----
-
-### Cancellation API request: POST /optimisation/{id}/cancel
-
-```http
-POST /optimisation/opt-12345/cancel
-If-Match: "opt-12345-rev2"
-Content-Type: application/json
-```
-
-```jsonc
-{
-  // Optional human-readable cancellation reason.
-  "reason": "Caller no longer requires this optimisation."
-}
-```
-
-Successful response:
-
-```http
-HTTP/1.1 202 Accepted
-ETag: "opt-12345-rev3"
-Content-Type: application/json
-```
-
-```jsonc
-{
-  // Runtime optimisation identity.
-  "id": "opt-12345",
-  "href": "/optimisation/opt-12345",
-
-  // TMF-aligned REST resource typing.
-  "@type": "Optimisation",
-  "@baseType": "Entity",
-  "@schemaLocation": "/schema/Optimisation.schema.json",
-
-  // Cancellation has been accepted but may not be fully completed yet.
-  "lifecycleStatus": "CANCELLING",
-
-  // Optional caller-provided reason.
-  "statusReason": "Caller no longer requires this optimisation.",
-
-  "lastUpdate": "2026-05-02T03:02:00Z",
-  "statusChangeDate": "2026-05-02T03:02:00Z",
-
-  // CANCELLING exposes self only.
-  "_links": {
-    "self": {
-      "href": "/optimisation/opt-12345",
-      "method": "GET"
-    }
-  }
-}
-```
-
-Cancellation state rules:
-
-```text
-Allowed source states:
-  ACKNOWLEDGED
-  QUEUED
-  PROCESSING
-
-Target state:
-  CANCELLING
-
-Final cancellation state:
-  CANCELLED
-```
-
-OC MS cancellation processing:
-
-```text
-1. Validate If-Match.
-2. Validate current lifecycleStatus is ACKNOWLEDGED, QUEUED, or PROCESSING.
-3. Move lifecycleStatus to CANCELLING.
-4. Store optional statusReason.
-5. Write OptimisationRequestedEvent with instruction = CANCEL to OC MS outbox in the same transaction.
-6. Return 202 Accepted.
-7. Outbox relay later publishes the event to t7.optimisation.events.
-```
-
-No separate cancel event type is used:
-
-```text
-Do not use:
-  OptimisationCancelRequestedEvent
-  OptimisationControlEvent
-```
-
----
-
-### Cancellation event: OptimisationRequestedEvent / instruction CANCEL
-
-Kafka topic:
-
-```text
-t7.optimisation.events
-```
-
-Kafka headers:
-
-```text
-ce-specversion: 1.0
-ce-id: evt-67890
-ce-type: au.com.mycsp.optimisation.requested.v1
-ce-source: optimisation-controller-ms
-ce-time: 2026-05-02T03:02:00Z
-ce-subject: optimisation/opt-12345
-ce-datacontenttype: application/json
-ce-correlationid: corr-12345
-ce-eventversion: 1.0
-content-type: application/json
-```
-
-Payload:
-
-```jsonc
-{
-  // Internal event identity.
-  // Kafka events do not use TMF REST @type/@baseType/@schemaLocation.
-  "eventId": "evt-67890",
-  "eventType": "OptimisationRequestedEvent",
-  "eventVersion": "1.0",
-
-  // Producer service.
-  "source": "optimisation-controller-ms",
-
-  // Event creation time.
-  "eventTime": "2026-05-02T03:02:00Z",
-
-  // Same correlation as the original optimisation request where possible.
-  "correlationId": "corr-12345",
-
-  // Minimal worker instruction payload.
-  "body": {
-    // Runtime Optimisation this instruction applies to.
-    "optimisationId": "opt-12345",
-
-    // REST location for traceability.
-    "optimisationHref": "/optimisation/opt-12345",
-
-    // Explicit worker instruction.
-    "instruction": "CANCEL",
-
-    // Optional caller-provided reason.
-    "reason": "Caller no longer requires this optimisation."
-  }
-}
-```
-
-CANCEL event boundary:
-
-```text
-OptimisationRequestedEvent with instruction = CANCEL includes:
-  optimisationId
-  optimisationHref
-  instruction
-  optional reason
-
-It does not include:
-  full Optimisation REST representation
-  HATEOAS links
-  ETag
-  optimisationSpecification
-  inputs
-  solver configuration
-  objective internals
-  candidate-resource rules
-  model formulation
-  result
-```
-
-Worker handling rule:
-
-```text
-Worker branches on body.instruction.
-
-If instruction = EXECUTE:
-  worker resolves internal deterministic model binding from the optimisationSpecification reference and starts execution.
-
-If instruction = CANCEL:
-  worker cancels/stops/ignores the optimisation where safely possible.
-```
-
-CloudEvents header mapping rule:
-
-```text
-ce-id:
-  Same value as payload.eventId.
-
-ce-type:
-  Stable technical event type for the worker request event:
-    au.com.mycsp.optimisation.requested.v1
-
-ce-source:
-  Producer component:
-    optimisation-controller-ms
-
-ce-subject:
-  Business subject of the event:
-    optimisation/{optimisationId}
-
-ce-time:
-  Same instant as payload.eventTime.
-
-ce-correlationid:
-  Same value as payload.correlationId.
-
-ce-eventversion:
-  Same value as payload.eventVersion.
-
-ce-datacontenttype and content-type:
-  application/json
-```
-
----
-
-## Baseline appended 2026-05-03T07:43:43 - Clarified OD contract versus OC runtime values
-
-Clarified the OD MS versus OC MS responsibility split.
+Corrected OD MS definition naming.
 
 Baseline:
-- OD MS defines the allowed request contract shape:
+- OD MS must define the request contract, not look like a runtime request.
+- OD MS uses:
+  - `constraintSpecifications[]`
+  - `targetSpecifications[]`
+  - `contextSpecifications[]`
+- OC MS runtime Optimisation resources use:
   - `constraints[]`
   - `targets[]`
   - `context[]`
-  - candidate resource schema under `context.topologySnapshot`
-  - candidate fields such as `candidateResources`, `resourceAttributes`, and `metrics`
-- OC MS runtime requests/responses carry the actual accepted values for:
-  - `constraints[]`
-  - `targets[]`
-  - `context[]`
-- The presence of `constraints[]` in OC MS is expected because OC MS stores/returns the runtime request instance, not the OD definition.
-- For resource/path selection, OC MS examples should carry actual `candidateResources` inside `context.topologySnapshot`, matching the candidate schema defined by OD MS.
-- OC MS validates structure/cardinality against OD MS but does not perform candidate ranking or metric-vs-constraint feasibility evaluation.
+- OD MS specification sections do not contain runtime values such as `value: 20`, `value: 99.9`, or actual candidate IDs such as `path-001` and `path-002`.
+- OD MS defines candidate resource schema and cardinality under `contextSpecifications[]`.
+- OC MS carries actual candidate resources under runtime `context[]`.
+- OC MS validates runtime values against OD MS specification sections.
 
 
 ---
@@ -3514,207 +2945,175 @@ Do not use a platform contract field named `operator` for this upper-bound const
 
 ---
 
-## Happy and unhappy path examples baseline:
+## OptimisationSpecification contract model baseline:
 
-### Happy-path request contract example:
+OD MS owns the definition of the optimisation request contract. It defines what a valid runtime request may contain, but it does not contain runtime values or actual candidate resources.
 
-Use both latency and reliability constraints in the OD MS request contract so the example is realistic and consistent.
+OD MS uses definition/specification sections:
+
+```text
+constraintSpecifications[]:
+  Defines allowed and required hard constraints.
+  Does not contain caller-supplied runtime values.
+
+targetSpecifications[]:
+  Defines allowed optimisation goals and default/allowed priority ordering.
+  Does not contain runtime optimisation results.
+
+contextSpecifications[]:
+  Defines required context objects and their schema.
+  Defines candidate resource structure, cardinality, resourceAttributes, and metrics.
+  Does not contain actual path-001/path-002 candidate data.
+```
+
+OC MS runtime resources use instance sections:
+
+```text
+constraints[]:
+  Actual caller-supplied constraint values.
+
+targets[]:
+  Actual caller-supplied or defaulted target priorities/goals.
+
+context[]:
+  Actual caller-supplied context values, including candidateResources when embedded.
+```
+
+Canonical OD MS contract fragment:
 
 ```json
 {
-  "constraints": [
+  "constraintSpecifications": [
     {
       "name": "maxLatency",
       "constraintType": "maximum",
       "ontologyPredicate": "icm:atMost",
       "valueType": "number",
-      "value": 20,
-      "unit": "ms"
+      "required": true,
+      "unit": "ms",
+      "description": "Maximum allowed latency for a candidate resource."
     },
     {
       "name": "minReliability",
       "constraintType": "minimum",
       "ontologyPredicate": "icm:atLeast",
       "valueType": "number",
-      "value": 99.9,
-      "unit": "percent"
+      "required": true,
+      "unit": "percent",
+      "description": "Minimum required reliability for a candidate resource."
     }
   ],
-  "targets": [
+  "targetSpecifications": [
     {
       "name": "cost",
       "goal": "minimise",
-      "priority": 1
+      "required": true,
+      "priority": 1,
+      "description": "Primary optimisation target is to minimise cost among valid candidates."
     },
     {
       "name": "latency",
       "goal": "minimise",
-      "priority": 2
+      "required": false,
+      "priority": 2,
+      "description": "Secondary optimisation target is to minimise latency among valid candidates."
     },
     {
       "name": "reliability",
       "goal": "maximise",
-      "priority": 3
+      "required": false,
+      "priority": 3,
+      "description": "Tertiary optimisation target is to maximise reliability among valid candidates."
     }
   ],
-  "context": [
+  "contextSpecifications": [
     {
       "name": "topologySnapshot",
       "valueType": "object",
-      "value": {
-        "dataset": "topology-snapshot",
-        "version": "2026-05-02T10:00:00Z",
-        "candidateResourceSetId": "candidate-paths-surgical-melbourne-20260502T100000Z",
-        "candidateResources": [
-          {
-            "resourceId": "path-001",
-            "resourceType": "deliveryResource",
-            "resourceClass": "low-latency-path",
-            "resourceAttributes": {
-              "locationId": "melbourne-hospital"
-            },
-            "metrics": [
-              {
-                "name": "latency",
-                "value": 18,
-                "unit": "ms"
-              },
-              {
-                "name": "reliability",
-                "value": 99.95,
-                "unit": "percent"
-              },
-              {
-                "name": "cost",
-                "value": 70,
-                "unit": "costUnit"
-              }
-            ]
+      "required": true,
+      "description": "Topology snapshot containing or referencing the candidate resource set available for optimisation.",
+      "schema": {
+        "type": "object",
+        "required": [
+          "dataset",
+          "version",
+          "candidateResourceSetId",
+          "candidateResources"
+        ],
+        "properties": {
+          "dataset": {
+            "type": "string"
           },
-          {
-            "resourceId": "path-002",
-            "resourceType": "deliveryResource",
-            "resourceClass": "high-reliability-path",
-            "resourceAttributes": {
-              "locationId": "melbourne-hospital"
-            },
-            "metrics": [
-              {
-                "name": "latency",
-                "value": 24,
-                "unit": "ms"
-              },
-              {
-                "name": "reliability",
-                "value": 99.995,
-                "unit": "percent"
-              },
-              {
-                "name": "cost",
-                "value": 90,
-                "unit": "costUnit"
+          "version": {
+            "type": "string"
+          },
+          "candidateResourceSetId": {
+            "type": "string"
+          },
+          "candidateResources": {
+            "type": "array",
+            "minItems": 2,
+            "description": "Candidate resources available to the optimiser. At least two candidate options are required for resource/path/option-selection optimisation unless the capability is explicitly feasibility-validation-only.",
+            "items": {
+              "type": "object",
+              "required": [
+                "resourceId",
+                "resourceType",
+                "metrics"
+              ],
+              "properties": {
+                "resourceId": {
+                  "type": "string"
+                },
+                "resourceType": {
+                  "type": "string"
+                },
+                "resourceClass": {
+                  "type": "string"
+                },
+                "resourceAttributes": {
+                  "type": "object",
+                  "description": "Stable descriptive properties of the resource, such as locationId or pathClass."
+                },
+                "metrics": {
+                  "type": "array",
+                  "description": "Measured or computed values used for evaluation/optimisation, such as latency, reliability, cost, or utilisation.",
+                  "items": {
+                    "type": "object",
+                    "required": [
+                      "name",
+                      "value"
+                    ],
+                    "properties": {
+                      "name": {
+                        "type": "string"
+                      },
+                      "value": {},
+                      "unit": {
+                        "type": "string"
+                      }
+                    }
+                  }
+                }
               }
-            ]
+            }
           }
-        ]
+        }
       }
     }
   ]
 }
 ```
 
-Happy-path interpretation:
+Contract validation rule:
 
 ```text
-The request satisfies the OptimisationSpecification contract.
-candidateResources has at least 2 candidates.
-OC MS accepts the request if all required fields, types, enums, and cardinality rules are valid.
-The worker/model owns the actual feasibility and selection decision.
-```
+OC MS validates runtime constraints[], targets[], and context[] against OD MS constraintSpecifications[], targetSpecifications[], and contextSpecifications[].
 
-### Unhappy-path contract violation example:
-
-This request is structurally valid JSON, but violates the ACTIVE OptimisationSpecification request contract because `candidateResources` has only one candidate where `minItems = 2` is required for this selection optimisation.
-
-```http
-HTTP/1.1 422 Unprocessable Entity
-Content-Type: application/json
-```
-
-```json
-{
-  "code": "OPTIMISATION_CONTRACT_VIOLATION",
-  "reason": "Optimisation request violates specification contract",
-  "message": "topologySnapshot.candidateResources must contain at least 2 candidate resources for this optimisation capability.",
-  "status": 422,
-  "@type": "Error"
-}
-```
-
-Rule:
-
-```text
-Cardinality failure is a request contract violation, not an optimisation outcome.
-
-OC MS performs structural and request-contract validation, including cardinality checks such as candidateResources minItems = 2.
+OC MS may reject structural/request-contract violations such as candidateResources minItems < 2 with 422 OPTIMISATION_CONTRACT_VIOLATION.
 
 OC MS does not perform solver feasibility, candidate ranking, metric-vs-constraint evaluation, or objective trade-off evaluation.
 ```
-
-
-### Unhappy-path optimiser outcome example:
-
-This request satisfies the OD MS request contract shape and cardinality. It has at least two candidate resources, so OC MS accepts it and sends it to the worker/model. The worker/model may still return `INFEASIBLE` if no candidate satisfies the optimisation constraints.
-
-```json
-{
-  "eventId": "evt-22346",
-  "eventType": "OptimisationCompletedEvent",
-  "eventVersion": "1.0",
-  "source": "gurobi-worker",
-  "eventTime": "2026-05-02T03:03:00Z",
-  "correlationId": "corr-12345",
-  "body": {
-    "optimisationId": "opt-12345",
-    "optimisationHref": "/optimisation/opt-12345",
-    "outcome": "INFEASIBLE",
-    "summary": "No feasible solution exists for the supplied constraints and context.",
-    "completedAt": "2026-05-02T03:03:00Z"
-  }
-}
-```
-
-Rule:
-
-```text
-A valid request can still produce INFEASIBLE.
-
-INFEASIBLE is an optimisation outcome produced by the worker/model.
-
-It is not a request contract validation error.
-```
-
----
-
-## Runtime context versus specification contract clarification:
-
-OD MS defines the allowed structure of `constraints[]`, `targets[]`, and `context[]`.
-
-OC MS runtime requests and responses carry the actual accepted values for those sections.
-
-Therefore:
-```text
-OD MS:
-  defines the candidate resource schema, including candidateResources, resourceAttributes, and metrics.
-
-OC MS:
-  carries the actual candidateResources inside context.topologySnapshot.
-  carries the actual constraints[] values supplied by the caller.
-  validates structure/cardinality against OD MS.
-  does not perform candidate ranking or metric-vs-constraint feasibility evaluation.
-```
-
-The presence of `constraints[]` in OC MS is expected. In OC MS it is not the definition; it is the runtime request instance.
 
 
 ---
@@ -3888,7 +3287,7 @@ Content-Type: application/json
   "priority": "1",
 
   // Capability-specific caller-fed constraints, targets, and context.
-  // Validated syntactically against OD MS OptimisationSpecification.constraints, targets, and context.
+  // Validated syntactically against OD MS OptimisationSpecification constraintSpecifications, targetSpecifications, and contextSpecifications.
   "constraints": [
     {
       "name": "maxLatency",
@@ -4160,7 +3559,7 @@ OC MS validates:
   generic REST wrapper using its static API/OpenAPI contract
   referenced OptimisationSpecification exists in OD MS
   referenced OptimisationSpecification lifecycleStatus is ACTIVE
-  constraints[], targets[], and context[] against the referenced ACTIVE OptimisationSpecification.constraints, targets, and context
+  runtime constraints[], targets[], and context[] against the referenced ACTIVE OptimisationSpecification contract definitions.constraints, targets, and context
 
 OC MS does not validate:
   optimisation semantics
@@ -5133,6 +4532,38 @@ OC MS:
 
 The presence of `constraints[]` in OC MS is expected. In OC MS it is not the definition; it is the runtime request instance.
 
+---
+
+## OD definition versus OC runtime model baseline:
+
+OD MS defines the contract using:
+
+```text
+constraintSpecifications[]
+targetSpecifications[]
+contextSpecifications[]
+```
+
+OC MS runtime Optimisation resources carry actual accepted values using:
+
+```text
+constraints[]
+targets[]
+context[]
+```
+
+OC MS validation mapping:
+
+```text
+runtime constraints[] -> OD constraintSpecifications[]
+runtime targets[] -> OD targetSpecifications[]
+runtime context[] -> OD contextSpecifications[]
+```
+
+OC MS validates structure, required fields, enum/value type rules, and cardinality against the ACTIVE OptimisationSpecification. This includes candidateResources minItems = 2 for selection optimisation.
+
+OC MS does not perform solver feasibility, candidate ranking, metric-vs-constraint evaluation, or objective trade-off evaluation.
+
 
 ---
 
@@ -5819,4 +5250,26 @@ Use `422 OPTIMISATION_CONTRACT_VIOLATION` for contract/cardinality failures, suc
 OD MS defines the optimisation request contract, including the allowed candidate resource structure under `context[]`.
 
 OC MS carries the actual runtime `constraints[]`, `targets[]`, and `context[]` values accepted from the caller. For resource/path selection, the runtime context should include or reference candidate resources as defined by OD MS.
+
+---
+
+## Definition versus runtime contract naming:
+
+OD MS defines the optimisation request contract using:
+
+```text
+constraintSpecifications[]
+targetSpecifications[]
+contextSpecifications[]
+```
+
+OC MS carries the runtime request instance using:
+
+```text
+constraints[]
+targets[]
+context[]
+```
+
+This keeps the design clear: OD MS defines what is allowed; OC MS stores and returns what was accepted at runtime.
 
