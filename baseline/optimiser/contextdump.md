@@ -1322,51 +1322,14 @@ Note:
 
 ---
 
-## Baseline appended 2026-05-03T12:00:03 - Fixed process view start actor
+## Baseline appended 2026-05-03T21:07:27 - Removed specific service-mesh product wording everywhere
 
-Corrected process view start so it begins with two separate steps:
+Cleaned all current Markdown artifacts so they no longer show a specific service-mesh product name for mTLS.
 
-```text
-Consumer
--> OEX
-```
-
-The process view must not combine these as a single `Consumer / OEX` node.
-
----
-
-## Baseline appended 2026-05-03T12:21:37 - Corrected Screen Builder invocation responsibility
-
-Corrected the security/integration wording:
-
-```text
-OGW invokes OEX Screen Builder MS with mTLS and User Context JWT.
-```
-
-The previous wording incorrectly said:
-
-```text
-OEX GW invokes OEX Screen Builder MS with mTLS and User Context JWT.
-```
-
----
-
-## Baseline appended 2026-05-03T20:57:54 - Removed Istio-specific mTLS wording
-
-Updated wording to avoid committing to Istio or any specific service mesh.
-
-Use:
+Current wording:
 
 ```text
 OC MS calls OD MS over mTLS to validate the referenced ACTIVE OptimisationSpecification.
 ```
 
-Do not baseline:
-
-```text
-OC MS calls OD MS over Istio mTLS to validate the referenced ACTIVE OptimisationSpecification.
-```
-
-Reason:
-- The design requires mTLS.
-- The implementation may use Istio or another service mesh/platform mechanism.
+Implementation remains open to any suitable service mesh or platform mTLS mechanism.
