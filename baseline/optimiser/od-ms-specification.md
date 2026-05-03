@@ -449,16 +449,65 @@ OD MS sits behind NGW. OD MS does not participate in Kafka, Python/Gurobi Worker
 
 ---
 
-## Process view participation baseline:
+## OD MS infrastructure security controls:
 
-OD MS participates in the runtime process as the OptimisationSpecification definition source.
+OD MS integrations must explicitly capture service-to-infrastructure security controls.
 
-In the runtime process view:
+### OD MS -> OD MS Database:
 
 ```text
-... -> NGW -> OC MS -> OD MS -> OC MS DB ...
+Authentication:
+  OD MS connects using an authenticated OD MS service identity.
+
+Authorisation:
+  OD MS is authorised only for the OD MS database/schema/tables required for OptimisationSpecification storage and retrieval.
+  No broad database admin/root access by default.
+
+Encrypted connectivity:
+  OD MS database connectivity uses encrypted transport.
+  mTLS or platform-approved encrypted database connectivity is used where supported by the selected database platform.
+
+Secrets and certificates:
+  Database credentials, keys, and certificates are stored in approved secret management.
+  Rotation must be supported without application code changes where possible.
+
+Environment separation:
+  OD MS database principals, roles, schemas, and credentials are environment-scoped.
+  Non-production OD MS identities must not access production OD MS data.
+
+Audit and monitoring:
+  Authentication failures, authorisation denials, privileged operations, schema changes, and unusual access patterns are logged and monitored.
+
+Ownership:
+  OD MS owns application-level access to OptimisationSpecification data.
+  Database/platform teams own database platform controls.
 ```
 
-OD MS provides the ACTIVE OptimisationSpecification used by OC MS for request-contract validation.
+### OD MS -> platform cache, if introduced later:
 
-OD MS does not persist runtime Optimisation resources, does not write OC MS outbox records, does not consume Kafka worker outcomes, and does not project runtime results.
+```text
+OD MS does not require a cache in the current baseline.
+
+If a cache is introduced later, the OD MS design brief must capture:
+  authenticated service identity
+  least-privilege cache namespace/keyspace access
+  encrypted connectivity
+  approved secret/certificate management
+  environment-scoped cache roles
+  audit/monitoring of denied access and privileged operations
+```
+
+### OD MS -> Kafka:
+
+```text
+OD MS does not integrate directly with Kafka in the current baseline.
+
+If OD MS later becomes a Kafka producer or consumer, the OD MS design brief must capture:
+  service identity
+  TLS/mTLS broker connectivity
+  topic-level ACLs
+  consumer-group permissions where applicable
+  DLQ permissions where applicable
+  secret/certificate management
+  monitoring and audit controls
+```

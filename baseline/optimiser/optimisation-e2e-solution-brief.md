@@ -6,7 +6,7 @@ The optimisation platform provides a reusable capability for running determinist
 
 The platform is not limited to the intent-management domain. It is designed as a generic optimisation capability that can be used by OEX, platform services, planning tools, assurance functions, intent-management flows, and other authorised entities that need to run optimisation.
 
-The business need is to allow authorised consumers to discover available optimisation capabilities, understand the required request contract, submit optimisation requests asynchronously, monitor execution state, cancel active requests where needed, retry failed requests, and retrieve outcomes without exposing internal solver details or Gurobi model implementation.
+The business need is to allow authorised consumers to discover available optimisation capabilities, understand the required request contract, submit optimisation requests asynchronously, monitor execution state, cancellation active requests where needed, retrial failed requests, and retrieve final outcomes without exposing internal solver details or Gurobi model implementation.
 
 The solution separates the **definition of optimisation capabilities** from the **execution and lifecycle control of optimisation runs**.
 
@@ -18,7 +18,7 @@ The solution separates the **definition of optimisation capabilities** from the 
 
 - It uses two core microservices:
   - **OD MS** owns `OptimisationSpecification` and exposes the caller-facing request contract.
-  - **OC MS** owns the runtime `Optimisation` lifecycle, cancellation, retrial, event integration, and result projection.
+  - **OC MS** owns runtime `Optimisation` lifecycle, cancellation, retrial, event integration, and result projection.
 
 - Consumers may include **OEX**, platform services, planning tools, assurance functions, intent-management flows, or other authorised entities that need to run optimisation.
 
@@ -26,7 +26,7 @@ The solution separates the **definition of optimisation capabilities** from the 
 
 - OGW exposes OEX APIs for the OEX UI using user-context-aware OAuth2. OWG calls OEX Screen Builder MS using mTLS and User Context JWT. OEX Screen Builder MS reaches backend OD MS and OC MS APIs through NGW using mTLS and OAuth2 system-to-system.
 
-- OC MS validates only the request structure and the OD MS request contract, then returns `202 Accepted` and drives execution asynchronously through Kafka.
+- OC MS validates only request structure and the OD MS request contract, then returns `202 Accepted` and drives execution asynchronously through Kafka.
 
 - Kafka carries worker instructions and outcomes, with a dedicated DLQ for unprocessable events.
 
@@ -53,7 +53,7 @@ The Python/Gurobi worker is responsible for executing the internal deterministic
 | Discover optimisation capability | User / OEX / platform service | Retrieve available `OptimisationSpecification` records from OD MS and understand required constraints, targets, and context. | Caller knows which optimisation capability to use and the required request contract. |
 | Create runtime optimisation | User / OEX / platform service | Submit a runtime `Optimisation` request to OC MS using an ACTIVE specification and valid constraints, targets, and context. | OC MS returns `202 Accepted` and creates an `ACKNOWLEDGED` optimisation. |
 | Monitor optimisation | User / OEX / platform service | Read current lifecycle state and result when available. | Caller can see whether the optimisation is pending, processing, completed, infeasible, failed, cancelling, or cancelled. |
-| Cancellation optimisation | User / OEX / platform service | Request cancellation for an eligible active optimisation. | OC MS moves the resource to `CANCELLING` and instructs the worker to cancel where safely possible. |
+| Cancellation optimisation | User / OEX / platform service | Request cancellation for an eligible active optimisation. | OC MS moves the resource to `CANCELLING` and instructs the worker to cancellation where safely possible. |
 | Retrial failed optimisation | User / OEX / platform service | Retrial a `FAILED` optimisation by creating a new linked optimisation. | A new `ACKNOWLEDGED` optimisation is created with `retrialOf` pointing to the failed one. |
 | Execute optimisation | Python/Gurobi worker | Consume worker instruction and execute the deterministic optimisation model. | Worker emits `SUCCESS`, `INFEASIBLE`, or `FAILURE` outcome. |
 
@@ -100,7 +100,7 @@ NGW -> OC MS:
   Uses mTLS to expose runtime Optimisation APIs.
 
 OC MS -> OD MS:
-  Uses mTLS for internal service-to-service validation.
+  Uses Istio mTLS for internal service-to-service validation.
 
 OC MS -> Kafka:
   Emits OptimisationRequestedEvent with instruction EXECUTE or CANCEL.
@@ -151,10 +151,10 @@ Detailed flow:
 4. OEX Screen Builder MS calls NGW using mTLS and OAuth2 system-to-system.
 5. NGW routes the request to OC MS.
 6. OC MS validates request structure.
-7. OC MS calls OD MS over mTLS to validate the referenced ACTIVE OptimisationSpecification.
+7. OC MS calls OD MS over Istio mTLS to validate the referenced ACTIVE OptimisationSpecification.
 8. OC MS validates constraints[], targets[], and context[] against the OD MS request contract.
 9. OC MS persists runtime Optimisation with lifecycleStatus = ACKNOWLEDGED.
-10. OC MS writes OptimisationRequestedEvent with instruction = EXECUTE to the outbox.
+10. OC MS writes OptimisationRequestedEvent with instruction = EXECUTE to outbox.
 11. Outbox relay publishes event to Kafka.
 12. Python/Gurobi worker consumes event.
 13. Worker resolves internal deterministic model binding.
@@ -250,7 +250,7 @@ Detailed flow:
 | **Gurobi Optimizer** | Executes the mathematical optimisation model prepared by the worker/model layer. Produces solve outcomes that the worker maps into `SUCCESS`, `INFEASIBLE`, or `FAILURE`. |
 | **Analytics platform / data sources** | Provides authorised datasets required by the worker/model layer, such as topology snapshots, traffic forecasts, capacity information, inventory data, or other optimisation context datasets. |
 | **OC MS Inbox Consumer** | Consumes worker outcome events, applies idempotency and stale/late-event handling, maps outcomes to lifecycle states, and projects result/failure details into the runtime `Optimisation` resource. |
-| **Operational support/monitoring** | Monitors service health, Kafka lag, outbox/inbox processing, worker failures, solver failures, DLQ records, retrial counts, stale/late events, and optimisation lifecycle/result trends. |
+| **Operational support / monitoring** | Monitors service health, Kafka lag, outbox/inbox processing, worker failures, solver failures, DLQ records, retrial counts, stale/late events, and optimisation lifecycle/result trends. |
 
 ---
 
@@ -318,11 +318,11 @@ This secures backend API access from the gateway to the optimisation domain serv
 
 ### 5.5 OC MS to OD MS service-to-service security:
 
-OC MS calls OD MS to validate referenced `OptimisationSpecification` resources. This internal service-to-service communication is secured using mTLS through service mesh.
+OC MS calls OD MS to validate referenced `OptimisationSpecification` resources. This internal service-to-service communication is secured using mTLS through Istio.
 
 ```text
 OC MS
--> mTLS
+-> Istio mTLS
 -> OD MS
 ```
 
@@ -506,7 +506,7 @@ OD MS specification responses may use caching where appropriate. OC MS runtime r
 
 - NGW integrates with OD MS and OC MS using mTLS.
 
-- OC MS calls OD MS using mTLS for internal service-to-service validation.
+- OC MS calls OD MS using Istio mTLS for internal service-to-service validation.
 
 - Kafka is available as the event backbone.
 
@@ -781,4 +781,69 @@ Process view compliance rule:
 NGW-exposed OC MS and OD MS APIs are TMF-compliant.
 OEX / OGW / OEX APIs / OWG / OEX Screen Builder MS are experience-layer/private integration components and do not need to be TMF-compliant.
 Kafka events are internal contracts and do not need to be TMF-compliant unless separately required.
+```
+
+---
+
+## Infrastructure security controls across solution briefs:
+
+The E2E solution brief and each individual service design brief must explicitly capture security controls for every service-to-infrastructure integration.
+
+This applies to:
+
+```text
+service-to-database
+service-to-cache
+service-to-Kafka
+service-to-object-storage
+service-to-search-index
+service-to-queue
+service-to-platform-service
+```
+
+Required controls:
+
+```text
+Authentication:
+  Every connecting workload uses an approved service identity.
+
+Authorisation:
+  Access is least privilege.
+  Permissions are scoped to the required resource and operation.
+  No broad wildcard, cluster-wide, schema-wide, or admin/root access by default.
+
+Encrypted connectivity:
+  Transport is encrypted.
+  mTLS is used where supported and appropriate.
+  Kafka broker connectivity uses TLS/mTLS where supported; Kafka ACLs enforce topic/consumer-group authorisation.
+
+Secret and certificate management:
+  Credentials, keys, tokens, and certificates are stored in approved secret management.
+  Rotation is supported without application code changes where possible.
+
+Environment separation:
+  Principals, roles, credentials, topics, schemas, and namespaces are environment-scoped.
+
+Audit and monitoring:
+  Authentication failures, authorisation denials, privileged operations, replay/admin actions, Kafka lag, DLQ growth, and unusual infrastructure access are logged and monitored.
+
+Ownership:
+  Each design brief identifies the owning service, resource owner, allowed operations, and operational support path.
+```
+
+Current application:
+
+```text
+OD MS design brief:
+  captures OD MS -> OD MS DB controls.
+  states OD MS has no direct Kafka integration in the current baseline.
+
+OC MS design brief:
+  captures OC MS -> OC MS DB controls.
+  captures OC MS -> OD MS mTLS controls.
+  captures OC MS -> Kafka controls for outbox/inbox.
+
+E2E solution brief:
+  captures common cross-cutting infrastructure security controls.
+  summarises database, Kafka, cache/future-infrastructure, identity, encryption, ACL, secret-management, and audit requirements.
 ```

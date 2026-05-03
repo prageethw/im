@@ -89,7 +89,7 @@ ETag: "opt-12345-v3"
 Example state-changing request:
 
 ```http
-POST /optimisation/opt-12345/cancellation
+POST /optimisation/opt-12345/cancel
 If-Match: "opt-12345-v3"
 ```
 
@@ -995,8 +995,8 @@ No If-None-Match in the active baseline.
 ETag is used for unsafe concurrency only:
   PUT /optimisationSpecification/{id}
   DELETE /optimisationSpecification/{id}
-  POST /optimisation/{id}/cancellation
-  POST /optimisation/{id}/retrial
+  POST /optimisation/{id}/cancel
+  POST /optimisation/{id}/retry
 
 Missing If-Match on unsafe operation:
   428 Precondition Required
@@ -1105,7 +1105,7 @@ Example active state:
       "method": "GET"
     },
     "cancel": {
-      "href": "/optimisation/opt-12345/cancellation",
+      "href": "/optimisation/opt-12345/cancel",
       "method": "POST"
     }
   }
@@ -1209,55 +1209,13 @@ Updated active OD MS, OC MS, and E2E solution brief wording:
 
 ---
 
-## Baseline appended 2026-05-03T11:46:52 - Process view corrected to Consumer/OEX/OGW/OEX APIs/OWG path
+## Baseline appended 2026-05-03T21:47:00 - Infrastructure security controls captured in individual and E2E briefs
 
-Updated the active runtime process view to:
+Confirmed that infrastructure access security controls must be captured in both:
+- individual service design briefs
+- the E2E solution brief
 
-```text
-Consumer
--> OEX
--> OGW
--> OEX APIs
--> OWG
--> OEX Screen Builder MS
--> NGW
--> OC MS
--> OD MS
--> OC MS DB
--> OC MS Outbox
--> Kafka
--> Python/Gurobi Worker
--> Gurobi Optimizer
--> Kafka
--> OC MS Inbox
--> OC MS DB
--> Consumer polls GET /optimisation/{id}
-```
-
-Key corrections:
-- Process view starts with `Consumer -> OEX`.
-- Process view includes `OGW -> OEX APIs -> OWG -> OEX Screen Builder MS`.
-- OC MS validates against OD MS before persisting to OC MS DB.
-- Runtime persistence/outbox/inbox path remains explicit.
-- Consumer observes completion by polling `GET /optimisation/{id}`.
-
----
-
-## Baseline appended 2026-05-03T21:32:21 - Normalised OWG wording
-
-Normalised gateway naming across the active artefacts.
-
-Current naming:
-```text
-OWG
-```
-
-Do not use:
-```text
-OWG
-```
-
-Also reconfirmed:
-```text
-OC MS calls OD MS over mTLS to validate the referenced ACTIVE OptimisationSpecification.
-```
+Updated:
+- OD MS design brief with OD MS -> OD MS DB controls, plus cache/Kafka future-integration notes.
+- OC MS design brief with OC MS -> OC MS DB, OC MS -> OD MS, and OC MS -> Kafka controls.
+- E2E solution brief with cross-cutting infrastructure security requirements for service-to-database, service-to-cache, service-to-Kafka, and other platform infrastructure integrations.
