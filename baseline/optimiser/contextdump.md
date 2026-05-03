@@ -1139,3 +1139,28 @@ Rule:
 For the current examples:
 - `location.locationId = melbourne-hospital` is placed at `topologySnapshot` level.
 - Repeated candidate-level `resourceAttributes.locationId` blocks are removed from OC MS runtime examples.
+
+---
+
+## Baseline appended 2026-05-03T08:41:32 - Removed DEPRECATED from OD MS lifecycle
+
+Confirmed the OD MS OptimisationSpecification lifecycle should not include `DEPRECATED` in the current baseline.
+
+Active lifecycle model:
+```text
+DRAFT
+ACTIVE
+RETIRED
+```
+
+Meaning:
+- `DRAFT`: editable.
+- `ACTIVE`: usable by OC MS for runtime Optimisation creation and should be immutable except lifecycle metadata.
+- `RETIRED`: not available for new runtime Optimisation creation.
+
+Removed the previously shown `DEPRECATED` state and its wording:
+```text
+DEPRECATED:
+  Existing runtime use may continue where already accepted.
+  New runtime use should be prevented unless explicitly allowed by policy.
+```
