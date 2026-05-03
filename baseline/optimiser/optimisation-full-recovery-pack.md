@@ -1,6 +1,6 @@
 # Optimisation Full Recovery Pack
 
-Generated: 2026-05-03T11:57:20
+Generated: 2026-05-03T12:00:03
 
 This file combines the current optimisation architecture recovery material into one place.
 
@@ -1335,6 +1335,19 @@ Consumer
 Note:
 - E2E brief and OC MS show this as the runtime process view.
 - OD MS includes it as a reference and clarifies that OD MS is only the OptimisationSpecification source; OC MS persists to OC MS DB after OD validation.
+
+---
+
+## Baseline appended 2026-05-03T12:00:03 - Fixed process view start actor
+
+Corrected process view start so it begins with two separate steps:
+
+```text
+Consumer
+-> OEX
+```
+
+The process view must not combine these as a single `Consumer / OEX` node.
 
 
 ---
@@ -3518,7 +3531,8 @@ optimisation-logical-view.drawio
 #### 3.3.1 Create and execute optimisation:
 
 ```text
-Consumer / OEX
+Consumer
+-> OEX
 -> OGW
 -> OEX APIs
 -> OEX GW
@@ -3563,7 +3577,8 @@ Detailed flow:
 #### 3.3.2 Cancellation optimisation:
 
 ```text
-Consumer / OEX
+Consumer
+-> OEX
 -> OGW
 -> OEX APIs
 -> OEX GW
@@ -3594,7 +3609,8 @@ Detailed flow:
 #### 3.3.3 Retrial failed optimisation:
 
 ```text
-Consumer / OEX
+Consumer
+-> OEX
 -> OGW
 -> OEX APIs
 -> OEX GW

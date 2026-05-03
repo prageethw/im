@@ -123,7 +123,8 @@ optimisation-logical-view.drawio
 #### 3.3.1 Create and execute optimisation:
 
 ```text
-Consumer / OEX
+Consumer
+-> OEX
 -> OGW
 -> OEX APIs
 -> OEX GW
@@ -168,7 +169,8 @@ Detailed flow:
 #### 3.3.2 Cancellation optimisation:
 
 ```text
-Consumer / OEX
+Consumer
+-> OEX
 -> OGW
 -> OEX APIs
 -> OEX GW
@@ -199,7 +201,8 @@ Detailed flow:
 #### 3.3.3 Retrial failed optimisation:
 
 ```text
-Consumer / OEX
+Consumer
+-> OEX
 -> OGW
 -> OEX APIs
 -> OEX GW
