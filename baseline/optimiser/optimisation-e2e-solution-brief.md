@@ -704,9 +704,9 @@ This keeps the design clear: OD MS defines what is allowed; OC MS stores and ret
 
 ---
 
-## Corrected E2E logical integration flow:
+## Corrected E2E process flow baseline:
 
-The agreed end-to-end logical integration sequence is:
+All E2E process flows use this front-door and backend integration sequence as the baseline:
 
 ```text
 User
@@ -722,75 +722,191 @@ User
 -> Gurobi Optimizer
 ```
 
-Meaning:
+### Flow 1: Discover optimisation capability:
 
 ```text
-User:
-  Operator or authorised consumer initiating the optimisation journey.
-
-Microsoft Entra ID SSO:
-  Authenticates the user and provides SSO identity context.
-
-OEX UI:
-  User-facing optimisation experience.
-
-OEX APIs:
-  Private OEX-facing APIs supporting the OEX UI experience.
-
-OGW:
-  User-context-aware gateway path for OEX APIs.
-
-OEX Screen Builder MS:
-  Builds and coordinates OEX screens and user journeys.
-
-NGW:
-  TMF-compliant gateway exposing backend OD MS and OC MS API contracts.
-
-OD MS / OC MS:
-  OD MS provides OptimisationSpecification definitions.
-  OC MS provides runtime Optimisation execution control.
-
-Kafka:
-  Asynchronous event backbone for worker instructions and outcomes.
-
-Python/Gurobi Worker:
-  Worker component consuming optimisation events and invoking the solver/model.
-
-Gurobi Optimizer:
-  Optimisation solver engine used by the worker/model.
+1. User authenticates through Microsoft Entra ID SSO.
+2. User accesses the OEX UI.
+3. OEX UI calls OEX APIs.
+4. OEX APIs are exposed through OGW.
+5. OGW routes the user-context-aware request to OEX Screen Builder MS.
+6. OEX Screen Builder MS calls NGW using the approved backend integration pattern.
+7. NGW exposes the TMF-compliant OD MS API.
+8. OD MS returns available ACTIVE OptimisationSpecification definitions.
+9. OEX Screen Builder MS shapes the response for the OEX UI journey.
+10. User sees available optimisation capabilities in OEX UI.
 ```
 
-Gateway/API compliance rule:
+This flow stops at OD MS because no runtime optimisation has been created yet.
+
+### Flow 2: Create or update OptimisationSpecification:
+
+```text
+1. User authenticates through Microsoft Entra ID SSO.
+2. User accesses the OEX UI.
+3. OEX UI calls OEX APIs.
+4. OEX APIs are exposed through OGW.
+5. OGW routes the user-context-aware request to OEX Screen Builder MS.
+6. OEX Screen Builder MS calls NGW.
+7. NGW exposes the TMF-compliant OD MS API.
+8. OD MS creates or updates the OptimisationSpecification definition.
+9. OD MS stores the definition as DRAFT until activation.
+10. When activated, OD MS marks the OptimisationSpecification ACTIVE.
+```
+
+OD MS definition model:
+
+```text
+constraintSpecifications[]
+targetSpecifications[]
+contextSpecifications[]
+```
+
+OD MS does not store runtime request values, candidate IDs, candidate metrics, selected resources, or optimisation results.
+
+### Flow 3: Create runtime Optimisation:
+
+```text
+1. User authenticates through Microsoft Entra ID SSO.
+2. User accesses the OEX UI.
+3. OEX UI calls OEX APIs.
+4. OEX APIs are exposed through OGW.
+5. OGW routes the user-context-aware request to OEX Screen Builder MS.
+6. OEX Screen Builder MS calls NGW.
+7. NGW exposes the TMF-compliant OC MS API.
+8. OC MS receives POST /optimisation.
+9. Runtime request contains constraints[], targets[], and context[].
+10. OC MS validates runtime constraints[], targets[], and context[] against the ACTIVE OptimisationSpecification from OD MS.
+11. OC MS performs structural/request-contract validation only.
+12. OC MS checks required fields, value types, supported names, supported enum values, and cardinality rules such as candidateResources minItems = 2.
+13. If validation passes, OC MS persists the runtime Optimisation as ACKNOWLEDGED.
+14. OC MS writes OptimisationRequestedEvent instruction EXECUTE to the outbox in the same transaction.
+15. OC MS returns 202 Accepted with Location and ETag through NGW -> OEX Screen Builder MS -> OGW -> OEX APIs -> OEX UI.
+16. Outbox relay publishes the event to Kafka.
+17. Python/Gurobi Worker consumes the Kafka event.
+18. Python/Gurobi Worker invokes Gurobi Optimizer.
+```
+
+OC MS runtime model:
+
+```text
+constraints[]
+targets[]
+context[]
+```
+
+### Flow 4: Runtime request contract violation:
+
+```text
+1. User follows the same front-door sequence through Microsoft Entra ID SSO -> OEX UI -> OEX APIs -> OGW -> OEX Screen Builder MS -> NGW -> OC MS.
+2. OC MS receives POST /optimisation.
+3. OC MS validates runtime constraints[], targets[], and context[] against the ACTIVE OptimisationSpecification.
+4. Request violates the request contract.
+5. Example: topologySnapshot.candidateResources contains fewer than 2 candidates where minItems = 2 is required.
+6. OC MS rejects the request before worker execution.
+7. OC MS returns 422 Unprocessable Entity with OPTIMISATION_CONTRACT_VIOLATION.
+8. Error response returns through NGW -> OEX Screen Builder MS -> OGW -> OEX APIs -> OEX UI.
+```
+
+This is not an optimisation outcome. It is a request-contract validation failure.
+
+### Flow 5: Successful optimisation outcome:
+
+```text
+1. Kafka receives OptimisationRequestedEvent with instruction EXECUTE.
+2. Python/Gurobi Worker consumes the event.
+3. Python/Gurobi Worker invokes Gurobi Optimizer.
+4. Worker/model evaluates constraints[], targets[], and context[].
+5. Worker/model performs solver feasibility, metric-vs-constraint evaluation, candidate ranking, and objective trade-off evaluation.
+6. Worker/model identifies a valid selected outcome.
+7. Worker emits OptimisationCompletedEvent with outcome SUCCESS to Kafka.
+8. OC MS consumes the outcome event.
+9. OC MS updates lifecycleStatus to COMPLETED.
+10. OC MS projects result.outputs[] into the runtime Optimisation resource.
+11. User views status/result through OEX UI -> OEX APIs -> OGW -> OEX Screen Builder MS -> NGW -> OC MS.
+```
+
+### Flow 6: Infeasible optimisation outcome:
+
+```text
+1. Runtime request passes OC MS request-contract validation.
+2. OC MS accepts the request and emits OptimisationRequestedEvent to Kafka.
+3. Python/Gurobi Worker consumes the event and invokes Gurobi Optimizer.
+4. Worker/model evaluates accepted constraints[], targets[], and context[].
+5. Worker/model determines no feasible solution exists.
+6. Worker emits OptimisationCompletedEvent with outcome INFEASIBLE to Kafka.
+7. OC MS consumes the outcome event.
+8. OC MS updates lifecycleStatus to INFEASIBLE.
+9. User views the infeasible status through OEX UI -> OEX APIs -> OGW -> OEX Screen Builder MS -> NGW -> OC MS.
+```
+
+INFEASIBLE is an optimisation outcome, not a request-contract validation error.
+
+### Flow 7: Worker/runtime failure outcome:
+
+```text
+1. Runtime request passes OC MS request-contract validation.
+2. OC MS accepts the request and emits OptimisationRequestedEvent to Kafka.
+3. Python/Gurobi Worker consumes the event and invokes Gurobi Optimizer.
+4. Worker/model fails due to a technical/runtime issue.
+5. Worker emits OptimisationFailedEvent with outcome FAILURE to Kafka.
+6. OC MS consumes the failure event.
+7. OC MS updates lifecycleStatus to FAILED.
+8. Failed Optimisation exposes retrial HATEOAS control where allowed.
+9. User views the failed status through OEX UI -> OEX APIs -> OGW -> OEX Screen Builder MS -> NGW -> OC MS.
+```
+
+### Flow 8: Cancellation:
+
+```text
+1. User initiates cancellation from OEX UI.
+2. Request follows OEX UI -> OEX APIs -> OGW -> OEX Screen Builder MS -> NGW -> OC MS.
+3. Consumer action maps to POST /optimisation/<built-in function id>/cancellation with If-Match.
+4. OC MS validates ETag and lifecycle state.
+5. Cancellation is allowed only from ACKNOWLEDGED, QUEUED, or PROCESSING.
+6. OC MS updates runtime Optimisation to CANCELLING.
+7. OC MS writes OptimisationRequestedEvent instruction CANCEL to the outbox in the same transaction.
+8. OC MS returns 202 Accepted with the updated CANCELLING resource.
+9. Outbox relay publishes the cancellation instruction to Kafka.
+10. Python/Gurobi Worker consumes or observes the cancellation instruction.
+11. Worker/model stops or ignores work where safely possible.
+12. OC MS later marks the runtime Optimisation CANCELLED according to worker/operational handling.
+```
+
+### Flow 9: Retrial:
+
+```text
+1. User initiates retrial from OEX UI.
+2. Request follows OEX UI -> OEX APIs -> OGW -> OEX Screen Builder MS -> NGW -> OC MS.
+3. Consumer action maps to POST /optimisation/<built-in function id>/retrial with If-Match.
+4. OC MS validates ETag and lifecycle state.
+5. Retrial is allowed only from FAILED by default.
+6. OC MS creates a new runtime Optimisation resource.
+7. New runtime Optimisation references the failed one using retrialOf.
+8. New runtime Optimisation starts at ACKNOWLEDGED.
+9. OC MS writes OptimisationRequestedEvent instruction EXECUTE to the outbox.
+10. OC MS returns 202 Accepted with Location pointing to the new Optimisation.
+11. Outbox relay publishes the execute instruction to Kafka.
+12. Python/Gurobi Worker consumes the event and invokes Gurobi Optimizer.
+```
+
+Retrial creates a new Optimisation. It does not mutate the failed Optimisation back into PROCESSING.
+
+### Flow 10: Late worker outcome after cancellation:
+
+```text
+1. OC MS has already moved the runtime Optimisation to CANCELLING or CANCELLED.
+2. A late SUCCESS, INFEASIBLE, or FAILURE outcome arrives through Kafka from the worker.
+3. OC MS must not blindly overwrite the cancellation state.
+4. OC MS handles the late event idempotently as stale/late according to operational policy.
+```
+
+### API compliance rule:
 
 ```text
 NGW-exposed backend APIs are TMF-compliant.
 
-OEX APIs exposed via OGW are OEX/private experience APIs and do not need to be TMF-compliant.
+OEX APIs exposed via OGW are private/OEX experience APIs and do not need to be TMF-compliant.
 
 Private MS-to-MS APIs and internal Kafka events do not need to be TMF-compliant unless explicitly required by a separate contract.
 ```
-
-
----
-
-## E2E flow access path baseline:
-
-All E2E solution flows should use the following access and integration path as the logical sequence:
-
-```text
-User
--> Microsoft Entra ID SSO
--> OEX UI
--> OEX APIs
--> OGW
--> OEX Screen Builder MS
--> NGW
--> OD MS / OC MS
--> Kafka
--> Python/Gurobi Worker
--> Gurobi Optimizer
-```
-
-When a flow is specifically about OD MS definition management, the sequence stops at OD MS unless runtime optimisation is created.
-
-When a flow is specifically about OC MS runtime execution, the sequence continues from OC MS to Kafka, Python/Gurobi Worker, and Gurobi Optimizer.

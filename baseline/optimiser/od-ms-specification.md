@@ -430,9 +430,9 @@ Example runtime context shape:
 
 ---
 
-## Definition access/integration sequence baseline:
+## Definition E2E access path baseline:
 
-OptimisationSpecification definition access follows the same front-door path and stops at OD MS:
+OD MS definition access follows this path:
 
 ```text
 User
@@ -445,4 +445,4 @@ User
 -> OD MS
 ```
 
-OD MS is reached through NGW. OD MS does not participate in Kafka, Python/Gurobi Worker, or Gurobi Optimizer runtime execution flows.
+OD MS sits behind NGW. OD MS does not participate in Kafka, Python/Gurobi Worker, or Gurobi Optimizer runtime execution flows.

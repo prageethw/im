@@ -1444,9 +1444,9 @@ OC MS does not perform solver feasibility, candidate ranking, metric-vs-constrai
 
 ---
 
-## Runtime access/integration sequence baseline:
+## Runtime E2E access path baseline:
 
-Runtime optimisation access should follow this logical sequence:
+OC MS runtime access follows this path before backend asynchronous execution:
 
 ```text
 User
@@ -1456,12 +1456,12 @@ User
 -> OGW
 -> OEX Screen Builder MS
 -> NGW
--> OD MS / OC MS
+-> OC MS
 -> Kafka
 -> Python/Gurobi Worker
 -> Gurobi Optimizer
 ```
 
-OC MS appears behind NGW. OC MS does not directly authenticate end users; user access is handled through Entra ID SSO, OEX UI/APIs, OGW, OEX Screen Builder MS, and NGW before the request reaches OC MS.
+OC MS sits behind NGW. OC MS does not directly authenticate end users. User authentication and user-context-aware routing occur through Entra ID SSO, OEX UI/APIs, OGW, OEX Screen Builder MS, and NGW.
 
-After OC MS accepts a runtime Optimisation request, asynchronous execution continues through Kafka, Python/Gurobi Worker, and Gurobi Optimizer.
+OC MS validates the runtime request against OD MS, persists the Optimisation, emits Kafka events, and consumes worker outcomes.

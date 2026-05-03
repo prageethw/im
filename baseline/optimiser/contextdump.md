@@ -1169,3 +1169,32 @@ Rules:
 - NGW exposes TMF-compliant backend APIs for OD MS and OC MS.
 - Runtime OC MS execution continues through Kafka, Python/Gurobi Worker, and Gurobi Optimizer.
 - OD MS definition-management flows stop at OD MS and do not continue to Kafka/worker/optimizer unless a runtime optimisation is created through OC MS.
+
+---
+
+## Baseline appended 2026-05-03T10:56:14 - E2E flows updated to corrected OEX/OGW/Screen Builder/NGW sequence
+
+Updated the active E2E process flows to follow the agreed sequence:
+
+```text
+User
+-> Microsoft Entra ID SSO
+-> OEX UI
+-> OEX APIs
+-> OGW
+-> OEX Screen Builder MS
+-> NGW
+-> OD MS / OC MS
+-> Kafka
+-> Python/Gurobi Worker
+-> Gurobi Optimizer
+```
+
+Key corrections:
+- OEX UI appears before OEX APIs.
+- OEX APIs are exposed through OGW.
+- OGW routes to OEX Screen Builder MS.
+- OEX Screen Builder MS calls NGW.
+- NGW exposes TMF-compliant OD MS / OC MS backend APIs.
+- Runtime OC MS flows continue to Kafka, Python/Gurobi Worker, and Gurobi Optimizer.
+- OD MS definition flows stop at OD MS unless a runtime optimisation is created through OC MS.
