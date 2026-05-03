@@ -1241,3 +1241,78 @@ Correction:
 - Use `User`, not `Consumer / OEX`, as the starting actor in this baseline.
 - Use `OEX UI -> OEX APIs -> OGW -> OEX Screen Builder MS`.
 - Do not include a separate `OEX GW` hop.
+
+---
+
+## Baseline appended 2026-05-03T11:23:51 - All logical and process views aligned
+
+Updated all active logical and process views to the agreed baseline.
+
+Logical sequence:
+```text
+User
+-> Microsoft Entra ID SSO
+-> OEX UI
+-> OEX APIs
+-> OGW
+-> OEX Screen Builder MS
+-> NGW
+-> OD MS / OC MS
+-> Kafka
+-> Python/Gurobi Worker
+-> Gurobi Optimizer
+```
+
+Definition path:
+```text
+User
+-> Microsoft Entra ID SSO
+-> OEX UI
+-> OEX APIs
+-> OGW
+-> OEX Screen Builder MS
+-> NGW
+-> OD MS
+```
+
+Runtime logical path:
+```text
+User
+-> Microsoft Entra ID SSO
+-> OEX UI
+-> OEX APIs
+-> OGW
+-> OEX Screen Builder MS
+-> NGW
+-> OC MS
+-> Kafka
+-> Python/Gurobi Worker
+-> Gurobi Optimizer
+```
+
+Runtime process expansion:
+```text
+User
+-> Microsoft Entra ID SSO
+-> OEX UI
+-> OEX APIs
+-> OGW
+-> OEX Screen Builder MS
+-> NGW
+-> OC MS
+-> OD MS
+-> OC MS DB
+-> OC MS Outbox
+-> Kafka
+-> Python/Gurobi Worker
+-> Gurobi Optimizer
+-> Kafka
+-> OC MS Inbox
+-> OC MS DB
+-> User polls GET /optimisation/{id}
+```
+
+Removed prior drift:
+- no `Consumer / OEX` actor in the baseline
+- no separate `OEX GW` hop
+- no stale `/cancel` or `/retry` endpoint references

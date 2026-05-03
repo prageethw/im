@@ -393,37 +393,9 @@ This OD MS specification intentionally does not include actual runtime candidate
 
 ---
 
-## Process view baseline:
+## Logical view baseline:
 
-OD MS participates in definition/specification processes only.
-
-```text
-User
--> Microsoft Entra ID SSO
--> OEX UI
--> OEX APIs
--> OGW
--> OEX Screen Builder MS
--> NGW
--> OD MS
-```
-
-OD MS process responsibilities:
-```text
-create OptimisationSpecification
-validate definition shape
-store as DRAFT
-activate as ACTIVE
-serve ACTIVE definitions to OC MS and authorised consumers
-```
-
-OD MS does not participate in Kafka execution, Python/Gurobi Worker processing, Gurobi Optimizer execution, runtime cancellation, runtime retrial, or runtime outcome projection.
-
----
-
-## Logical and process access baseline:
-
-OD MS definition-management path:
+OD MS definition logical path:
 
 ```text
 User
@@ -436,10 +408,35 @@ User
 -> OD MS
 ```
 
-OD MS also participates in OC MS runtime validation as the OptimisationSpecification definition source:
+OD MS also participates in runtime validation as the specification source:
 
 ```text
 OC MS -> OD MS
 ```
 
 OD MS does not participate in Kafka, Python/Gurobi Worker, Gurobi Optimizer, OC MS Inbox, or runtime result projection.
+
+## Process view baseline:
+
+OD MS definition-management process:
+
+```text
+1. User authenticates through Microsoft Entra ID SSO.
+2. User accesses OEX UI.
+3. OEX UI calls OEX APIs.
+4. OEX APIs route through OGW.
+5. OGW routes to OEX Screen Builder MS.
+6. OEX Screen Builder MS calls NGW.
+7. NGW calls OD MS.
+8. OD MS validates OptimisationSpecification definition shape.
+9. OD MS stores the definition as DRAFT.
+10. OD MS transitions the definition to ACTIVE when approved/ready.
+```
+
+OD MS definition model:
+
+```text
+constraintSpecifications[]
+targetSpecifications[]
+contextSpecifications[]
+```

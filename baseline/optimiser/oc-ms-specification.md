@@ -1412,9 +1412,9 @@ The presence of `constraints[]` in OC MS is expected. In OC MS it is not the def
 
 ---
 
-## Logical and runtime process baseline:
+## Logical view baseline:
 
-OC MS runtime access path:
+OC MS runtime logical path:
 
 ```text
 User
@@ -1425,34 +1425,16 @@ User
 -> OEX Screen Builder MS
 -> NGW
 -> OC MS
-```
-
-OC MS asynchronous execution path:
-
-```text
-OC MS
--> OC MS DB
--> OC MS Outbox
 -> Kafka
 -> Python/Gurobi Worker
 -> Gurobi Optimizer
--> Kafka
--> OC MS Inbox
--> OC MS DB
 ```
 
-User status/result retrieval:
+OC MS owns runtime Optimisation resources. It validates runtime requests against OD MS definitions, persists accepted executions, emits Kafka instructions, consumes worker outcomes, and projects lifecycle/result state.
 
-```text
-User polls GET /optimisation/{id}
-```
+## Process view baseline:
 
-
----
-
-## Corrected runtime process flow baseline:
-
-The agreed runtime optimisation process flow is:
+OC MS runtime process expansion:
 
 ```text
 User
@@ -1475,31 +1457,16 @@ User
 -> User polls GET /optimisation/{id}
 ```
 
-Detailed interpretation:
+OC MS process responsibilities:
 
 ```text
-1. User authenticates through Microsoft Entra ID SSO and accesses OEX UI.
-2. OEX UI calls OEX APIs.
-3. OEX APIs route through OGW.
-4. OGW routes to OEX Screen Builder MS.
-5. OEX Screen Builder MS calls NGW.
-6. NGW calls OC MS.
-7. OC MS validates the runtime request against the ACTIVE OptimisationSpecification from OD MS.
-8. OC MS persists the accepted runtime Optimisation in OC MS DB.
-9. OC MS writes OptimisationRequestedEvent to OC MS Outbox in the same transaction.
-10. OC MS Outbox relay publishes the event to Kafka.
-11. Python/Gurobi Worker consumes the event from Kafka.
-12. Python/Gurobi Worker invokes Gurobi Optimizer.
-13. Worker publishes outcome event back to Kafka.
-14. OC MS Inbox consumes the outcome event from Kafka.
-15. OC MS Inbox updates OC MS DB with lifecycle/result projection.
-16. User polls GET /optimisation/{id} through OEX UI -> OEX APIs -> OGW -> OEX Screen Builder MS -> NGW -> OC MS.
-```
-
-Outcome projection:
-
-```text
-SUCCESS -> COMPLETED
-INFEASIBLE -> INFEASIBLE
-FAILURE -> FAILED
+validate runtime constraints[], targets[], and context[] against ACTIVE OD MS specification
+reject contract violations with 422
+persist accepted runtime Optimisation in OC MS DB
+write OptimisationRequestedEvent to OC MS Outbox
+publish/relay to Kafka
+consume SUCCESS / INFEASIBLE / FAILURE outcomes through OC MS Inbox
+project lifecycle and result into OC MS DB
+support cancellation through POST /optimisation/<built-in function id>/cancellation
+support retrial through POST /optimisation/<built-in function id>/retrial
 ```
