@@ -148,7 +148,7 @@ ID MS validates only resource shape and syntax. II MS and Knowledge Plane own se
 |---|---|---|---|
 | `location` | `SC-LOCATION-001` | object | Required; nested object shape defined only in `expressionSpecification` |
 | `serviceClass` | `SC-SERVICE-CLASS-001` | string | Required; expected value `surgical-slice` |
-| `priority` | `SC-POLICY-PRIORITY-001` | string | Optional; allowed values may include `clinical-critical`, `high`, `standard` |
+| `priority` | `SC-POLICY-PRIORITY-001` | string | Optional; allowed values may include `critical`, `high`, `standard` |
 | `maxLatencyMs` | `SC-ASSURANCE-LATENCY-001` | number | Optional; listed values are guidance only |
 | `minAvailabilityPercent` | `SC-ASSURANCE-AVAILABILITY-001` | number | Optional; listed values are guidance only |
 | `maxJitterMs` | `SC-ASSURANCE-JITTER-001` | number | Optional; listed values are guidance only |
@@ -181,7 +181,7 @@ Only these fields are permitted:
 
 `priority` uses the agreed field name and may use the agreed enum values where the specification wants constrained values:
 
-- `clinical-critical`
+- `critical`
 - `high`
 - `standard`
 

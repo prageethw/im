@@ -102,14 +102,14 @@ correlationid: corr-icms-20260504-001
     "href": "/intentManagement/v5/intentSpecification/hospital-surgical-slice-spec-v1.19",
     "version": "1.19"
   },
-  "humanExpression": "Provide a clinical-critical surgical slice for Sydney Hospital with latency <= 10 ms and availability >= 99.99%.",
+  "humanExpression": "Provide a critical surgical slice for Sydney Hospital with latency <= 10 ms and availability >= 99.99%.",
   "expression": {
     "location": {
       "locationId": "sydney-hospital",
       "locationType": "hospital"
     },
     "serviceClass": "surgical-slice",
-    "priority": "clinical-critical",
+    "priority": "critical",
     "maxLatencyMs": 10,
     "minAvailabilityPercent": 99.99,
     "redundancyRequired": true,
@@ -151,14 +151,14 @@ correlationid: corr-icms-20260504-001
     "href": "/intentManagement/v5/intentSpecification/hospital-surgical-slice-spec-v1.19",
     "version": "1.19"
   },
-  "humanExpression": "Provide a clinical-critical surgical slice for Sydney Hospital with latency <= 10 ms and availability >= 99.99%.",
+  "humanExpression": "Provide a critical surgical slice for Sydney Hospital with latency <= 10 ms and availability >= 99.99%.",
   "expression": {
     "location": {
       "locationId": "sydney-hospital",
       "locationType": "hospital"
     },
     "serviceClass": "surgical-slice",
-    "priority": "clinical-critical",
+    "priority": "critical",
     "maxLatencyMs": 10,
     "minAvailabilityPercent": 99.99,
     "redundancyRequired": true,
@@ -244,7 +244,7 @@ correlationid: corr-icms-20260504-002
       "href": "/intentManagement/v5/intentSpecification/hospital-surgical-slice-spec-v1.19",
       "version": "1.19"
     },
-    "humanExpression": "Provide a clinical-critical surgical slice for Sydney Hospital with latency <= 10 ms and availability >= 99.99%.",
+    "humanExpression": "Provide a critical surgical slice for Sydney Hospital with latency <= 10 ms and availability >= 99.99%.",
     "validFor": {
       "startDateTime": "2026-05-04T12:00:00+10:00",
       "endDateTime": "2026-05-04T18:00:00+10:00"
@@ -316,14 +316,14 @@ correlationid: corr-icms-20260504-003
     "href": "/intentManagement/v5/intentSpecification/hospital-surgical-slice-spec-v1.19",
     "version": "1.19"
   },
-  "humanExpression": "Provide a clinical-critical surgical slice for Sydney Hospital with latency <= 10 ms and availability >= 99.99%.",
+  "humanExpression": "Provide a critical surgical slice for Sydney Hospital with latency <= 10 ms and availability >= 99.99%.",
   "expression": {
     "location": {
       "locationId": "sydney-hospital",
       "locationType": "hospital"
     },
     "serviceClass": "surgical-slice",
-    "priority": "clinical-critical",
+    "priority": "critical",
     "maxLatencyMs": 10,
     "minAvailabilityPercent": 99.99,
     "redundancyRequired": true,
@@ -596,7 +596,7 @@ headers:
         "minAvailabilityPercent": 99.99
       },
       "policyInputs": {
-        "priority": "clinical-critical"
+        "priority": "critical"
       }
     },
     "references": {
