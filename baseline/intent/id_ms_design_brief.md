@@ -730,3 +730,184 @@ Rules:
 **On active-version promotion, ID MS refreshes its own active-specification cache using a no-cache/internal refresh path so the newly active version becomes the cached active copy and the previous active version is no longer returned as active.**
 
 **ID MS uses dependency-specific circuit-breaker behaviour. Database failure is hard fail-fast and returns `503 Service Unavailable`. Cache failure is handled silently and gracefully by bypassing cache or ignoring cache writes where safe. Kafka/event-broker failure is handled through transactional outbox. External webhook callback failure is handled asynchronously: each failed delivery attempt fails fast, is retried later, and does not affect the original resource API response.**
+
+## Deployment and persistence strategy:
+
+### Runtime model:
+
+ID MS is deployed as a mostly stateless API service.
+
+The service instances can be horizontally scaled behind the API gateway / ingress layer.
+
+The application instances should not hold domain truth in local memory.
+
+### Source of truth:
+
+The source of truth for ID MS is a managed PostgreSQL / PostgreSQL-compatible relational database.
+
+ID MS stores and governs:
+
+- `IntentSpecification` resources
+- specification versions
+- lifecycle status
+- hub subscriptions
+- outbox records for event publication
+- audit-relevant metadata
+
+### Recommended persistence model:
+
+| **Table / store** | **Purpose** |
+|---|---|
+| `intent_specification` | Stores `IntentSpecification` resource, version, lifecycle, ETag, timestamps, and resource body |
+| `intent_specification_subscription` | Stores `/intentSpecification/hub` event subscriptions |
+| `outbox_event` | Stores durable events before publication to Kafka/event infrastructure |
+| `inbox_event` | Optional; used only if ID MS later consumes internal events requiring idempotent processing |
+| audit table / audit log | Optional dedicated audit trail if not covered by platform audit capability |
+
+### JSONB usage:
+
+Use JSONB where flexible document-shaped content is required.
+
+Recommended JSONB fields:
+
+- `specCharacteristic`
+- `expressionSpecification`
+- `_links`
+- full resource body snapshot where useful
+- event payload snapshot in `outbox_event`
+
+Rationale:
+
+- `IntentSpecification` is naturally document-shaped.
+- JSONB supports flexible schema evolution.
+- Relational columns still support governance queries such as `id`, `name`, `version`, `lifecycleStatus`, `familyId`, `ETag`, and timestamps.
+
+### Suggested relational columns:
+
+For `intent_specification`:
+
+| **Column** | **Purpose** |
+|---|---|
+| `id` | Stable specification ID, for example `hospital-surgical-slice-spec-v1.19` |
+| `family_id` | Logical specification family, for example `hospital-surgical-slice-spec` |
+| `name` | Human-readable name |
+| `version` | Version string |
+| `lifecycle_status` | `DRAFT`, `ACTIVE`, or `RETIRED` |
+| `etag` | Current entity tag for unsafe-operation concurrency |
+| `resource_body` | Full JSONB representation |
+| `created_at` | Creation timestamp |
+| `updated_at` | Last update timestamp |
+| `activated_at` | Activation timestamp, if active/previously active |
+| `retired_at` | Retirement timestamp, if retired |
+
+### High availability:
+
+ID MS should be deployed with:
+
+- multiple replicas
+- rolling deployment support
+- health checks
+- same-region multi-AZ database configuration where available
+- no local state dependency
+- safe restart behaviour
+
+### Disaster recovery:
+
+Initial deployment may be single-region or same-region multi-AZ.
+
+The selected database service/deployment pattern must support future cross-region active-passive DR as use cases expand.
+
+Active-active multi-region writes are not baselined initially.
+
+### Rollout strategy:
+
+ID MS supports rolling deployment.
+
+Rules:
+
+- no breaking API change without versioning
+- no incompatible DB schema change without backward-compatible migration
+- migrations should be additive first where possible
+- deployment should support rollback to the previous application version while DB remains compatible
+
+### Health checks:
+
+| **Health endpoint / check** | **Meaning** |
+|---|---|
+| Liveness | Process is running and can respond |
+| Readiness | Service can access critical dependencies needed for serving traffic |
+| DB readiness | Required for normal ID MS resource operations |
+| Kafka/outbox relay readiness | Should not block API readiness if DB/outbox commit path is healthy |
+| Cache readiness | Should not block API readiness because cache failure is graceful/silent |
+
+Readiness should fail when the DB/source-of-truth path is unavailable.
+
+Readiness should not fail only because cache is unavailable.
+
+Kafka/event-broker unavailability should be surfaced through relay metrics/alerts rather than making the ID MS API unavailable when the DB/outbox path is healthy.
+
+### Configuration and secrets:
+
+ID MS configuration should be externalised through platform configuration and secret management.
+
+Examples:
+
+- DB connection settings
+- cache endpoint
+- Kafka/event broker connection
+- outbox relay configuration
+- retry/backoff settings
+- cache TTL values
+- service identity
+- callback/event delivery settings
+- OAuth/JWT/security settings where applicable
+
+Secrets must not be stored in application images or source files.
+
+### Observability:
+
+ID MS should emit:
+
+- structured application logs
+- request metrics
+- dependency metrics
+- cache hit/miss metrics
+- circuit-breaker metrics
+- outbox publish metrics
+- subscription delivery metrics
+- audit/security logs where required
+- distributed traces with propagated correlation context
+
+Recommended metrics include:
+
+- `intent_specification_create_count`
+- `intent_specification_update_count`
+- `intent_specification_activation_count`
+- `intent_specification_retirement_count`
+- `intent_specification_delete_count`
+- `intent_specification_get_count`
+- `intent_specification_list_count`
+- `id_ms_db_error_count`
+- `id_ms_cache_bypass_count`
+- `id_ms_cache_write_failure_count`
+- `id_ms_outbox_pending_count`
+- `id_ms_outbox_publish_failure_count`
+- `id_ms_webhook_delivery_failure_count`
+
+### Security posture:
+
+ID MS should sit behind the platform gateway / ingress security layer.
+
+Security baseline:
+
+- authenticate callers through gateway/platform identity
+- authorise create/update/delete/activation operations
+- protect hub subscription creation/deletion
+- validate callback URLs according to platform security policy
+- apply request-size limits
+- log security-relevant administrative operations
+- avoid exposing internal DB/cache/broker details in error responses
+
+### Deployment baseline statement:
+
+ID MS application instances are stateless and horizontally scalable. The source of truth for `IntentSpecification`, hub subscriptions, lifecycle/version state, and outbox records is a managed PostgreSQL-compatible RDBMS. JSONB may be used for document-shaped resource bodies and event snapshots, while relational columns support governance queries, lifecycle/versioning, ETag handling, and operational reporting. ID MS readiness depends on DB/source-of-truth availability, but cache and Kafka failures are handled gracefully through cache bypass and transactional outbox where possible.

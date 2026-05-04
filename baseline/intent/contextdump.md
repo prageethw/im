@@ -162,3 +162,22 @@ On active-version promotion, ID MS refreshes its own active-specification cache 
 
 ### Dependency-specific CB baseline:
 DB failure is hard fail-fast and returns `503 Service Unavailable`. Cache failure is handled silently and gracefully by bypassing cache or ignoring cache writes where safe. Kafka/event-broker failure is handled through transactional outbox. External webhook callback failure is handled asynchronously and does not affect the original resource API response.
+
+## Baseline update — ID MS deployment and persistence strategy:
+
+Date: 2026-05-04T23:43:41.415139+00:00
+
+### Updated file:
+- `id_ms_design_brief.md`
+
+### Baseline:
+ID MS application instances are stateless and horizontally scalable. The source of truth for `IntentSpecification`, hub subscriptions, lifecycle/version state, and outbox records is a managed PostgreSQL-compatible RDBMS.
+
+### Persistence:
+Use relational columns for governance fields such as `id`, `family_id`, `name`, `version`, `lifecycle_status`, `etag`, and timestamps. Use JSONB for document-shaped resource body content such as `specCharacteristic`, `expressionSpecification`, `_links`, and event/resource snapshots.
+
+### HA / DR:
+ID MS should support multiple replicas, rolling deployments, health checks, and same-region multi-AZ database deployment where available. The selected database pattern must support future cross-region active-passive DR. Active-active multi-region writes are not baselined initially.
+
+### Health:
+Readiness depends on DB/source-of-truth availability. Cache failure should not make ID MS unavailable. Kafka/event-broker failure should be handled through transactional outbox and surfaced through metrics/alerts rather than blocking the API when DB/outbox commit is healthy.
