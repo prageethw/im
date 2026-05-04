@@ -445,3 +445,140 @@ Delete is blocked when:
 
 Delete success returns `204 No Content` and does not create `lifecycleStatus = DELETED`.
 
+## Caching and circuit-breaker strategy:
+
+### Caching purpose:
+
+ID MS supports safe caching for read operations so IC MS and other consumers can reduce repeated `IntentSpecification` lookups.
+
+Caching must not weaken specification governance or allow stale specifications to be used indefinitely.
+
+### HTTP caching rules:
+
+| **Operation** | **Caching rule** |
+|---|---|
+| `GET /intentSpecification/{id}` | Private cache allowed with `ETag` and bounded freshness |
+| `GET /intentSpecification` | Private list cache allowed with short TTL |
+| `POST /intentSpecification` | `Cache-Control: no-store` |
+| `PUT /intentSpecification/{id}` | `Cache-Control: no-store` |
+| `PATCH /intentSpecification/{id}` | `Cache-Control: no-store` |
+| `DELETE /intentSpecification/{id}` | `Cache-Control: no-store` |
+| Error responses | `Cache-Control: no-store` |
+| Hub subscription writes | `Cache-Control: no-store` |
+
+### Single-resource GET caching:
+
+For `GET /intentManagement/v5/intentSpecification/{id}`, ID MS should return:
+
+```http
+ETag: "intent-spec-hospital-surgical-slice-spec-v1.19-v1"
+Last-Modified: Sat, 18 Apr 2026 02:00:00 GMT
+Cache-Control: private, max-age=300
+```
+
+Rules:
+
+- `ETag` is mandatory.
+- `Cache-Control` should be private by default.
+- Clients should revalidate when correctness matters.
+- IC MS may cache active specifications for syntactic validation within a configured freshness window.
+
+### IC MS cached active specification fallback:
+
+IC MS may use a cached `ACTIVE` `IntentSpecification` for new runtime `Intent` syntactic validation only when all of the following are true:
+
+- the cached specification is within the configured freshness window
+- the cached specification lifecycle is `ACTIVE`
+- the cached specification ID/version matches the runtime intent reference
+- the cached specification includes the required `expressionSpecification`
+- the cached specification has not been explicitly invalidated by an ID MS status-change event or cache refresh signal
+- the degraded dependency path is logged and monitored
+
+If any of these conditions are not true, IC MS must fail closed for new runtime intent creation when ID MS availability prevents confirmation.
+
+### Fail-closed rule:
+
+If ID MS is unavailable and IC MS has no valid fresh cached `ACTIVE` specification, IC MS must reject new runtime intent creation with:
+
+```http
+HTTP/1.1 503 Service Unavailable
+Content-Type: application/json
+Cache-Control: no-store
+Retry-After: 30
+```
+
+```json
+{
+  "code": "SERVICE_UNAVAILABLE",
+  "reason": "INTENT_SPECIFICATION_LOOKUP_UNAVAILABLE",
+  "message": "Intent creation cannot be accepted because the active IntentSpecification could not be confirmed.",
+  "status": 503,
+  "referenceError": "https://mycsp.com.au/errors/SERVICE_UNAVAILABLE",
+  "@type": "Error"
+}
+```
+
+### Active-version promotion cache invalidation:
+
+When a new version of an `IntentSpecification` is promoted to `ACTIVE`, ID MS must invalidate old active-specification caches and refresh consumers with the new active copy.
+
+Baseline behaviour:
+
+- the newly promoted active specification write/activation response must use `Cache-Control: no-store`
+- ID MS emits `IntentSpecificationStatusChangeEvent` for the newly active version
+- ID MS emits `IntentSpecificationStatusChangeEvent` for the previous active version moving to `RETIRED`
+- IC MS must treat those status-change events as cache invalidation signals for the affected specification family
+- IC MS must evict the previous active version from its active-spec validation cache
+- IC MS should fetch and cache the new active version before accepting new runtime intents for that specification family where possible
+- if IC MS cannot refresh the new active copy and no valid fresh cache exists, it must fail closed for new runtime intent creation
+
+### Cache refresh after active promotion:
+
+Recommended refresh flow:
+
+```text
+ID MS promotes v1.20 to ACTIVE
+ID MS retires previous ACTIVE v1.19
+ID MS emits status-change events for v1.20 and v1.19
+IC MS receives event
+IC MS invalidates cached active spec for the family
+IC MS fetches v1.20 from ID MS
+IC MS stores v1.20 as the current active validation copy
+```
+
+### Stale-cache protection:
+
+IC MS must not use a cached specification when:
+
+- the cache freshness window has expired
+- the cached lifecycle is not `ACTIVE`
+- the specification family has received a status-change invalidation event
+- the runtime intent references a different version
+- the expression schema is missing or invalid
+- the cache entry cannot be tied to a valid `ETag`
+
+### ID MS circuit-breaker strategy:
+
+| **Dependency path** | **Circuit-breaker behaviour** |
+|---|---|
+| ID MS -> DB | Fail fast when open; return `503` for operations needing DB access |
+| ID MS -> event publisher/outbox | Use outbox-first where possible; do not lose committed resource changes |
+| ID MS -> external callback delivery | Delivery retry/failure handled by event delivery layer; resource operation should not depend on synchronous callback delivery |
+| IC MS -> ID MS | IC MS may use fresh cached active spec fallback; otherwise fail closed |
+
+### Observability requirements:
+
+ID MS and IC MS should expose metrics/logs for:
+
+- active specification cache hit count
+- active specification cache miss count
+- active specification cache invalidation count
+- stale cache rejection count
+- fail-closed due to ID MS unavailable
+- ID MS DB circuit-breaker open count
+- ID MS event publication failure count
+- IC MS validation using cached active specification count
+
+### Baseline statement:
+
+IC MS may use a cached `ACTIVE` `IntentSpecification` within a configured freshness window for runtime intent creation. When a new specification version is promoted to `ACTIVE`, old active-spec caches must be invalidated through no-store write responses and status-change events, and IC MS must refresh its cache with the new active copy. If the active specification cannot be confirmed from ID MS or a valid fresh cache, IC MS fails closed for new runtime intent creation.

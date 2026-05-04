@@ -73,3 +73,51 @@ Each meaningful change after activation requires a new versioned `IntentSpecific
 ### Runtime compatibility:
 IC MS validates new runtime `Intent` creation only against `ACTIVE` specifications. Existing intents referencing retired specifications may continue temporarily where safe, but should be migrated or recreated through controlled flow.
 
+## Baseline update — ID MS caching and circuit-breaker strategy:
+
+Date: 2026-05-04T22:32:03.043829+00:00
+
+### Updated file:
+- `id_ms_design_brief_v2.md`
+
+### Baseline:
+IC MS may use a cached `ACTIVE` `IntentSpecification` within a configured freshness window for runtime `Intent` syntactic validation.
+
+### Fail-closed rule:
+If ID MS is unavailable and IC MS has no valid fresh cached `ACTIVE` specification, IC MS must fail closed for new runtime intent creation with `503 Service Unavailable`.
+
+### Active-version promotion cache invalidation:
+When a new specification version is promoted to `ACTIVE`, ID MS must invalidate old active-specification caches and refresh consumers with the new active copy. Activation/write responses use `Cache-Control: no-store`. ID MS emits status-change events for the newly active version and the previously active version moving to `RETIRED`. IC MS treats those events as cache invalidation signals, evicts the old active version, and fetches the new active copy.
+
+## Baseline file handling rule:
+
+Date: 2026-05-04T22:35:35.320776+00:00
+
+### Rule:
+Going forward, keep the main baseline dump file as `contextdump.md`.
+
+Do not create numbered/versioned dump filenames such as `contextdump_v2.md` or `new-context-working-vXX.md` for normal baseline updates.
+
+Append each new baseline update to the end of `contextdump.md`.
+
+### Related rule:
+For design briefs, keep the stable file name unless the user explicitly asks for a versioned copy.
+
+## Baseline file handling rule — stable design files:
+
+Date: 2026-05-04T22:36:58.456157+00:00
+
+### Rule:
+Going forward, design files must keep stable filenames and be fully overwritten with the corrected full version when revised.
+
+### Applies to:
+- `id_ms_design_brief.md`
+- future MS design brief files
+- other stable design/specification files unless the user explicitly requests a versioned copy
+
+### Do not:
+- create normal update files such as `_v2`, `_v3`, or numbered copies for design briefs
+- leave the corrected version only in a temporary/versioned file
+
+### Main context dump:
+Keep one stable `contextdump.md` file and append every new baseline update to the end of that file.
