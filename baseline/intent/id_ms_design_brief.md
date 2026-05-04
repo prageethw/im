@@ -348,3 +348,100 @@ Common errors:
 ## ID MS API boundary statement:
 
 **ID MS owns design-time `IntentSpecification` contracts and subscription management for specification events. It validates syntax and resource shape, enforces specification lifecycle/version governance, and publishes external specification lifecycle events. It does not validate runtime semantic feasibility, policy fulfilment, network topology, optimisation, assurance, telemetry, or callbacks.**
+
+## Lifecycle and versioning rules:
+
+### Lifecycle state model:
+
+Allowed `IntentSpecification.lifecycleStatus` values:
+
+```text
+DRAFT
+ACTIVE
+RETIRED
+```
+
+There is no `DELETED` lifecycle status. Delete is an operation/outcome, not a normal lifecycle state.
+
+### Lifecycle transitions:
+
+| **Transition** | **Allowed** | **Rule** |
+|---|---:|---|
+| Create -> `DRAFT` | Yes | New specifications are created as drafts by default |
+| `DRAFT` -> `ACTIVE` | Yes | Activation makes this version available for new runtime `Intent` creation |
+| `ACTIVE` -> `RETIRED` | Yes | Usually occurs when a newer version becomes active |
+| `DRAFT` -> deleted | Yes, conditional | Allowed only if unused and not referenced |
+| `ACTIVE` -> deleted | No by default | Active specifications are immutable and protected |
+| `RETIRED` -> deleted | No by default | Retired specifications remain for audit/runtime compatibility unless tombstone policy is approved |
+| Any state -> `DELETED` | No | `DELETED` is not a lifecycle status |
+
+### Versioning rules:
+
+- Each meaningful change after activation requires a new versioned `IntentSpecification`.
+- A new version starts as `DRAFT`.
+- Only one version in the same specification family should be `ACTIVE` for new runtime intent creation.
+- When a new version becomes `ACTIVE`, the previous active version moves to `RETIRED`.
+- Retired specifications must not be used for new `Intent` creation.
+- Existing runtime intents that reference a retired specification may continue temporarily where safe.
+- Preferred long-term treatment is to migrate existing intents to the new active specification version where safe, or terminate and recreate them.
+
+### Specification family rule:
+
+A specification family is the logical grouping of related versions of the same specification.
+
+Example family:
+
+```text
+hospital-surgical-slice-spec
+```
+
+Example versions:
+
+```text
+hospital-surgical-slice-spec-v1.18
+hospital-surgical-slice-spec-v1.19
+hospital-surgical-slice-spec-v1.20
+```
+
+Only one version in that family should be `ACTIVE` for new runtime intent creation.
+
+### Mutability rules:
+
+| **Lifecycle status** | **Mutable?** | **Reason** |
+|---|---:|---|
+| `DRAFT` | Yes | Draft is still under design/governance |
+| `ACTIVE` | No | Active contract must be stable for runtime clients and IC MS validation |
+| `RETIRED` | No | Retired contract must remain stable for audit and existing runtime references |
+
+### Runtime compatibility rules:
+
+- IC MS must validate new runtime `Intent` creation only against an `ACTIVE` `IntentSpecification`.
+- If a submitted intent references a `DRAFT` specification, IC MS rejects it.
+- If a submitted intent references a `RETIRED` specification for new creation, IC MS rejects it.
+- Existing intents that were created against a now-retired specification may continue temporarily if platform policy allows.
+- Existing intents should be migrated to the new active specification version only through a controlled intent update/recreate flow.
+
+### Activation governance rules:
+
+Activation should only be allowed when:
+
+- the specification is syntactically valid
+- the `expressionSpecification` is valid
+- required `specCharacteristic` entries are present
+- the version identifier is unique
+- there is no conflicting active version in the same family, or the activation operation also retires the previous active version
+- governance approval has been completed where required
+
+### Delete rules:
+
+Delete is allowed only for unused `DRAFT` specifications.
+
+Delete is blocked when:
+
+- the specification is `ACTIVE`
+- the specification is `RETIRED`
+- existing runtime intents reference the specification
+- audit/retention policy requires preservation
+
+Delete success returns `204 No Content` and does not create `lifecycleStatus = DELETED`.
+

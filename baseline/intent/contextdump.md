@@ -54,3 +54,22 @@ ID MS / `intent-definition-ms` owns the design-time `IntentSpecification` API co
 ### Boundary:
 ID MS validates syntax/resource shape and enforces specification lifecycle/version governance. It does not validate runtime semantic feasibility, policy fulfilment, network topology, optimisation, assurance, telemetry, or callbacks.
 
+## Baseline update — ID MS lifecycle and versioning rules:
+
+Date: 2026-05-04T15:35:23.666295+00:00
+
+### Updated file:
+- `id_ms_design_brief.md`
+
+### Baseline:
+The ID MS design brief now includes detailed lifecycle and versioning rules for `IntentSpecification`.
+
+### Lifecycle:
+Allowed `IntentSpecification.lifecycleStatus` values are `DRAFT`, `ACTIVE`, and `RETIRED`. `DELETED` is not a lifecycle status.
+
+### Versioning:
+Each meaningful change after activation requires a new versioned `IntentSpecification`. New versions start as `DRAFT`. Only one version in the same specification family should be `ACTIVE` for new runtime intent creation. Activating a new version retires the previous active version.
+
+### Runtime compatibility:
+IC MS validates new runtime `Intent` creation only against `ACTIVE` specifications. Existing intents referencing retired specifications may continue temporarily where safe, but should be migrated or recreated through controlled flow.
+
