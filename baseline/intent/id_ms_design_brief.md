@@ -202,7 +202,8 @@ When `timeWindow` is present, `startDateTime` is required.
 | `DRAFT` | Specification is editable and not yet available for runtime use |
 | `ACTIVE` | Specification is approved and available for runtime intent creation |
 | `RETIRED` | Specification is no longer available for new runtime intents |
-| `DELETED` | Specification is removed or tombstoned according to policy |
+
+`DELETED` is not an `IntentSpecification.lifecycleStatus`. Deletion is an operation/outcome governed by delete, tombstone, retention, and reference-safety policy.
 
 ### Lifecycle Rules:
 
@@ -313,7 +314,6 @@ Available links/actions should vary by resource state.
 | `DRAFT` | `self`, `update`, `patch`, `activate`, `delete` |
 | `ACTIVE` | `self`, `create-new-version`, `retire` |
 | `RETIRED` | `self` |
-| `DELETED` | None, or tombstone/self depending on deletion policy |
 
 ## Subscription API Baseline:
 
