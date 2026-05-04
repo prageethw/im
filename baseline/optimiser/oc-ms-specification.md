@@ -1468,206 +1468,137 @@ OC MS validates the runtime request against OD MS, persists the Optimisation, em
 
 ---
 
-## OC MS infrastructure security controls:
+## Corrected process view baseline:
 
-OC MS integrations must explicitly capture service-to-infrastructure security controls.
-
-### OC MS -> OC MS Database:
+The agreed runtime process view is:
 
 ```text
-Authentication:
-  OC MS connects using an authenticated OC MS service identity.
-
-Authorisation:
-  OC MS is authorised only for the OC MS database/schema/tables required for runtime Optimisation, lifecycle state, result projection, outbox, and inbox records.
-  No broad database admin/root access by default.
-
-Encrypted connectivity:
-  OC MS database connectivity uses encrypted transport.
-  mTLS or platform-approved encrypted database connectivity is used where supported by the selected database platform.
-
-Secrets and certificates:
-  Database credentials, keys, and certificates are stored in approved secret management.
-  Rotation must be supported without application code changes where possible.
-
-Environment separation:
-  OC MS database principals, roles, schemas, and credentials are environment-scoped.
-  Non-production OC MS identities must not access production OC MS data.
-
-Audit and monitoring:
-  Authentication failures, authorisation denials, privileged operations, unusual access patterns, outbox/inbox processing failures, and schema changes are logged and monitored.
-
-Ownership:
-  OC MS owns application-level access to runtime Optimisation, outbox, and inbox data.
-  Database/platform teams own database platform controls.
+User
+-> OEX
+-> OGW
+-> OEX APIs
+-> OWG
+-> OEX Screen Builder MS
+-> NGW
+-> OC MS
+-> OD MS
+-> OC MS DB
+-> OC MS Outbox
+-> Kafka
+-> Python/Gurobi Worker
+-> Gurobi Optimizer
+-> Kafka
+-> OC MS Inbox
+-> OC MS DB
+-> User polls GET /optimisation/{id}
 ```
 
-### OC MS -> OD MS:
+Detailed interpretation:
 
 ```text
-Authentication:
-  OC MS calls OD MS using an authenticated service identity.
-
-Authorisation:
-  OC MS is authorised only to retrieve/validate referenced OptimisationSpecification resources needed for runtime request validation.
-
-Encrypted connectivity:
-  OC MS calls OD MS over mTLS to validate the referenced ACTIVE OptimisationSpecification.
-
-Secrets and certificates:
-  Service credentials/certificates are managed through approved secret/certificate management and rotated.
-
-Audit and monitoring:
-  Failed authentication, denied authorisation, validation failures, and downstream dependency failures are logged and monitored.
+1. Consumer initiates the optimisation journey through OEX.
+2. OEX routes the request to OGW.
+3. OGW routes to OEX APIs.
+4. OEX APIs route through OWG.
+5. OWG routes to OEX Screen Builder MS.
+6. OEX Screen Builder MS calls NGW.
+7. NGW calls OC MS.
+8. OC MS validates the runtime request against the ACTIVE OptimisationSpecification from OD MS.
+9. OC MS persists the accepted runtime Optimisation in OC MS DB.
+10. OC MS writes OptimisationRequestedEvent to OC MS Outbox in the same transaction.
+11. OC MS Outbox relay publishes the event to Kafka.
+12. Python/Gurobi Worker consumes the event from Kafka.
+13. Python/Gurobi Worker invokes Gurobi Optimizer.
+14. Worker publishes outcome event back to Kafka.
+15. OC MS Inbox consumes the outcome event from Kafka.
+16. OC MS Inbox updates OC MS DB with lifecycle/result projection.
+17. User polls GET /optimisation/{id} to retrieve current status/result.
 ```
 
-### OC MS -> Kafka:
+Runtime request model:
 
 ```text
-Authentication:
-  OC MS Outbox Relay and OC MS Inbox use authenticated service identities.
-
-Encrypted connectivity:
-  OC MS connects to Kafka brokers using TLS/mTLS.
-
-Authorisation:
-  Kafka ACLs enforce least-privilege access by topic and consumer group.
-
-OC MS Outbox Relay:
-  Allowed to WRITE worker instruction events.
-  Allowed to DESCRIBE required topics.
-  Not allowed broad wildcard topic access.
-
-OC MS Inbox:
-  Allowed to READ worker outcome events using the approved OC MS inbox consumer group.
-  Allowed to DESCRIBE required topics.
-  Not allowed to use worker consumer groups or write arbitrary topics.
-
-DLQ:
-  DLQ produce/read/replay permissions are restricted to approved service or operations identities.
-
-Secrets and certificates:
-  Kafka credentials, keys, and certificates are stored in approved secret management and rotated.
-
-Audit and monitoring:
-  Produce failures, consume failures, ACL denials, authentication failures, consumer lag, DLQ growth, and replay attempts are logged and monitored.
+constraints[]
+targets[]
+context[]
 ```
 
-### OC MS -> platform cache, if introduced later:
+Runtime contract validation:
 
 ```text
-OC MS does not require a cache in the current baseline.
+OC MS validates runtime constraints[], targets[], and context[] against the ACTIVE OD MS OptimisationSpecification.
+OC MS validates structure, required fields, value types, supported names, supported enum values, and cardinality such as candidateResources minItems = 2.
+OC MS does not perform solver feasibility, metric-vs-constraint evaluation, candidate ranking, or objective trade-off evaluation.
+```
 
-If a cache is introduced later, the OC MS design brief must capture:
-  authenticated service identity
-  least-privilege cache namespace/keyspace access
-  encrypted connectivity
-  approved secret/certificate management
-  environment-scoped cache roles
-  audit/monitoring of denied access and privileged operations
+Outcome projection:
+
+```text
+SUCCESS -> COMPLETED
+INFEASIBLE -> INFEASIBLE
+FAILURE -> FAILED
+```
+
+Process view compliance rule:
+
+```text
+NGW-exposed OC MS and OD MS APIs are TMF-compliant.
+OEX / OGW / OEX APIs / OWG / OEX Screen Builder MS are experience-layer/private integration components and do not need to be TMF-compliant.
+Kafka events are internal contracts and do not need to be TMF-compliant unless separately required.
 ```
 
 ---
 
-## Observability and monitoring telemetry baseline:
+## MS-to-Kafka security baseline:
 
-Each service design brief and the E2E solution brief must capture observability as more than application logging.
+Microservice-to-Kafka integration is secured independently from REST API mTLS.
 
-Observability includes:
+Kafka producers and consumers must use secured broker connectivity and workload identity controls.
 
-```text
-application logs
-metrics
-distributed traces
-audit/security events
-dependency telemetry
-alertable operational signals
-```
-
-Correlation and trace propagation:
+Baseline controls:
 
 ```text
-accept correlation id / request id from the upstream caller where provided
-generate a correlation id when missing
-propagate correlation id to downstream service, database, cache, Kafka, and platform calls where applicable
-propagate trace context where platform standards support it
-preserve useful downstream correlation identifiers in logs/telemetry where approved
+Broker connectivity:
+  TLS encrypted connection to Kafka brokers.
+
+Service authentication:
+  Service identity for each producer and consumer.
+  Use platform-approved Kafka authentication mechanism, such as mTLS client certificates, SASL/SCRAM, or cloud-managed workload identity.
+  Do not hard-code Kafka credentials in application configuration.
+
+Authorisation:
+  Kafka ACLs are applied per service identity.
+  OC MS can produce worker instruction events.
+  OC MS can consume worker outcome events through the OC MS Inbox.
+  Python/Gurobi Worker can consume worker instruction events.
+  Python/Gurobi Worker can produce worker outcome events.
+  DLQ produce/access permissions are restricted to approved services and operations support.
+
+Topic boundary:
+  Services receive least-privilege access only to required topics.
+  Runtime events use the agreed optimisation topic and DLQ.
+  No broad cluster-wide produce/consume permissions by default.
+
+Consumer isolation:
+  Dedicated consumer groups for OC MS Inbox and Python/Gurobi Worker.
+  Consumer group names are governed and environment-scoped.
+
+Event integrity:
+  Use CloudEvents-style Kafka headers for event identity, type, source, subject, correlation, and event version.
+  Downstream consumers must be idempotent using ce-id / eventId.
+  Producers must not mutate events after publish.
+  Consumers must validate event type, event version, and required body fields before processing.
+
+Secret/certificate handling:
+  Kafka credentials, keys, and certificates are stored in approved secret management.
+  Rotation is supported without application code changes where possible.
+  Expired or revoked credentials must fail closed.
+
+Observability and audit:
+  Produce/consume failures are logged with correlation id and event id.
+  Authentication/authorisation failures are monitored.
+  Kafka lag, DLQ growth, and replay attempts are observable.
+  Operational access to DLQ payloads is restricted and audited.
 ```
 
-Application log baseline:
-
-```text
-request id / correlation id
-service name
-operation or endpoint
-safe subject/user/service reference where applicable
-resource id where applicable
-dependency called
-dependency status code or outcome
-latency
-authorisation decision result where applicable
-error code/reason
-```
-
-Monitoring telemetry baseline:
-
-```text
-request count by endpoint/operation and status
-latency by endpoint/operation and dependency
-error rate by endpoint/operation and dependency
-dependency failure counts
-timeout and retry counts where applicable
-authorisation allow/deny counts where applicable
-token or credential validation failure counts where applicable
-database connection and query failure counts where applicable
-Kafka produce/consume failure counts where applicable
-Kafka lag and DLQ growth where applicable
-outbox/inbox backlog where applicable
-cache hit/miss/error counts where applicable
-```
-
-Distributed tracing baseline:
-
-```text
-trace inbound service requests
-trace outbound dependency calls
-include correlation id and safe business/resource identifiers as trace attributes where approved
-do not include sensitive token claims, secrets, credentials, or full private payloads in traces
-```
-
-Security/audit baseline:
-
-```text
-authentication failures
-authorisation failures
-privileged operation attempts
-catalogue write/activation/retirement attempts where applicable
-unsafe runtime action attempts such as cancellation and retrial where applicable
-Kafka replay/DLQ actions where applicable
-database privileged access or schema-change actions where applicable
-```
-
-Sensitive claims, full tokens, secrets, credentials, private payload data, and personal data beyond approved identifiers must not be logged or emitted as telemetry attributes.
-
----
-
-## OC MS observability focus:
-
-OC MS observability must include runtime optimisation, outbox, inbox, and worker outcome monitoring.
-
-Additional OC MS signals:
-
-```text
-runtime Optimisation create/list/detail counts
-contract validation failures including OPTIMISATION_CONTRACT_VIOLATION
-lifecycle transition counts
-SUCCESS / INFEASIBLE / FAILURE outcome counts
-cancellation and retrial action counts
-ETag / If-Match precondition failures
-OC MS database dependency latency and failures
-OC MS Outbox backlog and publish failures
-OC MS Inbox lag and consume/project failures
-Kafka produce/consume failure counts
-DLQ growth and replay attempts
-late/stale worker outcome handling counts
-```
+MS-to-Kafka security is not TMF-specific. Kafka events are internal contracts unless separately exposed.

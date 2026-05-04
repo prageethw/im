@@ -34,15 +34,6 @@ The solution separates the **definition of optimisation capabilities** from the 
 
 - NGW-exposed backend APIs are TMF-compliant. OGW-exposed OEX APIs, private MS-to-MS APIs, private MS-to-MS events, and internal Kafka events do not need to be TMF-compliant.
 
-
-- Infrastructure integrations must explicitly capture security controls in both the E2E solution brief and each individual service design brief. This includes service-to-database, service-to-cache, service-to-Kafka, and other platform infrastructure integrations.
-
-- Baseline infrastructure controls are authenticated service identity, least-privilege authorisation, encrypted connectivity, resource-level access scoping, no broad wildcard/admin/root access by default, approved secret/certificate management and rotation, environment separation, audit/monitoring, and clear ownership of allowed operations.
-
-- MS-to-Kafka integration uses secured broker connectivity, service identity, Kafka ACLs for topic/consumer-group access, restricted DLQ permissions, CloudEvents-style event identity/correlation headers, idempotent consumers, and monitored/audited produce/consume failures.
-
-- MS-to-DB access is authenticated, authorised, encrypted, and least-privilege. OD MS and OC MS use their own service identities and database roles; OEX, OGW, NGW, and workers do not receive broad or direct database access unless explicitly designed and approved.
-
 ---
 
 ## 3. Solution elaboration:
@@ -109,7 +100,7 @@ NGW -> OC MS:
   Uses mTLS to expose runtime Optimisation APIs.
 
 OC MS -> OD MS:
-  Uses Istio mTLS for internal service-to-service validation.
+  Uses mTLS for internal service-to-service validation.
 
 OC MS -> Kafka:
   Emits OptimisationRequestedEvent with instruction EXECUTE or CANCEL.
@@ -132,7 +123,7 @@ optimisation-logical-view.drawio
 #### 3.3.1 Create and execute optimisation:
 
 ```text
-Consumer / OEX
+User
 -> OGW
 -> OEX APIs
 -> OWG
@@ -148,7 +139,7 @@ Consumer / OEX
 -> Kafka
 -> OC MS Inbox
 -> OC MS DB
--> Consumer polls GET /optimisation/{id}
+-> User polls GET /optimisation/{id}
 ```
 
 Detailed flow:
@@ -160,7 +151,7 @@ Detailed flow:
 4. OEX Screen Builder MS calls NGW using mTLS and OAuth2 system-to-system.
 5. NGW routes the request to OC MS.
 6. OC MS validates request structure.
-7. OC MS calls OD MS over Istio mTLS to validate the referenced ACTIVE OptimisationSpecification.
+7. OC MS calls OD MS over mTLS to validate the referenced ACTIVE OptimisationSpecification.
 8. OC MS validates constraints[], targets[], and context[] against the OD MS request contract.
 9. OC MS persists runtime Optimisation with lifecycleStatus = ACKNOWLEDGED.
 10. OC MS writes OptimisationRequestedEvent with instruction = EXECUTE to outbox.
@@ -177,7 +168,7 @@ Detailed flow:
 #### 3.3.2 Cancellation optimisation:
 
 ```text
-Consumer / OEX
+User
 -> OGW
 -> OEX APIs
 -> OWG
@@ -208,7 +199,7 @@ Detailed flow:
 #### 3.3.3 Retrial failed optimisation:
 
 ```text
-Consumer / OEX
+User
 -> OGW
 -> OEX APIs
 -> OWG
@@ -243,7 +234,7 @@ Detailed flow:
 | **Microsoft Entra ID** | Provides SSO authentication for users before they access OEX. Supplies identity context used by the user-facing access path. |
 | **ACG approval process** | Governs operator access to OEX. Users must be approved through the organisational access-control process before they can use the OEX optimisation experience. |
 | **OGW** | User-context-aware gateway for OEX APIs and OEX UI integration. Uses user SSO OAuth2 from the UI/OEX API path and propagates user identity context into the OEX layer. |
-| **OEX APIs / OEX UI** | Provides the user-facing experience for discovering optimisation capabilities, submitting requests, monitoring state, cancelling, retrying, and viewing results. |
+| **OEX APIs / OEX UI** | Provides the user/operator-facing experience for discovering optimisation capabilities, submitting requests, monitoring state, cancelling, retrying, and viewing results. |
 | **OWG** | Secures internal OEX access to OEX Screen Builder MS using mTLS and User Context JWT. Preserves user context across the OEX backend interaction. |
 | **OEX Screen Builder MS** | Builds and orchestrates the OEX screen/backend experience. Integrates with NGW using mTLS and OAuth2 system-to-system to call backend optimisation APIs. |
 | **NGW** | NAAS Gateway exposing backend optimisation domain APIs for OD MS and OC MS. Provides the controlled backend API entry point for OEX Screen Builder MS and other authorised system consumers. NGW-exposed backend APIs are TMF-compliant. |
@@ -327,11 +318,11 @@ This secures backend API access from the gateway to the optimisation domain serv
 
 ### 5.5 OC MS to OD MS service-to-service security:
 
-OC MS calls OD MS to validate referenced `OptimisationSpecification` resources. This internal service-to-service communication is secured using mTLS through Istio.
+OC MS calls OD MS to validate referenced `OptimisationSpecification` resources. This internal service-to-service communication is secured using mTLS through service mesh.
 
 ```text
 OC MS
--> Istio mTLS
+-> mTLS
 -> OD MS
 ```
 
@@ -503,7 +494,7 @@ OD MS specification responses may use caching where appropriate. OC MS runtime r
 
 - Operators access OEX only after ACG approval.
 
-- User authentication uses Microsoft Entra ID SSO.
+- User/operator authentication uses Microsoft Entra ID SSO.
 
 - OGW is the user-context-aware gateway for OEX APIs and OEX UI integration.
 
@@ -515,7 +506,7 @@ OD MS specification responses may use caching where appropriate. OC MS runtime r
 
 - NGW integrates with OD MS and OC MS using mTLS.
 
-- OC MS calls OD MS using Istio mTLS for internal service-to-service validation.
+- OC MS calls OD MS using mTLS for internal service-to-service validation.
 
 - Kafka is available as the event backbone.
 
@@ -718,7 +709,7 @@ This keeps the design clear: OD MS defines what is allowed; OC MS stores and ret
 The agreed runtime process view is:
 
 ```text
-Consumer
+User
 -> OEX
 -> OGW
 -> OEX APIs
@@ -735,7 +726,7 @@ Consumer
 -> Kafka
 -> OC MS Inbox
 -> OC MS DB
--> Consumer polls GET /optimisation/{id}
+-> User polls GET /optimisation/{id}
 ```
 
 Detailed interpretation:
@@ -757,7 +748,7 @@ Detailed interpretation:
 14. Worker publishes outcome event back to Kafka.
 15. OC MS Inbox consumes the outcome event from Kafka.
 16. OC MS Inbox updates OC MS DB with lifecycle/result projection.
-17. Consumer polls GET /optimisation/{id} to retrieve current status/result.
+17. User polls GET /optimisation/{id} to retrieve current status/result.
 ```
 
 Runtime request model:
@@ -855,126 +846,4 @@ OC MS design brief:
 E2E solution brief:
   captures common cross-cutting infrastructure security controls.
   summarises database, Kafka, cache/future-infrastructure, identity, encryption, ACL, secret-management, and audit requirements.
-```
-
----
-
-## Observability and monitoring telemetry baseline:
-
-Each service design brief and the E2E solution brief must capture observability as more than application logging.
-
-Observability includes:
-
-```text
-application logs
-metrics
-distributed traces
-audit/security events
-dependency telemetry
-alertable operational signals
-```
-
-Correlation and trace propagation:
-
-```text
-accept correlation id / request id from the upstream caller where provided
-generate a correlation id when missing
-propagate correlation id to downstream service, database, cache, Kafka, and platform calls where applicable
-propagate trace context where platform standards support it
-preserve useful downstream correlation identifiers in logs/telemetry where approved
-```
-
-Application log baseline:
-
-```text
-request id / correlation id
-service name
-operation or endpoint
-safe subject/user/service reference where applicable
-resource id where applicable
-dependency called
-dependency status code or outcome
-latency
-authorisation decision result where applicable
-error code/reason
-```
-
-Monitoring telemetry baseline:
-
-```text
-request count by endpoint/operation and status
-latency by endpoint/operation and dependency
-error rate by endpoint/operation and dependency
-dependency failure counts
-timeout and retry counts where applicable
-authorisation allow/deny counts where applicable
-token or credential validation failure counts where applicable
-database connection and query failure counts where applicable
-Kafka produce/consume failure counts where applicable
-Kafka lag and DLQ growth where applicable
-outbox/inbox backlog where applicable
-cache hit/miss/error counts where applicable
-```
-
-Distributed tracing baseline:
-
-```text
-trace inbound service requests
-trace outbound dependency calls
-include correlation id and safe business/resource identifiers as trace attributes where approved
-do not include sensitive token claims, secrets, credentials, or full private payloads in traces
-```
-
-Security/audit baseline:
-
-```text
-authentication failures
-authorisation failures
-privileged operation attempts
-catalogue write/activation/retirement attempts where applicable
-unsafe runtime action attempts such as cancellation and retrial where applicable
-Kafka replay/DLQ actions where applicable
-database privileged access or schema-change actions where applicable
-```
-
-Sensitive claims, full tokens, secrets, credentials, private payload data, and personal data beyond approved identifiers must not be logged or emitted as telemetry attributes.
-
----
-
-## E2E observability coverage:
-
-The E2E solution must ensure correlation continuity across:
-
-```text
-User / OEX UI
-OGW
-OSB MS
-NGW
-OD MS
-OC MS
-OC MS DB
-OC MS Outbox
-Kafka
-Python/Gurobi Worker
-Gurobi Optimizer
-OC MS Inbox
-```
-
-The E2E solution must make it possible to trace an optimisation request from the user journey through backend validation, asynchronous worker execution, Kafka outcome publication, OC MS result projection, and user polling of `GET /optimisation/{id}`.
-
-The E2E solution must also define alertable operational signals for:
-
-```text
-authentication/authorisation failures
-OSB MS dependency failures
-NGW dependency failures
-OD MS / OC MS dependency failures
-Kafka lag
-outbox/inbox backlog
-DLQ growth
-worker failures
-solver failures
-high INFEASIBLE or FAILURE rates
-stale/late outcome handling
-database connectivity or authorisation failures
 ```

@@ -89,7 +89,7 @@ ETag: "opt-12345-v3"
 Example state-changing request:
 
 ```http
-POST /optimisation/opt-12345/cancel
+POST /optimisation/opt-12345/cancellation
 If-Match: "opt-12345-v3"
 ```
 
@@ -296,7 +296,7 @@ Example resource:
   // Public caller-facing input contract only.
   // This exposes what external callers must or may feed into POST /optimisation.
   // It does not expose objective logic, candidate rules, solver config, model binding, or Gurobi formulation.
-  "inputs": [
+  "context": [
     {
       // Required latency threshold the caller must provide.
       // The deterministic optimisation model knows how to apply it.
@@ -391,7 +391,7 @@ Content-Type: application/json
 
   // Public caller-facing input contract only.
   // This tells external callers what they need to feed into POST /optimisation.
-  "inputs": [
+  "context": [
     {
       // Required latency threshold the caller must provide.
       "name": "latency",
@@ -462,7 +462,7 @@ Content-Type: application/json
   "lastUpdate": "2026-05-02T01:00:00Z",
 
   // Accepted public input contract.
-  "inputs": [
+  "context": [
     {
       "name": "latency",
       "description": "Maximum acceptable latency threshold.",
@@ -553,7 +553,7 @@ Cache-Control: max-age=3600
   "creationDate": "2026-05-02T01:00:00Z",
   "lastUpdate": "2026-05-02T02:00:00Z",
 
-  "inputs": [
+  "context": [
     {
       // Required latency threshold the caller must provide.
       "name": "latency",
@@ -693,7 +693,7 @@ Content-Type: application/json
   // with the same specificationKey in the same transaction.
   "lifecycleStatus": "ACTIVE",
 
-  "inputs": [
+  "context": [
     {
       "name": "latency",
       "description": "Maximum acceptable latency threshold.",
@@ -756,7 +756,7 @@ Cache-Control: max-age=3600
   "creationDate": "2026-05-02T01:00:00Z",
   "lastUpdate": "2026-05-02T02:30:00Z",
 
-  "inputs": [
+  "context": [
     {
       "name": "latency",
       "description": "Maximum acceptable latency threshold.",
@@ -995,8 +995,8 @@ No If-None-Match in the active baseline.
 ETag is used for unsafe concurrency only:
   PUT /optimisationSpecification/{id}
   DELETE /optimisationSpecification/{id}
-  POST /optimisation/{id}/cancel
-  POST /optimisation/{id}/retry
+  POST /optimisation/{id}/cancellation
+  POST /optimisation/{id}/retrial
 
 Missing If-Match on unsafe operation:
   428 Precondition Required
@@ -1105,7 +1105,7 @@ Example active state:
       "method": "GET"
     },
     "cancel": {
-      "href": "/optimisation/opt-12345/cancel",
+      "href": "/optimisation/opt-12345/cancellation",
       "method": "POST"
     }
   }
@@ -1127,220 +1127,138 @@ Validation intent:
 
 ---
 
-## Baseline appended 2026-05-03T10:59:36 - Process views updated
+## Baseline appended 2026-05-03T08:08:22 - Shared location moved to topologySnapshot level
 
-Updated process views to match the agreed OEX/OGW/Screen Builder/NGW sequence and OD/OC responsibility split.
+Baselined the shared versus candidate-specific context rule.
 
-Common access path:
-```text
-User -> Microsoft Entra ID SSO -> OEX UI -> OEX APIs -> OGW -> OEX Screen Builder MS -> NGW
-```
+Rule:
+- Put shared context attributes at `context.topologySnapshot` level.
+- Use `candidateResources[].resourceAttributes` only for attributes that vary per candidate.
+- Do not repeat the same `locationId` under every candidate if all candidate paths belong to the same optimisation scope/location.
 
-OD MS process path:
-```text
-... -> NGW -> OD MS
-```
-
-OC MS runtime process path:
-```text
-... -> NGW -> OC MS -> Kafka -> Python/Gurobi Worker -> Gurobi Optimizer
-```
-
-Process views now cover:
-- capability discovery
-- OptimisationSpecification create/activate
-- runtime Optimisation create
-- 422 contract validation failure
-- SUCCESS
-- INFEASIBLE
-- FAILURE
-- cancellation
-- retrial
-- late worker outcome after cancellation
+For the current examples:
+- `location.locationId = melbourne-hospital` is placed at `topologySnapshot` level.
+- Repeated candidate-level `resourceAttributes.locationId` blocks are removed from OC MS runtime examples.
 
 ---
 
-## Baseline appended 2026-05-03T11:06:58 - Runtime process flow updated with OC DB outbox inbox
+## Baseline appended 2026-05-03T10:53:26 - Corrected E2E logical integration sequence
 
-Baselined the runtime process flow as:
+Baselined the E2E logical integration sequence as:
 
 ```text
-Consumer / OEX
--> OGW
+User
+-> Microsoft Entra ID SSO
+-> OEX UI
 -> OEX APIs
--> OEX GW
+-> OGW
 -> OEX Screen Builder MS
 -> NGW
--> OC MS
--> OD MS
--> OC MS DB
--> OC MS Outbox
+-> OD MS / OC MS
 -> Kafka
 -> Python/Gurobi Worker
 -> Gurobi Optimizer
+```
+
+Rules:
+- User authentication starts with Microsoft Entra ID SSO.
+- OEX UI calls OEX APIs.
+- OEX APIs are exposed through OGW.
+- OGW routes to OEX Screen Builder MS.
+- OEX Screen Builder MS integrates with NGW.
+- NGW exposes TMF-compliant backend APIs for OD MS and OC MS.
+- Runtime OC MS execution continues through Kafka, Python/Gurobi Worker, and Gurobi Optimizer.
+- OD MS definition-management flows stop at OD MS and do not continue to Kafka/worker/optimizer unless a runtime optimisation is created through OC MS.
+
+---
+
+## Baseline appended 2026-05-03T10:56:14 - E2E flows updated to corrected OEX/OGW/Screen Builder/NGW sequence
+
+Updated the active E2E process flows to follow the agreed sequence:
+
+```text
+User
+-> Microsoft Entra ID SSO
+-> OEX UI
+-> OEX APIs
+-> OGW
+-> OEX Screen Builder MS
+-> NGW
+-> OD MS / OC MS
 -> Kafka
--> OC MS Inbox
--> OC MS DB
--> Consumer polls GET /optimisation/{id}
+-> Python/Gurobi Worker
+-> Gurobi Optimizer
 ```
 
 Key corrections:
-- Runtime flow starts from `Consumer / OEX`, not just generic user.
-- Runtime flow includes `OGW -> OEX APIs -> OEX GW -> OEX Screen Builder MS -> NGW`.
-- OC MS validates against OD MS before persisting the accepted runtime Optimisation.
-- Runtime persistence is explicit through `OC MS DB`.
-- Outbox pattern is explicit through `OC MS Outbox -> Kafka`.
-- Worker execution is explicit through `Python/Gurobi Worker -> Gurobi Optimizer`.
-- Outcome path returns through `Kafka -> OC MS Inbox -> OC MS DB`.
-- Consumer observes outcome by polling `GET /optimisation/{id}`.
+- OEX UI appears before OEX APIs.
+- OEX APIs are exposed through OGW.
+- OGW routes to OEX Screen Builder MS.
+- OEX Screen Builder MS calls NGW.
+- NGW exposes TMF-compliant OD MS / OC MS backend APIs.
+- Runtime OC MS flows continue to Kafka, Python/Gurobi Worker, and Gurobi Optimizer.
+- OD MS definition flows stop at OD MS unless a runtime optimisation is created through OC MS.
 
 ---
 
-## Baseline appended 2026-05-03T11:20:21 - Reverted E2E sequence to agreed OEX/OGW path
+## Baseline appended 2026-05-03T11:37:21 - Standardised User and UI wording
 
-Reconfirmed the agreed logical E2E sequence:
+Updated active OD MS, OC MS, and E2E solution brief wording:
+- Use `User` instead of `User`.
+- Use `UI` instead of `UI`.
 
+---
+
+## Baseline appended 2026-05-03T21:47:00 - Infrastructure security controls captured in individual and E2E briefs
+
+Confirmed that infrastructure access security controls must be captured in both:
+- individual service design briefs
+- the E2E solution brief
+
+Updated:
+- OD MS design brief with OD MS -> OD MS DB controls, plus cache/Kafka future-integration notes.
+- OC MS design brief with OC MS -> OC MS DB, OC MS -> OD MS, and OC MS -> Kafka controls.
+- E2E solution brief with cross-cutting infrastructure security requirements for service-to-database, service-to-cache, service-to-Kafka, and other platform infrastructure integrations.
+
+---
+
+## Baseline appended 2026-05-03T21:51:41 - Users wording and E2E summary security baseline
+
+Updated wording:
+- Replaced `Users` and common variants with `Users`.
+
+Updated E2E solution summary to include the infrastructure security baseline:
+- service-to-database, service-to-cache, service-to-Kafka, and other platform infrastructure integrations must explicitly capture security controls.
+- required controls include authenticated service identity, least-privilege authorisation, encrypted connectivity, resource-level scoping, no broad wildcard/admin/root access, approved secret/certificate management and rotation, environment separation, audit/monitoring, and clear ownership of allowed operations.
+- MS-to-Kafka controls include secured broker connectivity, service identity, Kafka ACLs, restricted DLQ permissions, CloudEvents-style headers, idempotent consumers, and monitoring/audit.
+- MS-to-DB controls include authenticated, authorised, encrypted, least-privilege access with per-service database identities/roles.
+
+---
+
+## Baseline appended 2026-05-03T23:57:53 - Applied global cleanup fixes
+
+Applied cleanup across all current optimisation artefacts.
+
+Final active conventions:
 ```text
-User
--> Microsoft Entra ID SSO
--> OEX UI
--> OEX APIs
--> OGW
--> OEX Screen Builder MS
--> NGW
--> OD MS / OC MS
--> Kafka
--> Python/Gurobi Worker
--> Gurobi Optimizer
-```
+Runtime process:
+  User -> OEX -> OGW -> OSB MS -> NGW -> OC MS -> OD MS -> OC DB -> Outbox -> Kafka -> Worker -> Gurobi -> Kafka
 
-Runtime process expansion now follows the same front-door path and removes the previously introduced extra `OEX GW` hop:
-
-```text
+OSB access path:
 User
--> Microsoft Entra ID SSO
 -> OEX UI
--> OEX APIs
 -> OGW
--> OEX Screen Builder MS
+-> OSB MS
 -> NGW
 -> OC MS
 -> OD MS
--> OC MS DB
--> OC MS Outbox
--> Kafka
--> Python/Gurobi Worker
--> Gurobi Optimizer
--> Kafka
--> OC MS Inbox
--> OC MS DB
--> User polls GET /optimisation/{id}
 ```
 
-Correction:
-- Use `User`, not `Consumer / OEX`, as the starting actor in this baseline.
-- Use `OEX UI -> OEX APIs -> OGW -> OEX Screen Builder MS`.
-- Do not include a separate `OEX GW` hop.
-
----
-
-## Baseline appended 2026-05-03T11:23:51 - All logical and process views aligned
-
-Updated all active logical and process views to the agreed baseline.
-
-Logical sequence:
-```text
-User
--> Microsoft Entra ID SSO
--> OEX UI
--> OEX APIs
--> OGW
--> OEX Screen Builder MS
--> NGW
--> OD MS / OC MS
--> Kafka
--> Python/Gurobi Worker
--> Gurobi Optimizer
-```
-
-Definition path:
-```text
-User
--> Microsoft Entra ID SSO
--> OEX UI
--> OEX APIs
--> OGW
--> OEX Screen Builder MS
--> NGW
--> OD MS
-```
-
-Runtime logical path:
-```text
-User
--> Microsoft Entra ID SSO
--> OEX UI
--> OEX APIs
--> OGW
--> OEX Screen Builder MS
--> NGW
--> OC MS
--> Kafka
--> Python/Gurobi Worker
--> Gurobi Optimizer
-```
-
-Runtime process expansion:
-```text
-User
--> Microsoft Entra ID SSO
--> OEX UI
--> OEX APIs
--> OGW
--> OEX Screen Builder MS
--> NGW
--> OC MS
--> OD MS
--> OC MS DB
--> OC MS Outbox
--> Kafka
--> Python/Gurobi Worker
--> Gurobi Optimizer
--> Kafka
--> OC MS Inbox
--> OC MS DB
--> User polls GET /optimisation/{id}
-```
-
-Removed prior drift:
-- no `Consumer / OEX` actor in the baseline
-- no separate `OEX GW` hop
-- no stale `/cancel` or `/retry` endpoint references
-
----
-
-## Baseline appended 2026-05-03T22:04:55 - Catalogue governance highlighted in summary and security
-
-Updated the E2E solution brief summary and security section to highlight that managing the optimisation catalogue is an internal governed capability.
-
-Baseline:
-- Only approved optimisation domain engineers can create, update, activate, or retire OptimisationSpecification records.
-- Catalogue changes require agreement with broader E2E teams before becoming ACTIVE.
-- General users, OEX consumers, runtime callers, platform services, OC MS, and workers cannot self-author OptimisationSpecification records.
-- Catalogue write/activation/retirement operations require authenticated, authorised, audited access and ETag / If-Match where applicable.
-
----
-
-## Baseline appended 2026-05-03T23:49:38 - Observability and monitoring telemetry across all specs and E2E brief
-
-Extended the observability baseline across:
-- OD MS specification
-- OC MS specification
-- OSB MS specification
-- E2E solution brief
-
-Baseline:
-- Observability is not only application logging.
-- Each service design brief and the E2E brief must cover application logs, metrics, distributed traces, audit/security events, dependency telemetry, and alertable operational signals.
-- Correlation context must be accepted/generated and propagated across service, database, Kafka, cache, and platform calls where applicable.
-- Sensitive claims, full tokens, secrets, credentials, private payload data, and personal data beyond approved identifiers must not be logged or emitted as telemetry attributes.
+Cleanup rules applied:
+- No product-specific service mesh name for mTLS.
+- No `OWG` wording; use `OWG` only where that separate gateway is still intentionally referenced.
+- No stale `OEX APIs -> OWG -> OSB MS` hop in the OSB runtime process.
+- No `User`; use `User` in the current baseline.
+- No stale `/cancel` or `/retry` endpoint paths.
+- No `cancellation` typo.
+- Use `Gurobi Optimizer` consistently.
