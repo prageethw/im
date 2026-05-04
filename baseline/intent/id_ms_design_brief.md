@@ -445,65 +445,173 @@ Delete is blocked when:
 
 Delete success returns `204 No Content` and does not create `lifecycleStatus = DELETED`.
 
-## Caching and circuit-breaker strategy:
+## Caching, ETag, and dependency-specific circuit-breaker baseline:
 
-### Caching purpose:
+### Caching scope:
 
-ID MS supports safe caching for read operations so IC MS and other consumers can reduce repeated `IntentSpecification` lookups.
+ID MS caching applies only to GET responses.
 
-Caching must not weaken specification governance or allow stale specifications to be used indefinitely.
+Caching is baselined for:
 
-### HTTP caching rules:
+```http
+GET /intentManagement/v5/intentSpecification/{id}
+GET /intentManagement/v5/intentSpecification
+```
 
-| **Operation** | **Caching rule** |
-|---|---|
-| `GET /intentSpecification/{id}` | Private cache allowed with `ETag` and bounded freshness |
-| `GET /intentSpecification` | Private list cache allowed with short TTL |
-| `POST /intentSpecification` | `Cache-Control: no-store` |
-| `PUT /intentSpecification/{id}` | `Cache-Control: no-store` |
-| `PATCH /intentSpecification/{id}` | `Cache-Control: no-store` |
-| `DELETE /intentSpecification/{id}` | `Cache-Control: no-store` |
-| Error responses | `Cache-Control: no-store` |
-| Hub subscription writes | `Cache-Control: no-store` |
+No caching strategy is baselined for non-GET operations.
 
 ### Single-resource GET caching:
 
-For `GET /intentManagement/v5/intentSpecification/{id}`, ID MS should return:
+For a single `IntentSpecification`:
 
 ```http
+GET /intentManagement/v5/intentSpecification/hospital-surgical-slice-spec-v1.19
+```
+
+ID MS may return:
+
+```http
+HTTP/1.1 200 OK
+Content-Type: application/json
 ETag: "intent-spec-hospital-surgical-slice-spec-v1.19-v1"
-Last-Modified: Sat, 18 Apr 2026 02:00:00 GMT
 Cache-Control: private, max-age=300
 ```
 
-Rules:
+Meaning:
 
-- `ETag` is mandatory.
-- `Cache-Control` should be private by default.
-- Clients should revalidate when correctness matters.
-- IC MS may cache active specifications for syntactic validation within a configured freshness window.
+- private bounded TTL cache is allowed
+- single-resource GET may have a longer TTL than list GET
+- `ETag` is returned, but not for GET revalidation
+- `ETag` is used only for unsafe operation concurrency through `If-Match`
 
-### IC MS cached active specification fallback:
+### List GET caching:
 
-IC MS may use a cached `ACTIVE` `IntentSpecification` for new runtime `Intent` syntactic validation only when all of the following are true:
+For list reads:
+
+```http
+GET /intentManagement/v5/intentSpecification?offset=0&limit=20&lifecycleStatus=ACTIVE
+```
+
+ID MS may return:
+
+```http
+HTTP/1.1 200 OK
+Content-Type: application/json
+X-Total-Count: 1
+X-Result-Count: 1
+ETag: "intent-spec-list-active-v17"
+Cache-Control: private, max-age=60
+```
+
+Meaning:
+
+- list GET may be cached with a shorter TTL
+- list responses still include `X-Total-Count` and `X-Result-Count`
+- list-level `ETag` may be returned, but not for GET revalidation in this baseline
+
+### Client cache override:
+
+Clients can request a fresh GET response using:
+
+```http
+Cache-Control: no-cache
+```
+
+Example:
+
+```http
+GET /intentManagement/v5/intentSpecification/hospital-surgical-slice-spec-v1.19
+Cache-Control: no-cache
+```
+
+Meaning:
+
+- client does not rely on its existing cached copy
+- ID MS returns a fresh `200 OK` representation
+- `If-None-Match` is not baselined
+- `304 Not Modified` is not baselined
+
+### ETag rule:
+
+ETag is not used for GET revalidation in this baseline.
+
+Not baselined:
+
+```http
+If-None-Match
+```
+
+Not baselined:
+
+```http
+304 Not Modified
+```
+
+ETag is used only for unsafe operation concurrency through:
+
+```http
+If-Match
+```
+
+Applies to:
+
+```http
+PUT /intentManagement/v5/intentSpecification/{id}
+PATCH /intentManagement/v5/intentSpecification/{id}
+DELETE /intentManagement/v5/intentSpecification/{id}
+```
+
+and any activation/state-changing operation where stale updates could overwrite newer resource state.
+
+### No no-store caching strategy for non-GET operations:
+
+No `Cache-Control: no-store` strategy is baselined for non-GET operations.
+
+Current rule:
+
+- caching strategy is only discussed for GET responses
+- non-GET operations do not have a caching strategy baseline
+- error responses do not have a caching strategy baseline
+
+### ID MS internal cache refresh on active-version promotion:
+
+When a new `IntentSpecification` version is promoted to `ACTIVE`, ID MS must refresh its own active-specification cache.
+
+Activation flow:
+
+1. ID MS performs activation against the source-of-truth DB.
+2. ID MS retires the previous active version in the same specification family.
+3. ID MS bypasses/refreshes its own cache for that specification family using an internal no-cache/refresh path.
+4. ID MS stores the new active version as the current cached active copy.
+5. ID MS ensures the previous active version is no longer returned as active.
+6. ID MS emits status-change events for:
+   - new version becoming `ACTIVE`
+   - previous version becoming `RETIRED`
+
+Baseline statement:
+
+**On active-version promotion, ID MS must refresh its own active-specification cache using a no-cache/internal refresh path so the newly active version becomes the cached active copy and the previous active version is no longer returned as active.**
+
+### IC MS cache behaviour:
+
+IC MS may use a cached `ACTIVE` `IntentSpecification` for runtime `Intent` syntactic validation only when:
 
 - the cached specification is within the configured freshness window
 - the cached specification lifecycle is `ACTIVE`
 - the cached specification ID/version matches the runtime intent reference
-- the cached specification includes the required `expressionSpecification`
-- the cached specification has not been explicitly invalidated by an ID MS status-change event or cache refresh signal
+- the cached specification includes a valid `expressionSpecification`
+- the cached specification has not been made stale by active-version promotion or other invalidation logic
 - the degraded dependency path is logged and monitored
 
-If any of these conditions are not true, IC MS must fail closed for new runtime intent creation when ID MS availability prevents confirmation.
+If ID MS is unavailable and IC MS has no valid fresh cached `ACTIVE` specification, IC MS must fail closed for new runtime intent creation.
 
-### Fail-closed rule:
+### IC MS fail-closed response:
 
-If ID MS is unavailable and IC MS has no valid fresh cached `ACTIVE` specification, IC MS must reject new runtime intent creation with:
+If active specification cannot be confirmed from ID MS or a valid fresh cache:
 
 ```http
 HTTP/1.1 503 Service Unavailable
 Content-Type: application/json
-Cache-Control: no-store
 Retry-After: 30
 ```
 
@@ -518,82 +626,27 @@ Retry-After: 30
 }
 ```
 
-### Active-version promotion cache invalidation:
+### Dependency-specific circuit-breaker behaviour:
 
-When a new version of an `IntentSpecification` is promoted to `ACTIVE`, ID MS must invalidate old active-specification caches and refresh consumers with the new active copy.
+ID MS has multiple circuit-breaker trigger points. Different dependency failures have different behaviours.
 
-Baseline behaviour:
+| **Dependency path** | **CB style** | **Baseline behaviour** |
+|---|---|---|
+| ID MS -> DB | Hard fail-fast | Return `503`; consumer retries |
+| ID MS -> cache | Graceful/silent | Bypass/ignore cache, use DB/source-of-truth, emit telemetry |
+| ID MS -> Kafka/event broker | Graceful/silent with outbox | API succeeds after DB + outbox commit; relay retries Kafka later |
+| ID MS -> external callback webhook | Async fail-fast per attempt | Delivery attempt fails fast, retries later; original API unaffected |
+| IC MS -> ID MS | Cached fallback then fail-closed | IC MS may use fresh cached active spec fallback; otherwise fail closed |
 
-- the newly promoted active specification write/activation response must use `Cache-Control: no-store`
-- ID MS emits `IntentSpecificationStatusChangeEvent` for the newly active version
-- ID MS emits `IntentSpecificationStatusChangeEvent` for the previous active version moving to `RETIRED`
-- IC MS must treat those status-change events as cache invalidation signals for the affected specification family
-- IC MS must evict the previous active version from its active-spec validation cache
-- IC MS should fetch and cache the new active version before accepting new runtime intents for that specification family where possible
-- if IC MS cannot refresh the new active copy and no valid fresh cache exists, it must fail closed for new runtime intent creation
+### DB failure:
 
-### Cache refresh after active promotion:
+DB is a hard dependency.
 
-Recommended refresh flow:
-
-```text
-ID MS promotes v1.20 to ACTIVE
-ID MS retires previous ACTIVE v1.19
-ID MS emits status-change events for v1.20 and v1.19
-IC MS receives event
-IC MS invalidates cached active spec for the family
-IC MS fetches v1.20 from ID MS
-IC MS stores v1.20 as the current active validation copy
-```
-
-### Stale-cache protection:
-
-IC MS must not use a cached specification when:
-
-- the cache freshness window has expired
-- the cached lifecycle is not `ACTIVE`
-- the specification family has received a status-change invalidation event
-- the runtime intent references a different version
-- the expression schema is missing or invalid
-- the cache entry cannot be tied to a valid `ETag`
-
-### ID MS circuit-breaker strategy:
-
-| **Dependency path** | **Circuit-breaker behaviour** |
-|---|---|
-| ID MS -> DB | Hard fail-fast | Return `503 Service Unavailable`; consumer retries later because the source-of-truth persistence layer is unavailable |
-| ID MS -> cache | Graceful/silent | Bypass cache or ignore failed cache writes where safe; continue if DB/source-of-truth path succeeds; emit telemetry |
-| ID MS -> Kafka/event broker | Graceful/silent with transactional outbox | API success depends on DB + outbox commit, not immediate broker availability; outbox relay retries Kafka later |
-| ID MS -> external callback webhook | Async fail-fast per attempt | Delivery attempt fails fast, is retried later using bounded retry/backoff, and does not affect the original resource API response |
-| IC MS -> ID MS | Cached fallback then fail-closed | IC MS may use fresh cached active spec fallback; otherwise fail closed for new runtime intent creation |
-
-### Observability requirements:
-
-ID MS and IC MS should expose metrics/logs for:
-
-- active specification cache hit count
-- active specification cache miss count
-- active specification cache invalidation count
-- stale cache rejection count
-- fail-closed due to ID MS unavailable
-- ID MS DB circuit-breaker open count
-- ID MS event publication failure count
-- IC MS validation using cached active specification count
-
-### Dependency-specific circuit-breaker refinement:
-
-ID MS has multiple circuit-breaker trigger points, and not all failures are treated the same way.
-
-#### Database failure:
-
-Database is a hard dependency for ID MS resource operations.
-
-If the DB cannot be accessed, ID MS must fail fast and return:
+If DB cannot be accessed:
 
 ```http
 HTTP/1.1 503 Service Unavailable
 Content-Type: application/json
-Cache-Control: no-store
 Retry-After: 30
 ```
 
@@ -614,9 +667,9 @@ Rules:
 - ID MS cannot safely create, update, retrieve, activate, retire, or delete specifications without DB access.
 - Consumer must retry later.
 
-#### Cache failure:
+### Cache failure:
 
-Cache is not the source of truth.
+Cache is not source of truth.
 
 If cache read/write fails:
 
@@ -624,65 +677,56 @@ If cache read/write fails:
 - bypass cache where safe
 - read from DB/source of truth where needed
 - ignore failed cache writes
-- continue the request when the DB/source-of-truth operation succeeds
+- continue request when DB/source-of-truth succeeds
 - emit logs, metrics, and alerts
 
 Rules:
 
-- Cache failure is graceful and silent from the client perspective.
-- Do not return `503` only because cache is unavailable.
-- Cache failure must not block create, update, or read when DB is available.
+- cache failure is silent/graceful from the client perspective
+- do not return `503` only because cache is unavailable
+- cache failure must not block create, update, or read when DB is available
 
-#### Kafka / event broker failure:
+### Kafka / event broker failure:
 
-Kafka is not on the synchronous critical path when ID MS uses the transactional outbox pattern.
+Kafka is not on the synchronous critical path when ID MS uses transactional outbox.
 
 For create, update, delete, activation, and retirement:
 
-- commit the resource change and outbox record transactionally in DB
-- return API success once the DB + outbox transaction succeeds
-- publish to Kafka asynchronously through the outbox relay
-- if Kafka is unavailable, the relay fails fast for that publish attempt
-- retry later using the outbox retry policy
-- do not fail the original API call after a successful DB/outbox commit
+- commit resource change and outbox record transactionally in DB
+- return API success once DB + outbox transaction succeeds
+- publish to Kafka asynchronously through outbox relay
+- if Kafka is unavailable, relay fails fast for that publish attempt
+- retry later using outbox retry policy
+- do not fail original API call after successful DB/outbox commit
 
 Rules:
 
-- Kafka/event-broker failure is graceful and silent for the original API consumer.
-- Kafka failure is operationally visible through outbox retry metrics and alerts.
-- If DB/outbox commit fails, the API operation fails because durable event publication cannot be guaranteed.
+- Kafka/event broker failure is graceful/silent for the original API consumer
+- Kafka failure is operationally visible through retry metrics and alerts
+- if DB/outbox commit fails, API operation fails because durable event publication cannot be guaranteed
 
-#### External callback webhook failure:
+### External callback webhook failure:
 
 External subscriber callback delivery is asynchronous.
 
-If the callback endpoint is unavailable, times out, or returns a failure:
+If callback endpoint is unavailable, times out, or returns failure:
 
 - delivery worker fails fast for that delivery attempt
-- mark the attempt failed
+- mark attempt failed
 - retry later using bounded retries and backoff
-- do not impact the original ID MS resource operation
+- do not impact original ID MS resource operation
 - if retries are exhausted, mark delivery as failed and alert/operate
 
 Rules:
 
-- Webhook failure is graceful and silent from the original API consumer’s point of view.
-- Webhook failure must not roll back specification create, update, status-change, or delete operations.
-- Webhook delivery is not a synchronous dependency for the API write path.
+- webhook failure is graceful/silent from the original API consumer’s point of view
+- webhook failure must not roll back specification create, update, status-change, or delete operations
+- webhook delivery is not a synchronous dependency for the API write path
 
-#### Updated dependency-specific CB summary:
+### Final combined baseline statement:
 
-| **Dependency path** | **CB style** | **Baseline behaviour** |
-|---|---|---|
-| DB | Hard fail-fast | Return `503`; consumer retries |
-| Cache | Graceful/silent | Bypass/ignore cache, use DB/source-of-truth, emit telemetry |
-| Kafka/event broker | Graceful/silent with outbox | API succeeds after DB + outbox commit; relay retries Kafka later |
-| External webhook callback | Async fail-fast per attempt | Delivery attempt fails fast, retries later; original API unaffected |
+**ID MS caching applies only to GET responses. GET responses may use bounded private caching, with longer TTL for single-resource GETs and shorter TTL for list GETs. Clients either use the cached response within TTL or request a fresh copy using `Cache-Control: no-cache`. ETag is not used for GET revalidation; `If-None-Match` and `304 Not Modified` are not baselined. ETag is used only for unsafe operation concurrency through `If-Match`. No `Cache-Control: no-store` strategy is baselined for non-GET operations.**
 
-#### Baseline statement:
+**On active-version promotion, ID MS refreshes its own active-specification cache using a no-cache/internal refresh path so the newly active version becomes the cached active copy and the previous active version is no longer returned as active.**
 
-ID MS uses dependency-specific circuit-breaker behaviour. Database failure is a hard fail-fast failure and returns `503 Service Unavailable` because the source of truth is unavailable. Cache failure is handled silently and gracefully by bypassing cache or ignoring cache writes where safe. Kafka/event-broker failure is handled through transactional outbox: the API response depends on DB + outbox commit, not immediate broker availability. External webhook callback delivery failure is handled asynchronously: each failed delivery attempt fails fast, is retried later, and does not affect the original resource API response.
-
-### Baseline statement:
-
-IC MS may use a cached `ACTIVE` `IntentSpecification` within a configured freshness window for runtime intent creation. When a new specification version is promoted to `ACTIVE`, old active-spec caches must be invalidated through no-store write responses and status-change events, and IC MS must refresh its cache with the new active copy. If the active specification cannot be confirmed from ID MS or a valid fresh cache, IC MS fails closed for new runtime intent creation.
+**ID MS uses dependency-specific circuit-breaker behaviour. Database failure is hard fail-fast and returns `503 Service Unavailable`. Cache failure is handled silently and gracefully by bypassing cache or ignoring cache writes where safe. Kafka/event-broker failure is handled through transactional outbox. External webhook callback failure is handled asynchronously: each failed delivery attempt fails fast, is retried later, and does not affect the original resource API response.**

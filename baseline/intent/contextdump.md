@@ -140,3 +140,25 @@ ID MS has multiple circuit-breaker trigger points, and each dependency path has 
 
 ### Boundary:
 Only DB/source-of-truth unavailability is catastrophic for synchronous ID MS resource operations. Cache, Kafka, and callback webhook failures are operational failures handled through cache bypass, outbox, retry, metrics, alerts, and operational follow-up.
+
+## Baseline update — ID MS caching, ETag, and dependency-specific CB:
+
+Date: 2026-05-04T23:35:42.796639+00:00
+
+### Updated file:
+- `id_ms_design_brief.md`
+
+### Caching baseline:
+ID MS caching applies only to GET responses. GET responses may use bounded private caching, with longer TTL for single-resource GETs and shorter TTL for list GETs. Clients either use the cached response within TTL or request a fresh copy using `Cache-Control: no-cache`.
+
+### ETag baseline:
+ETag is not used for GET revalidation. `If-None-Match` and `304 Not Modified` are not baselined. ETag is used only for unsafe operation concurrency through `If-Match`.
+
+### Non-GET cache baseline:
+No `Cache-Control: no-store` strategy is baselined for non-GET operations.
+
+### Active-version promotion:
+On active-version promotion, ID MS refreshes its own active-specification cache using a no-cache/internal refresh path so the newly active version becomes the cached active copy and the previous active version is no longer returned as active.
+
+### Dependency-specific CB baseline:
+DB failure is hard fail-fast and returns `503 Service Unavailable`. Cache failure is handled silently and gracefully by bypassing cache or ignoring cache writes where safe. Kafka/event-broker failure is handled through transactional outbox. External webhook callback failure is handled asynchronously and does not affect the original resource API response.
