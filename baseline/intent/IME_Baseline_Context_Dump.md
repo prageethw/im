@@ -221,17 +221,16 @@ Internal events use CloudEvents metadata in headers and a top-level `body` wrapp
 
 Use `body`, not `payload`, for displayed internal event examples.
 
-Canonical event names include:
+Canonical active event names include:
 
 - `IntentValidatedEvent`
 - `IntentResolvedEvent`
 - `IntentOptimisedEvent`
 - `IntentNetworkReadyEvent`
 - `IntentAssuranceEvent`
-- `IntentDriftOccurredEvent`
 - `IntentCallbackEvent`
 
-`IntentDriftOccurredEvent` is emitted by IA MS, not II MS.
+`IntentDriftOccurredEvent` (retired) is retired from the active baseline. Drift, degradation, failure, termination confirmation, and re-optimisation triggers are represented inside `IntentAssuranceEvent.assuranceOutcome`, including `requiresReoptimisation` where re-resolution/re-optimisation is needed.
 
 `IntentNetworkReadyEvent` must use `networkConfiguration`, not generic `configuration`, and `networkConfiguration.serviceClass`, not `configuration.trafficClass`.
 
@@ -264,7 +263,3 @@ Canonical replacements/directions:
 ## Last Updated:
 
 2026-05-01
-
-## ID MS Design Brief File Baseline:
-
-Created `id_ms_design_brief.md` as the baseline ID MS design brief file. Endpoint request/response examples will be amended into this file as the next step.

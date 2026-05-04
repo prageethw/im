@@ -407,8 +407,7 @@ IC MS consumes or receives lifecycle-driving internal events, especially `Intent
 
 | **Input Event** | **Emitted By** | **IC MS Responsibility** |
 |---|---|---|
-| `IntentAssuranceEvent` | IA MS | Project external lifecycle/status on the runtime `Intent` |
-| `IntentDriftOccurredEvent` | IA MS | May influence projected status where required |
+| `IntentAssuranceEvent` | IA MS | Project external lifecycle/status on the runtime `Intent`; also carries drift/degradation/re-optimisation triggers in `assuranceOutcome` |
 | `IntentRejectedEvent` | II MS | Project rejected state |
 | `IntentNetworkReadyEvent` | II MS | May support workflow/status transition depending on implementation |
 
