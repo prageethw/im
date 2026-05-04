@@ -561,10 +561,11 @@ IC MS must not use a cached specification when:
 
 | **Dependency path** | **Circuit-breaker behaviour** |
 |---|---|
-| ID MS -> DB | Fail fast when open; return `503` for operations needing DB access |
-| ID MS -> event publisher/outbox | Use outbox-first where possible; do not lose committed resource changes |
-| ID MS -> external callback delivery | Delivery retry/failure handled by event delivery layer; resource operation should not depend on synchronous callback delivery |
-| IC MS -> ID MS | IC MS may use fresh cached active spec fallback; otherwise fail closed |
+| ID MS -> DB | Hard fail-fast | Return `503 Service Unavailable`; consumer retries later because the source-of-truth persistence layer is unavailable |
+| ID MS -> cache | Graceful/silent | Bypass cache or ignore failed cache writes where safe; continue if DB/source-of-truth path succeeds; emit telemetry |
+| ID MS -> Kafka/event broker | Graceful/silent with transactional outbox | API success depends on DB + outbox commit, not immediate broker availability; outbox relay retries Kafka later |
+| ID MS -> external callback webhook | Async fail-fast per attempt | Delivery attempt fails fast, is retried later using bounded retry/backoff, and does not affect the original resource API response |
+| IC MS -> ID MS | Cached fallback then fail-closed | IC MS may use fresh cached active spec fallback; otherwise fail closed for new runtime intent creation |
 
 ### Observability requirements:
 
@@ -578,6 +579,109 @@ ID MS and IC MS should expose metrics/logs for:
 - ID MS DB circuit-breaker open count
 - ID MS event publication failure count
 - IC MS validation using cached active specification count
+
+### Dependency-specific circuit-breaker refinement:
+
+ID MS has multiple circuit-breaker trigger points, and not all failures are treated the same way.
+
+#### Database failure:
+
+Database is a hard dependency for ID MS resource operations.
+
+If the DB cannot be accessed, ID MS must fail fast and return:
+
+```http
+HTTP/1.1 503 Service Unavailable
+Content-Type: application/json
+Cache-Control: no-store
+Retry-After: 30
+```
+
+```json
+{
+  "code": "SERVICE_UNAVAILABLE",
+  "reason": "ID_MS_DATABASE_UNAVAILABLE",
+  "message": "IntentSpecification service is temporarily unavailable because the persistence layer cannot be accessed.",
+  "status": 503,
+  "referenceError": "https://mycsp.com.au/errors/SERVICE_UNAVAILABLE",
+  "@type": "Error"
+}
+```
+
+Rules:
+
+- DB failure is not silently swallowed.
+- ID MS cannot safely create, update, retrieve, activate, retire, or delete specifications without DB access.
+- Consumer must retry later.
+
+#### Cache failure:
+
+Cache is not the source of truth.
+
+If cache read/write fails:
+
+- trigger cache circuit breaker
+- bypass cache where safe
+- read from DB/source of truth where needed
+- ignore failed cache writes
+- continue the request when the DB/source-of-truth operation succeeds
+- emit logs, metrics, and alerts
+
+Rules:
+
+- Cache failure is graceful and silent from the client perspective.
+- Do not return `503` only because cache is unavailable.
+- Cache failure must not block create, update, or read when DB is available.
+
+#### Kafka / event broker failure:
+
+Kafka is not on the synchronous critical path when ID MS uses the transactional outbox pattern.
+
+For create, update, delete, activation, and retirement:
+
+- commit the resource change and outbox record transactionally in DB
+- return API success once the DB + outbox transaction succeeds
+- publish to Kafka asynchronously through the outbox relay
+- if Kafka is unavailable, the relay fails fast for that publish attempt
+- retry later using the outbox retry policy
+- do not fail the original API call after a successful DB/outbox commit
+
+Rules:
+
+- Kafka/event-broker failure is graceful and silent for the original API consumer.
+- Kafka failure is operationally visible through outbox retry metrics and alerts.
+- If DB/outbox commit fails, the API operation fails because durable event publication cannot be guaranteed.
+
+#### External callback webhook failure:
+
+External subscriber callback delivery is asynchronous.
+
+If the callback endpoint is unavailable, times out, or returns a failure:
+
+- delivery worker fails fast for that delivery attempt
+- mark the attempt failed
+- retry later using bounded retries and backoff
+- do not impact the original ID MS resource operation
+- if retries are exhausted, mark delivery as failed and alert/operate
+
+Rules:
+
+- Webhook failure is graceful and silent from the original API consumer’s point of view.
+- Webhook failure must not roll back specification create, update, status-change, or delete operations.
+- Webhook delivery is not a synchronous dependency for the API write path.
+
+#### Updated dependency-specific CB summary:
+
+| **Dependency path** | **CB style** | **Baseline behaviour** |
+|---|---|---|
+| DB | Hard fail-fast | Return `503`; consumer retries |
+| Cache | Graceful/silent | Bypass/ignore cache, use DB/source-of-truth, emit telemetry |
+| Kafka/event broker | Graceful/silent with outbox | API succeeds after DB + outbox commit; relay retries Kafka later |
+| External webhook callback | Async fail-fast per attempt | Delivery attempt fails fast, retries later; original API unaffected |
+
+#### Baseline statement:
+
+ID MS uses dependency-specific circuit-breaker behaviour. Database failure is a hard fail-fast failure and returns `503 Service Unavailable` because the source of truth is unavailable. Cache failure is handled silently and gracefully by bypassing cache or ignoring cache writes where safe. Kafka/event-broker failure is handled through transactional outbox: the API response depends on DB + outbox commit, not immediate broker availability. External webhook callback delivery failure is handled asynchronously: each failed delivery attempt fails fast, is retried later, and does not affect the original resource API response.
 
 ### Baseline statement:
 

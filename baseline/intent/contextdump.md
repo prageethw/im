@@ -121,3 +121,22 @@ Going forward, design files must keep stable filenames and be fully overwritten 
 
 ### Main context dump:
 Keep one stable `contextdump.md` file and append every new baseline update to the end of that file.
+
+## Baseline update — ID MS dependency-specific circuit-breaker refinement:
+
+Date: 2026-05-04T22:50:08.727440+00:00
+
+### Updated file:
+- `id_ms_design_brief.md`
+
+### Baseline:
+ID MS has multiple circuit-breaker trigger points, and each dependency path has a different failure behaviour.
+
+### Dependency-specific CB behaviour:
+- DB failure is a hard fail-fast failure. ID MS returns `503 Service Unavailable` and the consumer retries later.
+- Cache failure is graceful/silent. ID MS bypasses cache or ignores failed cache writes where safe, continues through DB/source-of-truth, and emits telemetry.
+- Kafka/event-broker failure is graceful/silent when transactional outbox is used. API success depends on DB + outbox commit, not immediate broker availability. The outbox relay retries Kafka later.
+- External callback webhook failure is asynchronous fail-fast per attempt. The delivery attempt fails fast, is retried later through bounded retry/backoff, and does not affect the original resource API response.
+
+### Boundary:
+Only DB/source-of-truth unavailability is catastrophic for synchronous ID MS resource operations. Cache, Kafka, and callback webhook failures are operational failures handled through cache bypass, outbox, retry, metrics, alerts, and operational follow-up.
