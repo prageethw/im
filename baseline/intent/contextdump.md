@@ -219,3 +219,88 @@ ID MS trusts authenticated platform/system callers and enforces technical resour
 
 ### Audit:
 ID MS audits technical/governance-changing operations and technical integrity validation failures where required. Business/user authorisation audit belongs to OEX where that decision is made.
+
+## Baseline update — ID MS observability and audit:
+
+Date: 2026-05-05T00:05:59.882973+00:00
+
+### Updated file:
+- `id_ms_design_brief.md`
+
+### Baseline:
+ID MS must log and propagate correlation context, emit structured operational telemetry, participate in distributed tracing, and audit technical/governance-changing operations.
+
+### Observability:
+ID MS emits structured logs, metrics, traces, dependency health signals, cache metrics, outbox/event-delivery metrics, and webhook delivery metrics.
+
+### Audit:
+Business/user-level authorisation audit remains with OEX. ID MS audit focuses on specification creation, draft update/patch, activation, retirement, deletion, hub subscription changes, technical validation failures, ETag/If-Match integrity decisions, immutable-resource enforcement, and dependency failure signals.
+
+### Sensitive data:
+ID MS must not log OAuth2 tokens, certificate private material, secrets, credentials, full internal connection strings, sensitive platform headers, or raw internal dependency details in external responses.
+
+## Baseline update — ID MS consistency sweep:
+
+Date: 2026-05-05T00:08:01.489012+00:00
+
+### Updated file:
+- `id_ms_design_brief.md`
+
+### Result:
+ID MS design brief consistency sweep completed with result: **PASS WITH NOTES**.
+
+### Confirmed:
+- naming is consistent around ID MS / `intent-definition-ms` / `IntentSpecification`
+- lifecycle uses `DRAFT`, `ACTIVE`, and `RETIRED`; no `DELETED` lifecycle state
+- caching is GET-only
+- ETag is not used for GET revalidation; `If-None-Match` and `304 Not Modified` are not baselined
+- ETag is used for unsafe operation concurrency through `If-Match`
+- DB/cache/Kafka/webhook dependency-specific CB behaviour is captured
+- NGW handles mTLS and OAuth2 token validation; OEX owns business/user-level authorisation
+- ID MS emits external `IntentSpecification*Event` events only
+- persistence baseline uses managed PostgreSQL-compatible RDBMS with JSONB and outbox
+- ID MS boundaries exclude semantic validation, policy validation, optimisation, assurance, telemetry, and callback ingestion
+
+### Final position:
+ID MS is complete for the current baseline unless later revised.
+
+## Baseline update — ID MS no-store cleanup:
+
+Date: 2026-05-05T00:12:35.705139+00:00
+
+### Updated file:
+- `id_ms_design_brief.md`
+
+### Baseline cleanup:
+All residual `Cache-Control: no-store` references were removed from the ID MS design brief.
+
+### Current caching rule:
+ID MS caching is baselined only for GET responses. No caching strategy is baselined for non-GET operations. ETag is not used for GET revalidation; ETag is used only for unsafe operation concurrency through `If-Match`.
+
+### Consistency result:
+ID MS consistency sweep now passes with no notes.
+
+## Baseline update — ID MS specification document:
+
+Date: 2026-05-05T00:55:43.244675+00:00
+
+### New stable file:
+- `id_ms_specification.md`
+
+### Baseline:
+Created the ID MS specification document containing API endpoints, request/response examples, error bodies, lifecycle/version behaviour, hub subscription operations, activation operation, and external `IntentSpecification*Event` examples.
+
+### Coverage:
+- Create/list/retrieve/update/patch/delete `IntentSpecification`
+- Activate `IntentSpecification`
+- Create/retrieve/delete hub subscription
+- Common error bodies
+- DB unavailable response
+- External event family:
+  - `IntentSpecificationCreateEvent`
+  - `IntentSpecificationAttributeValueChangeEvent`
+  - `IntentSpecificationStatusChangeEvent`
+  - `IntentSpecificationDeleteEvent`
+
+### Alignment:
+The specification follows the ID MS design brief baseline: GET-only caching, ETag only for unsafe-operation concurrency, no `DELETED` lifecycle state, `DRAFT`/`ACTIVE`/`RETIRED` lifecycle, `priority` not `priority_level`, and `critical` not `clinical-critical`.

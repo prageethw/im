@@ -1,168 +1,141 @@
-## ID MS Design Baseline:
+# id_ms_specification.md
 
-### Purpose:
+## ID MS Specification:
 
-ID MS (`intent-design-ms`) owns the design-time lifecycle and governance of `IntentSpecification` resources for the Intent Management Enabler platform.
+### Service identity:
 
-ID MS is the source of truth for `IntentSpecification` resources and their versioning, lifecycle state, subscription model, and external design-time events where required.
-
-ID MS does not own runtime `Intent`, `IntentReport`, lifecycle projection, interpretation/resolution, optimisation, assurance, callback ingestion, or orchestration execution.
-
-## Service Identity:
-
-| **Attribute** | **Baseline** |
+| **Item** | **Baseline** |
 |---|---|
-| Display name | Intent Design MS |
-| Service name | `intent-design-ms` |
+| Full name | Intent Definition MS |
 | Short name | ID MS |
+| Service name | `intent-definition-ms` |
+| Domain | Intent Domain |
+| Base path | `/intentManagement/v5` |
 | Primary resource | `IntentSpecification` |
-| Base path | `/intentManagement/v5/intentSpecification` |
-| API style | TMF-aligned REST |
-| Persistence | Managed PostgreSQL / PostgreSQL-compatible RDBMS + JSONB |
-| Main responsibility | Design-time intent specification lifecycle and governance |
+| Primary responsibility | Design-time `IntentSpecification` catalogue, lifecycle/version governance, syntax contract, and external specification events |
 
-## Responsibilities:
+### Boundary statement:
 
-| **Responsibility** | **Baseline** |
-|---|---|
-| `IntentSpecification` source of truth | ID MS owns persisted specification resources |
-| Specification lifecycle | ID MS owns create, retrieve, list, update, version, activate, retire/delete governance |
-| Specification versioning | Meaningful changes to active specifications require new versions |
-| Concurrency | ETag on resource responses; `If-Match` required for PUT/PATCH/DELETE |
-| HATEOAS | Responses include state-appropriate `_links` |
-| Hub subscriptions | ID MS owns `/intentSpecification/hub` subscriptions |
-| External events | ID MS publishes `IntentSpecification*Event` where required |
-| Syntax/resource shape validation | ID MS validates resource shape and syntax |
+ID MS owns design-time `IntentSpecification` contracts and subscription management for specification events.
 
-## ID MS Does Not Own:
+ID MS validates syntax/resource shape and enforces specification lifecycle/version governance.
 
-| **Concern** | **Owner** |
-|---|---|
-| Runtime `Intent` lifecycle | IC MS |
-| `IntentReport` | IC MS |
-| External lifecycle projection | IC MS, based on IA-driven lifecycle/assurance outcomes |
-| Intent interpretation/resolution | II MS |
-| Semantic/policy validation | II MS and Knowledge Plane |
-| Optimisation | IO MS |
-| Runtime assurance | IA MS |
-| Callback ingestion | ICB MS |
-| Orchestration execution | Orchestration layer / network orchestrator |
-| OEX user experience | OEX layer |
+ID MS does not own runtime `Intent`, `IntentReport`, semantic validation, policy validation, network/resource feasibility, optimisation, runtime assurance, telemetry, or callback ingestion.
 
-## API Baseline:
+---
 
-| **Operation** | **Method / Path** | **Baseline** |
-|---|---|---|
-| Create specification | `POST /intentManagement/v5/intentSpecification` | Creates a new `IntentSpecification`, usually in `DRAFT` |
-| List specifications | `GET /intentManagement/v5/intentSpecification` | Returns top-level array of `IntentSpecification` resources |
-| Retrieve specification | `GET /intentManagement/v5/intentSpecification/{id}` | Returns one full resource |
-| Full update | `PUT /intentManagement/v5/intentSpecification/{id}` | Preferred deterministic full update; requires `If-Match` |
-| Partial update | `PATCH /intentManagement/v5/intentSpecification/{id}` | Supported for compatibility but discouraged; requires `If-Match` |
-| Delete / retire | `DELETE /intentManagement/v5/intentSpecification/{id}` | Requires `If-Match`; must respect lifecycle/reference safety |
-| Create subscription | `POST /intentManagement/v5/intentSpecification/hub` | Creates event subscription |
-| Retrieve subscription | `GET /intentManagement/v5/intentSpecification/hub/{id}` | Retrieves subscription by id |
-| Delete subscription | `DELETE /intentManagement/v5/intentSpecification/hub/{id}` | Deletes subscription |
+## 1. API endpoints:
 
-## Concurrency and Caching Baseline:
+### IntentSpecification resource APIs:
 
-| **Concern** | **Baseline** |
-|---|---|
-| ETag | Mandatory for create/retrieve/list/update responses |
-| `If-Match` | Required for PUT/PATCH/DELETE against existing versioned resources |
-| Missing `If-Match` | `428 Precondition Required` |
-| Stale `If-Match` | `412 Precondition Failed` |
-| PUT | Preferred update method |
-| PATCH | Supported for compatibility but discouraged |
-| Response body on update | Full returned `IntentSpecification` representation |
-| Cache-Control | Private/revalidation-oriented for mutable resources |
+| **Purpose** | **Method** | **Endpoint** |
+|---|---:|---|
+| Create specification | `POST` | `/intentManagement/v5/intentSpecification` |
+| List specifications | `GET` | `/intentManagement/v5/intentSpecification` |
+| Retrieve specification by ID | `GET` | `/intentManagement/v5/intentSpecification/{id}` |
+| Full replace specification | `PUT` | `/intentManagement/v5/intentSpecification/{id}` |
+| Partial update specification | `PATCH` | `/intentManagement/v5/intentSpecification/{id}` |
+| Delete specification | `DELETE` | `/intentManagement/v5/intentSpecification/{id}` |
+| Activate specification | `POST` | `/intentManagement/v5/intentSpecification/{id}/activate` |
 
-## IntentSpecification Resource Baseline:
+### Hub subscription APIs:
 
-| **Field / Area** | **Baseline** |
-|---|---|
-| `@type` | `IntentSpecification` |
-| `@baseType` | `EntitySpecification` |
-| `specCharacteristic` | High-level characteristic catalogue only |
-| `expressionSpecification` | Authoritative syntax/schema for request shape |
-| Nested object structure | Defined in `expressionSpecification`, not duplicated in `specCharacteristic` |
-| `characteristicValueSpecification` | Used only for defaults, examples, constrained allowed values, discovery, governance, or OEX/UI prefill guidance |
-| Numeric SLA values | Illustrative/default guidance only, not semantic enforcement |
-| Semantic/policy validation | II MS and Knowledge Plane |
-| Runtime assurance | IA MS |
+| **Purpose** | **Method** | **Endpoint** |
+|---|---:|---|
+| Create event subscription | `POST` | `/intentManagement/v5/intentSpecification/hub` |
+| Retrieve subscription by ID | `GET` | `/intentManagement/v5/intentSpecification/hub/{id}` |
+| Delete event subscription | `DELETE` | `/intentManagement/v5/intentSpecification/hub/{id}` |
 
-## Active Surgical Specification Baseline:
+---
 
-| **Area** | **Baseline** |
-|---|---|
-| Specification id | `hospital-surgical-slice-spec-v1.19` |
-| Specification type | Syntax-first |
-| Priority field | `priority`, not `priority_level` |
-| Semantic validation | Outside ID MS; owned by II MS / Knowledge Plane |
-| Runtime assurance | IA MS |
+## 2. Common conventions:
 
-## Characteristic Governance IDs:
+### Lifecycle values:
 
-| **Field name** | **specCharacteristic.id** |
-|---|---|
-| `location` | `SC-LOCATION-001` |
-| `serviceClass` | `SC-SERVICE-CLASS-001` |
-| `priority` | `SC-POLICY-PRIORITY-001` |
-| `maxLatencyMs` | `SC-ASSURANCE-LATENCY-001` |
-| `minAvailabilityPercent` | `SC-ASSURANCE-AVAILABILITY-001` |
-| `maxJitterMs` | `SC-ASSURANCE-JITTER-001` |
-| `maxPacketLossPercent` | `SC-ASSURANCE-PACKET-LOSS-001` |
-| `redundancyRequired` | `SC-RESILIENCE-REDUNDANCY-001` |
-| `preferredAccessTechnology` | `SC-ACCESS-TECHNOLOGY-001` |
-| `timeWindow` | `SC-DELIVERY-TIME-WINDOW-001` |
+```text
+DRAFT
+ACTIVE
+RETIRED
+```
 
-`specCharacteristic.name` must remain equal to the expression schema field name.
+There is no `DELETED` lifecycle status. Delete is an operation/outcome, not a normal lifecycle state.
 
-## Expression Specification Rules:
+### Versioning rules:
 
-| **Area** | **Baseline** |
-|---|---|
-| `location` | Closed top-level object with `additionalProperties: false` |
-| Permitted `location` fields | `locationId`, `locationType`, `geographicScope` |
-| `location.locationId` | Required and non-empty |
-| `geographicScope` | Intentionally open with `additionalProperties: true` for platform-controlled extension |
-| `serviceClass` | Uses `const: "surgical-slice"` |
-| `priority` | May use enum values `critical`, `high`, `standard` where constrained values are required |
-| `timeWindow` | Optional object |
-| `timeWindow.startDateTime` | Required when `timeWindow` is present |
-| `timeWindow.endDateTime` | Optional |
+- New specifications are normally created as `DRAFT`.
+- `DRAFT` specifications are editable.
+- `ACTIVE` and `RETIRED` specifications are immutable.
+- Meaningful change after activation requires a new versioned `IntentSpecification`.
+- Only one version in the same specification family should be `ACTIVE` for new runtime intent creation.
+- Activating a new version retires the previous active version.
+- Retired specifications must not be used for new runtime `Intent` creation.
+- Existing runtime intents that reference a retired specification may continue temporarily where safe.
 
-## POST /intentManagement/v5/intentSpecification Baseline:
+### Caching and ETag rules:
+
+- Caching applies only to GET responses.
+- Single-resource GET responses may use private cache with bounded TTL.
+- List GET responses may use shorter private cache with bounded TTL.
+- Clients may request a fresh GET response with `Cache-Control: no-cache`.
+- ETag is not used for GET revalidation.
+- `If-None-Match` and `304 Not Modified` are not baselined.
+- ETag is used only for unsafe operation concurrency through `If-Match`.
+- No caching strategy is baselined for non-GET operations.
+
+---
+
+## 3. Common error body:
+
+```json
+{
+  "code": "...",
+  "reason": "...",
+  "message": "...",
+  "status": 400,
+  "referenceError": "https://mycsp.com.au/errors/...",
+  "@type": "Error"
+}
+```
+
+### Common errors:
+
+| **HTTP** | **Code** | **Scenario** |
+|---:|---|---|
+| `400` | `BAD_REQUEST` | Invalid JSON or invalid request structure |
+| `404` | `RESOURCE_NOT_FOUND` | Specification or subscription not found |
+| `409` | `RESOURCE_IMMUTABLE` | Attempt to update active/retired specification |
+| `409` | `VERSION_CONFLICT` | Duplicate specification/version conflict |
+| `412` | `PRECONDITION_FAILED` | Missing/mismatched `If-Match` |
+| `422` | `VALIDATION_FAILED` | Fails expression/spec schema constraints |
+| `503` | `SERVICE_UNAVAILABLE` | Source-of-truth DB unavailable |
+| `500` | `INTERNAL_ERROR` | Unexpected server error |
+
+---
+
+## 4. Create IntentSpecification:
 
 ### Request:
 
 ```http
-POST /intentManagement/v5/intentSpecification HTTP/1.1
-Host: api.mycsp.com.au
+POST /intentManagement/v5/intentSpecification
 Content-Type: application/json
 Accept: application/json
-Content-Language: en-AU
-correlationid: corr-idms-20260504-001
 ```
-
-### Request Body:
 
 ```json
 {
-  "id": "hospital-surgical-slice-spec-v1.19",
   "name": "Hospital Surgical Slice Intent Specification",
-  "description": "Syntax-first specification for requesting a low-latency, high-availability surgical hospital network slice. This specification defines request structure only. Semantic validation, policy validation, candidate resolution, optimisation and assurance are handled by downstream IME microservices and Knowledge Plane configuration.",
+  "description": "Design-time specification for hospital surgical slice intents. This specification defines the allowed request shape for surgical connectivity intents. It is syntax-first: ID MS validates structure and allowed fields, while II MS and the knowledge plane validate semantic meaning, policy, and fulfilment feasibility.",
   "version": "1.19",
   "lifecycleStatus": "DRAFT",
-  "validFor": {
-    "startDateTime": "2026-05-04T00:00:00+10:00"
-  },
   "@type": "IntentSpecification",
   "@baseType": "EntitySpecification",
+  "@schemaLocation": "https://mycsp.com.au/schemas/intentManagement/v5/intentSpecification/hospital-surgical-slice-spec-v1.19.schema.json",
   "specCharacteristic": [
     {
       "id": "SC-LOCATION-001",
       "name": "location",
-      "description": "Target clinical or hospital location for the requested surgical slice service.",
+      "description": "Requested location for the surgical connectivity intent. The expression schema permits only locationId, locationType, and geographicScope. geographicScope remains intentionally open for platform-controlled extension.",
       "valueType": "object",
       "configurable": true,
       "minCardinality": 1,
@@ -171,150 +144,108 @@ correlationid: corr-idms-20260504-001
     {
       "id": "SC-SERVICE-CLASS-001",
       "name": "serviceClass",
-      "description": "Requested service class. For this specification the expected service class is surgical-slice.",
+      "description": "Requested service class for the surgical connectivity intent.",
       "valueType": "string",
       "configurable": true,
       "minCardinality": 1,
       "maxCardinality": 1,
       "characteristicValueSpecification": [
-        {
-          "valueType": "string",
-          "isDefault": true,
-          "value": "surgical-slice"
-        }
+        { "valueType": "string", "value": "critical-gold", "isDefault": true },
+        { "valueType": "string", "value": "critical-silver" }
       ]
     },
     {
       "id": "SC-POLICY-PRIORITY-001",
       "name": "priority",
-      "description": "Policy priority requested for the intent. The platform uses this as a policy input; policy interpretation is owned by II MS and Knowledge Plane rules.",
+      "description": "Requested business or clinical priority. This is used as policy input by II MS and the knowledge plane, not as a syntax-only enforcement rule.",
       "valueType": "string",
       "configurable": true,
-      "minCardinality": 0,
+      "minCardinality": 1,
       "maxCardinality": 1,
       "characteristicValueSpecification": [
-        {
-          "valueType": "string",
-          "isDefault": true,
-          "value": "critical"
-        },
-        {
-          "valueType": "string",
-          "isDefault": false,
-          "value": "high"
-        },
-        {
-          "valueType": "string",
-          "isDefault": false,
-          "value": "standard"
-        }
+        { "valueType": "string", "value": "critical", "isDefault": true },
+        { "valueType": "string", "value": "high" },
+        { "valueType": "string", "value": "standard" }
       ]
     },
     {
       "id": "SC-ASSURANCE-LATENCY-001",
       "name": "maxLatencyMs",
-      "description": "Requested maximum acceptable latency in milliseconds. Listed values are illustrative/default guidance for discovery and OEX/UI prefill only; semantic validation is handled by II MS and Knowledge Plane rules.",
+      "description": "Requested maximum latency in milliseconds. Values are illustrative/default guidance only. Semantic and policy enforcement is owned by II MS and the knowledge plane.",
       "valueType": "number",
       "configurable": true,
       "minCardinality": 0,
       "maxCardinality": 1,
       "characteristicValueSpecification": [
-        {
-          "valueType": "number",
-          "isDefault": false,
-          "value": 10
-        }
+        { "valueType": "number", "value": 10, "isDefault": true }
       ]
     },
     {
       "id": "SC-ASSURANCE-AVAILABILITY-001",
       "name": "minAvailabilityPercent",
-      "description": "Requested minimum service availability percentage. Listed values are illustrative/default guidance for discovery and OEX/UI prefill only; semantic validation is handled by II MS and Knowledge Plane rules.",
+      "description": "Requested minimum availability percentage. Values are illustrative/default guidance only. Semantic and policy enforcement is owned by II MS and the knowledge plane.",
       "valueType": "number",
       "configurable": true,
       "minCardinality": 0,
       "maxCardinality": 1,
       "characteristicValueSpecification": [
-        {
-          "valueType": "number",
-          "isDefault": false,
-          "value": 99.99
-        }
+        { "valueType": "number", "value": 99.99, "isDefault": true }
       ]
     },
     {
       "id": "SC-ASSURANCE-JITTER-001",
       "name": "maxJitterMs",
-      "description": "Requested maximum acceptable jitter in milliseconds. Listed values are illustrative/default guidance for discovery and OEX/UI prefill only; semantic validation is handled by II MS and Knowledge Plane rules.",
+      "description": "Requested maximum jitter in milliseconds. Values are illustrative/default guidance only.",
       "valueType": "number",
       "configurable": true,
       "minCardinality": 0,
       "maxCardinality": 1,
       "characteristicValueSpecification": [
-        {
-          "valueType": "number",
-          "isDefault": false,
-          "value": 5
-        }
+        { "valueType": "number", "value": 2, "isDefault": true }
       ]
     },
     {
       "id": "SC-ASSURANCE-PACKET-LOSS-001",
       "name": "maxPacketLossPercent",
-      "description": "Requested maximum acceptable packet loss percentage. Listed values are illustrative/default guidance for discovery and OEX/UI prefill only; semantic validation is handled by II MS and Knowledge Plane rules.",
+      "description": "Requested maximum packet loss percentage. Values are illustrative/default guidance only.",
       "valueType": "number",
       "configurable": true,
       "minCardinality": 0,
       "maxCardinality": 1,
       "characteristicValueSpecification": [
-        {
-          "valueType": "number",
-          "isDefault": false,
-          "value": 0.01
-        }
+        { "valueType": "number", "value": 0.01, "isDefault": true }
       ]
     },
     {
       "id": "SC-RESILIENCE-REDUNDANCY-001",
       "name": "redundancyRequired",
-      "description": "Indicates whether redundant candidate paths are requested.",
+      "description": "Whether resilient/redundant delivery is requested.",
       "valueType": "boolean",
       "configurable": true,
       "minCardinality": 0,
       "maxCardinality": 1,
       "characteristicValueSpecification": [
-        {
-          "valueType": "boolean",
-          "isDefault": true,
-          "value": true
-        }
+        { "valueType": "boolean", "value": true, "isDefault": true }
       ]
     },
     {
       "id": "SC-ACCESS-TECHNOLOGY-001",
       "name": "preferredAccessTechnology",
-      "description": "Preferred access technology if the requester supplies one. This is a preference only; eligibility and optimisation are handled outside ID MS.",
+      "description": "Preferred access technology where supplied by the requester.",
       "valueType": "string",
       "configurable": true,
       "minCardinality": 0,
       "maxCardinality": 1,
       "characteristicValueSpecification": [
-        {
-          "valueType": "string",
-          "isDefault": false,
-          "value": "5G"
-        },
-        {
-          "valueType": "string",
-          "isDefault": false,
-          "value": "fibre"
-        }
+        { "valueType": "string", "value": "5G" },
+        { "valueType": "string", "value": "fibre" },
+        { "valueType": "string", "value": "private-wireless" }
       ]
     },
     {
       "id": "SC-DELIVERY-TIME-WINDOW-001",
       "name": "timeWindow",
-      "description": "Optional requested time window for the surgical slice service.",
+      "description": "Optional requested delivery or validity time window. When timeWindow is present, startDateTime is required by expressionSpecification.",
       "valueType": "object",
       "configurable": true,
       "minCardinality": 0,
@@ -322,106 +253,43 @@ correlationid: corr-idms-20260504-001
     }
   ],
   "expressionSpecification": {
-    "@type": "JsonExpressionSpecification",
-    "description": "Syntax-first JSON expression shape for hospital surgical slice intent requests. This schema validates structure and basic value types only. It does not perform semantic validation, policy evaluation, candidate eligibility, optimisation, assurance, or orchestration decisions.",
-    "expressionLanguage": "JSON",
+    "name": "Hospital Surgical Slice Intent Expression Schema",
+    "description": "Authoritative request-shape schema for hospital surgical slice intents. This schema is syntax-first and does not perform semantic, policy, or fulfilment validation.",
+    "expressionLanguage": "JSON_SCHEMA",
     "schema": {
       "$schema": "https://json-schema.org/draft/2020-12/schema",
-      "title": "Hospital Surgical Slice Intent Request",
+      "$id": "https://mycsp.com.au/schemas/intentManagement/v5/intentExpression/hospital-surgical-slice-spec-v1.19.expression.schema.json",
+      "title": "Hospital Surgical Slice Intent Expression",
       "type": "object",
       "additionalProperties": false,
-      "required": [
-        "location",
-        "serviceClass"
-      ],
+      "required": ["location", "serviceClass", "priority"],
       "properties": {
         "location": {
           "type": "object",
           "additionalProperties": false,
-          "description": "Top-level location object is closed. Only locationId, locationType, and geographicScope are permitted. geographicScope itself is intentionally open for platform-controlled extension.",
-          "required": [
-            "locationId"
-          ],
+          "description": "Only locationId, locationType, and geographicScope are permitted. geographicScope is intentionally open for platform-controlled extension.",
+          "required": ["locationId"],
           "properties": {
-            "locationId": {
-              "type": "string",
-              "minLength": 1,
-              "description": "Platform-controlled target location identifier."
-            },
-            "locationType": {
-              "type": "string",
-              "description": "Optional target location type, such as hospital or clinical-site."
-            },
-            "geographicScope": {
-              "type": "object",
-              "additionalProperties": true,
-              "description": "Optional geographic scope. Semantic interpretation is handled by Knowledge Plane rules."
-            }
+            "locationId": { "type": "string", "minLength": 1 },
+            "locationType": { "type": "string", "minLength": 1 },
+            "geographicScope": { "type": "string", "minLength": 1 }
           }
         },
-        "serviceClass": {
-          "type": "string",
-          "const": "surgical-slice",
-          "description": "Requested service class for this specification."
-        },
-        "priority": {
-          "type": "string",
-          "enum": [
-            "critical",
-            "high",
-            "standard"
-          ],
-          "description": "Policy priority input. The field name is priority, not priority_level."
-        },
-        "maxLatencyMs": {
-          "type": "number",
-          "minimum": 0,
-          "description": "Requested maximum acceptable latency in milliseconds. Basic numeric syntax is validated here; semantic threshold validation is handled by II MS and Knowledge Plane rules."
-        },
-        "minAvailabilityPercent": {
-          "type": "number",
-          "minimum": 0,
-          "maximum": 100,
-          "description": "Requested minimum service availability percentage. Basic numeric syntax is validated here; semantic threshold validation is handled by II MS and Knowledge Plane rules."
-        },
-        "maxJitterMs": {
-          "type": "number",
-          "minimum": 0,
-          "description": "Requested maximum acceptable jitter in milliseconds. Basic numeric syntax is validated here; semantic threshold validation is handled by II MS and Knowledge Plane rules."
-        },
-        "maxPacketLossPercent": {
-          "type": "number",
-          "minimum": 0,
-          "maximum": 100,
-          "description": "Requested maximum acceptable packet loss percentage. Basic numeric syntax is validated here; semantic threshold validation is handled by II MS and Knowledge Plane rules."
-        },
-        "redundancyRequired": {
-          "type": "boolean",
-          "description": "Whether redundant path/resource treatment is requested."
-        },
-        "preferredAccessTechnology": {
-          "type": "string",
-          "enum": [
-            "5G",
-            "fibre"
-          ],
-          "description": "Optional access technology preference."
-        },
+        "serviceClass": { "type": "string", "enum": ["critical-gold", "critical-silver"] },
+        "priority": { "type": "string", "enum": ["critical", "high", "standard"] },
+        "maxLatencyMs": { "type": "number", "minimum": 0 },
+        "minAvailabilityPercent": { "type": "number", "minimum": 0, "maximum": 100 },
+        "maxJitterMs": { "type": "number", "minimum": 0 },
+        "maxPacketLossPercent": { "type": "number", "minimum": 0, "maximum": 100 },
+        "redundancyRequired": { "type": "boolean" },
+        "preferredAccessTechnology": { "type": "string", "minLength": 1 },
         "timeWindow": {
           "type": "object",
           "additionalProperties": false,
-          "required": [
-            "startDateTime"
-          ],
+          "required": ["startDateTime"],
           "properties": {
-            "startDateTime": {
-              "type": "string",
-              "format": "date-time"
-            },
-            "endDateTime": {
-              "type": "string",
-              "format": "date-time"
-            }
+            "startDateTime": { "type": "string", "format": "date-time" },
+            "endDateTime": { "type": "string", "format": "date-time" }
           }
         }
       }
@@ -429,73 +297,695 @@ correlationid: corr-idms-20260504-001
   },
   "_links": {
     "self": {
-      "href": "/intentManagement/v5/intentSpecification/hospital-surgical-slice-spec-v1.19"
+      "href": "https://mycsp.com.au/intentManagement/v5/intentSpecification/hospital-surgical-slice-spec-v1.19"
     }
   }
 }
 ```
 
-### Successful Response Headers:
+### Success response:
 
 ```http
 HTTP/1.1 201 Created
+Location: /intentManagement/v5/intentSpecification/hospital-surgical-slice-spec-v1.19
 Content-Type: application/json
 Content-Language: en-AU
-Location: /intentManagement/v5/intentSpecification/hospital-surgical-slice-spec-v1.19
-Content-Location: /intentManagement/v5/intentSpecification/hospital-surgical-slice-spec-v1.19
-ETag: "idms-intent-spec-hospital-surgical-slice-v1.19-rev-001"
-Last-Modified: Mon, 04 May 2026 10:15:00 GMT
-correlationid: corr-idms-20260504-001
+ETag: "intent-spec-hospital-surgical-slice-spec-v1.19-v1"
+Last-Modified: Sat, 18 Apr 2026 02:00:00 GMT
 ```
 
-## Hub Subscription Baseline:
+```json
+{
+  "id": "hospital-surgical-slice-spec-v1.19",
+  "href": "/intentManagement/v5/intentSpecification/hospital-surgical-slice-spec-v1.19",
+  "name": "Hospital Surgical Slice Intent Specification",
+  "version": "1.19",
+  "lifecycleStatus": "DRAFT",
+  "@type": "IntentSpecification",
+  "@baseType": "EntitySpecification",
+  "specCharacteristic": "...same as request...",
+  "expressionSpecification": "...same as request...",
+  "_links": {
+    "self": { "href": "/intentManagement/v5/intentSpecification/hospital-surgical-slice-spec-v1.19" },
+    "fullUpdate": { "href": "/intentManagement/v5/intentSpecification/hospital-surgical-slice-spec-v1.19", "method": "PUT" },
+    "partialUpdate": {
+      "href": "/intentManagement/v5/intentSpecification/hospital-surgical-slice-spec-v1.19",
+      "method": "PATCH",
+      "warning": "PATCH is supported for compatibility but discouraged. Prefer PUT for deterministic full replacement."
+    },
+    "delete": { "href": "/intentManagement/v5/intentSpecification/hospital-surgical-slice-spec-v1.19", "method": "DELETE" }
+  }
+}
+```
 
-| **Path** | **Purpose** |
+---
+
+## 5. List IntentSpecifications:
+
+### Request:
+
+```http
+GET /intentManagement/v5/intentSpecification?offset=0&limit=10&lifecycleStatus=ACTIVE
+Accept: application/json
+```
+
+### Success response:
+
+```http
+HTTP/1.1 200 OK
+Content-Type: application/json
+Content-Language: en-AU
+X-Total-Count: 1
+X-Result-Count: 1
+ETag: "intent-spec-list-active-v17"
+Cache-Control: private, max-age=60
+```
+
+```json
+[
+  {
+    "id": "hospital-surgical-slice-spec-v1.19",
+    "href": "/intentManagement/v5/intentSpecification/hospital-surgical-slice-spec-v1.19",
+    "name": "Hospital Surgical Slice Intent Specification",
+    "version": "1.19",
+    "lifecycleStatus": "ACTIVE",
+    "@type": "IntentSpecification",
+    "@baseType": "EntitySpecification",
+    "_links": {
+      "self": { "href": "/intentManagement/v5/intentSpecification/hospital-surgical-slice-spec-v1.19" },
+      "partialUpdate": {
+        "href": "/intentManagement/v5/intentSpecification/hospital-surgical-slice-spec-v1.19",
+        "method": "PATCH",
+        "warning": "PATCH is supported for compatibility but discouraged. Prefer PUT for deterministic full replacement."
+      }
+    }
+  }
+]
+```
+
+---
+
+## 6. Retrieve IntentSpecification:
+
+### Request:
+
+```http
+GET /intentManagement/v5/intentSpecification/hospital-surgical-slice-spec-v1.19
+Accept: application/json
+```
+
+### Request with cache override:
+
+```http
+GET /intentManagement/v5/intentSpecification/hospital-surgical-slice-spec-v1.19
+Accept: application/json
+Cache-Control: no-cache
+```
+
+### Success response:
+
+```http
+HTTP/1.1 200 OK
+Content-Type: application/json
+Content-Language: en-AU
+Content-Location: /intentManagement/v5/intentSpecification/hospital-surgical-slice-spec-v1.19
+ETag: "intent-spec-hospital-surgical-slice-spec-v1.19-v1"
+Last-Modified: Sat, 18 Apr 2026 02:00:00 GMT
+Cache-Control: private, max-age=300
+```
+
+```json
+{
+  "id": "hospital-surgical-slice-spec-v1.19",
+  "href": "/intentManagement/v5/intentSpecification/hospital-surgical-slice-spec-v1.19",
+  "name": "Hospital Surgical Slice Intent Specification",
+  "description": "Design-time specification for hospital surgical slice intents.",
+  "version": "1.19",
+  "lifecycleStatus": "ACTIVE",
+  "@type": "IntentSpecification",
+  "@baseType": "EntitySpecification",
+  "specCharacteristic": "...full characteristic catalogue...",
+  "expressionSpecification": "...full expression schema...",
+  "_links": {
+    "self": { "href": "/intentManagement/v5/intentSpecification/hospital-surgical-slice-spec-v1.19" },
+    "partialUpdate": {
+      "href": "/intentManagement/v5/intentSpecification/hospital-surgical-slice-spec-v1.19",
+      "method": "PATCH",
+      "warning": "PATCH is supported for compatibility but discouraged. Prefer PUT for deterministic full replacement."
+    }
+  }
+}
+```
+
+### Not found response:
+
+```http
+HTTP/1.1 404 Not Found
+Content-Type: application/json
+Content-Language: en-AU
+```
+
+```json
+{
+  "code": "RESOURCE_NOT_FOUND",
+  "reason": "INTENT_SPECIFICATION_NOT_FOUND",
+  "message": "IntentSpecification hospital-surgical-slice-spec-v1.19 was not found.",
+  "status": 404,
+  "referenceError": "https://mycsp.com.au/errors/RESOURCE_NOT_FOUND",
+  "@type": "Error"
+}
+```
+
+---
+
+## 7. Full update IntentSpecification:
+
+### Request:
+
+```http
+PUT /intentManagement/v5/intentSpecification/hospital-surgical-slice-spec-v1.19
+Content-Type: application/json
+Accept: application/json
+If-Match: "intent-spec-hospital-surgical-slice-spec-v1.19-v1"
+```
+
+```json
+{
+  "id": "hospital-surgical-slice-spec-v1.19",
+  "name": "Hospital Surgical Slice Intent Specification",
+  "description": "Updated draft description.",
+  "version": "1.19",
+  "lifecycleStatus": "DRAFT",
+  "@type": "IntentSpecification",
+  "@baseType": "EntitySpecification",
+  "specCharacteristic": [],
+  "expressionSpecification": {}
+}
+```
+
+### Success response:
+
+```http
+HTTP/1.1 200 OK
+Content-Type: application/json
+Content-Location: /intentManagement/v5/intentSpecification/hospital-surgical-slice-spec-v1.19
+ETag: "intent-spec-hospital-surgical-slice-spec-v1.19-v2"
+```
+
+```json
+{
+  "id": "hospital-surgical-slice-spec-v1.19",
+  "href": "/intentManagement/v5/intentSpecification/hospital-surgical-slice-spec-v1.19",
+  "name": "Hospital Surgical Slice Intent Specification",
+  "description": "Updated draft description.",
+  "version": "1.19",
+  "lifecycleStatus": "DRAFT",
+  "@type": "IntentSpecification",
+  "@baseType": "EntitySpecification"
+}
+```
+
+### Immutable resource response:
+
+```http
+HTTP/1.1 409 Conflict
+Content-Type: application/json
+```
+
+```json
+{
+  "code": "RESOURCE_IMMUTABLE",
+  "reason": "ACTIVE_SPECIFICATION_IMMUTABLE",
+  "message": "ACTIVE IntentSpecification resources cannot be updated. Create a new versioned DRAFT specification instead.",
+  "status": 409,
+  "referenceError": "https://mycsp.com.au/errors/RESOURCE_IMMUTABLE",
+  "@type": "Error"
+}
+```
+
+### ETag mismatch response:
+
+```http
+HTTP/1.1 412 Precondition Failed
+Content-Type: application/json
+```
+
+```json
+{
+  "code": "PRECONDITION_FAILED",
+  "reason": "ETAG_MISMATCH",
+  "message": "The supplied ETag does not match the current resource version.",
+  "status": 412,
+  "referenceError": "https://mycsp.com.au/errors/PRECONDITION_FAILED",
+  "@type": "Error"
+}
+```
+
+---
+
+## 8. Partial update IntentSpecification:
+
+### Request:
+
+```http
+PATCH /intentManagement/v5/intentSpecification/hospital-surgical-slice-spec-v1.19
+Content-Type: application/json
+Accept: application/json
+If-Match: "intent-spec-hospital-surgical-slice-spec-v1.19-v1"
+```
+
+```json
+{
+  "description": "Updated draft description only."
+}
+```
+
+### Success response:
+
+```http
+HTTP/1.1 200 OK
+Content-Type: application/json
+Content-Location: /intentManagement/v5/intentSpecification/hospital-surgical-slice-spec-v1.19
+ETag: "intent-spec-hospital-surgical-slice-spec-v1.19-v2"
+```
+
+```json
+{
+  "id": "hospital-surgical-slice-spec-v1.19",
+  "href": "/intentManagement/v5/intentSpecification/hospital-surgical-slice-spec-v1.19",
+  "name": "Hospital Surgical Slice Intent Specification",
+  "description": "Updated draft description only.",
+  "version": "1.19",
+  "lifecycleStatus": "DRAFT",
+  "@type": "IntentSpecification",
+  "@baseType": "EntitySpecification",
+  "_links": {
+    "self": { "href": "/intentManagement/v5/intentSpecification/hospital-surgical-slice-spec-v1.19" },
+    "partialUpdate": {
+      "href": "/intentManagement/v5/intentSpecification/hospital-surgical-slice-spec-v1.19",
+      "method": "PATCH",
+      "warning": "PATCH is supported for compatibility but discouraged. Prefer PUT for deterministic full replacement."
+    }
+  }
+}
+```
+
+---
+
+## 9. Delete IntentSpecification:
+
+### Request:
+
+```http
+DELETE /intentManagement/v5/intentSpecification/hospital-surgical-slice-spec-v1.19
+If-Match: "intent-spec-hospital-surgical-slice-spec-v1.19-v1"
+```
+
+### Success response:
+
+```http
+HTTP/1.1 204 No Content
+```
+
+### Rule:
+
+- Delete is allowed only for unused `DRAFT` specifications.
+- Delete is blocked for `ACTIVE` and `RETIRED` specifications.
+- Delete does not create `lifecycleStatus = DELETED`.
+
+### Delete blocked response:
+
+```http
+HTTP/1.1 409 Conflict
+Content-Type: application/json
+```
+
+```json
+{
+  "code": "RESOURCE_IMMUTABLE",
+  "reason": "SPECIFICATION_DELETE_NOT_ALLOWED",
+  "message": "IntentSpecification cannot be deleted because it is active, retired, or referenced by runtime resources.",
+  "status": 409,
+  "referenceError": "https://mycsp.com.au/errors/RESOURCE_IMMUTABLE",
+  "@type": "Error"
+}
+```
+
+---
+
+## 10. Activate IntentSpecification:
+
+### Request:
+
+```http
+POST /intentManagement/v5/intentSpecification/hospital-surgical-slice-spec-v1.20/activate
+Accept: application/json
+If-Match: "intent-spec-hospital-surgical-slice-spec-v1.20-v1"
+```
+
+### Success response:
+
+```http
+HTTP/1.1 200 OK
+Content-Type: application/json
+Content-Location: /intentManagement/v5/intentSpecification/hospital-surgical-slice-spec-v1.20
+ETag: "intent-spec-hospital-surgical-slice-spec-v1.20-v2"
+```
+
+```json
+{
+  "id": "hospital-surgical-slice-spec-v1.20",
+  "href": "/intentManagement/v5/intentSpecification/hospital-surgical-slice-spec-v1.20",
+  "familyId": "hospital-surgical-slice-spec",
+  "name": "Hospital Surgical Slice Intent Specification",
+  "version": "1.20",
+  "lifecycleStatus": "ACTIVE",
+  "previousActiveSpecification": {
+    "id": "hospital-surgical-slice-spec-v1.19",
+    "lifecycleStatus": "RETIRED",
+    "href": "/intentManagement/v5/intentSpecification/hospital-surgical-slice-spec-v1.19"
+  },
+  "@type": "IntentSpecification",
+  "@baseType": "EntitySpecification"
+}
+```
+
+### Rules:
+
+- Activation changes the target version from `DRAFT` to `ACTIVE`.
+- Activation retires the previous active version in the same family.
+- ID MS refreshes its own active-spec cache through an internal no-cache/refresh path.
+- ID MS emits status-change events for the new active version and the previous retired version.
+
+---
+
+## 11. Hub create subscription:
+
+### Request:
+
+```http
+POST /intentManagement/v5/intentSpecification/hub
+Content-Type: application/json
+Accept: application/json
+```
+
+```json
+{
+  "callback": "https://consumer.example.com/tmf/intentSpecification/events",
+  "query": "eventType=IntentSpecificationStatusChangeEvent",
+  "@type": "EventSubscription"
+}
+```
+
+### Success response:
+
+```http
+HTTP/1.1 201 Created
+Location: /intentManagement/v5/intentSpecification/hub/sub-001
+Content-Type: application/json
+ETag: "subscription-sub-001-v1"
+```
+
+```json
+{
+  "id": "sub-001",
+  "callback": "https://consumer.example.com/tmf/intentSpecification/events",
+  "query": "eventType=IntentSpecificationStatusChangeEvent",
+  "@type": "EventSubscription",
+  "_links": {
+    "self": { "href": "/intentManagement/v5/intentSpecification/hub/sub-001" }
+  }
+}
+```
+
+---
+
+## 12. Hub retrieve subscription:
+
+### Request:
+
+```http
+GET /intentManagement/v5/intentSpecification/hub/sub-001
+Accept: application/json
+```
+
+### Success response:
+
+```http
+HTTP/1.1 200 OK
+Content-Type: application/json
+ETag: "subscription-sub-001-v1"
+```
+
+```json
+{
+  "id": "sub-001",
+  "callback": "https://consumer.example.com/tmf/intentSpecification/events",
+  "query": "eventType=IntentSpecificationStatusChangeEvent",
+  "@type": "EventSubscription",
+  "_links": {
+    "self": { "href": "/intentManagement/v5/intentSpecification/hub/sub-001" }
+  }
+}
+```
+
+---
+
+## 13. Hub delete subscription:
+
+### Request:
+
+```http
+DELETE /intentManagement/v5/intentSpecification/hub/sub-001
+If-Match: "subscription-sub-001-v1"
+```
+
+### Success response:
+
+```http
+HTTP/1.1 204 No Content
+```
+
+---
+
+## 14. DB unavailable response:
+
+```http
+HTTP/1.1 503 Service Unavailable
+Content-Type: application/json
+Retry-After: 30
+```
+
+```json
+{
+  "code": "SERVICE_UNAVAILABLE",
+  "reason": "ID_MS_DATABASE_UNAVAILABLE",
+  "message": "IntentSpecification service is temporarily unavailable because the persistence layer cannot be accessed.",
+  "status": 503,
+  "referenceError": "https://mycsp.com.au/errors/SERVICE_UNAVAILABLE",
+  "@type": "Error"
+}
+```
+
+---
+
+## 15. External event family:
+
+ID MS emits external TMF-style resource events for `IntentSpecification` changes.
+
+| **Event** | **Trigger** |
 |---|---|
-| `/intentManagement/v5/intentSpecification/hub` | Create/list/manage subscriptions where applicable |
-| `/intentManagement/v5/intentSpecification/hub/{id}` | Retrieve/delete specific subscription |
+| `IntentSpecificationCreateEvent` | New `IntentSpecification` created |
+| `IntentSpecificationAttributeValueChangeEvent` | Editable draft attributes changed |
+| `IntentSpecificationStatusChangeEvent` | Lifecycle status changes, such as `DRAFT -> ACTIVE` or `ACTIVE -> RETIRED` |
+| `IntentSpecificationDeleteEvent` | Draft specification deleted |
 
-| **Event Type** | **Purpose** |
-|---|---|
-| `IntentSpecificationCreateEvent` | Specification created |
-| `IntentSpecificationAttributeValueChangeEvent` | Specification attribute changed |
-| `IntentSpecificationStatusChangeEvent` | Specification lifecycle/status changed |
-| `IntentSpecificationDeleteEvent` | Specification deleted/retired according to governance policy |
+These are external subscription events for the `IntentSpecification` resource.
 
-Subscriptions should use explicit `eventType` filters.
+They are not internal fulfilment events and must not expose II MS semantic validation details, lightweight II MS KP details, `t7.knowledge plane` data, optimiser decisions, runtime assurance state, telemetry, callback payloads, or internal candidate/resource scoring details.
 
-## Persistence Baseline:
+---
 
-| **Area** | **Baseline** |
-|---|---|
-| DB type | Managed PostgreSQL / PostgreSQL-compatible RDBMS |
-| Flexible body storage | JSONB |
-| DB ownership | Dedicated ID MS DB instance or logical managed DB boundary |
-| Shared DB | Not allowed across MSs |
-| Schema migration | Flyway or Liquibase |
-| Manual production schema changes | Not permitted |
-| Future DR | Cross-region active-passive DR path required |
+## 16. Event envelope pattern:
 
-## Security Baseline:
+```json
+{
+  "eventId": "evt-intent-spec-001",
+  "eventTime": "2026-04-18T12:00:00+10:00",
+  "eventType": "IntentSpecificationStatusChangeEvent",
+  "correlationId": "corr-intent-spec-001",
+  "description": "IntentSpecification lifecycle status changed.",
+  "priority": "Normal",
+  "title": "IntentSpecification status changed",
+  "event": {
+    "intentSpecification": {
+      "id": "hospital-surgical-slice-spec-v1.19",
+      "href": "/intentManagement/v5/intentSpecification/hospital-surgical-slice-spec-v1.19",
+      "name": "Hospital Surgical Slice Intent Specification",
+      "version": "1.19",
+      "lifecycleStatus": "ACTIVE",
+      "@type": "IntentSpecification",
+      "@baseType": "EntitySpecification"
+    }
+  },
+  "reportingSystem": {
+    "id": "intent-definition-ms",
+    "name": "Intent Definition MS"
+  },
+  "source": {
+    "id": "intent-definition-ms",
+    "name": "Intent Definition MS"
+  },
+  "@type": "IntentSpecificationStatusChangeEvent"
+}
+```
 
-| **Concern** | **Baseline** |
-|---|---|
-| External access | Through Gateway |
-| Authentication | Gateway-managed |
-| Authorisation | ID MS enforces resource/action-level authorisation where required |
-| Direct exposure | ID MS should not be directly exposed externally |
-| Correlation | ID MS logs and propagates correlation context |
-| Infrastructure access | Authenticated service identity, least privilege, encrypted connectivity, managed secrets/certs, environment-scoped roles, audit/monitoring |
+---
 
-## Open Items:
+## 17. IntentSpecificationCreateEvent:
 
-| **Open Item** | **Status** |
-|---|---|
-| Final concrete managed PostgreSQL service | Pending platform DB decision |
-| Exact physical DB boundary | Pending platform provisioning decision |
-| Final lifecycle state set | Needs confirmation against TMF/resource governance policy |
-| Delete vs retire semantics | Needs final governance rule |
-| Full event delivery implementation | Needs alignment with platform event delivery component |
-| Audit table vs platform audit service | Needs platform audit decision |
-| Exact authorisation rules | Needs security architecture decision |
-| Rate limits and API quotas | Needs gateway/API platform decision |
+```json
+{
+  "eventId": "evt-intent-spec-create-001",
+  "eventTime": "2026-04-18T12:00:00+10:00",
+  "eventType": "IntentSpecificationCreateEvent",
+  "correlationId": "corr-intent-spec-create-001",
+  "description": "IntentSpecification created.",
+  "priority": "Normal",
+  "title": "IntentSpecification created",
+  "event": {
+    "intentSpecification": {
+      "id": "hospital-surgical-slice-spec-v1.19",
+      "href": "/intentManagement/v5/intentSpecification/hospital-surgical-slice-spec-v1.19",
+      "name": "Hospital Surgical Slice Intent Specification",
+      "version": "1.19",
+      "lifecycleStatus": "DRAFT",
+      "@type": "IntentSpecification",
+      "@baseType": "EntitySpecification"
+    }
+  },
+  "reportingSystem": { "id": "intent-definition-ms", "name": "Intent Definition MS" },
+  "source": { "id": "intent-definition-ms", "name": "Intent Definition MS" },
+  "@type": "IntentSpecificationCreateEvent"
+}
+```
+
+---
+
+## 18. IntentSpecificationAttributeValueChangeEvent:
+
+```json
+{
+  "eventId": "evt-intent-spec-attr-001",
+  "eventTime": "2026-04-18T12:05:00+10:00",
+  "eventType": "IntentSpecificationAttributeValueChangeEvent",
+  "correlationId": "corr-intent-spec-attr-001",
+  "description": "IntentSpecification draft attributes changed.",
+  "priority": "Normal",
+  "title": "IntentSpecification attributes changed",
+  "event": {
+    "intentSpecification": {
+      "id": "hospital-surgical-slice-spec-v1.19",
+      "href": "/intentManagement/v5/intentSpecification/hospital-surgical-slice-spec-v1.19",
+      "name": "Hospital Surgical Slice Intent Specification",
+      "version": "1.19",
+      "lifecycleStatus": "DRAFT",
+      "@type": "IntentSpecification",
+      "@baseType": "EntitySpecification"
+    },
+    "changedAttributes": [
+      {
+        "name": "description",
+        "oldValue": "Design-time specification for hospital surgical slice intents.",
+        "newValue": "Updated draft description only."
+      }
+    ]
+  },
+  "reportingSystem": { "id": "intent-definition-ms", "name": "Intent Definition MS" },
+  "source": { "id": "intent-definition-ms", "name": "Intent Definition MS" },
+  "@type": "IntentSpecificationAttributeValueChangeEvent"
+}
+```
+
+---
+
+## 19. IntentSpecificationStatusChangeEvent:
+
+```json
+{
+  "eventId": "evt-intent-spec-status-001",
+  "eventTime": "2026-04-18T12:10:00+10:00",
+  "eventType": "IntentSpecificationStatusChangeEvent",
+  "correlationId": "corr-intent-spec-status-001",
+  "description": "IntentSpecification lifecycle status changed.",
+  "priority": "Normal",
+  "title": "IntentSpecification status changed",
+  "event": {
+    "intentSpecification": {
+      "id": "hospital-surgical-slice-spec-v1.20",
+      "href": "/intentManagement/v5/intentSpecification/hospital-surgical-slice-spec-v1.20",
+      "name": "Hospital Surgical Slice Intent Specification",
+      "version": "1.20",
+      "lifecycleStatus": "ACTIVE",
+      "@type": "IntentSpecification",
+      "@baseType": "EntitySpecification"
+    },
+    "previousLifecycleStatus": "DRAFT",
+    "newLifecycleStatus": "ACTIVE"
+  },
+  "reportingSystem": { "id": "intent-definition-ms", "name": "Intent Definition MS" },
+  "source": { "id": "intent-definition-ms", "name": "Intent Definition MS" },
+  "@type": "IntentSpecificationStatusChangeEvent"
+}
+```
+
+---
+
+## 20. IntentSpecificationDeleteEvent:
+
+```json
+{
+  "eventId": "evt-intent-spec-delete-001",
+  "eventTime": "2026-04-18T12:20:00+10:00",
+  "eventType": "IntentSpecificationDeleteEvent",
+  "correlationId": "corr-intent-spec-delete-001",
+  "description": "Unused draft IntentSpecification deleted.",
+  "priority": "Normal",
+  "title": "IntentSpecification deleted",
+  "event": {
+    "intentSpecification": {
+      "id": "hospital-surgical-slice-spec-v1.18-draft",
+      "href": "/intentManagement/v5/intentSpecification/hospital-surgical-slice-spec-v1.18-draft",
+      "name": "Hospital Surgical Slice Intent Specification",
+      "version": "1.18-draft",
+      "lifecycleStatus": "DRAFT",
+      "@type": "IntentSpecification",
+      "@baseType": "EntitySpecification"
+    }
+  },
+  "reportingSystem": { "id": "intent-definition-ms", "name": "Intent Definition MS" },
+  "source": { "id": "intent-definition-ms", "name": "Intent Definition MS" },
+  "@type": "IntentSpecificationDeleteEvent"
+}
+```
+
+---
+
+## 21. Final specification notes:
+
+- `@baseType` is `EntitySpecification`, not `ResourceSpecification`.
+- `specCharacteristic` is the high-level characteristic catalogue.
+- `expressionSpecification` is the authoritative request-shape schema.
+- `characteristicValueSpecification` is used only for defaults, examples, or constrained allowed values where useful.
+- Numeric SLA values in `characteristicValueSpecification` are illustrative/default guidance only, not semantic enforcement.
+- ID MS validates resource shape and syntax.
+- II MS and knowledge sources own semantic/policy validation.
+- IA MS owns runtime assurance.
+- `timeWindow.startDateTime` is required when `timeWindow` is present.
+- `priority` values are `critical`, `high`, and `standard`.
+- Use `priority`, not `priority_level`.
+- Do not use `clinical-critical`; use `critical`.
+- Do not use `DELETED` as an `IntentSpecification.lifecycleStatus`.
+- ETag is used for unsafe-operation concurrency only.
+- Caching is GET-only.
+- `If-None-Match` and `304 Not Modified` are not baselined.

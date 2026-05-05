@@ -106,7 +106,6 @@ Stale/mismatched ETag response:
 ```http
 HTTP/1.1 412 Precondition Failed
 Content-Type: application/json
-Cache-Control: no-store
 ```
 
 ```json
@@ -137,7 +136,6 @@ Content-Type: application/json
 Content-Language: en-AU
 ETag: "intent-spec-hospital-surgical-slice-spec-v1.19-v1"
 Last-Modified: Sat, 18 Apr 2026 02:00:00 GMT
-Cache-Control: no-store
 ```
 
 Notes:
@@ -188,7 +186,6 @@ HTTP/1.1 200 OK
 Content-Type: application/json
 Content-Location: /intentManagement/v5/intentSpecification/hospital-surgical-slice-spec-v1.19
 ETag: "intent-spec-hospital-surgical-slice-spec-v1.19-v2"
-Cache-Control: no-store
 ```
 
 Rules:
@@ -203,7 +200,6 @@ If resource is `ACTIVE`:
 ```http
 HTTP/1.1 409 Conflict
 Content-Type: application/json
-Cache-Control: no-store
 ```
 
 ```json
@@ -246,7 +242,6 @@ Success:
 
 ```http
 HTTP/1.1 204 No Content
-Cache-Control: no-store
 ```
 
 Rules:
@@ -278,7 +273,6 @@ HTTP/1.1 201 Created
 Location: /intentManagement/v5/intentSpecification/hub/sub-001
 Content-Type: application/json
 ETag: "subscription-sub-001-v1"
-Cache-Control: no-store
 ```
 
 ```json
@@ -315,7 +309,6 @@ Success:
 
 ```http
 HTTP/1.1 204 No Content
-Cache-Control: no-store
 ```
 
 ## Standard error body:
@@ -563,15 +556,21 @@ DELETE /intentManagement/v5/intentSpecification/{id}
 
 and any activation/state-changing operation where stale updates could overwrite newer resource state.
 
-### No no-store caching strategy for non-GET operations:
+### Non-GET caching rule:
 
-No `Cache-Control: no-store` strategy is baselined for non-GET operations.
+No caching strategy is baselined for non-GET operations.
 
-Current rule:
+This applies to:
 
-- caching strategy is only discussed for GET responses
-- non-GET operations do not have a caching strategy baseline
-- error responses do not have a caching strategy baseline
+- create operations
+- update operations
+- patch operations
+- delete operations
+- activation/state-changing operations
+- hub subscription write operations
+- error responses
+
+The caching baseline is intentionally limited to GET responses only.
 
 ### ID MS internal cache refresh on active-version promotion:
 
@@ -725,7 +724,7 @@ Rules:
 
 ### Final combined baseline statement:
 
-**ID MS caching applies only to GET responses. GET responses may use bounded private caching, with longer TTL for single-resource GETs and shorter TTL for list GETs. Clients either use the cached response within TTL or request a fresh copy using `Cache-Control: no-cache`. ETag is not used for GET revalidation; `If-None-Match` and `304 Not Modified` are not baselined. ETag is used only for unsafe operation concurrency through `If-Match`. No `Cache-Control: no-store` strategy is baselined for non-GET operations.**
+**ID MS caching applies only to GET responses. GET responses may use bounded private caching, with longer TTL for single-resource GETs and shorter TTL for list GETs. Clients either use the cached response within TTL or request a fresh copy using `Cache-Control: no-cache`. ETag is not used for GET revalidation; `If-None-Match` and `304 Not Modified` are not baselined. ETag is used only for unsafe operation concurrency through `If-Match`. No `` strategy is baselined for non-GET operations.**
 
 **On active-version promotion, ID MS refreshes its own active-specification cache using a no-cache/internal refresh path so the newly active version becomes the cached active copy and the previous active version is no longer returned as active.**
 
@@ -971,3 +970,215 @@ Business/user authorisation audit belongs to OEX where that decision is made.
 ### Baseline statement:
 
 **ID MS is protected behind NGW. NGW performs system-to-system authentication using mTLS and OAuth2 token validation. Business/user-level authorisation is owned by the OEX layer and should not be implemented as operation-level authorisation inside ID MS. ID MS trusts authenticated platform/system callers and enforces technical resource integrity, lifecycle/version governance, validation, ETag/If-Match concurrency rules, and state-machine constraints for `IntentSpecification` resources.**
+
+## Observability and audit baseline:
+
+### Observability purpose:
+
+ID MS must provide enough operational visibility to support production operations, troubleshooting, governance review, and platform audit.
+
+Observability covers:
+
+- structured logs
+- metrics
+- distributed tracing
+- audit records
+- dependency health signals
+- event/outbox delivery visibility
+
+### Correlation and trace context:
+
+ID MS must log and propagate correlation context.
+
+Rules:
+
+- Accept correlation/trace context from NGW where provided.
+- Generate a correlation ID if one is not provided.
+- Include correlation ID in structured logs.
+- Include correlation ID in emitted events.
+- Include correlation ID in outbox records.
+- Propagate correlation ID to downstream dependency calls where applicable.
+- Do not expose internal trace details in external error bodies.
+
+### Structured logging:
+
+ID MS logs should be structured and machine-readable.
+
+Recommended log fields:
+
+| **Field** | **Purpose** |
+|---|---|
+| `timestamp` | Event/log time |
+| `level` | Log level |
+| `service` | `intent-definition-ms` |
+| `correlationId` | End-to-end correlation |
+| `traceId` | Distributed trace ID where available |
+| `operation` | API or internal operation name |
+| `resourceId` | IntentSpecification ID where applicable |
+| `familyId` | Specification family where applicable |
+| `version` | Specification version where applicable |
+| `lifecycleStatus` | Current or target lifecycle status where applicable |
+| `result` | Success/failure/degraded |
+| `reasonCode` | Stable failure/reason code where applicable |
+
+### Sensitive-data logging rule:
+
+ID MS must not log:
+
+- OAuth2 tokens
+- mTLS certificate private material
+- secrets
+- DB credentials
+- cache credentials
+- Kafka credentials
+- full internal connection strings
+- sensitive platform headers
+- raw internal dependency stack traces in external responses
+
+Internal logs may include sanitized technical details needed for support.
+
+External error responses must remain stable and must not expose DB/cache/Kafka/internal infrastructure details.
+
+### Metrics baseline:
+
+ID MS should emit metrics for API operations, lifecycle transitions, dependency behaviour, caching, outbox/event delivery, and technical integrity validation.
+
+Recommended metrics include:
+
+| **Metric** | **Meaning** |
+|---|---|
+| `intent_specification_create_count` | Count of create operations |
+| `intent_specification_update_count` | Count of update operations |
+| `intent_specification_patch_count` | Count of patch operations |
+| `intent_specification_activation_count` | Count of activations |
+| `intent_specification_retirement_count` | Count of retirements |
+| `intent_specification_delete_count` | Count of delete operations |
+| `intent_specification_get_count` | Count of retrieve-by-id operations |
+| `intent_specification_list_count` | Count of list operations |
+| `intent_specification_validation_failure_count` | Count of syntax/schema validation failures |
+| `id_ms_db_error_count` | Count of DB/source-of-truth failures |
+| `id_ms_db_circuit_breaker_open_count` | Count of DB CB-open events |
+| `id_ms_cache_hit_count` | Count of cache hits |
+| `id_ms_cache_miss_count` | Count of cache misses |
+| `id_ms_cache_bypass_count` | Count of cache bypass events |
+| `id_ms_cache_write_failure_count` | Count of ignored cache-write failures |
+| `id_ms_outbox_pending_count` | Current pending outbox event count |
+| `id_ms_outbox_publish_failure_count` | Count of outbox publish failures |
+| `id_ms_webhook_delivery_failure_count` | Count of callback/webhook delivery failures |
+| `id_ms_webhook_delivery_retry_count` | Count of callback/webhook retry attempts |
+
+### Audit baseline:
+
+ID MS audit focuses on technical/governance-changing operations and technical integrity decisions.
+
+ID MS must audit:
+
+- create specification
+- update draft specification
+- patch draft specification
+- activate specification
+- retire previous active specification
+- delete unused draft specification
+- create hub subscription
+- delete hub subscription
+- rejected unsafe operation due to `If-Match` / ETag mismatch
+- rejected mutation of immutable `ACTIVE` specification
+- rejected mutation of immutable `RETIRED` specification
+- rejected delete due to references or lifecycle restrictions
+- technical validation failures where audit is required
+
+Business/user-level authorisation audit belongs to OEX, because OEX owns business/user-level authorisation decisions.
+
+### Audit record fields:
+
+Recommended audit record fields:
+
+| **Field** | **Purpose** |
+|---|---|
+| `auditId` | Stable audit record ID |
+| `timestamp` | Audit event time |
+| `service` | `intent-definition-ms` |
+| `operation` | Operation performed |
+| `resourceId` | Specification or subscription ID |
+| `familyId` | Specification family where applicable |
+| `version` | Specification version where applicable |
+| `previousLifecycleStatus` | Previous status where applicable |
+| `newLifecycleStatus` | New status where applicable |
+| `correlationId` | End-to-end correlation |
+| `callerIdentity` | Authenticated system identity from NGW where available |
+| `result` | Success/failure |
+| `reasonCode` | Stable reason code for failure or special decision |
+
+### Alerting baseline:
+
+Operational alerts should be raised for:
+
+- DB unavailable / DB circuit breaker open
+- repeated DB errors
+- outbox backlog above threshold
+- repeated Kafka/event publish failures
+- repeated webhook delivery failures
+- activation failures
+- repeated ETag/If-Match conflicts above normal threshold
+- high validation failure rate
+- cache bypass/failure rate above threshold
+- readiness failures
+- unexpected error rate increase
+
+### Tracing baseline:
+
+ID MS should participate in distributed tracing.
+
+Trace spans should cover:
+
+- inbound API request
+- DB/source-of-truth operation
+- cache read/write where applicable
+- outbox record creation
+- outbox relay publish attempt where applicable
+- webhook delivery attempt where applicable
+
+Trace data must not include secrets or sensitive token contents.
+
+### Baseline statement:
+
+**ID MS must log and propagate correlation context, emit structured operational telemetry, and audit technical/governance-changing operations. Business/user authorisation audit remains with OEX, while ID MS audit focuses on specification creation, update, activation, retirement, deletion, hub subscription changes, technical validation failures, ETag/If-Match integrity decisions, immutable-resource enforcement, and dependency failure signals.**
+
+
+## ID MS consistency sweep:
+
+### Sweep date:
+
+2026-05-05T00:12:35.703902+00:00
+
+### Overall result:
+
+**PASS**
+
+### Checks:
+
+| **Area** | **Result** | **Notes** |
+|---|---|---|
+| Service naming | PASS | `ID MS`, `intent-definition-ms`, and `IntentSpecification` terminology are present. |
+| Lifecycle states | PASS | `DRAFT`, `ACTIVE`, and `RETIRED` are present. `DELETED` is not used as a lifecycle state. |
+| GET-only caching | PASS | Caching is scoped to GET responses only. |
+| No GET ETag revalidation | PASS | `If-None-Match` and `304 Not Modified` are not baselined. |
+| ETag unsafe concurrency | PASS | ETag is positioned for `If-Match` unsafe operation concurrency. |
+| Non-GET caching | PASS | No caching strategy is baselined for non-GET operations. |
+| Dependency-specific circuit breakers | PASS | DB/cache/Kafka/webhook CB behaviours are present. |
+| Security boundary | PASS | NGW handles mTLS + OAuth2 token validation; OEX owns business/user-level authorisation. |
+| Eventing boundary | PASS | External `IntentSpecification*Event` family and boundary are captured. |
+| Persistence baseline | PASS | PostgreSQL-compatible RDBMS, JSONB, and outbox persistence are present. |
+| Boundary exclusions | PASS | ID MS does not own runtime fulfilment concerns. |
+
+### Notes requiring attention:
+
+- None.
+
+### Final consistency position:
+
+The ID MS design brief is internally consistent for the current baseline.
+
+The design keeps ID MS focused on design-time `IntentSpecification` resource ownership, lifecycle/version governance, syntax/resource-shape validation, ETag/If-Match concurrency, GET-only caching, external `IntentSpecification*Event` publication, PostgreSQL-compatible persistence, and technical observability/audit.
+
+ID MS does not own semantic validation, policy validation, candidate/resource feasibility, optimisation, runtime assurance, telemetry, or callback ingestion.
