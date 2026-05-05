@@ -507,3 +507,22 @@ IC MS uses transactional outbox for internal/external event publication and inbo
 
 ### Scaling:
 IC MS remains independently scalable at the application-instance level because durable state is not held in local memory.
+
+## Baseline update — IC MS security and access-control boundary:
+
+Date: 2026-05-05T09:50:32.634232+00:00
+
+### Updated file:
+- `ic_ms_design_brief.md`
+
+### Authentication:
+IC MS sits behind NGW. NGW performs system-to-system authentication using mTLS and OAuth2 token validation.
+
+### Authorisation boundary:
+Business/user-level authorisation is owned by OEX, not IC MS. IC MS does not implement business/user-level operation authorisation for runtime Intent or IntentReport operations.
+
+### IC MS responsibility:
+IC MS trusts authenticated platform/system callers and enforces technical resource integrity, syntactic validation, active-spec admission, lifecycle/status projection rules, version state-machine rules, ETag/If-Match concurrency, and delete-as-termination behaviour.
+
+### Audit:
+IC MS audits technical/governance-changing operations and technical integrity decisions. Business/user authorisation audit belongs to OEX where that decision is made.

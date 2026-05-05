@@ -1237,3 +1237,69 @@ Secrets must not be stored in application images or source files.
 ### Deployment baseline statement:
 
 **IC MS is a stateful MS, backed by a managed PostgreSQL-compatible RDBMS. IC MS application instances can still scale independently because durable state is externalised to the database rather than held in local memory. The database is the source of truth for retained `Intent` projections, internal `IntentVersion` history, `IntentReport` projections, subscriptions, inbox/outbox records, ETag values, and lifecycle/status projection state.**
+
+## Security and access-control baseline:
+
+### Authentication:
+
+IC MS sits behind NGW.
+
+NGW performs system-to-system authentication using:
+
+| **Mechanism** | **Purpose** |
+|---|---|
+| mTLS | Authenticates the calling system/client at transport layer |
+| OAuth2 token validation | Validates the calling workload/system token |
+
+### Authorisation boundary:
+
+IC MS does not own business/user-level operation authorisation.
+
+Business/user-level access control belongs in the OEX layer.
+
+| **Layer** | **Responsibility** |
+|---|---|
+| OEX | User/business-level access control, entitlement, role checks, and governance workflow permission |
+| NGW | System-to-system authentication using mTLS and OAuth2 token validation |
+| IC MS | Trusts authenticated platform/system callers and enforces technical resource integrity and lifecycle/state-machine rules |
+
+No OAuth2 scopes are assumed.
+
+No context-aware authorisation is baselined at NGW.
+
+### IC MS technical integrity responsibilities:
+
+IC MS still enforces:
+
+- valid request shape
+- concrete `intentSpecification.id` reference
+- active `IntentSpecification` validation for create/update admission
+- runtime `Intent` lifecycle/status rules
+- version lifecycle rules
+- projected `version` / internal active-version consistency
+- `ETag` / `If-Match` for unsafe operations
+- delete-as-termination rule
+- no physical delete by default
+- callback URL validation for hub subscriptions if hub endpoints are exposed to system callers
+
+### Audit baseline:
+
+IC MS must audit technical/governance-changing operations and technical integrity decisions, including:
+
+- create runtime Intent
+- full replacement update that creates a new runtime version
+- patch update that creates a new runtime version
+- lifecycle/status projection changes
+- termination request acceptance
+- creation/update of `IntentReport` projection where audit is required
+- hub subscription create/delete where IC MS owns the subscription route
+- rejected unsafe operation due to `If-Match` / ETag mismatch
+- rejected admission due to missing or invalid concrete `intentSpecification.id`
+- rejected admission due to inactive or unavailable `IntentSpecification`
+- rejected invalid lifecycle/version state transition
+
+Business/user authorisation audit belongs to OEX where that decision is made.
+
+### Baseline statement:
+
+**IC MS is protected behind NGW. NGW performs system-to-system authentication using mTLS and OAuth2 token validation. Business/user-level authorisation is owned by OEX and should not be implemented as operation-level authorisation inside IC MS. IC MS trusts authenticated platform/system callers and enforces technical resource integrity, syntactic validation, active-spec admission, lifecycle/status projection rules, version state-machine rules, ETag/If-Match concurrency, and delete-as-termination behaviour.**
