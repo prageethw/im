@@ -491,3 +491,27 @@ For the external `Intent` resource, IC MS simply projects the currently relevant
 
 ### Version history:
 Internal version history, `Standby`, `Retired`, rollback candidates, and previous versions remain internal unless exposed through `IntentReport` or a documented platform extension.
+
+## Baseline update — IC MS operation behaviour and IntentSpecification reference rule:
+
+Date: 2026-05-05T07:45:44.746447+00:00
+
+### Updated file:
+- `ic_ms_design_brief.md`
+
+### IntentSpecification reference rule:
+IC MS supports only concrete `intentSpecification.id` references in runtime `Intent` create/update requests. IC MS does not resolve `IntentSpecification` by family, key, name, or inferred payload shape.
+
+### Operation behaviour:
+- `POST /intent` requires concrete `intentSpecification.id`, validates against that exact active spec, and creates projected runtime version `v1`.
+- `GET /intent/{id}` returns current projected Intent state for that Intent ID, not the full internal version aggregate.
+- `GET /intent` lists current projected Intent states for retained Intent IDs.
+- `PUT /intent/{id}` is a platform extension for deterministic full replacement and creates a new runtime version when meaningful runtime content changes.
+- `PATCH /intent/{id}` is TMF-compatible partial update and creates a new runtime version when meaningful runtime content changes.
+- `DELETE /intent/{id}` is treated as termination, not physical deletion.
+
+### Termination version-state rule:
+`Active`, `Standby`, `InProgress`, `Degraded`, and `Paused` versions move to `Terminated`. `Rejected` remains `Rejected`, `Failed` remains `Failed`, and `Retired` remains `Retired`.
+
+### Baseline statement:
+For `POST`, `PUT`, and runtime-content-changing `PATCH`, IC MS validates runtime Intent content against the exact referenced `IntentSpecification.id`, and that specification must be `ACTIVE`. GET operations return current projected Intent state, not internal version aggregates. DELETE is termination, not physical deletion.

@@ -792,3 +792,166 @@ If needed, version history may be exposed through one of the following:
 ### Baseline statement:
 
 **For the external `Intent` resource, IC MS simply projects the currently relevant version of that Intent ID. `GET /intent/{id}` and `GET /intent` return current projected Intent state, not the full internal version aggregate. The returned `version` is the projected runtime version. Internal version history, `Standby`, `Retired`, rollback candidates, and previous versions remain internal unless exposed through `IntentReport` or a documented platform extension.**
+
+## Operation behaviour and IntentSpecification reference baseline:
+
+### IntentSpecification reference rule:
+
+IC MS supports only a concrete `IntentSpecification.id` reference in runtime `Intent` create/update requests.
+
+Supported:
+
+```json
+{
+  "intentSpecification": {
+    "id": "hospital-surgical-slice-spec-v1.20"
+  }
+}
+```
+
+Not supported:
+
+```json
+{
+  "intentSpecification": {
+    "familyId": "hospital-surgical-slice-spec"
+  }
+}
+```
+
+Not supported:
+
+```json
+{
+  "intentSpecification": {
+    "name": "Hospital Surgical Slice Intent Specification"
+  }
+}
+```
+
+IC MS does not resolve `IntentSpecification` by family, key, name, or inferred payload shape.
+
+### Two separate version concepts:
+
+| **Version concept** | **Applies to** | **Meaning** |
+|---|---|---|
+| `IntentSpecification` version | Design-time contract | Which schema/contract validates the runtime Intent |
+| `Intent` version | Runtime intent | Which runtime request/config version is projected, active, standby, failed, terminated, or retained |
+
+### Operation behaviour:
+
+| **Operation** | **Behaviour** |
+|---|---|
+| `POST /intent` | Requires concrete `intentSpecification.id`; validates against that exact spec; referenced spec must be `ACTIVE`; creates projected runtime version `v1` |
+| `GET /intent/{id}` | Returns current projected Intent state for that Intent ID, not the full internal version aggregate |
+| `GET /intent` | Lists current projected Intent states for retained Intent IDs |
+| `PUT /intent/{id}` | Platform extension for deterministic full replacement; if meaningful runtime content changes, creates a new runtime version; requires concrete `intentSpecification.id`; validates against that exact active spec |
+| `PATCH /intent/{id}` | TMF-compatible partial update; if meaningful runtime content changes, creates a new runtime version; requires concrete `intentSpecification.id` when runtime content needs validation |
+| `DELETE /intent/{id}` | Treated as termination, not physical delete; retained Intent projection moves to `Terminated` |
+
+### POST /intent rule:
+
+On create, IC MS requires:
+
+```json
+{
+  "intentSpecification": {
+    "id": "hospital-surgical-slice-spec-v1.20"
+  }
+}
+```
+
+Rules:
+
+- IC MS resolves exactly `hospital-surgical-slice-spec-v1.20`.
+- The referenced `IntentSpecification` must be `ACTIVE`.
+- IC MS validates runtime `Intent` content against that exact spec.
+- IC MS stores the concrete spec ID/version on the created projected Intent version.
+- Create starts projected runtime Intent version `v1`.
+- If no concrete `intentSpecification.id` is provided, IC MS rejects the request.
+
+### PUT /intent/{id} rule:
+
+`PUT` is a platform extension for deterministic full replacement.
+
+Rules:
+
+- Operates on the retained Intent identified by `{id}`.
+- Requires `If-Match`.
+- If meaningful runtime content changes, IC MS creates a new runtime Intent version.
+- The request must include concrete `intentSpecification.id`.
+- The referenced `IntentSpecification` must be `ACTIVE`.
+- IC MS validates the new runtime version against that exact spec.
+- The previous projected active version remains active while the new version is `Acknowledged` / `InProgress`.
+- IC MS stores the concrete spec ID/version on the new runtime Intent version.
+
+### PATCH /intent/{id} rule:
+
+`PATCH` is supported for TMF compatibility but not encouraged for ordinary edits.
+
+Rules:
+
+- Operates on the retained Intent identified by `{id}`.
+- Requires `If-Match`.
+- If the patch changes meaningful runtime content, IC MS creates a new runtime Intent version.
+- The patch must include concrete `intentSpecification.id` when runtime content needs spec validation.
+- The referenced `IntentSpecification` must be `ACTIVE`.
+- IC MS validates the new runtime version against that exact spec.
+- If the patch only changes non-runtime metadata, it may update the current projection without creating a new runtime version, subject to governance rules.
+
+### GET rules:
+
+#### GET /intent/{id}:
+
+- Returns the current projected Intent state for that Intent ID.
+- Does not return the full internal version aggregate by default.
+- Includes the projected runtime `version`.
+- Includes the concrete `IntentSpecification.id` used by the projected version.
+- Does not resolve or mutate specification versions.
+
+#### GET /intent:
+
+- Lists current projected Intent states for retained Intent IDs.
+- May support filters such as:
+  - `lifecycleStatus`
+  - `version`
+  - `intentSpecification.id`
+- Does not resolve or mutate specification versions.
+
+### DELETE /intent/{id} rule:
+
+`DELETE` is treated as termination, not physical deletion.
+
+Rules:
+
+- Operates on the retained Intent identified by `{id}`.
+- Requires `If-Match`.
+- Transitions Intent-level `lifecycleStatus` to `Terminated`.
+- Runtime Intent record remains retained for audit, reporting, lifecycle history, and traceability.
+
+### Termination version-state rule:
+
+| **Version state before termination** | **Version state after termination** |
+|---|---|
+| `Active` | `Terminated` |
+| `Standby` | `Terminated` |
+| `InProgress` | `Terminated` |
+| `Degraded` | `Terminated` |
+| `Paused` | `Terminated` |
+| `Rejected` | Remains `Rejected` |
+| `Failed` | Remains `Failed` |
+| `Retired` | Remains `Retired` |
+
+Reason:
+
+Termination closes live/candidate versions, but should not rewrite final historical outcomes such as `Rejected`, `Failed`, or `Retired`.
+
+### Baseline statement:
+
+**IC MS supports only concrete `intentSpecification.id` references in runtime `Intent` create/update requests. IC MS does not resolve `IntentSpecification` by family, key, name, or inferred payload shape.**
+
+**For `POST`, `PUT`, and runtime-content-changing `PATCH`, IC MS validates runtime Intent content against the exact referenced `IntentSpecification.id`, and that specification must be `ACTIVE`.**
+
+**`GET` operations return current projected Intent state, not internal version aggregates, and do not resolve or mutate specification versions.**
+
+**`DELETE /intent/{id}` is treated as termination, not physical deletion. It transitions the retained Intent projection to `Terminated` and updates live/candidate version states according to the termination rules.**
