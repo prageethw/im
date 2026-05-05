@@ -526,3 +526,43 @@ IC MS trusts authenticated platform/system callers and enforces technical resour
 
 ### Audit:
 IC MS audits technical/governance-changing operations and technical integrity decisions. Business/user authorisation audit belongs to OEX where that decision is made.
+
+## Baseline update — IC MS observability and audit:
+
+Date: 2026-05-05T09:54:36.969843+00:00
+
+### Updated file:
+- `ic_ms_design_brief.md`
+
+### Baseline:
+IC MS must log and propagate correlation context, emit structured operational telemetry, participate in distributed tracing, and audit technical/governance-changing operations.
+
+### Observability:
+IC MS emits structured logs, metrics, traces, dependency health signals, active-spec lookup/cache fallback metrics, inbox/outbox metrics, event-delivery metrics, webhook delivery metrics, lifecycle projection metrics, version-state metrics, and IntentReport projection metrics.
+
+### Audit:
+Business/user-level authorisation audit remains with OEX. IC MS audit focuses on runtime Intent admission, version creation, lifecycle/status projection, active/projected-version changes, termination, IntentReport projection, technical validation failures, ETag/If-Match integrity decisions, dependency failure signals, and consumed-event idempotency decisions.
+
+### Sensitive data:
+IC MS must not log OAuth2 tokens, certificate private material, secrets, credentials, full internal connection strings, sensitive platform headers, or raw internal dependency details in external responses.
+
+## Baseline update — IC MS specification document:
+
+Date: 2026-05-05T10:08:45.517155+00:00
+
+### New stable file:
+- `ic_ms_specification.md`
+
+### Baseline:
+Created the IC MS specification document containing API endpoints, request/response examples, common errors, runtime Intent create/list/retrieve/update/patch/terminate examples, IntentReport examples, hub subscription examples, external `Intent*Event` examples, external `IntentReport*Event` examples, and internal `IntentValidatedEvent` publication note.
+
+### Key alignment:
+- Runtime create/update supports only concrete `intentSpecification.id`.
+- `GET /intent/{id}` returns current projected Intent state, not full internal version aggregate.
+- `DELETE /intent/{id}` is termination, not physical deletion.
+- `PUT /intent/{id}` is platform extension for deterministic full replacement.
+- `PATCH /intent/{id}` is supported for TMF compatibility.
+- ETag is used for unsafe-operation concurrency through `If-Match`.
+- GET cache refresh uses `Cache-Control: no-cache`.
+- Event examples are curated external projection events.
+

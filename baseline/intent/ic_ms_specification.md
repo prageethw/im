@@ -1,230 +1,349 @@
-# IC MS Specification:
+# ic_ms_specification.md
 
-## Purpose:
+## IC MS Specification:
 
-This specification defines the Intent Controller MS (IC MS) runtime API surface, interfaces, request/response examples, headers, and baseline event/subscription behaviour.
+### Service identity:
 
-IC MS owns runtime `Intent` resources, runtime lifecycle projection, `IntentReport` where applicable, and `/intent/hub` subscriptions.
-
-IC MS does not own design-time `IntentSpecification` governance. ID MS owns `IntentSpecification`.
-
-## Service Identity:
-
-| **Attribute** | **Value** |
+| **Item** | **Baseline** |
 |---|---|
-| Display name | Intent Controller MS |
-| Service name | `intent-controller-ms` |
+| Full name | Intent Controller MS |
 | Short name | IC MS |
+| Service name | `intent-controller-ms` |
+| Domain | Intent Domain |
+| Base path | `/intentManagement/v5` |
 | Primary resource | `Intent` |
-| Related resource | `IntentReport` |
-| Base path | `/intentManagement/v5/intent` |
-| Hub path | `/intentManagement/v5/intent/hub` |
-| API style | TMF-aligned REST |
-| Source-of-truth database | Managed PostgreSQL / PostgreSQL-compatible RDBMS |
-| Event style | External TMF-aligned events; internal CloudEvents where needed |
+| Secondary resource | `IntentReport` |
+| Primary responsibility | TMF-facing runtime `Intent` controller, syntactic admission, lifecycle/status projection, and external runtime intent events |
 
-## Interface Summary:
+### Boundary statement:
 
-| **Interface** | **Method / Path** | **Purpose** | **Baseline Status** |
-|---|---|---|---|
-| Create Intent | `POST /intentManagement/v5/intent` | Create a runtime `Intent` after syntactic validation against an ACTIVE `IntentSpecification` | Baselined |
-| List Intents | `GET /intentManagement/v5/intent` | Return a top-level array of runtime `Intent` resources | Draft baseline |
-| Retrieve Intent | `GET /intentManagement/v5/intent/{id}` | Retrieve one canonical runtime `Intent` resource | Baselined |
-| Retrieve IntentReport | `GET /intentManagement/v5/intent/{id}/report` | Retrieve externally visible runtime report/projection for one intent | Draft baseline |
-| Create hub subscription | `POST /intentManagement/v5/intent/hub` | Subscribe to runtime `Intent*Event` notifications | Baselined |
-| Retrieve hub subscription | `GET /intentManagement/v5/intent/hub/{id}` | Retrieve one runtime intent hub subscription | Draft baseline |
-| Delete hub subscription | `DELETE /intentManagement/v5/intent/hub/{id}` | Remove one runtime intent hub subscription | Baselined |
+IC MS owns the external runtime `Intent` and `IntentReport` resources.
 
-## Interface-Level Rules:
+IC MS validates runtime `Intent` request shape against a concrete active `IntentSpecification.id`, admits syntactically valid runtime intents, emits `IntentValidatedEvent` as an internal state/progress event, projects external lifecycle/status based on downstream outcomes, and exposes curated `IntentReport` projections.
 
-| **Area** | **Baseline** |
-|---|---|
-| Resource owner | IC MS / `intent-controller-ms` |
-| Primary resource | `Intent` |
-| Base path | `/intentManagement/v5/intent` |
-| Hub path | `/intentManagement/v5/intent/hub` |
-| API style | TMF-aligned REST |
-| Response model | Full resource body for create/retrieve; top-level array for list; `204 No Content` for delete subscription success |
-| ETag | Mandatory for create, retrieve, list, report retrieve, and subscription create/retrieve responses |
-| If-Match | Required for `DELETE /intent/hub/{id}` and future unsafe update/delete operations |
-| Runtime Intent ID | Server assigned |
-| Runtime syntax validation | IC MS validates against an ACTIVE `IntentSpecification` |
-| Semantic/policy validation | II MS and Knowledge Plane, not IC MS |
-| Runtime assurance | IA MS, not IC MS |
-| Priority field | `priority`, not `priority_level` |
-| External event delivery | At-least-once; consumers deduplicate using stable `eventId` |
+IC MS does not own:
 
-## Runtime Intent Resource Baseline:
+- design-time `IntentSpecification` catalogue
+- semantic validation
+- policy validation
+- optimisation
+- network apply
+- runtime assurance truth
+- real-time telemetry
+- callback ingestion
+- raw orchestrator callback interpretation
 
-Use:
+---
+
+## 1. API endpoints:
+
+### Intent resource APIs:
+
+| **Purpose** | **Method** | **Endpoint** | **Position** |
+|---|---:|---|---|
+| Create runtime intent | `POST` | `/intentManagement/v5/intent` | TMF-aligned |
+| List runtime intents | `GET` | `/intentManagement/v5/intent` | TMF-aligned |
+| Retrieve runtime intent by ID | `GET` | `/intentManagement/v5/intent/{id}` | TMF-aligned |
+| Full replace runtime intent | `PUT` | `/intentManagement/v5/intent/{id}` | Platform extension |
+| Partial update runtime intent | `PATCH` | `/intentManagement/v5/intent/{id}` | TMF-aligned |
+| Terminate runtime intent | `DELETE` | `/intentManagement/v5/intent/{id}` | TMF-aligned delete verb, platform behaviour is termination not physical deletion |
+
+### IntentReport APIs:
+
+| **Purpose** | **Method** | **Endpoint** | **Position** |
+|---|---:|---|---|
+| List reports for intent | `GET` | `/intentManagement/v5/intent/{intentId}/intentReport` | Platform/TMF-style nested report projection |
+| Retrieve report by ID | `GET` | `/intentManagement/v5/intent/{intentId}/intentReport/{id}` | Platform/TMF-style nested report projection |
+
+### Hub subscription APIs:
+
+Strict TMF route form:
+
+| **Purpose** | **Method** | **Endpoint** |
+|---|---:|---|
+| Create event subscription | `POST` | `/intentManagement/v5/hub` |
+| Delete event subscription | `DELETE` | `/intentManagement/v5/hub/{id}` |
+
+Accepted domain-scoped platform extension:
+
+| **Purpose** | **Method** | **Endpoint** |
+|---|---:|---|
+| Create intent event subscription | `POST` | `/intentManagement/v5/intent/hub` |
+| Retrieve intent event subscription | `GET` | `/intentManagement/v5/intent/hub/{id}` |
+| Delete intent event subscription | `DELETE` | `/intentManagement/v5/intent/hub/{id}` |
+
+---
+
+## 2. Common conventions:
+
+### Concrete IntentSpecification reference rule:
+
+Runtime `Intent` create/update requests must reference a concrete `IntentSpecification.id`.
+
+Supported:
 
 ```json
 {
+  "intentSpecification": {
+    "id": "hospital-surgical-slice-spec-v1.20"
+  }
+}
+```
+
+Not supported:
+
+```json
+{
+  "intentSpecification": {
+    "familyId": "hospital-surgical-slice-spec"
+  }
+}
+```
+
+Not supported:
+
+```json
+{
+  "intentSpecification": {
+    "name": "Hospital Surgical Slice Intent Specification"
+  }
+}
+```
+
+IC MS does not resolve `IntentSpecification` by family, key, name, or inferred payload shape.
+
+### Intent-level lifecycleStatus values:
+
+```text
+Acknowledged
+InProgress
+Active
+Degraded
+Paused
+Rejected
+Failed
+Terminated
+```
+
+### Intent-version lifecycleStatus values:
+
+```text
+Acknowledged
+InProgress
+Active
+Standby
+Degraded
+Paused
+Rejected
+Failed
+Terminated
+Retired
+```
+
+### External projection rule:
+
+`GET /intent/{id}` returns the current projected `Intent` state for that Intent ID.
+
+It does not return the full internal version aggregate by default.
+
+The returned `version` is the projected runtime version.
+
+Historical version state such as `Standby`, `Retired`, rollback candidates, and previous versions remains internal unless exposed through `IntentReport` or a documented platform extension.
+
+### Termination rule:
+
+`DELETE /intent/{id}` is treated as termination, not physical deletion.
+
+Runtime `Intent` records are retained for audit, reporting, lifecycle history, and traceability.
+
+### Caching and ETag rules:
+
+- Caching applies only to GET responses.
+- Clients may request a fresh GET response with `Cache-Control: no-cache`.
+- ETag is used for unsafe-operation concurrency through `If-Match`.
+- No caching strategy is baselined for non-GET operations.
+
+### Typed placeholder rule:
+
+When examples abbreviate large repeated sections, keep the field’s real JSON type.
+
+Use array placeholders for arrays and object placeholders for objects.
+
+Example:
+
+```json
+{
+  "resources": [
+    "...similar payload to previous example..."
+  ],
+  "evaluationSummary": {
+    "...similar payload to previous example..."
+  }
+}
+```
+
+Do not use string placeholders for array/object fields.
+
+---
+
+## 3. Common error body:
+
+```json
+{
+  "code": "...",
+  "reason": "...",
+  "message": "...",
+  "status": 400,
+  "referenceError": "https://mycsp.com.au/errors/...",
+  "@type": "Error"
+}
+```
+
+### Common errors:
+
+| **HTTP** | **Code** | **Scenario** |
+|---:|---|---|
+| `400` | `BAD_REQUEST` | Invalid JSON or invalid request structure |
+| `404` | `RESOURCE_NOT_FOUND` | Intent, IntentReport, or subscription not found |
+| `409` | `INVALID_STATE_TRANSITION` | Requested lifecycle/version transition is not allowed |
+| `409` | `RESOURCE_CONFLICT` | Runtime update conflicts with current projection state |
+| `412` | `PRECONDITION_FAILED` | Missing/mismatched `If-Match` on unsafe operation |
+| `422` | `VALIDATION_FAILED` | Runtime Intent fails request-shape/spec validation |
+| `422` | `INTENT_SPECIFICATION_NOT_ACTIVE` | Referenced IntentSpecification is not active |
+| `503` | `SERVICE_UNAVAILABLE` | IC MS DB unavailable or active spec cannot be confirmed |
+| `500` | `INTERNAL_ERROR` | Unexpected server error |
+
+---
+
+## 4. Create Intent:
+
+### Request:
+
+```http
+POST /intentManagement/v5/intent
+Content-Type: application/json
+Accept: application/json
+```
+
+```json
+{
+  "name": "Sydney Hospital Surgical Connection Intent",
+  "description": "Request for a surgical connection in Sydney Hospital.",
+  "humanExpression": "I need a surgical connection in Sydney Hospital with latency less than or equal to 10 ms and availability at least 99.99%.",
+  "intentSpecification": {
+    "id": "hospital-surgical-slice-spec-v1.20"
+  },
+  "expression": {
+    "location": {
+      "locationId": "sydney-hospital",
+      "locationType": "hospital",
+      "geographicScope": "campus"
+    },
+    "serviceClass": "critical-gold",
+    "priority": "critical",
+    "maxLatencyMs": 10,
+    "minAvailabilityPercent": 99.99,
+    "maxJitterMs": 2,
+    "maxPacketLossPercent": 0.01,
+    "redundancyRequired": true,
+    "preferredAccessTechnology": "5G",
+    "timeWindow": {
+      "startDateTime": "2026-04-18T12:00:00+10:00"
+    }
+  },
+  "validFor": {
+    "startDateTime": "2026-04-18T12:00:00+10:00"
+  },
   "@type": "Intent",
   "@baseType": "Entity"
 }
 ```
 
-For surgical hospital slice examples:
-
-| **Field / Rule** | **Baseline** |
-|---|---|
-| IntentSpecification reference | `hospital-surgical-slice-spec-v1.19` |
-| Priority field | `priority`, not `priority_level` |
-| Human expression | Include `humanExpression` |
-| Latency expression | `maxLatencyMs: 10`, equivalent to latency <= 10 ms |
-| Availability expression | `minAvailabilityPercent: 99.99`, equivalent to availability >= 99.99% |
-| Validity | Include both `validFor.startDateTime` and `validFor.endDateTime` |
-| Resource type | `@type: Intent` |
-| Base type | `@baseType: Entity` |
-
-## Create Intent:
-
-### Request:
-
-```http
-POST /intentManagement/v5/intent HTTP/1.1
-Host: api.mycsp.com.au
-Content-Type: application/json
-Accept: application/json
-Content-Language: en-AU
-correlationid: corr-icms-20260504-001
-```
-
-```json
-{
-  "@type": "Intent",
-  "@baseType": "Entity",
-  "name": "Hospital surgical slice intent",
-  "description": "Request a low-latency and high-availability network slice for surgical hospital services.",
-  "intentSpecification": {
-    "id": "hospital-surgical-slice-spec-v1.19",
-    "href": "/intentManagement/v5/intentSpecification/hospital-surgical-slice-spec-v1.19",
-    "version": "1.19"
-  },
-  "humanExpression": "Provide a critical surgical slice for Sydney Hospital with latency <= 10 ms and availability >= 99.99%.",
-  "expression": {
-    "location": {
-      "locationId": "sydney-hospital",
-      "locationType": "hospital"
-    },
-    "serviceClass": "surgical-slice",
-    "priority": "critical",
-    "maxLatencyMs": 10,
-    "minAvailabilityPercent": 99.99,
-    "redundancyRequired": true,
-    "preferredAccessTechnology": "5G"
-  },
-  "validFor": {
-    "startDateTime": "2026-05-04T12:00:00+10:00",
-    "endDateTime": "2026-05-04T18:00:00+10:00"
-  }
-}
-```
-
-### Successful Response:
+### Success response:
 
 ```http
 HTTP/1.1 201 Created
+Location: /intentManagement/v5/intent/INT-HOSP-2026-001
 Content-Type: application/json
 Content-Language: en-AU
-Location: /intentManagement/v5/intent/INT-HOSP-2026-001
-Content-Location: /intentManagement/v5/intent/INT-HOSP-2026-001
-ETag: "icms-intent-INT-HOSP-2026-001-rev-001"
-Last-Modified: Mon, 04 May 2026 12:00:00 GMT
-correlationid: corr-icms-20260504-001
+ETag: "intent-INT-HOSP-2026-001-v1"
+Last-Modified: Sat, 18 Apr 2026 02:00:00 GMT
 ```
 
 ```json
 {
   "id": "INT-HOSP-2026-001",
   "href": "/intentManagement/v5/intent/INT-HOSP-2026-001",
-  "@type": "Intent",
-  "@baseType": "Entity",
-  "name": "Hospital surgical slice intent",
-  "description": "Request a low-latency and high-availability network slice for surgical hospital services.",
-  "lifecycleStatus": "InProgress",
-  "version": "1.0",
-  "effectiveVersion": null,
+  "name": "Sydney Hospital Surgical Connection Intent",
+  "description": "Request for a surgical connection in Sydney Hospital.",
+  "humanExpression": "I need a surgical connection in Sydney Hospital with latency less than or equal to 10 ms and availability at least 99.99%.",
+  "version": "v1",
+  "lifecycleStatus": "Acknowledged",
+  "statusReason": "Intent request accepted for semantic validation and fulfilment.",
+  "statusChangeDate": "2026-04-18T12:00:00+10:00",
   "intentSpecification": {
-    "id": "hospital-surgical-slice-spec-v1.19",
-    "href": "/intentManagement/v5/intentSpecification/hospital-surgical-slice-spec-v1.19",
-    "version": "1.19"
+    "id": "hospital-surgical-slice-spec-v1.20",
+    "href": "/intentManagement/v5/intentSpecification/hospital-surgical-slice-spec-v1.20"
   },
-  "humanExpression": "Provide a critical surgical slice for Sydney Hospital with latency <= 10 ms and availability >= 99.99%.",
   "expression": {
-    "location": {
-      "locationId": "sydney-hospital",
-      "locationType": "hospital"
-    },
-    "serviceClass": "surgical-slice",
-    "priority": "critical",
-    "maxLatencyMs": 10,
-    "minAvailabilityPercent": 99.99,
-    "redundancyRequired": true,
-    "preferredAccessTechnology": "5G"
+    "...same payload as request..."
   },
   "validFor": {
-    "startDateTime": "2026-05-04T12:00:00+10:00",
-    "endDateTime": "2026-05-04T18:00:00+10:00"
+    "startDateTime": "2026-04-18T12:00:00+10:00"
   },
-  "creationDate": "2026-05-04T12:00:00+10:00",
-  "lastUpdate": "2026-05-04T12:00:00+10:00",
+  "@type": "Intent",
+  "@baseType": "Entity",
   "_links": {
     "self": {
       "href": "/intentManagement/v5/intent/INT-HOSP-2026-001"
     },
-    "report": {
-      "href": "/intentManagement/v5/intent/INT-HOSP-2026-001/report"
+    "intentReport": {
+      "href": "/intentManagement/v5/intent/INT-HOSP-2026-001/intentReport"
     },
     "partialUpdate": {
       "href": "/intentManagement/v5/intent/INT-HOSP-2026-001",
       "method": "PATCH",
-      "warning": "PATCH is supported for compatibility, but lifecycle-sensitive changes should use governed full update or versioning patterns."
+      "warning": "PATCH is supported for TMF compatibility but not encouraged for ordinary edits. Prefer PUT where deterministic full replacement is supported."
     }
   }
 }
 ```
 
-### Behaviour:
+### Create validation rule:
 
-| **Concern** | **Baseline** |
-|---|---|
-| Owner | IC MS |
-| Success response | `201 Created` |
-| ID assignment | Server assigned |
-| ETag | Mandatory |
-| Validation | Syntactic validation against an ACTIVE IntentSpecification |
-| Semantic validation | II MS / Knowledge Plane, not IC MS |
-| Internal event | Emit `IntentValidatedEvent` after successful validation/persistence |
-| External event | Emit `IntentCreateEvent` where subscription policy requires |
+IC MS emits `IntentValidatedEvent` after syntactic validation succeeds and the external Intent projection is persisted.
 
-## List Intents:
+`IntentValidatedEvent` is a state/progress event, not a point-to-point command for a specific consumer.
+
+---
+
+## 5. List Intents:
 
 ### Request:
 
 ```http
-GET /intentManagement/v5/intent?lifecycleStatus=Active&limit=20&offset=0 HTTP/1.1
-Host: api.mycsp.com.au
+GET /intentManagement/v5/intent?offset=0&limit=10&lifecycleStatus=Active
 Accept: application/json
-Accept-Language: en-AU
-Cache-Control: no-cache
-correlationid: corr-icms-20260504-002
 ```
 
-### Successful Response:
+### Request with fresh-read override:
+
+```http
+GET /intentManagement/v5/intent?offset=0&limit=10&lifecycleStatus=Active
+Accept: application/json
+Cache-Control: no-cache
+```
+
+### Success response:
 
 ```http
 HTTP/1.1 200 OK
 Content-Type: application/json
 Content-Language: en-AU
-Content-Location: /intentManagement/v5/intent?lifecycleStatus=Active&limit=20&offset=0
 X-Total-Count: 1
 X-Result-Count: 1
-ETag: "icms-intent-list-active-rev-012"
-Last-Modified: Mon, 04 May 2026 12:10:00 GMT
+ETag: "intent-list-active-v21"
 Cache-Control: private, max-age=60
-correlationid: corr-icms-20260504-002
 ```
 
 ```json
@@ -232,527 +351,944 @@ correlationid: corr-icms-20260504-002
   {
     "id": "INT-HOSP-2026-001",
     "href": "/intentManagement/v5/intent/INT-HOSP-2026-001",
-    "@type": "Intent",
-    "@baseType": "Entity",
-    "name": "Hospital surgical slice intent",
-    "description": "Request a low-latency and high-availability network slice for surgical hospital services.",
+    "name": "Sydney Hospital Surgical Connection Intent",
+    "version": "v2",
     "lifecycleStatus": "Active",
-    "version": "1.0",
-    "effectiveVersion": "1.0",
+    "statusReason": "Intent version v2 is active and assurance is healthy.",
+    "statusChangeDate": "2026-04-18T12:20:00+10:00",
     "intentSpecification": {
-      "id": "hospital-surgical-slice-spec-v1.19",
-      "href": "/intentManagement/v5/intentSpecification/hospital-surgical-slice-spec-v1.19",
-      "version": "1.19"
+      "id": "hospital-surgical-slice-spec-v1.20"
     },
-    "humanExpression": "Provide a critical surgical slice for Sydney Hospital with latency <= 10 ms and availability >= 99.99%.",
-    "validFor": {
-      "startDateTime": "2026-05-04T12:00:00+10:00",
-      "endDateTime": "2026-05-04T18:00:00+10:00"
-    },
-    "creationDate": "2026-05-04T12:00:00+10:00",
-    "lastUpdate": "2026-05-04T12:10:00+10:00",
-    "_links": {
-      "self": {
-        "href": "/intentManagement/v5/intent/INT-HOSP-2026-001"
-      },
-      "report": {
-        "href": "/intentManagement/v5/intent/INT-HOSP-2026-001/report"
-      }
-    }
+    "@type": "Intent",
+    "@baseType": "Entity"
   }
 ]
 ```
 
-### Behaviour:
+### Query parameters:
 
-| **Concern** | **Baseline** |
+| **Parameter** | **Meaning** |
 |---|---|
-| Owner | IC MS |
-| Success response | `200 OK` |
-| Response body | Top-level array of Intent resources |
-| Wrapper object | None |
-| Headers | `X-Total-Count`, `X-Result-Count`, `ETag`, `Last-Modified`, `Content-Location` |
-| Caching | Private cache by default |
+| `offset` | Zero-based start position |
+| `limit` | Maximum number of records |
+| `lifecycleStatus` | Filter by projected external lifecycle status |
+| `version` | Filter by projected runtime version |
+| `intentSpecification.id` | Filter by concrete IntentSpecification ID |
 
-## Retrieve Intent:
+---
+
+## 6. Retrieve Intent:
 
 ### Request:
 
 ```http
-GET /intentManagement/v5/intent/INT-HOSP-2026-001 HTTP/1.1
-Host: api.mycsp.com.au
+GET /intentManagement/v5/intent/INT-HOSP-2026-001
 Accept: application/json
-Accept-Language: en-AU
-Cache-Control: no-cache
-correlationid: corr-icms-20260504-003
 ```
 
-### Successful Response:
+### Request with fresh-read override:
+
+```http
+GET /intentManagement/v5/intent/INT-HOSP-2026-001
+Accept: application/json
+Cache-Control: no-cache
+```
+
+### Success response:
 
 ```http
 HTTP/1.1 200 OK
 Content-Type: application/json
 Content-Language: en-AU
 Content-Location: /intentManagement/v5/intent/INT-HOSP-2026-001
-ETag: "icms-intent-INT-HOSP-2026-001-rev-004"
-Last-Modified: Mon, 04 May 2026 12:10:00 GMT
-Cache-Control: private, max-age=60
-correlationid: corr-icms-20260504-003
+ETag: "intent-INT-HOSP-2026-001-v3"
+Last-Modified: Sat, 18 Apr 2026 02:20:00 GMT
+Cache-Control: private, max-age=300
 ```
 
 ```json
 {
   "id": "INT-HOSP-2026-001",
   "href": "/intentManagement/v5/intent/INT-HOSP-2026-001",
-  "@type": "Intent",
-  "@baseType": "Entity",
-  "name": "Hospital surgical slice intent",
-  "description": "Request a low-latency and high-availability network slice for surgical hospital services.",
+  "name": "Sydney Hospital Surgical Connection Intent",
+  "description": "Request for a surgical connection in Sydney Hospital.",
+  "humanExpression": "I need a surgical connection in Sydney Hospital with latency less than or equal to 10 ms and availability at least 99.99%.",
+  "version": "v2",
   "lifecycleStatus": "Active",
-  "version": "1.0",
-  "effectiveVersion": "1.0",
+  "statusReason": "Intent version v2 is active and assurance is healthy.",
+  "statusChangeDate": "2026-04-18T12:20:00+10:00",
   "intentSpecification": {
-    "id": "hospital-surgical-slice-spec-v1.19",
-    "href": "/intentManagement/v5/intentSpecification/hospital-surgical-slice-spec-v1.19",
-    "version": "1.19"
+    "id": "hospital-surgical-slice-spec-v1.20",
+    "href": "/intentManagement/v5/intentSpecification/hospital-surgical-slice-spec-v1.20"
   },
-  "humanExpression": "Provide a critical surgical slice for Sydney Hospital with latency <= 10 ms and availability >= 99.99%.",
   "expression": {
     "location": {
       "locationId": "sydney-hospital",
-      "locationType": "hospital"
+      "locationType": "hospital",
+      "geographicScope": "campus"
     },
-    "serviceClass": "surgical-slice",
+    "serviceClass": "critical-gold",
     "priority": "critical",
-    "maxLatencyMs": 10,
+    "maxLatencyMs": 8,
     "minAvailabilityPercent": 99.99,
+    "maxJitterMs": 2,
+    "maxPacketLossPercent": 0.01,
     "redundancyRequired": true,
-    "preferredAccessTechnology": "5G"
+    "preferredAccessTechnology": "5G",
+    "timeWindow": {
+      "startDateTime": "2026-04-18T12:00:00+10:00"
+    }
   },
   "validFor": {
-    "startDateTime": "2026-05-04T12:00:00+10:00",
-    "endDateTime": "2026-05-04T18:00:00+10:00"
+    "startDateTime": "2026-04-18T12:00:00+10:00"
   },
-  "creationDate": "2026-05-04T12:00:00+10:00",
-  "lastUpdate": "2026-05-04T12:10:00+10:00",
+  "@type": "Intent",
+  "@baseType": "Entity",
   "_links": {
     "self": {
       "href": "/intentManagement/v5/intent/INT-HOSP-2026-001"
     },
-    "report": {
-      "href": "/intentManagement/v5/intent/INT-HOSP-2026-001/report"
+    "intentReport": {
+      "href": "/intentManagement/v5/intent/INT-HOSP-2026-001/intentReport"
     }
   }
 }
 ```
 
-### Behaviour:
+### Not found response:
 
-| **Concern** | **Baseline** |
-|---|---|
-| Owner | IC MS |
-| Success response | `200 OK` |
-| Response body | Full canonical externally visible Intent resource |
-| ETag | Mandatory |
-| Content-Location | Required |
-| Runtime state source | IC MS lifecycle projection state |
+```http
+HTTP/1.1 404 Not Found
+Content-Type: application/json
+Content-Language: en-AU
+```
 
-## Retrieve IntentReport:
+```json
+{
+  "code": "RESOURCE_NOT_FOUND",
+  "reason": "INTENT_NOT_FOUND",
+  "message": "Intent INT-HOSP-2026-001 was not found.",
+  "status": 404,
+  "referenceError": "https://mycsp.com.au/errors/RESOURCE_NOT_FOUND",
+  "@type": "Error"
+}
+```
+
+---
+
+## 7. Full replace Intent:
 
 ### Request:
 
 ```http
-GET /intentManagement/v5/intent/INT-HOSP-2026-001/report HTTP/1.1
-Host: api.mycsp.com.au
+PUT /intentManagement/v5/intent/INT-HOSP-2026-001
+Content-Type: application/json
 Accept: application/json
-Accept-Language: en-AU
-Cache-Control: no-cache
-correlationid: corr-icms-20260504-004
+If-Match: "intent-INT-HOSP-2026-001-v3"
 ```
 
-### Successful Response:
+```json
+{
+  "id": "INT-HOSP-2026-001",
+  "name": "Sydney Hospital Surgical Connection Intent",
+  "description": "Updated surgical connection request with lower latency target.",
+  "humanExpression": "I need a surgical connection in Sydney Hospital with latency less than or equal to 8 ms and availability at least 99.99%.",
+  "intentSpecification": {
+    "id": "hospital-surgical-slice-spec-v1.20"
+  },
+  "expression": {
+    "location": {
+      "locationId": "sydney-hospital",
+      "locationType": "hospital",
+      "geographicScope": "campus"
+    },
+    "serviceClass": "critical-gold",
+    "priority": "critical",
+    "maxLatencyMs": 8,
+    "minAvailabilityPercent": 99.99,
+    "maxJitterMs": 2,
+    "maxPacketLossPercent": 0.01,
+    "redundancyRequired": true,
+    "preferredAccessTechnology": "5G",
+    "timeWindow": {
+      "startDateTime": "2026-04-18T12:00:00+10:00"
+    }
+  },
+  "@type": "Intent",
+  "@baseType": "Entity"
+}
+```
+
+### Success response:
+
+```http
+HTTP/1.1 200 OK
+Content-Type: application/json
+Content-Location: /intentManagement/v5/intent/INT-HOSP-2026-001
+ETag: "intent-INT-HOSP-2026-001-v4"
+```
+
+```json
+{
+  "id": "INT-HOSP-2026-001",
+  "href": "/intentManagement/v5/intent/INT-HOSP-2026-001",
+  "name": "Sydney Hospital Surgical Connection Intent",
+  "description": "Updated surgical connection request with lower latency target.",
+  "version": "v3",
+  "lifecycleStatus": "Acknowledged",
+  "statusReason": "Updated intent version accepted for semantic validation and fulfilment.",
+  "statusChangeDate": "2026-04-18T12:30:00+10:00",
+  "intentSpecification": {
+    "id": "hospital-surgical-slice-spec-v1.20",
+    "href": "/intentManagement/v5/intentSpecification/hospital-surgical-slice-spec-v1.20"
+  },
+  "expression": {
+    "...similar payload to request..."
+  },
+  "@type": "Intent",
+  "@baseType": "Entity"
+}
+```
+
+### Rule:
+
+`PUT` is a platform extension for deterministic full replacement.
+
+If meaningful runtime content changes, IC MS creates a new runtime Intent version.
+
+---
+
+## 8. Partial update Intent:
+
+### Request:
+
+```http
+PATCH /intentManagement/v5/intent/INT-HOSP-2026-001
+Content-Type: application/json
+Accept: application/json
+If-Match: "intent-INT-HOSP-2026-001-v4"
+```
+
+```json
+{
+  "intentSpecification": {
+    "id": "hospital-surgical-slice-spec-v1.20"
+  },
+  "expression": {
+    "maxLatencyMs": 7
+  }
+}
+```
+
+### Success response:
+
+```http
+HTTP/1.1 200 OK
+Content-Type: application/json
+Content-Location: /intentManagement/v5/intent/INT-HOSP-2026-001
+ETag: "intent-INT-HOSP-2026-001-v5"
+```
+
+```json
+{
+  "id": "INT-HOSP-2026-001",
+  "href": "/intentManagement/v5/intent/INT-HOSP-2026-001",
+  "name": "Sydney Hospital Surgical Connection Intent",
+  "version": "v4",
+  "lifecycleStatus": "Acknowledged",
+  "statusReason": "Patched intent version accepted for semantic validation and fulfilment.",
+  "statusChangeDate": "2026-04-18T12:40:00+10:00",
+  "intentSpecification": {
+    "id": "hospital-surgical-slice-spec-v1.20"
+  },
+  "expression": {
+    "...similar payload to previous projected intent with patched maxLatencyMs..."
+  },
+  "@type": "Intent",
+  "@baseType": "Entity"
+}
+```
+
+### Rule:
+
+`PATCH` is supported for TMF compatibility but is not encouraged for ordinary edits where deterministic full replacement through `PUT` is available.
+
+If the patch changes meaningful runtime content, IC MS creates a new runtime Intent version.
+
+---
+
+## 9. Terminate Intent:
+
+### Request:
+
+```http
+DELETE /intentManagement/v5/intent/INT-HOSP-2026-001
+Accept: application/json
+If-Match: "intent-INT-HOSP-2026-001-v5"
+```
+
+### Success response:
+
+```http
+HTTP/1.1 200 OK
+Content-Type: application/json
+Content-Location: /intentManagement/v5/intent/INT-HOSP-2026-001
+ETag: "intent-INT-HOSP-2026-001-v6"
+```
+
+```json
+{
+  "id": "INT-HOSP-2026-001",
+  "href": "/intentManagement/v5/intent/INT-HOSP-2026-001",
+  "name": "Sydney Hospital Surgical Connection Intent",
+  "version": "v4",
+  "lifecycleStatus": "Terminated",
+  "statusReason": "Intent termination requested and accepted.",
+  "statusChangeDate": "2026-04-18T13:00:00+10:00",
+  "intentSpecification": {
+    "id": "hospital-surgical-slice-spec-v1.20"
+  },
+  "@type": "Intent",
+  "@baseType": "Entity"
+}
+```
+
+### Rule:
+
+`DELETE /intent/{id}` is treated as termination, not physical deletion.
+
+The retained Intent record remains available for audit, reporting, lifecycle history, and traceability.
+
+---
+
+## 10. List IntentReports:
+
+### Request:
+
+```http
+GET /intentManagement/v5/intent/INT-HOSP-2026-001/intentReport
+Accept: application/json
+```
+
+### Success response:
 
 ```http
 HTTP/1.1 200 OK
 Content-Type: application/json
 Content-Language: en-AU
-Content-Location: /intentManagement/v5/intent/INT-HOSP-2026-001/report
-ETag: "icms-intent-report-INT-HOSP-2026-001-rev-003"
-Last-Modified: Mon, 04 May 2026 12:10:30 GMT
-Cache-Control: private, max-age=30
-correlationid: corr-icms-20260504-004
+X-Total-Count: 1
+X-Result-Count: 1
+ETag: "intent-report-list-INT-HOSP-2026-001-v3"
+Cache-Control: private, max-age=60
+```
+
+```json
+[
+  {
+    "id": "IR-INT-HOSP-2026-001-003",
+    "href": "/intentManagement/v5/intent/INT-HOSP-2026-001/intentReport/IR-INT-HOSP-2026-001-003",
+    "intent": {
+      "id": "INT-HOSP-2026-001",
+      "href": "/intentManagement/v5/intent/INT-HOSP-2026-001"
+    },
+    "version": "v2",
+    "lifecycleStatus": "Active",
+    "reportTime": "2026-04-18T12:20:00+10:00",
+    "summary": "Intent is active and assurance is healthy.",
+    "@type": "IntentReport",
+    "@baseType": "Entity"
+  }
+]
+```
+
+---
+
+## 11. Retrieve IntentReport:
+
+### Request:
+
+```http
+GET /intentManagement/v5/intent/INT-HOSP-2026-001/intentReport/IR-INT-HOSP-2026-001-003
+Accept: application/json
+```
+
+### Success response:
+
+```http
+HTTP/1.1 200 OK
+Content-Type: application/json
+Content-Language: en-AU
+Content-Location: /intentManagement/v5/intent/INT-HOSP-2026-001/intentReport/IR-INT-HOSP-2026-001-003
+ETag: "intent-report-IR-INT-HOSP-2026-001-003-v1"
+Cache-Control: private, max-age=300
 ```
 
 ```json
 {
-  "id": "IR-INT-HOSP-2026-001-001",
-  "href": "/intentManagement/v5/intent/INT-HOSP-2026-001/report",
-  "@type": "IntentReport",
-  "@baseType": "Entity",
+  "id": "IR-INT-HOSP-2026-001-003",
+  "href": "/intentManagement/v5/intent/INT-HOSP-2026-001/intentReport/IR-INT-HOSP-2026-001-003",
   "intent": {
     "id": "INT-HOSP-2026-001",
     "href": "/intentManagement/v5/intent/INT-HOSP-2026-001"
   },
+  "version": "v2",
   "lifecycleStatus": "Active",
-  "effectiveVersion": "1.0",
-  "reportTime": "2026-05-04T12:10:30+10:00",
-  "summary": "Intent is active and currently meeting projected lifecycle status.",
+  "reportTime": "2026-04-18T12:20:00+10:00",
+  "summary": "Intent is active and assurance is healthy.",
   "assuranceSummary": {
-    "status": "Healthy",
-    "lastAssuranceEventTime": "2026-05-04T12:10:10+10:00",
-    "observedMetrics": {
-      "latencyMs": 7,
-      "availabilityPercent": 99.995,
-      "jitterMs": 3,
-      "packetLossPercent": 0.005
-    }
+    "overallStatus": "Healthy",
+    "latencyMs": 8,
+    "availabilityPercent": 99.995,
+    "jitterMs": 1.5,
+    "packetLossPercent": 0.005
   },
-  "_links": {
-    "self": {
-      "href": "/intentManagement/v5/intent/INT-HOSP-2026-001/report"
-    },
-    "intent": {
-      "href": "/intentManagement/v5/intent/INT-HOSP-2026-001"
-    }
-  }
+  "serviceSummary": {
+    "serviceClass": "critical-gold",
+    "locationId": "sydney-hospital"
+  },
+  "evaluationSummary": {
+    "result": "Compliant",
+    "details": [
+      "Latency target satisfied",
+      "Availability target satisfied",
+      "Jitter target satisfied",
+      "Packet loss target satisfied"
+    ]
+  },
+  "@type": "IntentReport",
+  "@baseType": "Entity"
 }
 ```
 
-### Behaviour:
+---
 
-| **Concern** | **Baseline** |
-|---|---|
-| Owner | IC MS |
-| Success response | `200 OK` |
-| Response body | Externally visible IntentReport projection |
-| ETag | Mandatory |
-| Cache-Control | Short private cache by default |
-| Assurance truth | IA MS; IC MS exposes projection/report only |
+## 12. Hub create subscription:
 
-## Create Intent Hub Subscription:
-
-### Request:
+### Strict TMF route request:
 
 ```http
-POST /intentManagement/v5/intent/hub HTTP/1.1
-Host: api.mycsp.com.au
+POST /intentManagement/v5/hub
 Content-Type: application/json
 Accept: application/json
-Content-Language: en-AU
-correlationid: corr-icms-hub-001
 ```
 
 ```json
 {
-  "callback": "https://consumer.example.com/listener/intentCreateEvent",
-  "query": "eventType=IntentCreateEvent"
+  "callback": "https://consumer.example.com/tmf/intent/events",
+  "query": "eventType=IntentStatusChangeEvent",
+  "@type": "EventSubscription"
 }
 ```
 
-### Successful Response:
+### Domain-scoped platform extension request:
+
+```http
+POST /intentManagement/v5/intent/hub
+Content-Type: application/json
+Accept: application/json
+```
+
+```json
+{
+  "callback": "https://consumer.example.com/tmf/intent/events",
+  "query": "eventType=IntentStatusChangeEvent",
+  "@type": "EventSubscription"
+}
+```
+
+### Success response:
 
 ```http
 HTTP/1.1 201 Created
+Location: /intentManagement/v5/intent/hub/sub-intent-001
 Content-Type: application/json
-Content-Language: en-AU
-Location: /intentManagement/v5/intent/hub/sub-icms-001
-Content-Location: /intentManagement/v5/intent/hub/sub-icms-001
-ETag: "icms-intent-hub-sub-001-rev-001"
-Last-Modified: Mon, 04 May 2026 12:05:00 GMT
-correlationid: corr-icms-hub-001
+ETag: "subscription-sub-intent-001-v1"
 ```
 
 ```json
 {
-  "id": "sub-icms-001",
-  "callback": "https://consumer.example.com/listener/intentCreateEvent",
-  "query": "eventType=IntentCreateEvent",
+  "id": "sub-intent-001",
+  "callback": "https://consumer.example.com/tmf/intent/events",
+  "query": "eventType=IntentStatusChangeEvent",
+  "@type": "EventSubscription",
   "_links": {
     "self": {
-      "href": "/intentManagement/v5/intent/hub/sub-icms-001"
-    },
-    "delete": {
-      "href": "/intentManagement/v5/intent/hub/sub-icms-001",
-      "method": "DELETE"
+      "href": "/intentManagement/v5/intent/hub/sub-intent-001"
     }
   }
 }
 ```
 
-### Supported Event Types:
+### Supported event filters:
 
-| **Event Type** | **Purpose** |
-|---|---|
-| `IntentCreateEvent` | Runtime Intent created |
-| `IntentAttributeValueChangeEvent` | Runtime Intent attribute changed |
-| `IntentStatusChangeEvent` | Runtime Intent lifecycle/status changed |
-| `IntentDeleteEvent` | Runtime Intent deleted/terminated where applicable |
+```text
+IntentCreateEvent
+IntentAttributeValueChangeEvent
+IntentStatusChangeEvent
+IntentDeleteEvent
+IntentReportCreateEvent
+IntentReportAttributeValueChangeEvent
+IntentReportDeleteEvent
+```
 
-## Retrieve Intent Hub Subscription:
+---
+
+## 13. Hub retrieve subscription:
 
 ### Request:
 
 ```http
-GET /intentManagement/v5/intent/hub/sub-icms-001 HTTP/1.1
-Host: api.mycsp.com.au
+GET /intentManagement/v5/intent/hub/sub-intent-001
 Accept: application/json
-Accept-Language: en-AU
-correlationid: corr-icms-hub-002
 ```
 
-### Successful Response:
+### Success response:
 
 ```http
 HTTP/1.1 200 OK
 Content-Type: application/json
-Content-Language: en-AU
-Content-Location: /intentManagement/v5/intent/hub/sub-icms-001
-ETag: "icms-intent-hub-sub-001-rev-001"
-Last-Modified: Mon, 04 May 2026 12:05:00 GMT
-correlationid: corr-icms-hub-002
+ETag: "subscription-sub-intent-001-v1"
 ```
 
 ```json
 {
-  "id": "sub-icms-001",
-  "callback": "https://consumer.example.com/listener/intentCreateEvent",
-  "query": "eventType=IntentCreateEvent",
+  "id": "sub-intent-001",
+  "callback": "https://consumer.example.com/tmf/intent/events",
+  "query": "eventType=IntentStatusChangeEvent",
+  "@type": "EventSubscription",
   "_links": {
     "self": {
-      "href": "/intentManagement/v5/intent/hub/sub-icms-001"
-    },
-    "delete": {
-      "href": "/intentManagement/v5/intent/hub/sub-icms-001",
-      "method": "DELETE"
+      "href": "/intentManagement/v5/intent/hub/sub-intent-001"
     }
   }
 }
 ```
 
-## Delete Intent Hub Subscription:
+---
+
+## 14. Hub delete subscription:
 
 ### Request:
 
 ```http
-DELETE /intentManagement/v5/intent/hub/sub-icms-001 HTTP/1.1
-Host: api.mycsp.com.au
-Accept: application/json
-If-Match: "icms-intent-hub-sub-001-rev-001"
-correlationid: corr-icms-hub-003
+DELETE /intentManagement/v5/intent/hub/sub-intent-001
+If-Match: "subscription-sub-intent-001-v1"
 ```
 
-### Successful Response:
-
-```http
-HTTP/1.1 204 No Content
-Content-Language: en-AU
-correlationid: corr-icms-hub-003
-```
-
-## Internal Event: IntentValidatedEvent:
-
-IC MS emits `IntentValidatedEvent` after it successfully creates and syntactically validates a runtime `Intent`.
-
-### Kafka Message:
-
-```text
-topic: t7.intent.management.events
-key: INT-HOSP-2026-001
-
-headers:
-  ce-specversion: 1.0
-  ce-type: au.com.mycsp.intent.validated.v1
-  ce-source: intent-controller-ms
-  ce-id: evt-icms-validated-001
-  ce-time: 2026-05-04T12:00:01+10:00
-  ce-subject: intent/INT-HOSP-2026-001
-  correlationid: corr-icms-20260504-001
-  content-type: application/json
-```
-
-```json
-{
-  "body": {
-    "eventType": "IntentValidatedEvent",
-    "eventVersion": "1.0",
-    "source": "intent-controller-ms",
-    "eventTime": "2026-05-04T12:00:01+10:00",
-    "correlationId": "corr-icms-20260504-001",
-    "intentId": "INT-HOSP-2026-001",
-    "intentSpecification": {
-      "id": "hospital-surgical-slice-spec-v1.19",
-      "version": "1.19"
-    },
-    "request": {
-      "location": {
-        "locationId": "sydney-hospital",
-        "locationType": "hospital"
-      },
-      "service": {
-        "serviceClass": "surgical-slice"
-      },
-      "constraints": {
-        "maxLatencyMs": 10,
-        "minAvailabilityPercent": 99.99
-      },
-      "policyInputs": {
-        "priority": "critical"
-      }
-    },
-    "references": {
-      "intent": "/intentManagement/v5/intent/INT-HOSP-2026-001",
-      "intentSpecification": "/intentManagement/v5/intentSpecification/hospital-surgical-slice-spec-v1.19"
-    }
-  }
-}
-```
-
-## External Event: IntentCreateEvent:
-
-IC MS emits `IntentCreateEvent` to subscribed consumers where subscription policy requires it.
-
-### Listener Delivery Request:
-
-```http
-POST /listener/intentCreateEvent HTTP/1.1
-Host: consumer.example.com
-Content-Type: application/json
-Accept: application/json
-correlationid: corr-icms-20260504-001
-```
-
-```json
-{
-  "eventId": "evt-external-intent-create-001",
-  "eventTime": "2026-05-04T12:00:02+10:00",
-  "eventType": "IntentCreateEvent",
-  "correlationId": "corr-icms-20260504-001",
-  "title": "Intent created",
-  "description": "Runtime Intent INT-HOSP-2026-001 was created.",
-  "priority": "normal",
-  "timeOccurred": "2026-05-04T12:00:00+10:00",
-  "reportingSystem": {
-    "id": "intent-controller-ms",
-    "name": "intent-controller-ms"
-  },
-  "source": {
-    "id": "intent-controller-ms",
-    "name": "intent-controller-ms"
-  },
-  "event": {
-    "intent": {
-      "id": "INT-HOSP-2026-001",
-      "href": "/intentManagement/v5/intent/INT-HOSP-2026-001",
-      "@type": "Intent",
-      "@baseType": "Entity",
-      "name": "Hospital surgical slice intent",
-      "lifecycleStatus": "InProgress",
-      "version": "1.0",
-      "effectiveVersion": null
-    }
-  }
-}
-```
-
-### Listener Success Response:
+### Success response:
 
 ```http
 HTTP/1.1 204 No Content
 ```
 
-## Standard Error Responses:
+---
 
-### Invalid Request Shape:
+## 15. Validation and dependency error examples:
 
-```http
-HTTP/1.1 400 Bad Request
-Content-Type: application/json
-Content-Language: en-AU
-correlationid: corr-icms-error-001
-```
-
-```json
-{
-  "code": "INVALID_REQUEST",
-  "reason": "Bad Request",
-  "message": "The request body is malformed or does not match the active IntentSpecification syntax.",
-  "status": 400,
-  "@type": "Error"
-}
-```
-
-### Unknown Or Inactive IntentSpecification:
+### Missing concrete IntentSpecification ID:
 
 ```http
 HTTP/1.1 422 Unprocessable Entity
 Content-Type: application/json
-Content-Language: en-AU
-correlationid: corr-icms-error-002
 ```
 
 ```json
 {
-  "code": "INTENT_SPECIFICATION_NOT_ACTIVE",
-  "reason": "Unprocessable Entity",
-  "message": "The referenced IntentSpecification is unknown or not ACTIVE.",
+  "code": "VALIDATION_FAILED",
+  "reason": "CONCRETE_INTENT_SPECIFICATION_ID_REQUIRED",
+  "message": "Runtime Intent create/update requests must include a concrete intentSpecification.id.",
   "status": 422,
+  "referenceError": "https://mycsp.com.au/errors/VALIDATION_FAILED",
   "@type": "Error"
 }
 ```
 
-### Missing If-Match:
+### Referenced specification not active:
 
 ```http
-HTTP/1.1 428 Precondition Required
+HTTP/1.1 422 Unprocessable Entity
 Content-Type: application/json
-Content-Language: en-AU
-correlationid: corr-icms-error-003
 ```
 
 ```json
 {
-  "code": "PRECONDITION_REQUIRED",
-  "reason": "Precondition Required",
-  "message": "If-Match header is required for this operation.",
-  "status": 428,
+  "code": "VALIDATION_FAILED",
+  "reason": "INTENT_SPECIFICATION_NOT_ACTIVE",
+  "message": "Referenced IntentSpecification hospital-surgical-slice-spec-v1.20 is not ACTIVE.",
+  "status": 422,
+  "referenceError": "https://mycsp.com.au/errors/VALIDATION_FAILED",
   "@type": "Error"
 }
 ```
 
-### Stale If-Match:
+### IntentSpecification lookup unavailable:
+
+```http
+HTTP/1.1 503 Service Unavailable
+Content-Type: application/json
+Retry-After: 30
+```
+
+```json
+{
+  "code": "SERVICE_UNAVAILABLE",
+  "reason": "INTENT_SPECIFICATION_LOOKUP_UNAVAILABLE",
+  "message": "Intent creation or update cannot be accepted because the referenced active IntentSpecification could not be confirmed.",
+  "status": 503,
+  "referenceError": "https://mycsp.com.au/errors/SERVICE_UNAVAILABLE",
+  "@type": "Error"
+}
+```
+
+### ETag mismatch:
 
 ```http
 HTTP/1.1 412 Precondition Failed
 Content-Type: application/json
-Content-Language: en-AU
-correlationid: corr-icms-error-004
 ```
 
 ```json
 {
   "code": "PRECONDITION_FAILED",
-  "reason": "Precondition Failed",
+  "reason": "ETAG_MISMATCH",
   "message": "The supplied ETag does not match the current resource version.",
   "status": 412,
+  "referenceError": "https://mycsp.com.au/errors/PRECONDITION_FAILED",
   "@type": "Error"
 }
 ```
 
-## Lifecycle Baseline:
+---
 
-| **State** | **Meaning** |
+## 16. External Intent event family:
+
+IC MS emits external TMF-style resource events for `Intent` projection changes.
+
+| **Event** | **Trigger** |
 |---|---|
-| `InProgress` | Intent accepted and workflow is progressing |
-| `Active` | Intent is active/effective in the network/service |
-| `Degraded` | Intent is still effective but assurance indicates degraded conditions |
-| `Failed` | Intent failed after being attempted or active |
-| `Terminated` | Intent has been terminated |
-| `Rejected` | Intent cannot be processed/resolved/accepted under validation or policy rules |
+| `IntentCreateEvent` | Runtime Intent projection created |
+| `IntentAttributeValueChangeEvent` | External Intent attributes changed |
+| `IntentStatusChangeEvent` | External lifecycle/status projection changed |
+| `IntentDeleteEvent` | Runtime Intent termination accepted; retained projection moves to `Terminated` |
 
-## Effective Version Rule:
+These are external projection/resource events only.
 
-Once an Intent version becomes `Active`, it becomes the `effectiveVersion`.
+They must not expose raw telemetry, raw optimiser decisions, raw `t7.knowledge plane` data, raw callback payloads, internal candidate scoring, or internal Kafka event payloads.
 
-It remains the `effectiveVersion` even if its lifecycle later moves to `Degraded`, `Paused`, or `Failed`.
+---
 
-`effectiveVersion` changes only when another version is confirmed `Active` in the network/service.
+## 17. IntentCreateEvent:
+
+```json
+{
+  "eventId": "evt-intent-create-001",
+  "eventTime": "2026-04-18T12:00:00+10:00",
+  "eventType": "IntentCreateEvent",
+  "correlationId": "corr-intent-create-001",
+  "description": "Intent created.",
+  "priority": "Normal",
+  "title": "Intent created",
+  "event": {
+    "intent": {
+      "id": "INT-HOSP-2026-001",
+      "href": "/intentManagement/v5/intent/INT-HOSP-2026-001",
+      "name": "Sydney Hospital Surgical Connection Intent",
+      "version": "v1",
+      "lifecycleStatus": "Acknowledged",
+      "intentSpecification": {
+        "id": "hospital-surgical-slice-spec-v1.20"
+      },
+      "@type": "Intent",
+      "@baseType": "Entity"
+    }
+  },
+  "reportingSystem": {
+    "id": "intent-controller-ms",
+    "name": "Intent Controller MS"
+  },
+  "source": {
+    "id": "intent-controller-ms",
+    "name": "Intent Controller MS"
+  },
+  "@type": "IntentCreateEvent"
+}
+```
+
+---
+
+## 18. IntentAttributeValueChangeEvent:
+
+```json
+{
+  "eventId": "evt-intent-attr-001",
+  "eventTime": "2026-04-18T12:40:00+10:00",
+  "eventType": "IntentAttributeValueChangeEvent",
+  "correlationId": "corr-intent-attr-001",
+  "description": "Intent projected attributes changed.",
+  "priority": "Normal",
+  "title": "Intent attributes changed",
+  "event": {
+    "intent": {
+      "id": "INT-HOSP-2026-001",
+      "href": "/intentManagement/v5/intent/INT-HOSP-2026-001",
+      "name": "Sydney Hospital Surgical Connection Intent",
+      "version": "v4",
+      "lifecycleStatus": "Acknowledged",
+      "@type": "Intent",
+      "@baseType": "Entity"
+    },
+    "changedAttributes": [
+      {
+        "name": "expression.maxLatencyMs",
+        "oldValue": 8,
+        "newValue": 7
+      }
+    ]
+  },
+  "reportingSystem": {
+    "id": "intent-controller-ms",
+    "name": "Intent Controller MS"
+  },
+  "source": {
+    "id": "intent-controller-ms",
+    "name": "Intent Controller MS"
+  },
+  "@type": "IntentAttributeValueChangeEvent"
+}
+```
+
+---
+
+## 19. IntentStatusChangeEvent:
+
+```json
+{
+  "eventId": "evt-intent-status-001",
+  "eventTime": "2026-04-18T12:20:00+10:00",
+  "eventType": "IntentStatusChangeEvent",
+  "correlationId": "corr-intent-status-001",
+  "description": "Intent lifecycle status changed.",
+  "priority": "Normal",
+  "title": "Intent status changed",
+  "event": {
+    "intent": {
+      "id": "INT-HOSP-2026-001",
+      "href": "/intentManagement/v5/intent/INT-HOSP-2026-001",
+      "name": "Sydney Hospital Surgical Connection Intent",
+      "version": "v2",
+      "lifecycleStatus": "Active",
+      "@type": "Intent",
+      "@baseType": "Entity"
+    },
+    "previousLifecycleStatus": "InProgress",
+    "newLifecycleStatus": "Active"
+  },
+  "reportingSystem": {
+    "id": "intent-controller-ms",
+    "name": "Intent Controller MS"
+  },
+  "source": {
+    "id": "intent-controller-ms",
+    "name": "Intent Controller MS"
+  },
+  "@type": "IntentStatusChangeEvent"
+}
+```
+
+---
+
+## 20. IntentDeleteEvent:
+
+`IntentDeleteEvent` represents accepted termination, not physical deletion.
+
+```json
+{
+  "eventId": "evt-intent-delete-001",
+  "eventTime": "2026-04-18T13:00:00+10:00",
+  "eventType": "IntentDeleteEvent",
+  "correlationId": "corr-intent-delete-001",
+  "description": "Intent termination accepted.",
+  "priority": "Normal",
+  "title": "Intent terminated",
+  "event": {
+    "intent": {
+      "id": "INT-HOSP-2026-001",
+      "href": "/intentManagement/v5/intent/INT-HOSP-2026-001",
+      "name": "Sydney Hospital Surgical Connection Intent",
+      "version": "v4",
+      "lifecycleStatus": "Terminated",
+      "@type": "Intent",
+      "@baseType": "Entity"
+    }
+  },
+  "reportingSystem": {
+    "id": "intent-controller-ms",
+    "name": "Intent Controller MS"
+  },
+  "source": {
+    "id": "intent-controller-ms",
+    "name": "Intent Controller MS"
+  },
+  "@type": "IntentDeleteEvent"
+}
+```
+
+---
+
+## 21. External IntentReport event family:
+
+IC MS emits external TMF-style resource events for `IntentReport` projection changes.
+
+| **Event** | **Trigger** |
+|---|---|
+| `IntentReportCreateEvent` | New `IntentReport` projection created |
+| `IntentReportAttributeValueChangeEvent` | Existing `IntentReport` projection updated |
+| `IntentReportDeleteEvent` | `IntentReport` projection removed where retention policy allows |
+
+---
+
+## 22. IntentReportCreateEvent:
+
+```json
+{
+  "eventId": "evt-intent-report-create-001",
+  "eventTime": "2026-04-18T12:20:00+10:00",
+  "eventType": "IntentReportCreateEvent",
+  "correlationId": "corr-intent-report-create-001",
+  "description": "IntentReport created.",
+  "priority": "Normal",
+  "title": "IntentReport created",
+  "event": {
+    "intentReport": {
+      "id": "IR-INT-HOSP-2026-001-003",
+      "href": "/intentManagement/v5/intent/INT-HOSP-2026-001/intentReport/IR-INT-HOSP-2026-001-003",
+      "intent": {
+        "id": "INT-HOSP-2026-001"
+      },
+      "version": "v2",
+      "lifecycleStatus": "Active",
+      "@type": "IntentReport",
+      "@baseType": "Entity"
+    }
+  },
+  "reportingSystem": {
+    "id": "intent-controller-ms",
+    "name": "Intent Controller MS"
+  },
+  "source": {
+    "id": "intent-controller-ms",
+    "name": "Intent Controller MS"
+  },
+  "@type": "IntentReportCreateEvent"
+}
+```
+
+---
+
+## 23. IntentReportAttributeValueChangeEvent:
+
+```json
+{
+  "eventId": "evt-intent-report-attr-001",
+  "eventTime": "2026-04-18T12:25:00+10:00",
+  "eventType": "IntentReportAttributeValueChangeEvent",
+  "correlationId": "corr-intent-report-attr-001",
+  "description": "IntentReport attributes changed.",
+  "priority": "Normal",
+  "title": "IntentReport attributes changed",
+  "event": {
+    "intentReport": {
+      "id": "IR-INT-HOSP-2026-001-003",
+      "href": "/intentManagement/v5/intent/INT-HOSP-2026-001/intentReport/IR-INT-HOSP-2026-001-003",
+      "intent": {
+        "id": "INT-HOSP-2026-001"
+      },
+      "version": "v2",
+      "lifecycleStatus": "Degraded",
+      "@type": "IntentReport",
+      "@baseType": "Entity"
+    },
+    "changedAttributes": [
+      {
+        "name": "lifecycleStatus",
+        "oldValue": "Active",
+        "newValue": "Degraded"
+      }
+    ]
+  },
+  "reportingSystem": {
+    "id": "intent-controller-ms",
+    "name": "Intent Controller MS"
+  },
+  "source": {
+    "id": "intent-controller-ms",
+    "name": "Intent Controller MS"
+  },
+  "@type": "IntentReportAttributeValueChangeEvent"
+}
+```
+
+---
+
+## 24. IntentReportDeleteEvent:
+
+```json
+{
+  "eventId": "evt-intent-report-delete-001",
+  "eventTime": "2026-04-18T13:30:00+10:00",
+  "eventType": "IntentReportDeleteEvent",
+  "correlationId": "corr-intent-report-delete-001",
+  "description": "IntentReport projection removed.",
+  "priority": "Normal",
+  "title": "IntentReport deleted",
+  "event": {
+    "intentReport": {
+      "id": "IR-INT-HOSP-2026-001-003",
+      "href": "/intentManagement/v5/intent/INT-HOSP-2026-001/intentReport/IR-INT-HOSP-2026-001-003",
+      "intent": {
+        "id": "INT-HOSP-2026-001"
+      },
+      "@type": "IntentReport",
+      "@baseType": "Entity"
+    }
+  },
+  "reportingSystem": {
+    "id": "intent-controller-ms",
+    "name": "Intent Controller MS"
+  },
+  "source": {
+    "id": "intent-controller-ms",
+    "name": "Intent Controller MS"
+  },
+  "@type": "IntentReportDeleteEvent"
+}
+```
+
+---
+
+## 25. Internal event publication note:
+
+IC MS publishes `IntentValidatedEvent` internally after syntactic validation and admission.
+
+This is not a point-to-point command for a single consumer.
+
+It is a platform state/progress event meaning the runtime Intent has passed IC MS syntactic validation and has been admitted into the intent lifecycle.
+
+Current primary consumer is II MS / `intent-intelligence-ms`, but the event may be consumed by other authorised internal consumers where useful.
+
+---
+
+## 26. Final specification notes:
+
+- `GET /intent/{id}` returns current projected Intent state, not a full internal version aggregate.
+- `GET /intent` lists current projected Intent states for retained Intent IDs.
+- Runtime create/update requires concrete `intentSpecification.id`.
+- IC MS does not resolve `IntentSpecification` by family, key, name, or inferred payload shape.
+- `DELETE /intent/{id}` is termination, not physical deletion.
+- `PUT /intent/{id}` is a platform extension for deterministic full replacement.
+- `PATCH /intent/{id}` is supported for TMF compatibility but not encouraged for ordinary edits.
+- ETag is used for unsafe-operation concurrency through `If-Match`.
+- GET responses may use bounded private caching.
+- Clients may request a fresh GET using `Cache-Control: no-cache`.
+- `IntentDeleteEvent` represents termination acceptance, not physical deletion.
+- External `Intent*Event` and `IntentReport*Event` payloads are curated projection events and must not expose raw telemetry, raw callback payloads, raw optimiser details, raw knowledge-plane data, or internal candidate scoring.

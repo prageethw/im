@@ -1303,3 +1303,214 @@ Business/user authorisation audit belongs to OEX where that decision is made.
 ### Baseline statement:
 
 **IC MS is protected behind NGW. NGW performs system-to-system authentication using mTLS and OAuth2 token validation. Business/user-level authorisation is owned by OEX and should not be implemented as operation-level authorisation inside IC MS. IC MS trusts authenticated platform/system callers and enforces technical resource integrity, syntactic validation, active-spec admission, lifecycle/status projection rules, version state-machine rules, ETag/If-Match concurrency, and delete-as-termination behaviour.**
+
+## Observability and audit baseline:
+
+### Observability purpose:
+
+IC MS must provide operational visibility for runtime intent admission, lifecycle/status projection, version management, report projection, event processing, and dependency health.
+
+Observability covers:
+
+- structured logs
+- metrics
+- distributed tracing
+- audit records
+- dependency health signals
+- inbox/outbox processing visibility
+- event and webhook delivery visibility
+
+### Observability areas:
+
+| **Area** | **Purpose** |
+|---|---|
+| API operations | Track create, get, list, update, patch, and terminate operations |
+| Lifecycle projection | Track `Acknowledged`, `InProgress`, `Active`, `Degraded`, `Paused`, `Rejected`, `Failed`, and `Terminated` changes |
+| Versioning | Track version creation, projected version changes, active-version changes, and `Standby` / `Retired` / `Terminated` transitions |
+| ID MS dependency | Track active-spec lookup, active-spec cache fallback, and fail-closed outcomes |
+| Event publication | Track `IntentValidatedEvent`, external `Intent*Event`, and external `IntentReport*Event` outbox publication |
+| Event consumption | Track `IntentRejectedEvent` and `IntentAssuranceEvent` inbox/idempotency processing |
+| Report projection | Track `IntentReport` create/update/delete projection |
+| Dependency health | Track DB, cache, Kafka/event broker, and webhook delivery |
+| Security/audit | Track technical integrity decisions and governance-changing operations |
+
+### Correlation and trace context:
+
+IC MS must log and propagate correlation context.
+
+Rules:
+
+- Accept correlation/trace context from NGW where provided.
+- Generate a correlation ID if one is not provided.
+- Include correlation ID in structured logs.
+- Include correlation ID in emitted internal events.
+- Include correlation ID in emitted external events.
+- Include correlation ID in inbox and outbox records.
+- Propagate correlation context to ID MS lookups and downstream calls where applicable.
+- Do not expose internal trace details in external error bodies.
+
+### Structured logging:
+
+IC MS logs should be structured and machine-readable.
+
+Recommended log fields:
+
+| **Field** | **Purpose** |
+|---|---|
+| `timestamp` | Event/log time |
+| `level` | Log level |
+| `service` | `intent-controller-ms` |
+| `correlationId` | End-to-end correlation |
+| `traceId` | Distributed trace ID where available |
+| `operation` | API or internal operation name |
+| `intentId` | Runtime Intent ID where applicable |
+| `version` | Projected/runtime version where applicable |
+| `lifecycleStatus` | Current or target external lifecycle status where applicable |
+| `versionLifecycleStatus` | Version-level lifecycle status where applicable |
+| `intentSpecificationId` | Concrete `IntentSpecification.id` used for validation |
+| `result` | Success/failure/degraded |
+| `reasonCode` | Stable failure/reason code where applicable |
+
+### Sensitive-data logging rule:
+
+IC MS must not log:
+
+- OAuth2 tokens
+- mTLS certificate private material
+- secrets
+- DB credentials
+- cache credentials
+- Kafka credentials
+- full internal connection strings
+- sensitive platform headers
+- raw internal dependency stack traces in external responses
+
+Internal logs may include sanitised technical details needed for support.
+
+External error responses must remain stable and must not expose DB/cache/Kafka/internal infrastructure details.
+
+### Metrics baseline:
+
+IC MS should emit metrics for API operations, lifecycle projection, versioning, ID MS lookup/cache fallback, dependency behaviour, inbox/outbox, and report projection.
+
+Recommended metrics include:
+
+| **Metric** | **Meaning** |
+|---|---|
+| `intent_create_count` | Count of runtime Intent create operations |
+| `intent_get_count` | Count of retrieve-by-id operations |
+| `intent_list_count` | Count of list operations |
+| `intent_put_count` | Count of full replacement operations |
+| `intent_patch_count` | Count of partial update operations |
+| `intent_terminate_count` | Count of termination requests accepted |
+| `intent_version_create_count` | Count of new runtime Intent versions created |
+| `intent_active_version_change_count` | Count of active/projected version changes |
+| `intent_lifecycle_status_change_count` | Count of external lifecycle/status projection changes |
+| `intent_version_standby_count` | Count of version transitions to `Standby` |
+| `intent_version_retired_count` | Count of version transitions to `Retired` |
+| `intent_admission_validation_failure_count` | Count of syntax/spec validation failures |
+| `intent_spec_lookup_count` | Count of ID MS active-spec lookup attempts |
+| `intent_spec_lookup_failure_count` | Count of failed active-spec lookup attempts |
+| `intent_spec_cache_fallback_count` | Count of active-spec cache fallback uses |
+| `intent_spec_fail_closed_count` | Count of fail-closed admissions due to spec confirmation failure |
+| `intent_report_create_count` | Count of IntentReport projections created |
+| `intent_report_update_count` | Count of IntentReport projections updated |
+| `ic_ms_db_error_count` | Count of DB/source-of-truth failures |
+| `ic_ms_db_circuit_breaker_open_count` | Count of DB CB-open events |
+| `ic_ms_cache_hit_count` | Count of cache hits |
+| `ic_ms_cache_miss_count` | Count of cache misses |
+| `ic_ms_cache_bypass_count` | Count of cache bypass events |
+| `ic_ms_cache_write_failure_count` | Count of ignored cache-write failures |
+| `ic_ms_inbox_duplicate_count` | Count of duplicate consumed events detected |
+| `ic_ms_inbox_processing_failure_count` | Count of inbox processing failures |
+| `ic_ms_outbox_pending_count` | Current pending outbox event count |
+| `ic_ms_outbox_publish_failure_count` | Count of outbox publish failures |
+| `ic_ms_webhook_delivery_failure_count` | Count of callback/webhook delivery failures |
+| `ic_ms_webhook_delivery_retry_count` | Count of callback/webhook retry attempts |
+
+### Audit baseline:
+
+IC MS audit focuses on technical/governance-changing operations and technical integrity decisions.
+
+IC MS must audit:
+
+- runtime Intent creation
+- full replacement updates that create new runtime versions
+- patch updates that create new runtime versions
+- projected lifecycle/status changes
+- projected/runtime version changes
+- active-version changes
+- version state transitions, including `Active`, `Standby`, `Retired`, and `Terminated`
+- termination request acceptance
+- `IntentReport` projection create/update/delete where audit is required
+- hub subscription create/delete where IC MS owns the route
+- rejected unsafe operation due to `If-Match` / ETag mismatch
+- rejected admission due to missing or invalid concrete `intentSpecification.id`
+- rejected admission because referenced `IntentSpecification` is not active or cannot be confirmed
+- invalid lifecycle/version state transitions
+- consumed `IntentRejectedEvent` idempotency decisions
+- consumed `IntentAssuranceEvent` idempotency decisions
+
+Business/user-level authorisation audit belongs to OEX, because OEX owns business/user-level authorisation decisions.
+
+### Audit record fields:
+
+Recommended audit record fields:
+
+| **Field** | **Purpose** |
+|---|---|
+| `auditId` | Stable audit record ID |
+| `timestamp` | Audit event time |
+| `service` | `intent-controller-ms` |
+| `operation` | Operation performed |
+| `intentId` | Runtime Intent ID |
+| `version` | Runtime version where applicable |
+| `previousLifecycleStatus` | Previous external lifecycle status where applicable |
+| `newLifecycleStatus` | New external lifecycle status where applicable |
+| `previousVersionLifecycleStatus` | Previous version status where applicable |
+| `newVersionLifecycleStatus` | New version status where applicable |
+| `intentSpecificationId` | Concrete spec used for validation where applicable |
+| `correlationId` | End-to-end correlation |
+| `callerIdentity` | Authenticated system identity from NGW where available |
+| `result` | Success/failure |
+| `reasonCode` | Stable reason code for failure or special decision |
+
+### Alerting baseline:
+
+Operational alerts should be raised for:
+
+- DB unavailable / DB circuit breaker open
+- repeated DB errors
+- ID MS lookup failure rate above threshold
+- active-spec fail-closed rate above threshold
+- outbox backlog above threshold
+- inbox processing failure rate above threshold
+- repeated Kafka/event publish failures
+- repeated webhook delivery failures
+- repeated lifecycle projection failures
+- repeated version state-machine transition failures
+- high admission validation failure rate
+- cache bypass/failure rate above threshold
+- readiness failures
+- unexpected error rate increase
+
+### Tracing baseline:
+
+IC MS should participate in distributed tracing.
+
+Trace spans should cover:
+
+- inbound API request
+- ID MS active-spec lookup where applicable
+- DB/source-of-truth operation
+- cache read/write where applicable
+- inbox idempotency check and event processing
+- outbox record creation
+- outbox relay publish attempt where applicable
+- webhook delivery attempt where applicable
+
+Trace data must not include secrets or sensitive token contents.
+
+### Baseline statement:
+
+**IC MS must log and propagate correlation context, emit structured operational telemetry, participate in distributed tracing, and audit technical/governance-changing operations. Business/user authorisation audit remains with OEX. IC MS audit focuses on runtime Intent admission, version creation, lifecycle/status projection, active/projected-version changes, termination, IntentReport projection, technical validation failures, ETag/If-Match integrity decisions, dependency failure signals, and consumed-event idempotency decisions.**
