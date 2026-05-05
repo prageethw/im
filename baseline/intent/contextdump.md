@@ -396,3 +396,32 @@ II MS is the current primary consumer because it performs semantic validation an
 
 ### Boundary:
 IC MS owns external `Intent` and `IntentReport` resources, syntactic validation against active `IntentSpecification`, and external lifecycle/status projection. IC MS does not own semantic validation, policy validation, optimisation, network apply, runtime assurance, telemetry ingestion, or callback mediation.
+
+## Baseline update — IC MS lifecycle/status and versioning:
+
+Date: 2026-05-05T02:29:41.944505+00:00
+
+### Updated file:
+- `ic_ms_design_brief.md`
+
+### Lifecycle/status ownership:
+IC MS owns the external lifecycle/status projection, not the runtime truth. Runtime truth comes from IC MS syntactic admission, II MS semantic/policy rejection outcomes, IA MS assurance outcomes, and accepted termination requests.
+
+### Lifecycle values:
+- `Acknowledged`
+- `InProgress`
+- `Active`
+- `Degraded`
+- `Paused`
+- `Rejected`
+- `Failed`
+- `Terminated`
+
+### Delete/terminate rule:
+IC MS does not physically delete runtime `Intent` records by default. `DELETE /intentManagement/v5/intent/<built-in function id>` or equivalent terminate flow is treated as a termination request and transitions the retained `Intent` projection to `Terminated`.
+
+### Versioning:
+Each meaningful runtime `Intent` update creates a new Intent version. Each version has its own lifecycle/status. `effectiveVersion` tracks the version currently confirmed active in the network/service. Once a version becomes `Active`, it becomes `effectiveVersion` and remains so until another version is confirmed `Active`.
+
+### Key rule:
+IC MS must not invent runtime lifecycle truth. It projects external lifecycle/status from syntactic admission, II MS rejection outcomes, IA MS assurance outcomes, and accepted termination requests.

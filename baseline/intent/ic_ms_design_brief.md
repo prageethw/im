@@ -254,3 +254,89 @@ Platform preference:
 ## IC MS boundary statement:
 
 **IC MS is the TMF-facing runtime intent controller. It owns external `Intent` and `IntentReport` resources, performs syntactic validation against active `IntentSpecification`, emits `IntentValidatedEvent` as an internal state/progress event, and projects external lifecycle/status from II MS rejection outcomes and IA MS assurance outcomes. IC MS does not perform semantic validation, policy validation, optimisation, network apply, runtime assurance, telemetry ingestion, or callback mediation.**
+
+## Lifecycle/status and versioning baseline:
+
+### Lifecycle/status ownership:
+
+IC MS owns the external lifecycle/status projection, not the runtime truth.
+
+Runtime truth comes from:
+
+| **Source** | **Meaning** |
+|---|---|
+| IC MS | Syntactic admission only |
+| II MS | Semantic/policy rejection outcome |
+| IA MS | Apply, active, degraded, failed, paused, and runtime assurance outcomes |
+| External client/OEX | Termination request |
+
+### Lifecycle values:
+
+```text
+Acknowledged
+InProgress
+Active
+Degraded
+Paused
+Rejected
+Failed
+Terminated
+```
+
+### Lifecycle transition baseline:
+
+| **Trigger** | **IC MS projected lifecycleStatus** | **Rule** |
+|---|---|---|
+| Runtime intent passes IC MS syntactic validation | `Acknowledged` | IC MS admits the request and emits `IntentValidatedEvent` |
+| Downstream fulfilment starts | `InProgress` | IC MS projects fulfilment progress when downstream outcome/event indicates processing has started |
+| II MS rejects semantic/policy validation | `Rejected` | IC MS consumes rejection outcome and projects external rejection |
+| IA MS confirms apply/assurance active | `Active` | IC MS projects active external state from assurance truth |
+| IA MS reports degraded assurance | `Degraded` | IC MS projects degraded external state and updates `IntentReport` |
+| IA MS reports paused state | `Paused` | IC MS projects paused external state where applicable |
+| IA MS reports apply/runtime failure | `Failed` | IC MS projects failed external state |
+| External delete/terminate request is accepted | `Terminated` | IC MS retains the `Intent` record and projects terminated lifecycle |
+
+### Delete/terminate rule:
+
+IC MS does not physically delete runtime `Intent` records by default.
+
+`DELETE /intentManagement/v5/intent/{id}` or equivalent terminate flow is treated as a termination request.
+
+Baseline result:
+
+```json
+{
+  "lifecycleStatus": "Terminated",
+  "statusReason": "Intent termination requested and accepted.",
+  "statusChangeDate": "2026-04-18T12:00:00+10:00"
+}
+```
+
+The retained `Intent` record remains available for:
+
+- audit
+- reporting
+- lifecycle history
+- traceability
+- existing `IntentReport` references
+
+### Versioning baseline:
+
+Each meaningful runtime `Intent` update creates a new Intent version.
+
+| **Rule** | **Baseline** |
+|---|---|
+| Intent versions | Each meaningful runtime update creates a new version |
+| Version lifecycle | Each version has its own lifecycle/status |
+| Effective version | `effectiveVersion` tracks the version currently confirmed active in the network/service |
+| Active version rule | Once a version becomes `Active`, it becomes `effectiveVersion` |
+| Later degradation/failure | A version can remain `effectiveVersion` even if later `Degraded` or `Failed`, until another version is confirmed `Active` |
+| Rollback | Previous terminated/old versions do not automatically become active again; rollback requires a new orchestration/activation cycle |
+
+### Baseline statements:
+
+**IC MS must not invent runtime lifecycle truth. It projects external `Intent.lifecycleStatus`, `statusReason`, and `statusChangeDate` based on syntactic admission, II MS rejection outcomes, IA MS assurance outcomes, and accepted termination requests.**
+
+**IC MS does not physically delete runtime `Intent` records by default. Delete/terminate requests transition the retained `Intent` projection to `Terminated`.**
+
+**`effectiveVersion` means the runtime Intent version currently confirmed active in the network/service. Once an Intent version becomes `Active`, it becomes the effective version and remains so until another version is confirmed `Active`.**
