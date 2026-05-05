@@ -779,3 +779,19 @@ Do not include a `validation` object in `IntentValidatedEvent`.
 
 ### Applied change:
 Removed the redundant `validation` object from the `IntentValidatedEvent` example.
+
+## Baseline update — internal events shared terminology cleanup:
+
+Date: 2026-05-05T23:44:52.142250+00:00
+
+### Updated file:
+- `intent_internal_events_specification.md`
+
+### Baseline:
+Use agreed intent-domain terminology consistently across internal events.
+
+### Rule:
+Use `location.locationId`, not `site.locationId`, unless a future event explicitly baselines a separate concept from `location`.
+
+### Applied change:
+Updated internal event examples such as `IntentResolvedEvent`, `IntentOptimisedEvent`, and `IntentNetworkReadyEvent` to use `location.locationId`.

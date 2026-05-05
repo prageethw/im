@@ -58,6 +58,29 @@ The event is emitted only after IC MS admission validation succeeds, so successf
 
 If validation fails, IC MS returns a synchronous API validation error and does not emit `IntentValidatedEvent`.
 
+### Shared terminology rule:
+
+Use agreed intent-domain terminology consistently across internal events.
+
+Use:
+
+```json
+"location": {
+  "locationId": "sydney-hospital"
+}
+```
+
+Do not use:
+
+```json
+"site": {
+  "locationId": "sydney-hospital"
+}
+```
+
+unless a future event explicitly baselines a separate concept from `location`.
+
+Current internal event examples use `location.locationId`.
 
 ---
 
@@ -255,7 +278,7 @@ content-type: application/json
     "intentId": "INT-HOSP-2026-001",
     "version": "v1",
     "lifecycleStatus": "InProgress",
-    "site": {
+    "location": {
       "locationId": "sydney-hospital"
     },
     "service": {
@@ -348,7 +371,7 @@ content-type: application/json
   "body": {
     "intentId": "INT-HOSP-2026-001",
     "version": "v1",
-    "site": {
+    "location": {
       "locationId": "sydney-hospital"
     },
     "service": {
@@ -454,7 +477,7 @@ content-type: application/json
     "version": "v1",
     "lifecycleStatus": "Active",
     "statusReason": "Optimised intent has been applied and the network service is ready.",
-    "site": {
+    "location": {
       "locationId": "sydney-hospital"
     },
     "service": {
