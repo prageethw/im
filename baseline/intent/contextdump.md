@@ -617,3 +617,32 @@ The cache bypass / fresh-read rule is now documented explicitly: clients may sen
 ### Current rule:
 All successful GET responses include `Cache-Control`. Non-GET operations do not have a caching strategy baseline. ETag is used for unsafe-operation concurrency through `If-Match`.
 
+## Baseline update — IC MS consistency sweep:
+
+Date: 2026-05-05T13:33:21.556132+00:00
+
+### Updated file:
+- `ic_ms_design_brief.md`
+
+### Checked files:
+- `ic_ms_design_brief.md`
+- `ic_ms_specification.md`
+
+### Result:
+IC MS consistency sweep completed with result: **PASS WITH NOTES**.
+
+### Confirmed:
+- External REST interfaces are documented.
+- IntentReport interfaces are documented.
+- Hub subscription interfaces are documented.
+- External `Intent*Event` and `IntentReport*Event` examples are documented.
+- Internal produced/consumed event interfaces are documented.
+- Runtime create/update uses concrete `intentSpecification.id` only.
+- `GET /intent/{id}` returns the current projected Intent state.
+- `DELETE /intent/{id}` is termination, not physical deletion.
+- Intent-level and version-level lifecycle models are separated.
+- GET response examples include `Cache-Control`.
+- Cache bypass using `Cache-Control: no-cache` is documented.
+- ETag is used for unsafe-operation concurrency through `If-Match`.
+- Security boundary places system authentication at NGW and business/user authorisation at OEX.
+- IC MS boundaries exclude semantic validation, policy validation, optimisation, runtime assurance truth, raw telemetry, and callback ingestion.

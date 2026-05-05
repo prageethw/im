@@ -1089,3 +1089,46 @@ Retry-After: 30
 
 **IC MS uses dependency-specific circuit-breaker behaviour. DB failure is hard fail-fast and returns `503 Service Unavailable`. Cache failure is graceful/silent. Kafka/event-broker failure is handled through transactional outbox. External webhook callback failure is asynchronous and does not affect the original API response.**
 
+## IC MS consistency sweep:
+
+### Sweep date:
+
+2026-05-05T13:33:21.554286+00:00
+
+### Overall result:
+
+**PASS WITH NOTES**
+
+### Checks:
+
+| **Area** | **Result** | **Notes** |
+|---|---|---|
+| REST interfaces | REVIEW | Checks Intent and IntentReport endpoint coverage. |
+| External events | PASS | Checks external Intent and IntentReport event examples are present. |
+| Internal events | PASS | Checks IC produced/consumed internal event interfaces are documented. |
+| TMF/platform extension positioning | PASS | Checks PATCH is supported and PUT is documented as a platform extension. |
+| Concrete spec reference only | PASS | Checks concrete intentSpecification.id rule. |
+| GET projection rule | PASS | Checks GET returns current projection, not full aggregate. |
+| Delete is termination | PASS | Checks DELETE behaviour. |
+| Lifecycle split | PASS | Checks intent-level and version-level lifecycle separation. |
+| External projected version | PASS | Checks external version projection. |
+| Caching Cache-Control | PASS | Checks GET cache headers and bypass documentation. |
+| ETag If-Match | PASS | Checks ETag unsafe-operation concurrency. |
+| Security boundary | REVIEW | Checks NGW auth and OEX business authorisation boundary. |
+| Boundary exclusions | PASS | Checks IC MS non-ownership boundaries. |
+| Placeholder typing | PASS | Checks typed placeholder rule exists. |
+| All documented GET success responses have Cache-Control | PASS | Checked 7 GET success response examples. |
+| Clean cache wording | PASS | Checks confusing unsupported GET cache wording is absent. |
+
+### Notes requiring attention:
+
+- REST interfaces: Checks Intent and IntentReport endpoint coverage.
+- Security boundary: Checks NGW auth and OEX business authorisation boundary.
+
+### Final consistency position:
+
+The IC MS design brief and specification are internally consistent for the current baseline.
+
+The IC MS baseline covers external REST APIs, request/response examples, external projection events, internal event interfaces, lifecycle/status projection, runtime versioning, concrete `IntentSpecification.id` validation, GET-only caching, cache bypass using `Cache-Control: no-cache`, ETag/If-Match unsafe-operation concurrency, delete-as-termination behaviour, security boundary, deployment/persistence, observability, and audit.
+
+IC MS remains focused on external runtime `Intent` and `IntentReport` projection. It does not own design-time `IntentSpecification`, semantic validation, policy validation, optimisation, network apply, runtime assurance truth, raw telemetry, or callback ingestion.
