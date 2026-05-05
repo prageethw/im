@@ -330,3 +330,33 @@ Activation/retirement is represented as a resource update to `IntentSpecificatio
 
 ### Governance:
 When lifecycleStatus is updated to `ACTIVE`, ID MS applies governance internally: target version becomes `ACTIVE`, previous active version in the same family becomes `RETIRED`, ID MS refreshes its own active-specification cache through an internal no-cache/refresh path, and ID MS emits `IntentSpecificationStatusChangeEvent` events for both lifecycle changes.
+
+## Baseline update — TMF compliance and platform extensions for ID MS:
+
+Date: 2026-05-05T01:19:32.207312+00:00
+
+### Updated files:
+- `id_ms_design_brief.md`
+- `id_ms_specification.md`
+
+### Baseline:
+ID MS and IC MS remain TMF-aligned at the external contract level, but controlled platform extensions are acceptable when documented, non-breaking, and semantically compatible with TMF.
+
+### Strict TMF baseline:
+- `POST /intentManagement/v5/intentSpecification`
+- `GET /intentManagement/v5/intentSpecification`
+- `GET /intentManagement/v5/intentSpecification/{id}`
+- `PATCH /intentManagement/v5/intentSpecification/{id}`
+- `DELETE /intentManagement/v5/intentSpecification/{id}`
+- `/hub` and `/hub/{id}` for strict TMF-style event subscriptions where required
+
+### Accepted platform extensions:
+- `PUT /intentManagement/v5/intentSpecification/{id}` for deterministic full replacement
+- `/intentManagement/v5/intentSpecification/hub`
+- `/intentManagement/v5/intentSpecification/hub/{id}`
+
+### Update method rule:
+`PATCH` is the strict TMF-compatible update operation. `PUT` is the accepted platform extension and preferred for deterministic full replacement where clients support it.
+
+### Activation rule:
+Activation/retirement is represented as a resource update to `IntentSpecification.lifecycleStatus`, not a custom `/activate` action endpoint.
