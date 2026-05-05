@@ -304,3 +304,29 @@ Created the ID MS specification document containing API endpoints, request/respo
 
 ### Alignment:
 The specification follows the ID MS design brief baseline: GET-only caching, ETag only for unsafe-operation concurrency, no `DELETED` lifecycle state, `DRAFT`/`ACTIVE`/`RETIRED` lifecycle, `priority` not `priority_level`, and `critical` not `clinical-critical`.
+
+## Baseline update — ID MS TMF-aligned lifecycle activation:
+
+Date: 2026-05-05T01:02:30.098178+00:00
+
+### Updated files:
+- `id_ms_design_brief.md`
+- `id_ms_specification.md`
+
+### Baseline:
+ID MS and IC MS must remain fully TMF-compliant at the external API boundary.
+
+### Correction:
+Do not expose a custom lifecycle action endpoint such as `POST /intentManagement/v5/intentSpecification/{id}/activate`.
+
+### Lifecycle activation approach:
+Activation/retirement is represented as a resource update to `IntentSpecification.lifecycleStatus` using:
+
+- `PUT /intentManagement/v5/intentSpecification/{id}`
+- `PATCH /intentManagement/v5/intentSpecification/{id}`
+
+### Update preference:
+`PUT` is preferred for deterministic full replacement. `PATCH` is supported for TMF compatibility but is not encouraged for ordinary edits.
+
+### Governance:
+When lifecycleStatus is updated to `ACTIVE`, ID MS applies governance internally: target version becomes `ACTIVE`, previous active version in the same family becomes `RETIRED`, ID MS refreshes its own active-specification cache through an internal no-cache/refresh path, and ID MS emits `IntentSpecificationStatusChangeEvent` events for both lifecycle changes.

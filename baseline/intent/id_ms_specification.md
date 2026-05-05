@@ -36,7 +36,7 @@ ID MS does not own runtime `Intent`, `IntentReport`, semantic validation, policy
 | Full replace specification | `PUT` | `/intentManagement/v5/intentSpecification/{id}` |
 | Partial update specification | `PATCH` | `/intentManagement/v5/intentSpecification/{id}` |
 | Delete specification | `DELETE` | `/intentManagement/v5/intentSpecification/{id}` |
-| Activate specification | `POST` | `/intentManagement/v5/intentSpecification/{id}/activate` |
+| Activate specification | `PUT` / `PATCH` | `/intentManagement/v5/intentSpecification/{id}` |
 
 ### Hub subscription APIs:
 
@@ -633,15 +633,44 @@ Content-Type: application/json
 
 ---
 
-## 10. Activate IntentSpecification:
+## 10. Activate IntentSpecification through lifecycle update:
 
-### Request:
+Activation is not exposed through a custom action endpoint.
+
+Do not use:
 
 ```http
-POST /intentManagement/v5/intentSpecification/hospital-surgical-slice-spec-v1.20/activate
+POST /intentManagement/v5/intentSpecification/{id}
+```
+
+Use the existing TMF-style resource update endpoint instead.
+
+### PATCH request:
+
+```http
+PATCH /intentManagement/v5/intentSpecification/hospital-surgical-slice-spec-v1.20
+Content-Type: application/json
 Accept: application/json
 If-Match: "intent-spec-hospital-surgical-slice-spec-v1.20-v1"
 ```
+
+```json
+{
+  "lifecycleStatus": "ACTIVE"
+}
+```
+
+### PUT request option:
+
+`PUT` may also be used when the caller sends the full replacement representation with:
+
+```json
+{
+  "lifecycleStatus": "ACTIVE"
+}
+```
+
+as part of the complete `IntentSpecification` resource.
 
 ### Success response:
 
@@ -672,12 +701,16 @@ ETag: "intent-spec-hospital-surgical-slice-spec-v1.20-v2"
 
 ### Rules:
 
-- Activation changes the target version from `DRAFT` to `ACTIVE`.
-- Activation retires the previous active version in the same family.
+- Activation is represented as a lifecycle/status update on the `IntentSpecification` resource.
+- Use `PUT` or `PATCH` against `/intentSpecification/{id}`.
+- `PUT` is preferred for deterministic full replacement.
+- `PATCH` is supported for TMF compatibility but is not encouraged for ordinary edits.
+- The requested target version changes from `DRAFT` to `ACTIVE`.
+- ID MS retires the previous active version in the same specification family.
 - ID MS refreshes its own active-spec cache through an internal no-cache/refresh path.
 - ID MS emits status-change events for the new active version and the previous retired version.
 
----
+
 
 ## 11. Hub create subscription:
 
@@ -989,3 +1022,4 @@ They are not internal fulfilment events and must not expose II MS semantic valid
 - ETag is used for unsafe-operation concurrency only.
 - Caching is GET-only.
 - `If-None-Match` and `304 Not Modified` are not baselined.
+- Activation is represented through PUT/PATCH lifecycle update, not a custom action endpoint.
