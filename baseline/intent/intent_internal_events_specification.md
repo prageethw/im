@@ -50,6 +50,15 @@ Use `correlationId` as the standard cross-service trace/correlation reference in
 
 Do not include `sourceRequestId` in internal event examples unless a request-ID propagation model is explicitly baselined later.
 
+### IntentValidatedEvent validation object rule:
+
+Do not include a `validation` object in `IntentValidatedEvent`.
+
+The event is emitted only after IC MS admission validation succeeds, so successful validation is implied by the event itself.
+
+If validation fails, IC MS returns a synchronous API validation error and does not emit `IntentValidatedEvent`.
+
+
 ---
 
 ## Common CloudEvents headers:
@@ -126,11 +135,6 @@ content-type: application/json
     },
     "expression": {
       "...similar payload to create intent request..."
-    },
-    "validation": {
-      "result": "Passed",
-      "validationType": "Syntactic",
-      "validatedBy": "intent-controller-ms"
     },
     "references": {
       "intent": {

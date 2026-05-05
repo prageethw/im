@@ -741,3 +741,41 @@ Do not include `sourceRequestId` in internal event examples unless a request-ID 
 
 ### Applied change:
 Removed `sourceRequestId` from the `IntentValidatedEvent` example references.
+
+## Baseline update — lean IntentValidatedEvent validation detail:
+
+Date: 2026-05-05T23:36:01.965053+00:00
+
+### Updated file:
+- `intent_internal_events_specification.md`
+
+### Baseline:
+Do not include `validationType` in `IntentValidatedEvent`.
+
+### Rule:
+The event name, producer, and IC MS boundary already imply that this is IC MS admission validation. Keep only `validation.result` unless a downstream consumer later needs more validation detail.
+
+### Applied change:
+The `IntentValidatedEvent` example now uses:
+
+```json
+"validation": {
+  "result": "Passed"
+}
+```
+
+## Baseline update — remove validation object from IntentValidatedEvent:
+
+Date: 2026-05-05T23:38:23.261073+00:00
+
+### Updated file:
+- `intent_internal_events_specification.md`
+
+### Baseline:
+Do not include a `validation` object in `IntentValidatedEvent`.
+
+### Rule:
+`IntentValidatedEvent` is emitted only after IC MS admission validation succeeds, so successful validation is implied by the event itself. If validation fails, IC MS returns a synchronous API validation error and does not emit `IntentValidatedEvent`.
+
+### Applied change:
+Removed the redundant `validation` object from the `IntentValidatedEvent` example.
