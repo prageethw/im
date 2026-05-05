@@ -646,3 +646,20 @@ IC MS consistency sweep completed with result: **PASS WITH NOTES**.
 - ETag is used for unsafe-operation concurrency through `If-Match`.
 - Security boundary places system authentication at NGW and business/user authorisation at OEX.
 - IC MS boundaries exclude semantic validation, policy validation, optimisation, runtime assurance truth, raw telemetry, and callback ingestion.
+
+## Baseline update — IC MS consistency sweep cleanup:
+
+Date: 2026-05-05T15:12:47.650875+00:00
+
+### Updated files:
+- `ic_ms_design_brief.md`
+- `ic_ms_specification.md`
+
+### Cleanup:
+Added canonical endpoint summary to `ic_ms_specification.md` and exact NGW/OEX/IC security boundary wording to `ic_ms_design_brief.md`.
+
+### Result:
+IC MS consistency sweep now completes with result: **PASS**.
+
+### Notes:
+- None.

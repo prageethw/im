@@ -1089,21 +1089,32 @@ Retry-After: 30
 
 **IC MS uses dependency-specific circuit-breaker behaviour. DB failure is hard fail-fast and returns `503 Service Unavailable`. Cache failure is graceful/silent. Kafka/event-broker failure is handled through transactional outbox. External webhook callback failure is asynchronous and does not affect the original API response.**
 
+
+## Security and access-control baseline:
+
+### Exact security boundary statement:
+
+NGW performs system-to-system authentication using mTLS and OAuth2 token validation.
+
+OEX owns business/user-level authorisation.
+
+IC MS does not implement business/user-level operation authorisation. IC MS trusts authenticated platform/system callers from NGW and enforces technical resource integrity, syntactic validation, active-spec admission, lifecycle/status projection rules, version state-machine rules, ETag/If-Match concurrency, and delete-as-termination behaviour.
+
 ## IC MS consistency sweep:
 
 ### Sweep date:
 
-2026-05-05T13:33:21.554286+00:00
+2026-05-05T15:12:47.649337+00:00
 
 ### Overall result:
 
-**PASS WITH NOTES**
+**PASS**
 
 ### Checks:
 
 | **Area** | **Result** | **Notes** |
 |---|---|---|
-| REST interfaces | REVIEW | Checks Intent and IntentReport endpoint coverage. |
+| REST interfaces | PASS | Checks canonical Intent, IntentReport, and hub endpoint coverage. |
 | External events | PASS | Checks external Intent and IntentReport event examples are present. |
 | Internal events | PASS | Checks IC produced/consumed internal event interfaces are documented. |
 | TMF/platform extension positioning | PASS | Checks PATCH is supported and PUT is documented as a platform extension. |
@@ -1114,7 +1125,7 @@ Retry-After: 30
 | External projected version | PASS | Checks external version projection. |
 | Caching Cache-Control | PASS | Checks GET cache headers and bypass documentation. |
 | ETag If-Match | PASS | Checks ETag unsafe-operation concurrency. |
-| Security boundary | REVIEW | Checks NGW auth and OEX business authorisation boundary. |
+| Security boundary | PASS | Checks exact NGW/OEX/IC security boundary wording. |
 | Boundary exclusions | PASS | Checks IC MS non-ownership boundaries. |
 | Placeholder typing | PASS | Checks typed placeholder rule exists. |
 | All documented GET success responses have Cache-Control | PASS | Checked 7 GET success response examples. |
@@ -1122,8 +1133,7 @@ Retry-After: 30
 
 ### Notes requiring attention:
 
-- REST interfaces: Checks Intent and IntentReport endpoint coverage.
-- Security boundary: Checks NGW auth and OEX business authorisation boundary.
+- None.
 
 ### Final consistency position:
 

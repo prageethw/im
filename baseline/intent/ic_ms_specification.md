@@ -35,6 +35,26 @@ IC MS does not own:
 
 ---
 
+## Canonical endpoint summary:
+
+The examples in this specification may use concrete IDs. The canonical API paths are:
+
+| **Purpose** | **Method** | **Canonical endpoint** | **Position** |
+|---|---:|---|---|
+| Create runtime Intent | `POST` | `/intentManagement/v5/intent` | TMF-aligned |
+| List runtime Intents | `GET` | `/intentManagement/v5/intent` | TMF-aligned |
+| Retrieve runtime Intent | `GET` | `/intentManagement/v5/intent/{id}` | TMF-aligned |
+| Full replace runtime Intent | `PUT` | `/intentManagement/v5/intent/{id}` | Platform extension |
+| Partial update runtime Intent | `PATCH` | `/intentManagement/v5/intent/{id}` | TMF-aligned |
+| Terminate runtime Intent | `DELETE` | `/intentManagement/v5/intent/{id}` | TMF-aligned delete verb; platform behaviour is termination, not physical deletion |
+| List IntentReports | `GET` | `/intentManagement/v5/intent/{intentId}/intentReport` | Platform/TMF-style nested report projection |
+| Retrieve IntentReport | `GET` | `/intentManagement/v5/intent/{intentId}/intentReport/{id}` | Platform/TMF-style nested report projection |
+| Create hub subscription | `POST` | `/intentManagement/v5/hub` | Strict TMF route form |
+| Delete hub subscription | `DELETE` | `/intentManagement/v5/hub/{id}` | Strict TMF route form |
+| Create intent-scoped hub subscription | `POST` | `/intentManagement/v5/intent/hub` | Domain-scoped platform extension |
+| Retrieve intent-scoped hub subscription | `GET` | `/intentManagement/v5/intent/hub/{id}` | Domain-scoped platform extension |
+| Delete intent-scoped hub subscription | `DELETE` | `/intentManagement/v5/intent/hub/{id}` | Domain-scoped platform extension |
+
 ## Interface coverage matrix:
 
 | **Interface type** | **Covered in this specification** |
