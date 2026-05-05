@@ -378,36 +378,21 @@ Use explicit explanatory placeholders such as:
 
 This makes clear that the content is abbreviated to save space, not missing from the real payload.
 
-## Baseline update — global JSON placeholder type rule applied:
+## Baseline update — IC MS design brief and IntentValidatedEvent production rule:
 
-Date: 2026-05-05T01:30:15.597360+00:00
+Date: 2026-05-05T02:22:05.009928+00:00
 
-### Rule:
-When request/response/event examples intentionally abbreviate large repeated sections, preserve the field’s real JSON type.
+### New stable file:
+- `ic_ms_design_brief.md`
 
-### Placeholder style:
-- Array fields use array placeholders, for example: `"field": ["...similar payload to previous example..."]`
-- Object fields use object placeholders, for example: `"field": { "...similar payload to previous example..." }`
-- Do not use a string placeholder for array/object fields.
-- Do not show empty arrays or empty objects unless the field is genuinely empty.
+### Baseline:
+Created the initial IC MS design brief covering service identity, ownership, API surface, lifecycle/status projection, internal/external events, IntentReport responsibility, TMF/platform extension positioning, and ownership boundaries.
 
-### Applied to:
-- `id_ms_specification.md`
-- `id_ms_design_brief.md`
+### IntentValidatedEvent rule:
+IC MS does not emit `IntentValidatedEvent` as a point-to-point command for a specific consumer. IC MS emits it as an internal platform state/progress event meaning: the runtime Intent has passed IC MS syntactic validation and has been admitted into the intent lifecycle.
 
-### Example:
-Use:
-```json
-"specCharacteristic": [
-  "...similar payload to spec creation..."
-],
-"expressionSpecification": {
-  "...similar payload to spec creation..."
-}
-```
+### Consumer positioning:
+II MS is the current primary consumer because it performs semantic validation and resolution, but the event is not defined only for II MS. Other authorised internal consumers may consume it where useful.
 
-Not:
-```json
-"specCharacteristic": "...same as request...",
-"expressionSpecification": "...same as request..."
-```
+### Boundary:
+IC MS owns external `Intent` and `IntentReport` resources, syntactic validation against active `IntentSpecification`, and external lifecycle/status projection. IC MS does not own semantic validation, policy validation, optimisation, network apply, runtime assurance, telemetry ingestion, or callback mediation.
