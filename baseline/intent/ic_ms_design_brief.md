@@ -257,6 +257,87 @@ Platform preference:
 
 ## Lifecycle/status and versioning baseline:
 
+### Intent-level lifecycleStatus:
+
+The overall external Intent lifecycle remains:
+
+```text
+Acknowledged
+InProgress
+Active
+Degraded
+Paused
+Rejected
+Failed
+Terminated
+```
+
+### Intent-version lifecycleStatus:
+
+Individual Intent versions can use:
+
+```text
+Acknowledged
+InProgress
+Active
+Standby
+Degraded
+Paused
+Rejected
+Failed
+Terminated
+Retired
+```
+
+### Version state meanings:
+
+| **Version lifecycleStatus** | **Meaning** |
+|---|---|
+| `Acknowledged` | Version accepted after syntactic validation |
+| `InProgress` | Version is being semantically resolved, optimised, applied, or assured |
+| `Active` | Version is currently active/effective in the network/service |
+| `Standby` | Version is not currently active/effective, but is retained as a valid rollback or future reactivation candidate |
+| `Degraded` | Version is still active/effective, but runtime assurance is degraded |
+| `Paused` | Version is temporarily paused where applicable |
+| `Rejected` | Version was rejected before successful fulfilment |
+| `Failed` | Version failed during fulfilment, apply, or runtime processing |
+| `Terminated` | Version was stopped because the Intent/service was terminated |
+| `Retired` | Version is permanently removed from future active-candidate use; terminal |
+
+### Version pointer:
+
+Use:
+
+```json
+{
+  "activeVersion": "v1"
+}
+```
+
+Do not use:
+
+```json
+{
+  "effectiveVersion": "v1"
+}
+```
+
+or:
+
+```json
+{
+  "currentVersion": "v1"
+}
+```
+
+### Why `activeVersion`:
+
+| **Term** | **Decision** | **Reason** |
+|---|---|---|
+| `activeVersion` | Use | Natural and clearly points to the version currently active/effective in the network/service |
+| `effectiveVersion` | Do not use | Accurate, but less natural |
+| `currentVersion` | Do not use | Ambiguous; could mean latest submitted, latest edited, latest stored, or active |
+
 ### Lifecycle/status ownership:
 
 IC MS owns the external lifecycle/status projection, not the runtime truth.
@@ -270,7 +351,183 @@ Runtime truth comes from:
 | IA MS | Apply, active, degraded, failed, paused, and runtime assurance outcomes |
 | External client/OEX | Termination request |
 
-### Lifecycle values:
+### Lifecycle/versioning example:
+
+| **Step** | **Trigger / event** | **Intent version** | **Version lifecycleStatus** | **Intent activeVersion** | **IC MS external projection** |
+|---:|---|---|---|---|---|
+| 1 | `POST /intent` passes syntactic validation | `v1` | `Acknowledged` | none | Intent admitted; `IntentValidatedEvent` emitted |
+| 2 | Downstream fulfilment starts | `v1` | `InProgress` | none | Intent is being processed |
+| 3 | IA MS confirms apply/assurance active | `v1` | `Active` | `v1` | Intent active; `v1` becomes active version |
+| 4 | Runtime degradation reported by IA MS | `v1` | `Degraded` | `v1` | Intent degraded, but `v1` remains `activeVersion` |
+| 5 | Meaningful update accepted, creates new version | `v2` | `Acknowledged` / `InProgress` | `v1` | New version being processed; service still running on `v1` |
+| 6 | IA MS confirms updated apply active | `v2` | `Active` | `v2` | `v2` becomes `activeVersion` |
+| 7 | `v2` becomes `activeVersion` | `v1` | `Standby` | `v2` | `v1` no longer active/effective, but remains a rollback candidate |
+| 8 | Rollback requested | `v1` | `InProgress` | `v2` | `v1` being reapplied; `v2` still active until rollback is confirmed |
+| 9 | Rollback apply confirmed | `v1` | `Active` | `v1` | `v1` becomes `activeVersion` again |
+| 10 | Rollback completes | `v2` | `Standby` | `v1` | `v2` no longer active, but remains a future candidate |
+| 11 | Version explicitly removed from future use | `v2` | `Retired` | `v1` | `v2` is terminal and cannot become active again |
+| 12 | Termination request accepted | active version | `Terminated` | last active version retained | Intent projection moves to `Terminated`; record retained |
+
+### Example JSON — while v2 is still being processed:
+
+```json
+{
+  "id": "INT-HOSP-2026-001",
+  "lifecycleStatus": "InProgress",
+  "activeVersion": "v1",
+  "versions": [
+    {
+      "version": "v1",
+      "lifecycleStatus": "Active"
+    },
+    {
+      "version": "v2",
+      "lifecycleStatus": "InProgress"
+    }
+  ]
+}
+```
+
+### Example JSON — after v2 becomes active:
+
+```json
+{
+  "id": "INT-HOSP-2026-001",
+  "lifecycleStatus": "Active",
+  "activeVersion": "v2",
+  "versions": [
+    {
+      "version": "v1",
+      "lifecycleStatus": "Standby"
+    },
+    {
+      "version": "v2",
+      "lifecycleStatus": "Active"
+    }
+  ]
+}
+```
+
+### Example JSON — during rollback to v1:
+
+```json
+{
+  "id": "INT-HOSP-2026-001",
+  "lifecycleStatus": "InProgress",
+  "activeVersion": "v2",
+  "versions": [
+    {
+      "version": "v1",
+      "lifecycleStatus": "InProgress"
+    },
+    {
+      "version": "v2",
+      "lifecycleStatus": "Active"
+    }
+  ]
+}
+```
+
+### Example JSON — after rollback to v1 is confirmed:
+
+```json
+{
+  "id": "INT-HOSP-2026-001",
+  "lifecycleStatus": "Active",
+  "activeVersion": "v1",
+  "versions": [
+    {
+      "version": "v1",
+      "lifecycleStatus": "Active"
+    },
+    {
+      "version": "v2",
+      "lifecycleStatus": "Standby"
+    }
+  ]
+}
+```
+
+### Example JSON — after v2 is retired from future use:
+
+```json
+{
+  "id": "INT-HOSP-2026-001",
+  "lifecycleStatus": "Active",
+  "activeVersion": "v1",
+  "versions": [
+    {
+      "version": "v1",
+      "lifecycleStatus": "Active"
+    },
+    {
+      "version": "v2",
+      "lifecycleStatus": "Retired"
+    }
+  ]
+}
+```
+
+### Example JSON — after termination:
+
+```json
+{
+  "id": "INT-HOSP-2026-001",
+  "lifecycleStatus": "Terminated",
+  "activeVersion": "v1",
+  "versions": [
+    {
+      "version": "v1",
+      "lifecycleStatus": "Terminated"
+    },
+    {
+      "version": "v2",
+      "lifecycleStatus": "Retired"
+    }
+  ]
+}
+```
+
+### Delete/terminate rule:
+
+IC MS does not physically delete runtime `Intent` records by default.
+
+`DELETE /intentManagement/v5/intent/{id}` or equivalent terminate flow is treated as a termination request.
+
+The retained `Intent` record remains available for:
+
+- audit
+- reporting
+- lifecycle history
+- traceability
+- existing `IntentReport` references
+
+### Final baseline statements:
+
+**Use `activeVersion`, not `effectiveVersion` or `currentVersion`, for the Intent version currently confirmed active/effective in the network/service.**
+
+**When a newer Intent version becomes `Active`, IC MS moves `activeVersion` to the newer version and transitions the previously active version to `Standby`. `Standby` means the version is no longer currently active/effective, but is retained as a valid rollback or future reactivation candidate.**
+
+**`Retired` is terminal and means the version is permanently removed from future active-candidate use. Once a version is `Retired`, its lifecycle state cannot change again.**
+
+**IC MS does not physically delete runtime `Intent` records by default. Termination transitions the retained Intent projection to `Terminated` for audit, reporting, lifecycle history, and traceability.**
+
+**IC MS must not invent runtime lifecycle truth. It projects external `Intent.lifecycleStatus`, `statusReason`, and `statusChangeDate` based on syntactic admission, II MS rejection outcomes, IA MS assurance outcomes, and accepted termination requests.**
+
+## Intent lifecycle state diagrams:
+
+### Purpose:
+
+IC MS lifecycle modelling is split into two related views:
+
+1. Intent-level lifecycle — the external `Intent.lifecycleStatus` that IC MS projects.
+2. Intent-version lifecycle — the lifecycle of each runtime Intent version, including `Standby` and `Retired`.
+
+Important rule:
+
+`Standby` and `Retired` are version-level states, not overall Intent lifecycle states.
+
+### Intent-level lifecycle states:
 
 ```text
 Acknowledged
@@ -283,60 +540,198 @@ Failed
 Terminated
 ```
 
-### Lifecycle transition baseline:
+### Intent-version lifecycle states:
 
-| **Trigger** | **IC MS projected lifecycleStatus** | **Rule** |
-|---|---|---|
-| Runtime intent passes IC MS syntactic validation | `Acknowledged` | IC MS admits the request and emits `IntentValidatedEvent` |
-| Downstream fulfilment starts | `InProgress` | IC MS projects fulfilment progress when downstream outcome/event indicates processing has started |
-| II MS rejects semantic/policy validation | `Rejected` | IC MS consumes rejection outcome and projects external rejection |
-| IA MS confirms apply/assurance active | `Active` | IC MS projects active external state from assurance truth |
-| IA MS reports degraded assurance | `Degraded` | IC MS projects degraded external state and updates `IntentReport` |
-| IA MS reports paused state | `Paused` | IC MS projects paused external state where applicable |
-| IA MS reports apply/runtime failure | `Failed` | IC MS projects failed external state |
-| External delete/terminate request is accepted | `Terminated` | IC MS retains the `Intent` record and projects terminated lifecycle |
-
-### Delete/terminate rule:
-
-IC MS does not physically delete runtime `Intent` records by default.
-
-`DELETE /intentManagement/v5/intent/{id}` or equivalent terminate flow is treated as a termination request.
-
-Baseline result:
-
-```json
-{
-  "lifecycleStatus": "Terminated",
-  "statusReason": "Intent termination requested and accepted.",
-  "statusChangeDate": "2026-04-18T12:00:00+10:00"
-}
+```text
+Acknowledged
+InProgress
+Active
+Standby
+Degraded
+Paused
+Rejected
+Failed
+Terminated
+Retired
 ```
 
-The retained `Intent` record remains available for:
-
-- audit
-- reporting
-- lifecycle history
-- traceability
-- existing `IntentReport` references
-
-### Versioning baseline:
-
-Each meaningful runtime `Intent` update creates a new Intent version.
+### Key lifecycle rules:
 
 | **Rule** | **Baseline** |
 |---|---|
-| Intent versions | Each meaningful runtime update creates a new version |
-| Version lifecycle | Each version has its own lifecycle/status |
-| Effective version | `effectiveVersion` tracks the version currently confirmed active in the network/service |
-| Active version rule | Once a version becomes `Active`, it becomes `effectiveVersion` |
-| Later degradation/failure | A version can remain `effectiveVersion` even if later `Degraded` or `Failed`, until another version is confirmed `Active` |
-| Rollback | Previous terminated/old versions do not automatically become active again; rollback requires a new orchestration/activation cycle |
+| Initial syntactic success | Intent/version starts as `Acknowledged` |
+| Semantic/policy rejection | Moves to `Rejected` |
+| Fulfilment/apply starts | Moves to `InProgress` |
+| Assurance confirms active | Moves to `Active` |
+| Runtime degradation | Active version can move to `Degraded` while remaining `activeVersion` |
+| Recovery from degradation | `Degraded -> Active` |
+| New version becomes active | New version becomes `Active`; previous active version moves to `Standby` |
+| Rollback | `Standby -> InProgress -> Active`; previous active version moves to `Standby` |
+| Explicit retirement | Version moves to `Retired`; terminal |
+| Termination | Intent-level moves to `Terminated`; active version moves to `Terminated`; records retained |
+| Physical delete | Not baselined for runtime `Intent` |
 
-### Baseline statements:
+### Intent-level lifecycle PlantUML:
 
-**IC MS must not invent runtime lifecycle truth. It projects external `Intent.lifecycleStatus`, `statusReason`, and `statusChangeDate` based on syntactic admission, II MS rejection outcomes, IA MS assurance outcomes, and accepted termination requests.**
+File: `ic_ms_intent_lifecycle_state_diagram.puml`
 
-**IC MS does not physically delete runtime `Intent` records by default. Delete/terminate requests transition the retained `Intent` projection to `Terminated`.**
+```plantuml
+@startuml
+title IC MS — Intent-Level Lifecycle State Diagram
 
-**`effectiveVersion` means the runtime Intent version currently confirmed active in the network/service. Once an Intent version becomes `Active`, it becomes the effective version and remains so until another version is confirmed `Active`.**
+skinparam backgroundColor #FFFFFF
+skinparam shadowing false
+skinparam roundcorner 14
+skinparam state {
+  BackgroundColor #F8FAFC
+  BorderColor #334155
+  FontColor #111827
+  FontStyle bold
+}
+skinparam note {
+  BackgroundColor #FEF3C7
+  BorderColor #D97706
+  FontColor #111827
+}
+
+[*] --> Acknowledged : POST /intent passes\nsyntactic validation
+
+Acknowledged --> Rejected : II MS semantic/policy\nrejection outcome
+Acknowledged --> InProgress : downstream fulfilment\nstarts
+
+InProgress --> Rejected : semantic/policy\nrejection outcome
+InProgress --> Active : IA MS confirms apply /\nassurance active
+InProgress --> Failed : IA MS apply / runtime\nfailure outcome
+
+Active --> Degraded : IA MS reports\ndegraded assurance
+Degraded --> Active : IA MS reports\nrecovered assurance
+Degraded --> InProgress : re-decision /\nre-optimisation starts
+
+Active --> Paused : IA MS reports\npaused outcome
+Paused --> Active : IA MS reports\nresumed / active
+Paused --> Failed : IA MS reports\nfailure
+
+Active --> Failed : IA MS reports\nruntime failure
+Degraded --> Failed : IA MS reports\nfailure
+
+Acknowledged --> Terminated : termination request\naccepted
+InProgress --> Terminated : termination request\naccepted
+Active --> Terminated : termination request\naccepted
+Degraded --> Terminated : termination request\naccepted
+Paused --> Terminated : termination request\naccepted
+Failed --> Terminated : termination request\naccepted
+Rejected --> Terminated : termination request\naccepted, if retained\nas terminated
+
+Terminated --> [*]
+
+note right of Terminated
+  Runtime Intent records are retained.
+  DELETE /intent/{id} is treated as
+  termination, not physical delete.
+end note
+
+note bottom of Active
+  IC MS owns external lifecycle projection.
+  Runtime truth comes from IA MS.
+end note
+
+@enduml
+
+```
+
+### Intent-version lifecycle PlantUML:
+
+File: `ic_ms_intent_version_lifecycle_state_diagram.puml`
+
+```plantuml
+@startuml
+title IC MS — Intent-Version Lifecycle State Diagram
+
+skinparam backgroundColor #FFFFFF
+skinparam shadowing false
+skinparam roundcorner 14
+skinparam state {
+  BackgroundColor #F8FAFC
+  BorderColor #334155
+  FontColor #111827
+  FontStyle bold
+}
+skinparam note {
+  BackgroundColor #FEF3C7
+  BorderColor #D97706
+  FontColor #111827
+}
+
+[*] --> Acknowledged : version created /\nsyntactically admitted
+
+Acknowledged --> Rejected : semantic/policy\nrejection
+Acknowledged --> InProgress : fulfilment starts
+
+InProgress --> Active : apply + assurance\nconfirmed
+InProgress --> Failed : apply / fulfilment\nfailed
+InProgress --> Rejected : semantic/policy\nrejection
+
+Active --> Degraded : assurance degraded
+Degraded --> Active : assurance recovered
+
+Active --> Standby : newer version becomes Active
+Degraded --> Standby : newer version becomes Active\nwhile old version degraded
+
+Standby --> InProgress : rollback / reactivation\nrequested
+InProgress --> Active : rollback / reactivation\napply confirmed
+
+Standby --> Retired : explicit retirement /\nremoved from future use
+Failed --> Retired : explicit retirement
+Rejected --> Retired : explicit retirement
+Terminated --> Retired : explicit retirement\nif policy allows
+
+Active --> Terminated : Intent termination accepted
+Degraded --> Terminated : Intent termination accepted
+Standby --> Terminated : Intent termination accepted
+InProgress --> Terminated : Intent termination accepted
+Paused --> Terminated : Intent termination accepted
+Failed --> Terminated : Intent termination accepted
+Rejected --> Terminated : Intent termination accepted
+
+Active --> Paused : pause outcome
+Paused --> Active : resume outcome
+Paused --> Failed : failure outcome
+
+Retired --> [*]
+Terminated --> [*]
+
+note right of Standby
+  Standby means:
+  not currently active/effective,
+  but still valid for rollback or
+  future reactivation.
+end note
+
+note right of Retired
+  Retired is terminal.
+  A retired version is permanently
+  removed from future active-candidate use.
+end note
+
+note bottom of Active
+  activeVersion points to the version
+  currently confirmed active/effective.
+end note
+
+@enduml
+
+```
+
+### Example activeVersion transition:
+
+```text
+v1 Active, activeVersion = v1
+-> v2 created, v2 InProgress, activeVersion still v1
+-> v2 Active, activeVersion = v2, v1 moves to Standby
+-> rollback requested, v1 InProgress, activeVersion still v2
+-> rollback confirmed, v1 Active, activeVersion = v1, v2 moves to Standby
+```
+
+### Baseline statement:
+
+IC MS lifecycle diagrams must keep Intent-level lifecycle and Intent-version lifecycle separate. The external Intent lifecycle is what IC MS projects to callers. Version lifecycle tracks each runtime version and includes `Standby` for rollback/reactivation candidates and `Retired` as a terminal state for versions permanently removed from future active-candidate use.

@@ -425,3 +425,50 @@ Each meaningful runtime `Intent` update creates a new Intent version. Each versi
 
 ### Key rule:
 IC MS must not invent runtime lifecycle truth. It projects external lifecycle/status from syntactic admission, II MS rejection outcomes, IA MS assurance outcomes, and accepted termination requests.
+
+## Baseline update — IC MS activeVersion and version lifecycle refinement:
+
+Date: 2026-05-05T04:43:42.158147+00:00
+
+### Updated file:
+- `ic_ms_design_brief.md`
+
+### Baseline:
+Use `activeVersion`, not `effectiveVersion` or `currentVersion`, for the Intent version currently confirmed active/effective in the network/service.
+
+### Version lifecycle:
+Individual Intent versions may use: `Acknowledged`, `InProgress`, `Active`, `Standby`, `Degraded`, `Paused`, `Rejected`, `Failed`, `Terminated`, and `Retired`.
+
+### Standby:
+When a newer Intent version becomes `Active`, IC MS moves `activeVersion` to the newer version and transitions the previously active version to `Standby`. `Standby` means the version is no longer currently active/effective, but is retained as a valid rollback or future reactivation candidate.
+
+### Retired:
+`Retired` is terminal and means the version is permanently removed from future active-candidate use. Once a version is `Retired`, its lifecycle state cannot change again.
+
+### Termination:
+IC MS does not physically delete runtime `Intent` records by default. Termination transitions the retained Intent projection to `Terminated` for audit, reporting, lifecycle history, and traceability.
+
+### Examples:
+The IC MS design brief now includes lifecycle/versioning tables and JSON examples for initial activation, update to v2, rollback to v1, retiring v2, and termination.
+
+## Baseline update — IC MS intent lifecycle state diagrams:
+
+Date: 2026-05-05T05:59:27.287970+00:00
+
+### Updated file:
+- `ic_ms_design_brief.md`
+
+### New stable diagram files:
+- `ic_ms_intent_lifecycle_state_diagram.puml`
+- `ic_ms_intent_version_lifecycle_state_diagram.puml`
+
+### Baseline:
+IC MS lifecycle modelling is split into two views:
+1. Intent-level lifecycle: external `Intent.lifecycleStatus` projected by IC MS.
+2. Intent-version lifecycle: each runtime Intent version lifecycle, including `Standby` and `Retired`.
+
+### Key rules:
+- `Standby` and `Retired` are version-level states, not overall Intent lifecycle states.
+- `Standby` means the version is not currently active/effective but is retained as a rollback or future reactivation candidate.
+- `Retired` is terminal and means the version is permanently removed from future active-candidate use.
+- Runtime `Intent` records are retained; delete is treated as termination, not physical deletion.

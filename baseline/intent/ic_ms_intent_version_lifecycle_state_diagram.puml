@@ -1,0 +1,75 @@
+@startuml
+title IC MS — Intent-Version Lifecycle State Diagram
+
+skinparam backgroundColor #FFFFFF
+skinparam shadowing false
+skinparam roundcorner 14
+skinparam state {
+  BackgroundColor #F8FAFC
+  BorderColor #334155
+  FontColor #111827
+  FontStyle bold
+}
+skinparam note {
+  BackgroundColor #FEF3C7
+  BorderColor #D97706
+  FontColor #111827
+}
+
+[*] --> Acknowledged : version created /\nsyntactically admitted
+
+Acknowledged --> Rejected : semantic/policy\nrejection
+Acknowledged --> InProgress : fulfilment starts
+
+InProgress --> Active : apply + assurance\nconfirmed
+InProgress --> Failed : apply / fulfilment\nfailed
+InProgress --> Rejected : semantic/policy\nrejection
+
+Active --> Degraded : assurance degraded
+Degraded --> Active : assurance recovered
+
+Active --> Standby : newer version becomes Active
+Degraded --> Standby : newer version becomes Active\nwhile old version degraded
+
+Standby --> InProgress : rollback / reactivation\nrequested
+InProgress --> Active : rollback / reactivation\napply confirmed
+
+Standby --> Retired : explicit retirement /\nremoved from future use
+Failed --> Retired : explicit retirement
+Rejected --> Retired : explicit retirement
+Terminated --> Retired : explicit retirement\nif policy allows
+
+Active --> Terminated : Intent termination accepted
+Degraded --> Terminated : Intent termination accepted
+Standby --> Terminated : Intent termination accepted
+InProgress --> Terminated : Intent termination accepted
+Paused --> Terminated : Intent termination accepted
+Failed --> Terminated : Intent termination accepted
+Rejected --> Terminated : Intent termination accepted
+
+Active --> Paused : pause outcome
+Paused --> Active : resume outcome
+Paused --> Failed : failure outcome
+
+Retired --> [*]
+Terminated --> [*]
+
+note right of Standby
+  Standby means:
+  not currently active/effective,
+  but still valid for rollback or
+  future reactivation.
+end note
+
+note right of Retired
+  Retired is terminal.
+  A retired version is permanently
+  removed from future active-candidate use.
+end note
+
+note bottom of Active
+  activeVersion points to the version
+  currently confirmed active/effective.
+end note
+
+@enduml
