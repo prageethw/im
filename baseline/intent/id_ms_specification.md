@@ -323,8 +323,12 @@ Last-Modified: Sat, 18 Apr 2026 02:00:00 GMT
   "lifecycleStatus": "DRAFT",
   "@type": "IntentSpecification",
   "@baseType": "EntitySpecification",
-  "specCharacteristic": "...same as request...",
-  "expressionSpecification": "...same as request...",
+  "specCharacteristic": [
+    "...same as request..."
+  ],
+  "expressionSpecification": {
+    "...same as request..."
+  },
   "_links": {
     "self": { "href": "/intentManagement/v5/intentSpecification/hospital-surgical-slice-spec-v1.19" },
     "fullUpdate": { "href": "/intentManagement/v5/intentSpecification/hospital-surgical-slice-spec-v1.19", "method": "PUT" },
@@ -424,8 +428,12 @@ Cache-Control: private, max-age=300
   "lifecycleStatus": "ACTIVE",
   "@type": "IntentSpecification",
   "@baseType": "EntitySpecification",
-  "specCharacteristic": "...full characteristic catalogue...",
-  "expressionSpecification": "...full expression schema...",
+  "specCharacteristic": [
+    "...full characteristic catalogue..."
+  ],
+  "expressionSpecification": {
+    "...full expression schema..."
+  },
   "_links": {
     "self": { "href": "/intentManagement/v5/intentSpecification/hospital-surgical-slice-spec-v1.19" },
     "partialUpdate": {
@@ -478,8 +486,12 @@ If-Match: "intent-spec-hospital-surgical-slice-spec-v1.19-v1"
   "lifecycleStatus": "DRAFT",
   "@type": "IntentSpecification",
   "@baseType": "EntitySpecification",
-  "specCharacteristic": [],
-  "expressionSpecification": {}
+  "specCharacteristic": [
+    "...similar payload to spec creation..."
+  ],
+  "expressionSpecification": {
+    "...similar payload to spec creation..."
+  }
 }
 ```
 
@@ -1107,3 +1119,21 @@ The domain-scoped route is acceptable only as a documented platform extension an
 ### Baseline statement:
 
 ID MS and IC MS remain TMF-aligned at the external contract level. Controlled platform extensions are allowed when documented, non-breaking, and semantically compatible with TMF. For ID MS, `PATCH /intentSpecification/{id}` is the strict TMF update operation, while `PUT /intentSpecification/{id}` is an accepted platform extension for deterministic full replacement. TMF `/hub` routing is the strict subscription route form, while `/intentSpecification/hub` is an accepted domain-scoped platform extension when deliberately used.
+- Where examples abbreviate large sections, use explicit placeholders such as `"...similar payload to spec creation..."` rather than empty arrays/objects, so readers understand the section is intentionally shortened and not missing.
+
+## Example placeholder rule:
+
+When request/response/event examples intentionally abbreviate large repeated sections, keep the field’s real JSON type.
+
+Use:
+
+```json
+"arrayField": [
+  "...similar payload to previous example..."
+],
+"objectField": {
+  "...similar payload to previous example..."
+}
+```
+
+Do not use a string placeholder for an array or object field. Do not show empty arrays or empty objects unless the field is genuinely empty.

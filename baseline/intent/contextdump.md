@@ -360,3 +360,54 @@ ID MS and IC MS remain TMF-aligned at the external contract level, but controlle
 
 ### Activation rule:
 Activation/retirement is represented as a resource update to `IntentSpecification.lifecycleStatus`, not a custom `/activate` action endpoint.
+
+## Baseline update — ID MS specification placeholder clarity:
+
+Date: 2026-05-05T01:21:44.269813+00:00
+
+### Updated file:
+- `id_ms_specification.md`
+
+### Baseline:
+When request/response examples intentionally shorten large sections such as `specCharacteristic` or `expressionSpecification`, do not show empty arrays/objects unless the field is genuinely empty.
+
+### Rule:
+Use explicit explanatory placeholders such as:
+- `"specCharacteristic": ["...similar payload to spec creation..."]`
+- `"expressionSpecification": ...similar payload to spec creation...`
+
+This makes clear that the content is abbreviated to save space, not missing from the real payload.
+
+## Baseline update — global JSON placeholder type rule applied:
+
+Date: 2026-05-05T01:30:15.597360+00:00
+
+### Rule:
+When request/response/event examples intentionally abbreviate large repeated sections, preserve the field’s real JSON type.
+
+### Placeholder style:
+- Array fields use array placeholders, for example: `"field": ["...similar payload to previous example..."]`
+- Object fields use object placeholders, for example: `"field": { "...similar payload to previous example..." }`
+- Do not use a string placeholder for array/object fields.
+- Do not show empty arrays or empty objects unless the field is genuinely empty.
+
+### Applied to:
+- `id_ms_specification.md`
+- `id_ms_design_brief.md`
+
+### Example:
+Use:
+```json
+"specCharacteristic": [
+  "...similar payload to spec creation..."
+],
+"expressionSpecification": {
+  "...similar payload to spec creation..."
+}
+```
+
+Not:
+```json
+"specCharacteristic": "...same as request...",
+"expressionSpecification": "...same as request..."
+```

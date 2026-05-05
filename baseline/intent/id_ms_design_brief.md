@@ -1235,86 +1235,19 @@ When the requested lifecycle update is valid, ID MS applies governance internall
 
 ID MS remains TMF-aligned by using resource update operations for lifecycle transitions. Activation is not exposed as a custom `/activate` action endpoint. Use `PUT` or `PATCH` against `/intentSpecification/{id}`, with `PUT` preferred for deterministic full replacement and `PATCH` supported for TMF compatibility.
 
-## TMF compliance and platform extension baseline:
+## Example placeholder rule:
 
-### Strict TMF-facing baseline:
-
-For strict TMF alignment, ID MS supports the TMF-style `IntentSpecification` operations:
-
-| **Operation** | **Endpoint** | **Position** |
-|---|---|---|
-| Create | `POST /intentManagement/v5/intentSpecification` | TMF-aligned |
-| List | `GET /intentManagement/v5/intentSpecification` | TMF-aligned |
-| Retrieve | `GET /intentManagement/v5/intentSpecification/{id}` | TMF-aligned |
-| Partial update | `PATCH /intentManagement/v5/intentSpecification/{id}` | TMF-aligned |
-| Delete | `DELETE /intentManagement/v5/intentSpecification/{id}` | TMF-aligned |
-| Event subscription | `/hub` and `/hub/{id}` | Strict TMF route form where required |
-
-### Accepted platform extensions:
-
-Controlled platform extensions are acceptable when they are documented, non-breaking, and do not conflict with TMF semantics.
-
-For ID MS, accepted platform extensions are:
-
-| **Extension** | **Purpose** | **Rule** |
-|---|---|---|
-| `PUT /intentManagement/v5/intentSpecification/{id}` | Deterministic full replacement | Preferred platform update method where supported |
-| `/intentManagement/v5/intentSpecification/hub` | Domain-scoped event subscription route | Allowed as a clearer domain-owned route when deliberately chosen |
-| `/intentManagement/v5/intentSpecification/hub/{id}` | Domain-scoped subscription delete/retrieve route | Allowed as a clearer domain-owned route when deliberately chosen |
-
-### Update method rule:
-
-`PATCH` is the strict TMF-compatible update operation.
-
-`PUT` is the platform extension for deterministic full replacement and is preferred from the platform engineering perspective where clients support it.
-
-`PATCH` remains supported for TMF compatibility but is not encouraged for ordinary edits when deterministic full replacement is available.
-
-### Lifecycle activation rule:
-
-Activation/retirement is represented as a resource update to `IntentSpecification.lifecycleStatus`.
+When request/response/event examples intentionally abbreviate large repeated sections, keep the field’s real JSON type.
 
 Use:
 
-```http
-PATCH /intentManagement/v5/intentSpecification/{id}
+```json
+"arrayField": [
+  "...similar payload to previous example..."
+],
+"objectField": {
+  "...similar payload to previous example..."
+}
 ```
 
-for strict TMF compatibility.
-
-Use:
-
-```http
-PUT /intentManagement/v5/intentSpecification/{id}
-```
-
-as a platform extension when performing deterministic full replacement.
-
-Do not expose custom lifecycle action endpoints such as:
-
-```http
-POST /intentManagement/v5/intentSpecification/{id}/activate
-```
-
-### Hub route rule:
-
-For strict TMF route compatibility, use:
-
-```http
-POST /intentManagement/v5/hub
-DELETE /intentManagement/v5/hub/{id}
-```
-
-For domain-scoped platform extension routing, ID MS may expose:
-
-```http
-POST /intentManagement/v5/intentSpecification/hub
-GET /intentManagement/v5/intentSpecification/hub/{id}
-DELETE /intentManagement/v5/intentSpecification/hub/{id}
-```
-
-The domain-scoped route is acceptable only as a documented platform extension and must preserve the same subscription semantics.
-
-### Baseline statement:
-
-ID MS and IC MS remain TMF-aligned at the external contract level. Controlled platform extensions are allowed when documented, non-breaking, and semantically compatible with TMF. For ID MS, `PATCH /intentSpecification/{id}` is the strict TMF update operation, while `PUT /intentSpecification/{id}` is an accepted platform extension for deterministic full replacement. TMF `/hub` routing is the strict subscription route form, while `/intentSpecification/hub` is an accepted domain-scoped platform extension when deliberately used.
+Do not use a string placeholder for an array or object field. Do not show empty arrays or empty objects unless the field is genuinely empty.
