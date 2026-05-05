@@ -152,6 +152,7 @@ Date: 2026-05-04T23:35:42.796639+00:00
 ID MS caching applies only to GET responses. GET responses may use bounded private caching, with longer TTL for single-resource GETs and shorter TTL for list GETs. Clients either use the cached response within TTL or request a fresh copy using `Cache-Control: no-cache`.
 
 ### ETag baseline:
+ETag is not used for GET revalidation. ETag is used only for unsafe operation concurrency through `If-Match`.
 
 ### Non-GET cache baseline:
 No `Cache-Control: no-store` strategy is baselined for non-GET operations.
@@ -273,6 +274,7 @@ Date: 2026-05-05T00:12:35.705139+00:00
 All residual `Cache-Control: no-store` references were removed from the ID MS design brief.
 
 ### Current caching rule:
+ID MS caching is baselined only for GET responses. No caching strategy is baselined for non-GET operations. ETag is not used for GET revalidation; ETag is used only for unsafe operation concurrency through `If-Match`.
 
 ### Consistency result:
 ID MS consistency sweep now passes with no notes.
@@ -448,21 +450,86 @@ IC MS does not physically delete runtime `Intent` records by default. Terminatio
 ### Examples:
 The IC MS design brief now includes lifecycle/versioning tables and JSON examples for initial activation, update to v2, rollback to v1, retiring v2, and termination.
 
-## Baseline update — GET caching wording cleanup across ID and IC:
+## Baseline update — IC MS intent lifecycle state diagrams:
 
-Date: 2026-05-05T07:59:37.925379+00:00
+Date: 2026-05-05T05:59:27.287970+00:00
 
-### Checked files:
+### Updated file:
 - `ic_ms_design_brief.md`
+
+### New stable diagram files:
+- `ic_ms_intent_lifecycle_state_diagram.puml`
+- `ic_ms_intent_version_lifecycle_state_diagram.puml`
+
+### Baseline:
+IC MS lifecycle modelling is split into two views:
+1. Intent-level lifecycle: external `Intent.lifecycleStatus` projected by IC MS.
+2. Intent-version lifecycle: each runtime Intent version lifecycle, including `Standby` and `Retired`.
+
+### Key rules:
+- `Standby` and `Retired` are version-level states, not overall Intent lifecycle states.
+- `Standby` means the version is not currently active/effective but is retained as a rollback or future reactivation candidate.
+- `Retired` is terminal and means the version is permanently removed from future active-candidate use.
+- Runtime `Intent` records are retained; delete is treated as termination, not physical deletion.
+
+## Baseline update — IC MS external Intent projection and version visibility:
+
+Date: 2026-05-05T07:40:46.351191+00:00
+
+### Updated file:
+- `ic_ms_design_brief.md`
+
+### Baseline:
+For the external `Intent` resource, IC MS simply projects the currently relevant version of that Intent ID.
+
+### GET behaviour:
+- `GET /intent/{id}` returns the current projected version for that Intent ID.
+- `GET /intent` lists current projected versions for retained Intent IDs.
+- The returned `version` is the projected runtime version.
+- IC MS does not return the full internal version aggregate by default.
+
+### Version history:
+Internal version history, `Standby`, `Retired`, rollback candidates, and previous versions remain internal unless exposed through `IntentReport` or a documented platform extension.
+
+## Baseline update — IC MS operation behaviour and IntentSpecification reference rule:
+
+Date: 2026-05-05T07:45:44.746447+00:00
+
+### Updated file:
+- `ic_ms_design_brief.md`
+
+### IntentSpecification reference rule:
+IC MS supports only concrete `intentSpecification.id` references in runtime `Intent` create/update requests. IC MS does not resolve `IntentSpecification` by family, key, name, or inferred payload shape.
+
+### Operation behaviour:
+- `POST /intent` requires concrete `intentSpecification.id`, validates against that exact active spec, and creates projected runtime version `v1`.
+- `GET /intent/{id}` returns current projected Intent state for that Intent ID, not the full internal version aggregate.
+- `GET /intent` lists current projected Intent states for retained Intent IDs.
+- `PUT /intent/{id}` is a platform extension for deterministic full replacement and creates a new runtime version when meaningful runtime content changes.
+- `PATCH /intent/{id}` is TMF-compatible partial update and creates a new runtime version when meaningful runtime content changes.
+- `DELETE /intent/{id}` is treated as termination, not physical deletion.
+
+### Termination version-state rule:
+`Active`, `Standby`, `InProgress`, `Degraded`, and `Paused` versions move to `Terminated`. `Rejected` remains `Rejected`, `Failed` remains `Failed`, and `Retired` remains `Retired`.
+
+### Baseline statement:
+For `POST`, `PUT`, and runtime-content-changing `PATCH`, IC MS validates runtime Intent content against the exact referenced `IntentSpecification.id`, and that specification must be `ACTIVE`. GET operations return current projected Intent state, not internal version aggregates. DELETE is termination, not physical deletion.
+
+## Baseline update — remove confusing GET revalidation exclusions:
+
+Date: 2026-05-05T07:56:35.185688+00:00
+
+### Updated files:
 - `id_ms_design_brief.md`
 - `id_ms_specification.md`
 - `contextdump.md`
 
-### Current wording rule:
-Use only positive caching wording:
-- GET responses may use bounded private caching.
-- Clients may request a fresh GET using `Cache-Control: no-cache`.
-- ETag is used for unsafe-operation concurrency through `If-Match`.
-- No caching strategy is baselined for non-GET operations.
+### Rule:
+Do not explicitly mention unsupported GET revalidation mechanisms in baseline documents because it can confuse readers.
 
-Avoid listing mechanisms that are not part of the baseline, because that creates reader confusion.
+### Current wording:
+State only the positive caching rule:
+- caching is baselined for GET responses
+- clients can request a fresh GET using `Cache-Control: no-cache`
+- ETag is used for unsafe-operation concurrency through `If-Match`
+- no caching strategy is baselined for non-GET operations
