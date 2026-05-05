@@ -955,3 +955,125 @@ Termination closes live/candidate versions, but should not rewrite final histori
 **`GET` operations return current projected Intent state, not internal version aggregates, and do not resolve or mutate specification versions.**
 
 **`DELETE /intent/{id}` is treated as termination, not physical deletion. It transitions the retained Intent projection to `Terminated` and updates live/candidate version states according to the termination rules.**
+
+## Caching, ETag, and dependency-specific circuit-breaker baseline:
+
+### Caching scope:
+
+IC MS caching applies only to GET responses.
+
+Caching is baselined for:
+
+```http
+GET /intentManagement/v5/intent
+GET /intentManagement/v5/intent/{id}
+GET /intentManagement/v5/intent/{intentId}/intentReport
+GET /intentManagement/v5/intent/{intentId}/intentReport/{reportId}
+```
+
+No caching strategy is baselined for non-GET operations.
+
+### GET caching behaviour:
+
+| **Endpoint** | **Cache behaviour** |
+|---|---|
+| `GET /intent/{id}` | Private bounded TTL; returns current projected Intent version |
+| `GET /intent` | Private bounded TTL; shorter TTL for list |
+| `GET /intent/{intentId}/intentReport` | Private bounded TTL; short TTL because reports can change with assurance |
+| `GET /intent/{intentId}/intentReport/{reportId}` | Private bounded TTL; moderate TTL |
+
+### Client cache override:
+
+Clients can request a fresh GET response using:
+
+```http
+Cache-Control: no-cache
+```
+
+### ETag rule:
+
+ETag is used for unsafe-operation concurrency through:
+
+```http
+If-Match
+```
+
+Applies to:
+
+```http
+PUT /intentManagement/v5/intent/{id}
+PATCH /intentManagement/v5/intent/{id}
+DELETE /intentManagement/v5/intent/{id}
+```
+
+`DELETE` is treated as termination, not physical deletion.
+
+### Dependency-specific circuit-breaker behaviour:
+
+| **Dependency path** | **CB style** | **Baseline behaviour** |
+|---|---|---|
+| IC MS -> DB | Hard fail-fast | Return `503`; consumer retries |
+| IC MS -> cache | Graceful/silent | Bypass cache or ignore failed cache writes; use DB/source-of-truth; emit telemetry |
+| IC MS -> ID MS | Cached active-spec fallback then fail-closed for create/update | Use valid fresh cached active spec where available; otherwise fail closed for runtime-content admission |
+| IC MS -> Kafka/event broker | Graceful/silent with transactional outbox | API succeeds after DB + outbox commit; relay retries Kafka later |
+| IC MS -> external webhook callback | Async fail-fast per delivery attempt | Delivery attempt fails fast, retries later; original API unaffected |
+
+### ID MS dependency rule:
+
+For `POST`, `PUT`, and runtime-content-changing `PATCH`, IC MS must validate against the exact referenced `intentSpecification.id`.
+
+If ID MS cannot confirm that spec is `ACTIVE`:
+
+| **Situation** | **IC MS behaviour** |
+|---|---|
+| Valid fresh cached active spec exists | Continue syntactic validation using cache |
+| No valid fresh cached active spec | Fail closed; do not admit/create new runtime version |
+
+### Failure responses:
+
+DB unavailable:
+
+```http
+HTTP/1.1 503 Service Unavailable
+Content-Type: application/json
+Retry-After: 30
+```
+
+```json
+{
+  "code": "SERVICE_UNAVAILABLE",
+  "reason": "IC_MS_DATABASE_UNAVAILABLE",
+  "message": "Intent service is temporarily unavailable because the persistence layer cannot be accessed.",
+  "status": 503,
+  "referenceError": "https://mycsp.com.au/errors/SERVICE_UNAVAILABLE",
+  "@type": "Error"
+}
+```
+
+Active IntentSpecification cannot be confirmed:
+
+```http
+HTTP/1.1 503 Service Unavailable
+Content-Type: application/json
+Retry-After: 30
+```
+
+```json
+{
+  "code": "SERVICE_UNAVAILABLE",
+  "reason": "INTENT_SPECIFICATION_LOOKUP_UNAVAILABLE",
+  "message": "Intent creation or update cannot be accepted because the referenced active IntentSpecification could not be confirmed.",
+  "status": 503,
+  "referenceError": "https://mycsp.com.au/errors/SERVICE_UNAVAILABLE",
+  "@type": "Error"
+}
+```
+
+### Baseline statements:
+
+**IC MS caching applies only to GET responses. Clients either use cached GET responses within TTL or request a fresh copy using `Cache-Control: no-cache`. ETag is used only for unsafe-operation concurrency through `If-Match`. No caching strategy is baselined for non-GET operations.**
+
+**For runtime-content admission, IC MS must confirm the exact referenced active `IntentSpecification.id` from ID MS or a valid fresh cached active specification. If it cannot confirm the active specification, IC MS fails closed and does not admit the runtime Intent or runtime version.**
+
+**IC MS uses dependency-specific circuit-breaker behaviour. DB failure is hard fail-fast and returns `503 Service Unavailable`. Cache failure is graceful/silent. Kafka/event-broker failure is handled through transactional outbox. External webhook callback failure is asynchronous and does not affect the original API response.**
+

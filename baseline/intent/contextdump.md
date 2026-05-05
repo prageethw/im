@@ -466,3 +466,23 @@ Use only positive caching wording:
 - No caching strategy is baselined for non-GET operations.
 
 Avoid listing mechanisms that are not part of the baseline, because that creates reader confusion.
+
+## Baseline update — IC MS caching, ETag, and dependency-specific CB:
+
+Date: 2026-05-05T09:36:05.981308+00:00
+
+### Updated file:
+- `ic_ms_design_brief.md`
+
+### Caching baseline:
+IC MS caching applies only to GET responses. Clients either use cached GET responses within TTL or request a fresh copy using `Cache-Control: no-cache`. No caching strategy is baselined for non-GET operations.
+
+### ETag baseline:
+ETag is used only for unsafe-operation concurrency through `If-Match` on `PUT`, `PATCH`, and `DELETE`.
+
+### ID MS dependency:
+For `POST`, `PUT`, and runtime-content-changing `PATCH`, IC MS must confirm the exact referenced active `IntentSpecification.id` from ID MS or a valid fresh cached active specification. If it cannot confirm the active specification, IC MS fails closed and does not admit the runtime Intent or runtime version.
+
+### Dependency-specific CB:
+DB failure is hard fail-fast and returns `503 Service Unavailable`. Cache failure is graceful/silent. Kafka/event-broker failure is handled through transactional outbox. External webhook callback failure is asynchronous and does not affect the original API response.
+
