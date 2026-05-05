@@ -1077,3 +1077,163 @@ Retry-After: 30
 
 **IC MS uses dependency-specific circuit-breaker behaviour. DB failure is hard fail-fast and returns `503 Service Unavailable`. Cache failure is graceful/silent. Kafka/event-broker failure is handled through transactional outbox. External webhook callback failure is asynchronous and does not affect the original API response.**
 
+## Deployment and persistence strategy:
+
+### Runtime/state model:
+
+IC MS is a stateful MS, backed by a managed PostgreSQL-compatible RDBMS.
+
+IC MS application instances can still scale independently because durable state is externalised to the database rather than held in local memory.
+
+### Source of truth:
+
+The IC MS database is the source of truth for:
+
+- retained `Intent` projections
+- internal `IntentVersion` history
+- `IntentReport` projections
+- hub/event subscriptions where IC MS owns the subscription route
+- inbox records for idempotent event consumption
+- outbox records for durable event publication
+- ETag values
+- lifecycle/status projection state
+- audit-relevant runtime projection metadata
+
+### Recommended persistence model:
+
+| **Table / store** | **Purpose** |
+|---|---|
+| `intent` | Stores retained external `Intent` projection, current projected version, lifecycle/status, ETag, timestamps, and resource body |
+| `intent_version` | Stores internal runtime Intent versions, version lifecycle/status, concrete `IntentSpecification.id`, rollback/standby/retired history, and version payload |
+| `intent_report` | Stores external `IntentReport` projections linked to retained `Intent` records |
+| `event_subscription` | Stores external event subscriptions where IC MS owns the route |
+| `inbox_event` | Stores consumed internal events such as `IntentRejectedEvent` and `IntentAssuranceEvent` for idempotent processing |
+| `outbox_event` | Stores durable internal/external events before publication |
+| audit table / audit log | Optional dedicated audit trail if not covered by platform audit capability |
+
+### JSONB usage:
+
+Use JSONB where flexible document-shaped content is required.
+
+Recommended JSONB fields:
+
+- external `Intent` resource body snapshot
+- internal `IntentVersion` payload
+- `IntentReport` body snapshot
+- event payload snapshot in `outbox_event`
+- consumed event snapshot in `inbox_event`
+- curated resource/service/evaluation summaries where structure may evolve
+
+Relational columns should still be used for governance and query fields such as `id`, `version`, `lifecycleStatus`, `activeVersion` / projected version, `intentSpecificationId`, `etag`, and timestamps.
+
+### Suggested relational columns:
+
+For `intent`:
+
+| **Column** | **Purpose** |
+|---|---|
+| `id` | Stable Intent ID, for example `INT-HOSP-2026-001` |
+| `projected_version` | Current externally projected runtime version |
+| `lifecycle_status` | Current external `Intent.lifecycleStatus` |
+| `status_reason` | Current external status reason |
+| `status_change_date` | Last lifecycle/status projection change timestamp |
+| `intent_specification_id` | Concrete `IntentSpecification.id` used by the projected version |
+| `etag` | Current ETag for unsafe-operation concurrency |
+| `resource_body` | Current external projected `Intent` JSONB representation |
+| `created_at` | Creation timestamp |
+| `updated_at` | Last update timestamp |
+| `terminated_at` | Termination timestamp where applicable |
+
+For `intent_version`:
+
+| **Column** | **Purpose** |
+|---|---|
+| `intent_id` | Parent Intent ID |
+| `version` | Runtime version, for example `v1`, `v2` |
+| `version_lifecycle_status` | Version-level status such as `Active`, `Standby`, `Retired`, or `Terminated` |
+| `intent_specification_id` | Concrete active `IntentSpecification.id` used for validation |
+| `version_body` | Internal version JSONB payload |
+| `created_at` | Version creation timestamp |
+| `activated_at` | Timestamp when version became active, if applicable |
+| `terminated_at` | Timestamp when version was terminated, if applicable |
+| `retired_at` | Timestamp when version became retired, if applicable |
+
+### Event publication and consumption:
+
+IC MS should use transactional outbox for event publication.
+
+Events published through outbox include:
+
+- internal `IntentValidatedEvent`
+- external `IntentCreateEvent`
+- external `IntentAttributeValueChangeEvent`
+- external `IntentStatusChangeEvent`
+- external `IntentDeleteEvent`
+- external `IntentReportCreateEvent`
+- external `IntentReportAttributeValueChangeEvent`
+- external `IntentReportDeleteEvent`
+
+IC MS should use inbox/idempotency handling for consumed events, including:
+
+- `IntentRejectedEvent`
+- `IntentAssuranceEvent`
+
+### High availability and scaling:
+
+IC MS should support:
+
+- multiple application instances
+- independent horizontal scaling of application instances
+- safe restart behaviour
+- no durable state held only in local memory
+- rolling deployments
+- same-region multi-AZ database configuration where available
+- future cross-region active-passive DR support for the database
+
+### Disaster recovery:
+
+Initial deployment may be single-region or same-region multi-AZ.
+
+The selected database service/deployment pattern must support future cross-region active-passive DR as use cases expand.
+
+Active-active multi-region writes are not baselined initially.
+
+### Health checks:
+
+| **Health endpoint / check** | **Meaning** |
+|---|---|
+| Liveness | Process is running and can respond |
+| Readiness | Service can access dependencies needed for serving traffic |
+| DB readiness | Required for normal IC MS resource operations |
+| ID MS readiness for admission | Required for new runtime-content admission unless valid fresh cached active spec exists |
+| Kafka/outbox relay readiness | Should not block API readiness if DB/outbox commit path is healthy |
+| Cache readiness | Should not block API readiness because cache failure is graceful/silent |
+
+Readiness should fail when the DB/source-of-truth path is unavailable.
+
+Cache failure should not make IC MS unavailable.
+
+Kafka/event-broker unavailability should be surfaced through relay metrics/alerts rather than making the IC MS API unavailable when DB/outbox commit is healthy.
+
+### Configuration and secrets:
+
+IC MS configuration should be externalised through platform configuration and secret management.
+
+Examples:
+
+- DB connection settings
+- cache endpoint
+- Kafka/event broker connection
+- ID MS lookup endpoint
+- active-spec cache TTL values
+- outbox relay settings
+- inbox/idempotency settings
+- retry/backoff settings
+- service identity
+- OAuth/JWT/security settings where applicable
+
+Secrets must not be stored in application images or source files.
+
+### Deployment baseline statement:
+
+**IC MS is a stateful MS, backed by a managed PostgreSQL-compatible RDBMS. IC MS application instances can still scale independently because durable state is externalised to the database rather than held in local memory. The database is the source of truth for retained `Intent` projections, internal `IntentVersion` history, `IntentReport` projections, subscriptions, inbox/outbox records, ETag values, and lifecycle/status projection state.**

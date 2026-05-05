@@ -486,3 +486,24 @@ For `POST`, `PUT`, and runtime-content-changing `PATCH`, IC MS must confirm the 
 ### Dependency-specific CB:
 DB failure is hard fail-fast and returns `503 Service Unavailable`. Cache failure is graceful/silent. Kafka/event-broker failure is handled through transactional outbox. External webhook callback failure is asynchronous and does not affect the original API response.
 
+## Baseline update — IC MS deployment and persistence strategy:
+
+Date: 2026-05-05T09:47:24.292709+00:00
+
+### Updated file:
+- `ic_ms_design_brief.md`
+
+### Baseline:
+IC MS is a stateful MS, backed by a managed PostgreSQL-compatible RDBMS. IC MS application instances can still scale independently because durable state is externalised to the database rather than held in local memory.
+
+### Source of truth:
+The IC MS database is the source of truth for retained `Intent` projections, internal `IntentVersion` history, `IntentReport` projections, subscriptions, inbox/outbox records, ETag values, and lifecycle/status projection state.
+
+### Persistence:
+Recommended stores include `intent`, `intent_version`, `intent_report`, `event_subscription`, `inbox_event`, `outbox_event`, and optional audit table/audit log.
+
+### Eventing:
+IC MS uses transactional outbox for internal/external event publication and inbox/idempotency handling for consumed events such as `IntentRejectedEvent` and `IntentAssuranceEvent`.
+
+### Scaling:
+IC MS remains independently scalable at the application-instance level because durable state is not held in local memory.
