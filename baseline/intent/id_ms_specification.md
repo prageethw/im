@@ -77,8 +77,6 @@ There is no `DELETED` lifecycle status. Delete is an operation/outcome, not a no
 - Single-resource GET responses may use private cache with bounded TTL.
 - List GET responses may use shorter private cache with bounded TTL.
 - Clients may request a fresh GET response with `Cache-Control: no-cache`.
-- ETag is not used for GET revalidation.
-- `If-None-Match` and `304 Not Modified` are not baselined.
 - ETag is used only for unsafe operation concurrency through `If-Match`.
 - No caching strategy is baselined for non-GET operations.
 
@@ -323,12 +321,8 @@ Last-Modified: Sat, 18 Apr 2026 02:00:00 GMT
   "lifecycleStatus": "DRAFT",
   "@type": "IntentSpecification",
   "@baseType": "EntitySpecification",
-  "specCharacteristic": [
-    "...same as request..."
-  ],
-  "expressionSpecification": {
-    "...same as request..."
-  },
+  "specCharacteristic": "...same as request...",
+  "expressionSpecification": "...same as request...",
   "_links": {
     "self": { "href": "/intentManagement/v5/intentSpecification/hospital-surgical-slice-spec-v1.19" },
     "fullUpdate": { "href": "/intentManagement/v5/intentSpecification/hospital-surgical-slice-spec-v1.19", "method": "PUT" },
@@ -428,12 +422,8 @@ Cache-Control: private, max-age=300
   "lifecycleStatus": "ACTIVE",
   "@type": "IntentSpecification",
   "@baseType": "EntitySpecification",
-  "specCharacteristic": [
-    "...full characteristic catalogue..."
-  ],
-  "expressionSpecification": {
-    "...full expression schema..."
-  },
+  "specCharacteristic": "...full characteristic catalogue...",
+  "expressionSpecification": "...full expression schema...",
   "_links": {
     "self": { "href": "/intentManagement/v5/intentSpecification/hospital-surgical-slice-spec-v1.19" },
     "partialUpdate": {
@@ -486,12 +476,8 @@ If-Match: "intent-spec-hospital-surgical-slice-spec-v1.19-v1"
   "lifecycleStatus": "DRAFT",
   "@type": "IntentSpecification",
   "@baseType": "EntitySpecification",
-  "specCharacteristic": [
-    "...similar payload to spec creation..."
-  ],
-  "expressionSpecification": {
-    "...similar payload to spec creation..."
-  }
+  "specCharacteristic": [],
+  "expressionSpecification": {}
 }
 ```
 
@@ -721,8 +707,6 @@ ETag: "intent-spec-hospital-surgical-slice-spec-v1.20-v2"
 - ID MS retires the previous active version in the same specification family.
 - ID MS refreshes its own active-spec cache through an internal no-cache/refresh path.
 - ID MS emits status-change events for the new active version and the previous retired version.
-
-
 
 ## 11. Hub create subscription:
 
@@ -1033,107 +1017,4 @@ They are not internal fulfilment events and must not expose II MS semantic valid
 - Do not use `DELETED` as an `IntentSpecification.lifecycleStatus`.
 - ETag is used for unsafe-operation concurrency only.
 - Caching is GET-only.
-- `If-None-Match` and `304 Not Modified` are not baselined.
 - Activation is represented through PUT/PATCH lifecycle update, not a custom action endpoint.
-
-## TMF compliance and platform extension baseline:
-
-### Strict TMF-facing baseline:
-
-For strict TMF alignment, ID MS supports the TMF-style `IntentSpecification` operations:
-
-| **Operation** | **Endpoint** | **Position** |
-|---|---|---|
-| Create | `POST /intentManagement/v5/intentSpecification` | TMF-aligned |
-| List | `GET /intentManagement/v5/intentSpecification` | TMF-aligned |
-| Retrieve | `GET /intentManagement/v5/intentSpecification/{id}` | TMF-aligned |
-| Partial update | `PATCH /intentManagement/v5/intentSpecification/{id}` | TMF-aligned |
-| Delete | `DELETE /intentManagement/v5/intentSpecification/{id}` | TMF-aligned |
-| Event subscription | `/hub` and `/hub/{id}` | Strict TMF route form where required |
-
-### Accepted platform extensions:
-
-Controlled platform extensions are acceptable when they are documented, non-breaking, and do not conflict with TMF semantics.
-
-For ID MS, accepted platform extensions are:
-
-| **Extension** | **Purpose** | **Rule** |
-|---|---|---|
-| `PUT /intentManagement/v5/intentSpecification/{id}` | Deterministic full replacement | Preferred platform update method where supported |
-| `/intentManagement/v5/intentSpecification/hub` | Domain-scoped event subscription route | Allowed as a clearer domain-owned route when deliberately chosen |
-| `/intentManagement/v5/intentSpecification/hub/{id}` | Domain-scoped subscription delete/retrieve route | Allowed as a clearer domain-owned route when deliberately chosen |
-
-### Update method rule:
-
-`PATCH` is the strict TMF-compatible update operation.
-
-`PUT` is the platform extension for deterministic full replacement and is preferred from the platform engineering perspective where clients support it.
-
-`PATCH` remains supported for TMF compatibility but is not encouraged for ordinary edits when deterministic full replacement is available.
-
-### Lifecycle activation rule:
-
-Activation/retirement is represented as a resource update to `IntentSpecification.lifecycleStatus`.
-
-Use:
-
-```http
-PATCH /intentManagement/v5/intentSpecification/{id}
-```
-
-for strict TMF compatibility.
-
-Use:
-
-```http
-PUT /intentManagement/v5/intentSpecification/{id}
-```
-
-as a platform extension when performing deterministic full replacement.
-
-Do not expose custom lifecycle action endpoints such as:
-
-```http
-POST /intentManagement/v5/intentSpecification/{id}/activate
-```
-
-### Hub route rule:
-
-For strict TMF route compatibility, use:
-
-```http
-POST /intentManagement/v5/hub
-DELETE /intentManagement/v5/hub/{id}
-```
-
-For domain-scoped platform extension routing, ID MS may expose:
-
-```http
-POST /intentManagement/v5/intentSpecification/hub
-GET /intentManagement/v5/intentSpecification/hub/{id}
-DELETE /intentManagement/v5/intentSpecification/hub/{id}
-```
-
-The domain-scoped route is acceptable only as a documented platform extension and must preserve the same subscription semantics.
-
-### Baseline statement:
-
-ID MS and IC MS remain TMF-aligned at the external contract level. Controlled platform extensions are allowed when documented, non-breaking, and semantically compatible with TMF. For ID MS, `PATCH /intentSpecification/{id}` is the strict TMF update operation, while `PUT /intentSpecification/{id}` is an accepted platform extension for deterministic full replacement. TMF `/hub` routing is the strict subscription route form, while `/intentSpecification/hub` is an accepted domain-scoped platform extension when deliberately used.
-- Where examples abbreviate large sections, use explicit placeholders such as `"...similar payload to spec creation..."` rather than empty arrays/objects, so readers understand the section is intentionally shortened and not missing.
-
-## Example placeholder rule:
-
-When request/response/event examples intentionally abbreviate large repeated sections, keep the field’s real JSON type.
-
-Use:
-
-```json
-"arrayField": [
-  "...similar payload to previous example..."
-],
-"objectField": {
-  "...similar payload to previous example..."
-}
-```
-
-Do not use a string placeholder for an array or object field. Do not show empty arrays or empty objects unless the field is genuinely empty.
