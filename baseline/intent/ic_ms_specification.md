@@ -35,6 +35,21 @@ IC MS does not own:
 
 ---
 
+## Interface coverage matrix:
+
+| **Interface type** | **Covered in this specification** |
+|---|---|
+| External Intent REST APIs | Yes — create, list, retrieve, full replace, partial update, terminate |
+| External IntentReport REST APIs | Yes — list and retrieve report projections |
+| Hub subscription APIs | Yes — strict `/hub` route and domain-scoped `/intent/hub` extension |
+| External Intent events | Yes — create, attribute change, status change, delete/termination |
+| External IntentReport events | Yes — create, attribute change, delete |
+| Internal produced events | Yes — `IntentValidatedEvent` |
+| Internal consumed events | Yes — `IntentRejectedEvent`, `IntentAssuranceEvent` |
+| Common errors | Yes |
+| Caching/ETag conventions | Yes |
+| Termination behaviour | Yes |
+
 ## 1. API endpoints:
 
 ### Intent resource APIs:
@@ -1278,7 +1293,345 @@ Current primary consumer is II MS / `intent-intelligence-ms`, but the event may 
 
 ---
 
-## 26. Final specification notes:
+
+## 27. Internal event interfaces:
+
+This section captures the internal event interfaces relevant to IC MS.
+
+Internal events are not external TMF listener events. They are platform events exchanged on the internal event backbone.
+
+IC MS uses internal events for lifecycle progression and projection updates. Internal events represent state/progress/outcome facts, not point-to-point commands for a single consumer.
+
+### Internal event interaction summary:
+
+| **Event** | **IC MS role** | **Direction** | **Purpose** |
+|---|---|---|---|
+| `IntentValidatedEvent` | Producer | IC MS -> internal event backbone | Runtime Intent passed IC MS syntactic validation and was admitted into the lifecycle |
+| `IntentRejectedEvent` | Consumer | internal event backbone -> IC MS | II MS rejected semantic/policy validation; IC MS projects external `Rejected` status |
+| `IntentAssuranceEvent` | Consumer | internal event backbone -> IC MS | IA MS reports assurance/apply/runtime outcome; IC MS updates external `Intent` and `IntentReport` projections |
+
+### Internal event envelope style:
+
+Internal events use CloudEvents-style metadata in transport headers and a plain JSON body.
+
+Example CloudEvents headers:
+
+```http
+ce-specversion: 1.0
+ce-type: IntentValidatedEvent
+ce-source: intent-controller-ms
+ce-id: evt-intent-validated-001
+ce-time: 2026-04-18T12:00:01+10:00
+ce-subject: INT-HOSP-2026-001
+content-type: application/json
+```
+
+The JSON payload contains a top-level `body`.
+
+---
+
+## 28. IntentValidatedEvent:
+
+### Producer:
+
+```text
+intent-controller-ms
+```
+
+### Current primary consumer:
+
+```text
+intent-intelligence-ms
+```
+
+### Event meaning:
+
+`IntentValidatedEvent` means the runtime Intent has passed IC MS syntactic validation and has been admitted into the intent lifecycle.
+
+It is a state/progress event, not a point-to-point command.
+
+### Example headers:
+
+```http
+ce-specversion: 1.0
+ce-type: IntentValidatedEvent
+ce-source: intent-controller-ms
+ce-id: evt-intent-validated-001
+ce-time: 2026-04-18T12:00:01+10:00
+ce-subject: INT-HOSP-2026-001
+content-type: application/json
+```
+
+### Example body:
+
+```json
+{
+  "body": {
+    "intentId": "INT-HOSP-2026-001",
+    "version": "v1",
+    "lifecycleStatus": "Acknowledged",
+    "statusReason": "Intent request passed IC MS syntactic validation and was admitted for downstream processing.",
+    "intentSpecification": {
+      "id": "hospital-surgical-slice-spec-v1.20",
+      "href": "/intentManagement/v5/intentSpecification/hospital-surgical-slice-spec-v1.20"
+    },
+    "intent": {
+      "id": "INT-HOSP-2026-001",
+      "href": "/intentManagement/v5/intent/INT-HOSP-2026-001",
+      "name": "Sydney Hospital Surgical Connection Intent",
+      "version": "v1",
+      "lifecycleStatus": "Acknowledged",
+      "@type": "Intent",
+      "@baseType": "Entity"
+    },
+    "expression": {
+      "...similar payload to create intent request..."
+    },
+    "validation": {
+      "result": "Passed",
+      "validationType": "Syntactic",
+      "validatedBy": "intent-controller-ms"
+    },
+    "references": {
+      "correlationId": "corr-intent-create-001",
+      "sourceRequestId": "req-intent-create-001"
+    }
+  }
+}
+```
+
+### Notes:
+
+- IC MS emits this only after the external Intent projection and outbox record are durably committed.
+- The referenced `IntentSpecification.id` is concrete and must have been confirmed `ACTIVE` or validated from a valid fresh cached active spec.
+- The payload is intentionally curated for downstream processing and does not expose DB/cache/internal implementation details.
+
+---
+
+## 29. IntentRejectedEvent consumption:
+
+### Producer:
+
+```text
+intent-intelligence-ms
+```
+
+### Consumer:
+
+```text
+intent-controller-ms
+```
+
+### Event meaning:
+
+`IntentRejectedEvent` means semantic, policy, or downstream interpretation validation rejected the admitted Intent.
+
+IC MS consumes this event and projects the external Intent lifecycle/status to `Rejected`.
+
+### Example headers:
+
+```http
+ce-specversion: 1.0
+ce-type: IntentRejectedEvent
+ce-source: intent-intelligence-ms
+ce-id: evt-intent-rejected-001
+ce-time: 2026-04-18T12:01:00+10:00
+ce-subject: INT-HOSP-2026-001
+content-type: application/json
+```
+
+### Example body consumed by IC MS:
+
+```json
+{
+  "body": {
+    "intentId": "INT-HOSP-2026-001",
+    "version": "v1",
+    "lifecycleStatus": "Rejected",
+    "reasonCode": "SEMANTIC_LOCATION_UNSUPPORTED",
+    "statusReason": "Requested hospital location is not currently supported for this service class.",
+    "evaluations": [
+      {
+        "type": "Semantic",
+        "result": "Failed",
+        "reasonCode": "SEMANTIC_LOCATION_UNSUPPORTED",
+        "message": "The requested location could not be resolved to a supported service location."
+      }
+    ],
+    "references": {
+      "correlationId": "corr-intent-create-001",
+      "intentSpecificationId": "hospital-surgical-slice-spec-v1.20"
+    }
+  }
+}
+```
+
+### IC MS projection result:
+
+```json
+{
+  "id": "INT-HOSP-2026-001",
+  "version": "v1",
+  "lifecycleStatus": "Rejected",
+  "statusReason": "Requested hospital location is not currently supported for this service class.",
+  "statusChangeDate": "2026-04-18T12:01:00+10:00",
+  "@type": "Intent",
+  "@baseType": "Entity"
+}
+```
+
+### Notes:
+
+- IC MS must process `IntentRejectedEvent` idempotently through inbox handling.
+- IC MS should emit an external `IntentStatusChangeEvent` after the external projection changes to `Rejected`.
+- IC MS may create or update an `IntentReport` projection where useful.
+
+---
+
+## 30. IntentAssuranceEvent consumption:
+
+### Producer:
+
+```text
+intent-assurance-ms
+```
+
+### Consumer:
+
+```text
+intent-controller-ms
+```
+
+### Event meaning:
+
+`IntentAssuranceEvent` carries curated assurance/apply/runtime outcome truth from IA MS.
+
+IC MS consumes this event and updates the external `Intent` and `IntentReport` projections.
+
+### Example headers:
+
+```http
+ce-specversion: 1.0
+ce-type: IntentAssuranceEvent
+ce-source: intent-assurance-ms
+ce-id: evt-intent-assurance-001
+ce-time: 2026-04-18T12:20:00+10:00
+ce-subject: INT-HOSP-2026-001
+content-type: application/json
+```
+
+### Example body consumed by IC MS — active outcome:
+
+```json
+{
+  "body": {
+    "intentId": "INT-HOSP-2026-001",
+    "version": "v2",
+    "lifecycleStatus": "Active",
+    "statusReason": "Intent version v2 is active and assurance is healthy.",
+    "assuranceStatus": "Healthy",
+    "service": {
+      "serviceClass": "critical-gold"
+    },
+    "location": {
+      "locationId": "sydney-hospital"
+    },
+    "metrics": {
+      "latencyMs": 8,
+      "availabilityPercent": 99.995,
+      "jitterMs": 1.5,
+      "packetLossPercent": 0.005
+    },
+    "evaluations": [
+      {
+        "name": "latency",
+        "result": "Compliant",
+        "observedValue": 8,
+        "threshold": 10
+      },
+      {
+        "name": "availability",
+        "result": "Compliant",
+        "observedValue": 99.995,
+        "threshold": 99.99
+      }
+    ],
+    "references": {
+      "correlationId": "corr-intent-assurance-001",
+      "intentSpecificationId": "hospital-surgical-slice-spec-v1.20"
+    }
+  }
+}
+```
+
+### IC MS projection result — active:
+
+```json
+{
+  "id": "INT-HOSP-2026-001",
+  "version": "v2",
+  "lifecycleStatus": "Active",
+  "statusReason": "Intent version v2 is active and assurance is healthy.",
+  "statusChangeDate": "2026-04-18T12:20:00+10:00",
+  "@type": "Intent",
+  "@baseType": "Entity"
+}
+```
+
+### Example body consumed by IC MS — degraded outcome:
+
+```json
+{
+  "body": {
+    "intentId": "INT-HOSP-2026-001",
+    "version": "v2",
+    "lifecycleStatus": "Degraded",
+    "statusReason": "Latency assurance is degraded.",
+    "assuranceStatus": "Degraded",
+    "metrics": {
+      "latencyMs": 18,
+      "availabilityPercent": 99.99
+    },
+    "evaluations": [
+      {
+        "name": "latency",
+        "result": "NonCompliant",
+        "observedValue": 18,
+        "threshold": 10
+      }
+    ],
+    "references": {
+      "correlationId": "corr-intent-assurance-002",
+      "intentSpecificationId": "hospital-surgical-slice-spec-v1.20"
+    }
+  }
+}
+```
+
+### IC MS projection result — degraded:
+
+```json
+{
+  "id": "INT-HOSP-2026-001",
+  "version": "v2",
+  "lifecycleStatus": "Degraded",
+  "statusReason": "Latency assurance is degraded.",
+  "statusChangeDate": "2026-04-18T12:25:00+10:00",
+  "@type": "Intent",
+  "@baseType": "Entity"
+}
+```
+
+### Notes:
+
+- IC MS must process `IntentAssuranceEvent` idempotently through inbox handling.
+- IC MS updates the current projected external `Intent` resource.
+- IC MS creates or updates `IntentReport` projection.
+- IC MS emits external `IntentStatusChangeEvent` and/or `IntentReport*Event` where the external projections change.
+- Raw telemetry remains outside IC MS. IC MS consumes curated assurance outcomes, not raw telemetry streams.
+
+
+## 31. Final specification notes:
 
 - `GET /intent/{id}` returns current projected Intent state, not a full internal version aggregate.
 - `GET /intent` lists current projected Intent states for retained Intent IDs.
@@ -1292,3 +1645,4 @@ Current primary consumer is II MS / `intent-intelligence-ms`, but the event may 
 - Clients may request a fresh GET using `Cache-Control: no-cache`.
 - `IntentDeleteEvent` represents termination acceptance, not physical deletion.
 - External `Intent*Event` and `IntentReport*Event` payloads are curated projection events and must not expose raw telemetry, raw callback payloads, raw optimiser details, raw knowledge-plane data, or internal candidate scoring.
+- Internal produced/consumed events are included in this specification.
