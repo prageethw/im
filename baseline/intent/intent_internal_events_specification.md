@@ -33,6 +33,17 @@ Internal events are state/progress/outcome facts, not point-to-point commands fo
 | Sensitive data | Do not include secrets, tokens, credentials, or raw internal stack traces |
 | External exposure | Internal payloads are not directly exposed as external TMF events |
 
+
+### Lean internal payload rule:
+
+Internal events should carry milestone-specific fields directly and avoid embedding full external TMF resource objects unless the consumer genuinely needs that full resource snapshot.
+
+Use top-level event-body fields for the event fact, such as `intentId`, `version`, `lifecycleStatus`, `statusReason`, and milestone-specific outcomes.
+
+Use `references` for links/hrefs and related resource references instead of duplicating IDs, version, lifecycle, and resource metadata inside embedded external resource objects.
+
+This keeps each internal event lean and avoids duplicate truth.
+
 ---
 
 ## Common CloudEvents headers:
@@ -105,17 +116,7 @@ content-type: application/json
     "lifecycleStatus": "Acknowledged",
     "statusReason": "Intent request passed IC MS syntactic validation and was admitted for downstream processing.",
     "intentSpecification": {
-      "id": "hospital-surgical-slice-spec-v1.20",
-      "href": "/intentManagement/v5/intentSpecification/hospital-surgical-slice-spec-v1.20"
-    },
-    "intent": {
-      "id": "INT-HOSP-2026-001",
-      "href": "/intentManagement/v5/intent/INT-HOSP-2026-001",
-      "name": "Sydney Hospital Surgical Connection Intent",
-      "version": "v1",
-      "lifecycleStatus": "Acknowledged",
-      "@type": "Intent",
-      "@baseType": "Entity"
+      "id": "hospital-surgical-slice-spec-v1.20"
     },
     "expression": {
       "...similar payload to create intent request..."
@@ -126,6 +127,12 @@ content-type: application/json
       "validatedBy": "intent-controller-ms"
     },
     "references": {
+      "intent": {
+        "href": "/intentManagement/v5/intent/INT-HOSP-2026-001"
+      },
+      "intentSpecification": {
+        "href": "/intentManagement/v5/intentSpecification/hospital-surgical-slice-spec-v1.20"
+      },
       "correlationId": "corr-intent-create-001",
       "sourceRequestId": "req-intent-create-001"
     }
@@ -715,3 +722,4 @@ IA MS owns correlation, mapping, skip/dead-letter decisions, and downstream assu
 - Use `critical`, not `clinical-critical`.
 - Use `resources` for selected optimisation resources in `IntentOptimisedEvent`.
 - Use typed placeholders in examples when abbreviating arrays or objects.
+- Internal event payloads should be lean and avoid embedding full external TMF resource objects unless genuinely required by consumers.

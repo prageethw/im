@@ -709,3 +709,19 @@ Added `IntentNetworkReadyEvent` to the internal events specification.
 - `IntentNetworkReadyEvent`
 - `IntentAssuranceEvent`
 - `IntentCallbackEvent`
+
+## Baseline update — lean internal event payload rule:
+
+Date: 2026-05-05T23:21:29.812933+00:00
+
+### Updated file:
+- `intent_internal_events_specification.md`
+
+### Baseline:
+Internal events should carry milestone-specific fields directly and avoid embedding full external TMF resource objects unless the consumer genuinely needs that full resource snapshot.
+
+### Rule:
+Use top-level event-body fields for the event fact, such as `intentId`, `version`, `lifecycleStatus`, `statusReason`, and milestone-specific outcomes. Use `references` for links/hrefs and related resource references instead of duplicating IDs, version, lifecycle, and resource metadata inside embedded external resource objects.
+
+### Applied example:
+`IntentValidatedEvent` was updated to remove the embedded full external `intent` object. The event now keeps top-level `intentId`, `version`, `lifecycleStatus`, concrete `intentSpecification.id`, expression, validation outcome, and reference hrefs.
