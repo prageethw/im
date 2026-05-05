@@ -911,3 +911,63 @@ Security baseline:
 ### Deployment baseline statement:
 
 ID MS application instances are stateless and horizontally scalable. The source of truth for `IntentSpecification`, hub subscriptions, lifecycle/version state, and outbox records is a managed PostgreSQL-compatible RDBMS. JSONB may be used for document-shaped resource bodies and event snapshots, while relational columns support governance queries, lifecycle/versioning, ETag handling, and operational reporting. ID MS readiness depends on DB/source-of-truth availability, but cache and Kafka failures are handled gracefully through cache bypass and transactional outbox where possible.
+
+## Security and access-control baseline:
+
+### Authentication:
+
+ID MS sits behind NGW.
+
+NGW performs system-to-system authentication using:
+
+| **Mechanism** | **Purpose** |
+|---|---|
+| mTLS | Authenticates the calling system/client at transport layer |
+| OAuth2 token validation | Validates the calling workload/system token |
+
+### Authorisation boundary:
+
+ID MS does not own business/user-level operation authorisation.
+
+Business/user-level authorisation belongs in the OEX layer.
+
+| **Layer** | **Responsibility** |
+|---|---|
+| OEX | User/business-level access control, entitlement, role checks, and governance workflow permission |
+| NGW | System-to-system authentication using mTLS and OAuth2 token validation |
+| ID MS | Trusts authenticated platform/system callers and enforces technical resource integrity and governance state-machine rules |
+
+No OAuth2 scopes are assumed.
+
+No context-aware authorisation is baselined at NGW.
+
+### ID MS technical integrity responsibilities:
+
+ID MS still enforces:
+
+- valid request shape
+- `IntentSpecification` lifecycle rules
+- version uniqueness
+- immutable `ACTIVE` and `RETIRED` specifications
+- `ETag` / `If-Match` for unsafe operations
+- no `DELETED` lifecycle state
+- delete only for unused `DRAFT`
+- callback URL validation for hub subscriptions if hub endpoints are exposed to system callers
+
+### Audit baseline:
+
+ID MS must audit technical/governance-changing operations, including:
+
+- create specification
+- update draft specification
+- activate specification
+- retire previous active specification
+- delete unused draft specification
+- create/delete hub subscription
+- technical integrity validation failures where audit is required
+
+Business/user authorisation audit belongs to OEX where that decision is made.
+
+### Baseline statement:
+
+**ID MS is protected behind NGW. NGW performs system-to-system authentication using mTLS and OAuth2 token validation. Business/user-level authorisation is owned by the OEX layer and should not be implemented as operation-level authorisation inside ID MS. ID MS trusts authenticated platform/system callers and enforces technical resource integrity, lifecycle/version governance, validation, ETag/If-Match concurrency rules, and state-machine constraints for `IntentSpecification` resources.**

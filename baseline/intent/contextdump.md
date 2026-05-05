@@ -181,3 +181,41 @@ ID MS should support multiple replicas, rolling deployments, health checks, and 
 
 ### Health:
 Readiness depends on DB/source-of-truth availability. Cache failure should not make ID MS unavailable. Kafka/event-broker failure should be handled through transactional outbox and surfaced through metrics/alerts rather than blocking the API when DB/outbox commit is healthy.
+
+## Baseline update — ID MS security and access-control:
+
+Date: 2026-05-04T23:56:47.973649+00:00
+
+### Updated file:
+- `id_ms_design_brief.md`
+
+### Authentication:
+ID MS sits behind NGW. NGW performs system-to-system authentication using mTLS and OAuth2 token validation.
+
+### Authorisation:
+Authorisation is based on the authenticated mTLS client certificate identity and validated OAuth2 token identity. No OAuth2 scopes are assumed. No context-aware authorisation is baselined at NGW.
+
+### ID MS responsibility:
+ID MS performs operation-level authorisation using the authenticated caller identity for `IntentSpecification` reads, writes, activation, retirement, deletion, and hub subscription management.
+
+### Audit:
+ID MS must audit create, draft update, activation, retirement, draft deletion, hub subscription create/delete, and failed authorisation attempts for privileged operations.
+
+## Baseline update — ID MS security/access-control boundary refinement:
+
+Date: 2026-05-05T00:03:09.411553+00:00
+
+### Updated file:
+- `id_ms_design_brief.md`
+
+### Authentication:
+ID MS sits behind NGW. NGW performs system-to-system authentication using mTLS and OAuth2 token validation.
+
+### Authorisation boundary:
+Business/user-level authorisation is owned by the OEX layer, not ID MS. ID MS does not implement business/user-level operation authorisation for `IntentSpecification` reads, writes, activation, retirement, deletion, or hub subscription management.
+
+### ID MS responsibility:
+ID MS trusts authenticated platform/system callers and enforces technical resource integrity, lifecycle/version governance, request validation, ETag/If-Match concurrency rules, and state-machine constraints.
+
+### Audit:
+ID MS audits technical/governance-changing operations and technical integrity validation failures where required. Business/user authorisation audit belongs to OEX where that decision is made.
