@@ -474,6 +474,7 @@ Meaning:
 
 - private bounded TTL cache is allowed
 - single-resource GET may have a longer TTL than list GET
+- `ETag` is returned, but not for GET revalidation
 - `ETag` is used only for unsafe operation concurrency through `If-Match`
 
 ### List GET caching:
@@ -499,6 +500,7 @@ Meaning:
 
 - list GET may be cached with a shorter TTL
 - list responses still include `X-Total-Count` and `X-Result-Count`
+- list-level `ETag` may be returned, but not for GET revalidation in this baseline
 
 ### Client cache override:
 
@@ -507,6 +509,18 @@ Clients can request a fresh GET response using:
 ```http
 Cache-Control: no-cache
 ```
+
+### Client cache bypass / fresh-read rule:
+
+For any GET request, clients may request a fresh response by sending:
+
+```http
+Cache-Control: no-cache
+```
+
+When this header is present on a GET request, the service should bypass or refresh any cached representation and return a fresh `200 OK` response from the authoritative read path where available.
+
+This applies to resource GETs, list GETs, report GETs, and hub subscription GETs.
 
 Example:
 
@@ -519,12 +533,24 @@ Meaning:
 
 - client does not rely on its existing cached copy
 - ID MS returns a fresh `200 OK` representation
+- `If-None-Match` is not baselined
+- `304 Not Modified` is not baselined
 
 ### ETag rule:
 
-Not baselined:
+ETag is not used for GET revalidation in this baseline.
 
 Not baselined:
+
+```http
+If-None-Match
+```
+
+Not baselined:
+
+```http
+304 Not Modified
+```
 
 ETag is used only for unsafe operation concurrency through:
 
@@ -542,21 +568,15 @@ DELETE /intentManagement/v5/intentSpecification/{id}
 
 and any activation/state-changing operation where stale updates could overwrite newer resource state.
 
-### Non-GET caching rule:
+### No no-store caching strategy for non-GET operations:
 
-No caching strategy is baselined for non-GET operations.
+No `Cache-Control: no-store` strategy is baselined for non-GET operations.
 
-This applies to:
+Current rule:
 
-- create operations
-- update operations
-- patch operations
-- delete operations
-- activation/state-changing operations
-- hub subscription write operations
-- error responses
-
-The caching baseline is intentionally limited to GET responses only.
+- caching strategy is only discussed for GET responses
+- non-GET operations do not have a caching strategy baseline
+- error responses do not have a caching strategy baseline
 
 ### ID MS internal cache refresh on active-version promotion:
 
@@ -709,6 +729,8 @@ Rules:
 - webhook delivery is not a synchronous dependency for the API write path
 
 ### Final combined baseline statement:
+
+**ID MS caching applies only to GET responses. GET responses may use bounded private caching, with longer TTL for single-resource GETs and shorter TTL for list GETs. Clients either use the cached response within TTL or request a fresh copy using `Cache-Control: no-cache`. ETag is not used for GET revalidation; `If-None-Match` and `304 Not Modified` are not baselined. ETag is used only for unsafe operation concurrency through `If-Match`. No `Cache-Control: no-store` strategy is baselined for non-GET operations.**
 
 **On active-version promotion, ID MS refreshes its own active-specification cache using a no-cache/internal refresh path so the newly active version becomes the cached active copy and the previous active version is no longer returned as active.**
 
@@ -1132,30 +1154,30 @@ Trace data must not include secrets or sensitive token contents.
 
 ### Sweep date:
 
-2026-05-05T00:12:35.703902+00:00
+2026-05-05T00:08:01.487913+00:00
 
 ### Overall result:
 
-**PASS**
+**PASS WITH NOTES**
 
 ### Checks:
 
 | **Area** | **Result** | **Notes** |
 |---|---|---|
-| Service naming | PASS | `ID MS`, `intent-definition-ms`, and `IntentSpecification` terminology are present. |
-| Lifecycle states | PASS | `DRAFT`, `ACTIVE`, and `RETIRED` are present. `DELETED` is not used as a lifecycle state. |
-| GET-only caching | PASS | Caching is scoped to GET responses only. |
-| ETag unsafe concurrency | PASS | ETag is positioned for `If-Match` unsafe operation concurrency. |
-| Non-GET caching | PASS | No caching strategy is baselined for non-GET operations. |
-| Dependency-specific circuit breakers | PASS | DB/cache/Kafka/webhook CB behaviours are present. |
-| Security boundary | PASS | NGW handles mTLS + OAuth2 token validation; OEX owns business/user-level authorisation. |
-| Eventing boundary | PASS | External `IntentSpecification*Event` family and boundary are captured. |
-| Persistence baseline | PASS | PostgreSQL-compatible RDBMS, JSONB, and outbox persistence are present. |
-| Boundary exclusions | PASS | ID MS does not own runtime fulfilment concerns. |
+| Service naming | PASS | Checks ID MS, service name, and IntentSpecification terminology are present. |
+| Lifecycle states | REVIEW | Checks DRAFT/ACTIVE/RETIRED are present and DELETED is not used as a lifecycle state. |
+| GET-only caching | PASS | Checks caching is scoped to GET responses only. |
+| No GET ETag revalidation | PASS | Checks If-None-Match and 304 Not Modified are not baselined. |
+| ETag unsafe concurrency | PASS | Checks ETag is positioned for If-Match unsafe operation concurrency. |
+| Dependency-specific circuit breakers | PASS | Checks DB/cache/Kafka/webhook CB behaviours are present. |
+| Security boundary | PASS | Checks NGW authentication and OEX authorisation boundary. |
+| Eventing boundary | REVIEW | Checks external IntentSpecification event family and boundary. |
+| Persistence baseline | PASS | Checks PostgreSQL-compatible RDBMS, JSONB, and outbox persistence are present. |
+| Boundary exclusions | PASS | Checks ID MS does not own runtime fulfilment concerns. |
 
 ### Notes requiring attention:
 
-- None.
+- Found residual `Cache-Control: no-store` references outside the current baseline statement.
 
 ### Final consistency position:
 
@@ -1164,3 +1186,147 @@ The ID MS design brief is internally consistent for the current baseline.
 The design keeps ID MS focused on design-time `IntentSpecification` resource ownership, lifecycle/version governance, syntax/resource-shape validation, ETag/If-Match concurrency, GET-only caching, external `IntentSpecification*Event` publication, PostgreSQL-compatible persistence, and technical observability/audit.
 
 ID MS does not own semantic validation, policy validation, candidate/resource feasibility, optimisation, runtime assurance, telemetry, or callback ingestion.
+
+## TMF alignment correction — lifecycle activation:
+
+### Rule:
+
+ID MS and IC MS must remain fully TMF-aligned at the external API boundary.
+
+Do not use custom action endpoints such as:
+
+```http
+POST /intentManagement/v5/intentSpecification/{id}/activate
+```
+
+Activation/retirement must be represented as a resource update to `IntentSpecification.lifecycleStatus`.
+
+### Allowed external update methods:
+
+Use one of the existing TMF-style resource update operations:
+
+```http
+PUT /intentManagement/v5/intentSpecification/{id}
+PATCH /intentManagement/v5/intentSpecification/{id}
+```
+
+### Platform preference:
+
+`PUT` is preferred for deterministic full replacement.
+
+`PATCH` is supported for TMF compatibility, but is generally discouraged for ordinary edits.
+
+For lifecycle/status transitions, `PATCH` is acceptable when aligning with TMF-style partial attribute update behaviour.
+
+### Activation example using PATCH:
+
+```http
+PATCH /intentManagement/v5/intentSpecification/hospital-surgical-slice-spec-v1.20
+Content-Type: application/json
+Accept: application/json
+If-Match: "intent-spec-hospital-surgical-slice-spec-v1.20-v1"
+```
+
+```json
+{
+  "lifecycleStatus": "ACTIVE"
+}
+```
+
+### Activation governance behaviour:
+
+When the requested lifecycle update is valid, ID MS applies governance internally:
+
+1. Target version moves from `DRAFT` to `ACTIVE`.
+2. Previous active version in the same specification family moves from `ACTIVE` to `RETIRED`.
+3. ID MS refreshes its own active-specification cache through an internal no-cache/refresh path.
+4. ID MS emits `IntentSpecificationStatusChangeEvent` for the new active version.
+5. ID MS emits `IntentSpecificationStatusChangeEvent` for the previous version moving to `RETIRED`.
+
+### Baseline statement:
+
+ID MS remains TMF-aligned by using resource update operations for lifecycle transitions. Activation is not exposed as a custom `/activate` action endpoint. Use `PUT` or `PATCH` against `/intentSpecification/{id}`, with `PUT` preferred for deterministic full replacement and `PATCH` supported for TMF compatibility.
+
+## TMF compliance and platform extension baseline:
+
+### Strict TMF-facing baseline:
+
+For strict TMF alignment, ID MS supports the TMF-style `IntentSpecification` operations:
+
+| **Operation** | **Endpoint** | **Position** |
+|---|---|---|
+| Create | `POST /intentManagement/v5/intentSpecification` | TMF-aligned |
+| List | `GET /intentManagement/v5/intentSpecification` | TMF-aligned |
+| Retrieve | `GET /intentManagement/v5/intentSpecification/{id}` | TMF-aligned |
+| Partial update | `PATCH /intentManagement/v5/intentSpecification/{id}` | TMF-aligned |
+| Delete | `DELETE /intentManagement/v5/intentSpecification/{id}` | TMF-aligned |
+| Event subscription | `/hub` and `/hub/{id}` | Strict TMF route form where required |
+
+### Accepted platform extensions:
+
+Controlled platform extensions are acceptable when they are documented, non-breaking, and do not conflict with TMF semantics.
+
+For ID MS, accepted platform extensions are:
+
+| **Extension** | **Purpose** | **Rule** |
+|---|---|---|
+| `PUT /intentManagement/v5/intentSpecification/{id}` | Deterministic full replacement | Preferred platform update method where supported |
+| `/intentManagement/v5/intentSpecification/hub` | Domain-scoped event subscription route | Allowed as a clearer domain-owned route when deliberately chosen |
+| `/intentManagement/v5/intentSpecification/hub/{id}` | Domain-scoped subscription delete/retrieve route | Allowed as a clearer domain-owned route when deliberately chosen |
+
+### Update method rule:
+
+`PATCH` is the strict TMF-compatible update operation.
+
+`PUT` is the platform extension for deterministic full replacement and is preferred from the platform engineering perspective where clients support it.
+
+`PATCH` remains supported for TMF compatibility but is not encouraged for ordinary edits when deterministic full replacement is available.
+
+### Lifecycle activation rule:
+
+Activation/retirement is represented as a resource update to `IntentSpecification.lifecycleStatus`.
+
+Use:
+
+```http
+PATCH /intentManagement/v5/intentSpecification/{id}
+```
+
+for strict TMF compatibility.
+
+Use:
+
+```http
+PUT /intentManagement/v5/intentSpecification/{id}
+```
+
+as a platform extension when performing deterministic full replacement.
+
+Do not expose custom lifecycle action endpoints such as:
+
+```http
+POST /intentManagement/v5/intentSpecification/{id}/activate
+```
+
+### Hub route rule:
+
+For strict TMF route compatibility, use:
+
+```http
+POST /intentManagement/v5/hub
+DELETE /intentManagement/v5/hub/{id}
+```
+
+For domain-scoped platform extension routing, ID MS may expose:
+
+```http
+POST /intentManagement/v5/intentSpecification/hub
+GET /intentManagement/v5/intentSpecification/hub/{id}
+DELETE /intentManagement/v5/intentSpecification/hub/{id}
+```
+
+The domain-scoped route is acceptable only as a documented platform extension and must preserve the same subscription semantics.
+
+### Baseline statement:
+
+ID MS and IC MS remain TMF-aligned at the external contract level. Controlled platform extensions are allowed when documented, non-breaking, and semantically compatible with TMF. For ID MS, `PATCH /intentSpecification/{id}` is the strict TMF update operation, while `PUT /intentSpecification/{id}` is an accepted platform extension for deterministic full replacement. TMF `/hub` routing is the strict subscription route form, while `/intentSpecification/hub` is an accepted domain-scoped platform extension when deliberately used.

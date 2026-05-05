@@ -583,3 +583,37 @@ Confirmed and expanded IC MS specification coverage so the specification include
 
 ### Coverage matrix:
 The IC MS specification now includes an interface coverage matrix covering external Intent APIs, IntentReport APIs, hub subscription APIs, external Intent events, external IntentReport events, internal produced/consumed events, common errors, caching/ETag conventions, and termination behaviour.
+
+## Baseline update — hub GET Cache-Control headers:
+
+Date: 2026-05-05T11:23:26.807866+00:00
+
+### Checked files:
+- `id_ms_specification.md`
+- `ic_ms_specification.md`
+
+### Result:
+Hub subscription GET response examples now include `Cache-Control: private, max-age=300`.
+
+### Rule:
+All successful GET responses include `Cache-Control`, including resource GETs, list GETs, report GETs, and hub subscription GETs. Non-GET operations do not have a caching strategy baseline.
+
+## Baseline update — GET Cache-Control quick pass:
+
+Date: 2026-05-05T11:25:44.215101+00:00
+
+### Checked files:
+- `id_ms_specification.md`
+- `ic_ms_specification.md`
+- `id_ms_design_brief.md`
+- `ic_ms_design_brief.md`
+
+### Result:
+All documented successful GET response examples in the ID MS and IC MS specification documents include `Cache-Control`.
+
+### Cache bypass documentation:
+The cache bypass / fresh-read rule is now documented explicitly: clients may send `Cache-Control: no-cache` on any GET request to request a fresh response. This applies to resource GETs, list GETs, report GETs, and hub subscription GETs.
+
+### Current rule:
+All successful GET responses include `Cache-Control`. Non-GET operations do not have a caching strategy baseline. ETag is used for unsafe-operation concurrency through `If-Match`.
+

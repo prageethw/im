@@ -199,6 +199,18 @@ Example:
 
 Do not use string placeholders for array/object fields.
 
+### Client cache bypass / fresh-read rule:
+
+For any GET request, clients may request a fresh response by sending:
+
+```http
+Cache-Control: no-cache
+```
+
+When this header is present on a GET request, the service should bypass or refresh any cached representation and return a fresh `200 OK` response from the authoritative read path where available.
+
+This applies to resource GETs, list GETs, report GETs, and hub subscription GETs.
+
 ---
 
 ## 3. Common error body:
@@ -863,6 +875,7 @@ Accept: application/json
 HTTP/1.1 200 OK
 Content-Type: application/json
 ETag: "subscription-sub-intent-001-v1"
+Cache-Control: private, max-age=300
 ```
 
 ```json
