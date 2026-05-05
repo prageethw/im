@@ -44,6 +44,12 @@ Use `references` for links/hrefs and related resource references instead of dupl
 
 This keeps each internal event lean and avoids duplicate truth.
 
+### Request ID reference rule:
+
+Use `correlationId` as the standard cross-service trace/correlation reference in internal event examples.
+
+Do not include `sourceRequestId` in internal event examples unless a request-ID propagation model is explicitly baselined later.
+
 ---
 
 ## Common CloudEvents headers:
@@ -133,8 +139,7 @@ content-type: application/json
       "intentSpecification": {
         "href": "/intentManagement/v5/intentSpecification/hospital-surgical-slice-spec-v1.20"
       },
-      "correlationId": "corr-intent-create-001",
-      "sourceRequestId": "req-intent-create-001"
+      "correlationId": "corr-intent-create-001"
     }
   }
 }

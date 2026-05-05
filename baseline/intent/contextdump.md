@@ -725,3 +725,19 @@ Use top-level event-body fields for the event fact, such as `intentId`, `version
 
 ### Applied example:
 `IntentValidatedEvent` was updated to remove the embedded full external `intent` object. The event now keeps top-level `intentId`, `version`, `lifecycleStatus`, concrete `intentSpecification.id`, expression, validation outcome, and reference hrefs.
+
+## Baseline update — remove sourceRequestId from internal event examples:
+
+Date: 2026-05-05T23:31:54.534720+00:00
+
+### Updated file:
+- `intent_internal_events_specification.md`
+
+### Baseline:
+Use `correlationId` as the standard cross-service trace/correlation reference in internal event examples.
+
+### Rule:
+Do not include `sourceRequestId` in internal event examples unless a request-ID propagation model is explicitly baselined later.
+
+### Applied change:
+Removed `sourceRequestId` from the `IntentValidatedEvent` example references.
