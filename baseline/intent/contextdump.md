@@ -663,3 +663,24 @@ IC MS consistency sweep now completes with result: **PASS**.
 
 ### Notes:
 - None.
+
+## Baseline update — internal events specification document:
+
+Date: 2026-05-05T22:52:21.040037+00:00
+
+### New stable file:
+- `intent_internal_events_specification.md`
+
+### Baseline:
+Created the internal events specification document for Intent Enabler internal workflow events.
+
+### Events covered:
+- `IntentValidatedEvent`
+- `IntentRejectedEvent`
+- `IntentResolvedEvent`
+- `IntentOptimisedEvent`
+- `IntentAssuranceEvent`
+- `IntentCallbackEvent`
+
+### Common rules:
+The document includes CloudEvents header conventions, common payload style, idempotency/replay requirements, topic/key baseline, and producer/consumer ownership boundaries.
