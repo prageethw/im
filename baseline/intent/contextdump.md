@@ -566,3 +566,20 @@ Created the IC MS specification document containing API endpoints, request/respo
 - GET cache refresh uses `Cache-Control: no-cache`.
 - Event examples are curated external projection events.
 
+## Baseline update — IC MS specification internal event coverage:
+
+Date: 2026-05-05T10:12:27.379012+00:00
+
+### Updated file:
+- `ic_ms_specification.md`
+
+### Baseline:
+Confirmed and expanded IC MS specification coverage so the specification includes external REST interfaces, request/response examples, external events, and internal event interfaces.
+
+### Internal event coverage added:
+- `IntentValidatedEvent` produced by IC MS
+- `IntentRejectedEvent` consumed by IC MS
+- `IntentAssuranceEvent` consumed by IC MS
+
+### Coverage matrix:
+The IC MS specification now includes an interface coverage matrix covering external Intent APIs, IntentReport APIs, hub subscription APIs, external Intent events, external IntentReport events, internal produced/consumed events, common errors, caching/ETag conventions, and termination behaviour.
