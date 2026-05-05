@@ -472,3 +472,22 @@ IC MS lifecycle modelling is split into two views:
 - `Standby` means the version is not currently active/effective but is retained as a rollback or future reactivation candidate.
 - `Retired` is terminal and means the version is permanently removed from future active-candidate use.
 - Runtime `Intent` records are retained; delete is treated as termination, not physical deletion.
+
+## Baseline update — IC MS external Intent projection and version visibility:
+
+Date: 2026-05-05T07:40:46.351191+00:00
+
+### Updated file:
+- `ic_ms_design_brief.md`
+
+### Baseline:
+For the external `Intent` resource, IC MS simply projects the currently relevant version of that Intent ID.
+
+### GET behaviour:
+- `GET /intent/{id}` returns the current projected version for that Intent ID.
+- `GET /intent` lists current projected versions for retained Intent IDs.
+- The returned `version` is the projected runtime version.
+- IC MS does not return the full internal version aggregate by default.
+
+### Version history:
+Internal version history, `Standby`, `Retired`, rollback candidates, and previous versions remain internal unless exposed through `IntentReport` or a documented platform extension.

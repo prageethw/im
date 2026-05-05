@@ -735,3 +735,60 @@ v1 Active, activeVersion = v1
 ### Baseline statement:
 
 IC MS lifecycle diagrams must keep Intent-level lifecycle and Intent-version lifecycle separate. The external Intent lifecycle is what IC MS projects to callers. Version lifecycle tracks each runtime version and includes `Standby` for rollback/reactivation candidates and `Retired` as a terminal state for versions permanently removed from future active-candidate use.
+
+## External Intent projection and version visibility baseline:
+
+### External projection rule:
+
+For the external `Intent` resource, IC MS projects the currently relevant version of that Intent ID.
+
+This means:
+
+- `GET /intent/{id}` returns the current projected version for that Intent ID.
+- `GET /intent` lists current projected versions for retained Intent IDs.
+- The returned `version` is the projected runtime version.
+- IC MS does not return the full internal version aggregate by default.
+- Internal version history, `Standby`, `Retired`, rollback candidates, and previous versions remain internal unless exposed through `IntentReport` or a documented platform extension.
+
+### GET /intent/{id} example:
+
+```http
+GET /intentManagement/v5/intent/INT-HOSP-2026-001
+Accept: application/json
+```
+
+```json
+{
+  "id": "INT-HOSP-2026-001",
+  "href": "/intentManagement/v5/intent/INT-HOSP-2026-001",
+  "name": "Sydney Hospital Surgical Connection Intent",
+  "version": "v2",
+  "lifecycleStatus": "Active",
+  "statusReason": "Intent version v2 is active and assurance is healthy.",
+  "statusChangeDate": "2026-04-18T12:20:00+10:00",
+  "intentSpecification": {
+    "id": "hospital-surgical-slice-spec-v1.20",
+    "href": "/intentManagement/v5/intentSpecification/hospital-surgical-slice-spec-v1.20"
+  },
+  "@type": "Intent",
+  "@baseType": "Entity"
+}
+```
+
+### Version-history exposure rule:
+
+Internal version history is retained for audit, rollback, assurance correlation, and traceability.
+
+Historical versions are not returned by default in the external `Intent` resource.
+
+If needed, version history may be exposed through one of the following:
+
+| **Mechanism** | **Purpose** |
+|---|---|
+| `IntentReport` | Curated external reporting/history projection |
+| Documented platform extension | Explicit version inspection endpoint if required later |
+| Internal operational tooling | Operator/debug use without changing external TMF-facing resource shape |
+
+### Baseline statement:
+
+**For the external `Intent` resource, IC MS simply projects the currently relevant version of that Intent ID. `GET /intent/{id}` and `GET /intent` return current projected Intent state, not the full internal version aggregate. The returned `version` is the projected runtime version. Internal version history, `Standby`, `Retired`, rollback candidates, and previous versions remain internal unless exposed through `IntentReport` or a documented platform extension.**
