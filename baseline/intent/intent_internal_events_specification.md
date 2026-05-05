@@ -57,6 +57,7 @@ content-type: application/json
 | `IntentRejectedEvent` | `intent-intelligence-ms` | `intent-controller-ms` | Semantic/policy validation rejected the admitted Intent |
 | `IntentResolvedEvent` | `intent-intelligence-ms` | `intent-optimiser-ms` | Intent was semantically resolved into a canonical internal request for optimisation |
 | `IntentOptimisedEvent` | `intent-optimiser-ms` | `intent-assurance-ms` / downstream orchestration path | Optimisation completed and selected resources/outcome are available |
+| `IntentNetworkReadyEvent` | `intent-assurance-ms` / network apply path | `intent-controller-ms` / assurance projection path | Optimised intent has been successfully applied and the network/service is ready |
 | `IntentAssuranceEvent` | `intent-assurance-ms` | `intent-controller-ms` | Assurance/apply/runtime outcome truth for external Intent and IntentReport projection |
 | `IntentCallbackEvent` | `intent-callback-ms` | `intent-assurance-ms` | Accepted raw orchestrator callback relayed to the internal event backbone |
 
@@ -393,6 +394,104 @@ content-type: application/json
 
 ---
 
+
+## IntentNetworkReadyEvent:
+
+### Producer:
+
+```text
+intent-assurance-ms / network apply path
+```
+
+### Current primary consumer:
+
+```text
+intent-controller-ms
+```
+
+### Meaning:
+
+`IntentNetworkReadyEvent` is an internal milestone event indicating that the optimised intent has been successfully applied and the network/service is ready.
+
+It represents a network-ready/apply-success milestone.
+
+`IntentAssuranceEvent` remains the ongoing assurance/runtime outcome event used for active, degraded, failed, paused, and recovered projection updates.
+
+### Example headers:
+
+```http
+ce-specversion: 1.0
+ce-type: IntentNetworkReadyEvent
+ce-source: intent-assurance-ms
+ce-id: evt-intent-network-ready-001
+ce-time: 2026-04-18T12:12:00+10:00
+ce-subject: INT-HOSP-2026-001
+content-type: application/json
+```
+
+### Example body:
+
+```json
+{
+  "body": {
+    "intentId": "INT-HOSP-2026-001",
+    "version": "v1",
+    "lifecycleStatus": "Active",
+    "statusReason": "Optimised intent has been applied and the network service is ready.",
+    "site": {
+      "locationId": "sydney-hospital"
+    },
+    "service": {
+      "serviceClass": "critical-gold"
+    },
+    "resources": [
+      {
+        "roles": [
+          "primary"
+        ],
+        "resourceId": "path-syd-hosp-5g-primary",
+        "resourceType": "networkPath",
+        "resourceClass": "critical-gold-access",
+        "resourceAttributes": {
+          "accessTechnology": "5G"
+        },
+        "relationships": [
+          {
+            "type": "backup",
+            "resourceId": "path-syd-hosp-fibre-backup"
+          }
+        ],
+        "metrics": {
+          "expectedLatencyMs": 8,
+          "expectedAvailabilityPercent": 99.995,
+          "expectedJitterMs": 1.5,
+          "expectedPacketLossPercent": 0.005
+        }
+      }
+    ],
+    "applyOutcome": {
+      "status": "Applied",
+      "statusReason": "Network orchestrator confirmed successful apply."
+    },
+    "references": {
+      "correlationId": "corr-intent-create-001",
+      "intent": {
+        "id": "INT-HOSP-2026-001",
+        "href": "/intentManagement/v5/intent/INT-HOSP-2026-001"
+      },
+      "intentSpecificationId": "hospital-surgical-slice-spec-v1.20"
+    }
+  }
+}
+```
+
+### Notes:
+
+- `IntentNetworkReadyEvent` is a milestone event, not an ongoing telemetry event.
+- IC MS may use this event to project the external Intent lifecycle to `Active` where that is the selected flow.
+- IA MS may also use this milestone as part of its assurance state model.
+- Ongoing assurance updates, degradation, recovery, pause, and failure signals should use `IntentAssuranceEvent`.
+
 ## IntentAssuranceEvent:
 
 ### Producer:
@@ -599,6 +698,7 @@ IA MS owns correlation, mapping, skip/dead-letter decisions, and downstream assu
 | `IntentRejectedEvent` | `t7.intent.management.events` | `intentId` |
 | `IntentResolvedEvent` | `t7.intent.management.events` | `intentId` |
 | `IntentOptimisedEvent` | `t7.intent.management.events` | `intentId` |
+| `IntentNetworkReadyEvent` | `t7.intent.management.events` | `intentId` |
 | `IntentAssuranceEvent` | `t7.intent.management.events` | `intentId` |
 | `IntentCallbackEvent` | `t7.intent.management.events.callbacks` | `intentId` |
 

@@ -684,3 +684,28 @@ Created the internal events specification document for Intent Enabler internal w
 
 ### Common rules:
 The document includes CloudEvents header conventions, common payload style, idempotency/replay requirements, topic/key baseline, and producer/consumer ownership boundaries.
+
+## Baseline update — add IntentNetworkReadyEvent to internal events specification:
+
+Date: 2026-05-05T22:56:16.136761+00:00
+
+### Updated file:
+- `intent_internal_events_specification.md`
+
+### Baseline:
+Added `IntentNetworkReadyEvent` to the internal events specification.
+
+### Event meaning:
+`IntentNetworkReadyEvent` is an internal milestone event indicating that the optimised intent has been successfully applied and the network/service is ready.
+
+### Relationship to IntentAssuranceEvent:
+`IntentNetworkReadyEvent` is the network-ready/apply-success milestone. `IntentAssuranceEvent` remains the ongoing assurance/runtime outcome event used for active, degraded, failed, paused, and recovered projection updates.
+
+### Updated internal event catalogue:
+- `IntentValidatedEvent`
+- `IntentRejectedEvent`
+- `IntentResolvedEvent`
+- `IntentOptimisedEvent`
+- `IntentNetworkReadyEvent`
+- `IntentAssuranceEvent`
+- `IntentCallbackEvent`
