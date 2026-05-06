@@ -736,3 +736,34 @@ An `expressionValidationProfiles` baseline for the surgical hospital slice expre
 
 ### Runtime rule:
 If semantic validation passes, II MS may continue candidate/resource resolution and emit `IntentResolvedEvent`. If semantic validation fails, II MS emits `IntentRejectedEvent`. If semantic validation passes but no candidate/resource set can satisfy the constraints, the optimiser may return `INFEASIBLE` through `IntentOptimisedEvent`.
+
+## Baseline confirmation — KP expression validation profile is additive:
+
+Date: 2026-05-06T03:37:48.122296+00:00
+
+### Confirmed:
+The KP expression validation profile addition does not change the original semantic thinking of the KP master config.
+
+### Position:
+The change is additive. It makes previously implied semantic-validation attributes explicit so II MS can validate runtime expression fields in a concrete and auditable way.
+
+### Preserved baseline:
+- KP remains the source of truth for semantic validation.
+- II MS uses KP for expression mapping, policy hints, service/location interpretation, and candidate-resource resolution.
+- Optimiser uses KP-derived candidates and constraints.
+- IA/apply-preparation path uses KP-derived network-ready configuration rules.
+- IA MS uses KP-derived telemetry and assurance rule interpretation.
+
+### New explicit coverage:
+The added `expressionValidationProfiles` section explicitly covers validation for:
+- `location.locationId`
+- `location.locationType`
+- `location.geographicScope`
+- `serviceClass`
+- `priority`
+- `maxLatencyMs`
+- `minAvailabilityPercent`
+- `maxJitterMs`
+- `maxPacketLossPercent`
+- `redundancyRequired`
+- `preferredAccessTechnology`
