@@ -825,3 +825,41 @@ KP master config is simplified to current available knowledge for location-based
 
 ### Runtime interpretation:
 Only `capabilityStatus: available` can proceed to fulfilment/optimisation. `unknown` means the service capability is not currently confirmed usable. Redundancy is derived from KP `resourceRoles` and selected resources.
+
+## Baseline update — KP redundancy capability and human expression mapping:
+
+Date: 2026-05-06T09:11:36.694484+00:00
+
+### Updated file:
+- `kp_master_config.md`
+
+### Baseline:
+KP uses `redundancyAvailable` to describe whether the current location-based service has redundant resource capability.
+
+### Applied values:
+- `Sydney-Main-Hospital.redundancyAvailable = true`
+- `Melbourne-Main-Hospital.redundancyAvailable = true`
+- `Brisbane-Main-Hospital.redundancyAvailable = false`
+
+### Human expression mapping:
+Added `redundancyRequired` mapping back into `expressionMapping.humanExpressionMapping.fieldPatterns` using phrases such as redundant, redundancy, required backup, backup path, and secondary path.
+
+### Runtime rule:
+Human/NLP input may map `redundancyRequired`, but II MS must validate it against KP `redundancyAvailable` and `resourceRoles`. Optimiser then verifies whether a valid primary/secondary resource set can actually be selected.
+
+## Baseline update — KP direct 1-to-1 location lookup:
+
+Date: 2026-05-06T09:32:23.531170+00:00
+
+### Updated file:
+- `kp_master_config.md`
+
+### Baseline:
+KP `locationBasedServices` entries are now keyed by canonical `locationId` to reduce mapping overhead.
+
+### Applied changes:
+- Changed `locationBasedServices` keys from friendly labels such as `Sydney-Main-Hospital` to canonical IDs such as `AU-NSW-SYD-HOSP-001`.
+- Added `displayName` to keep friendly labels.
+- Changed `expressionMapping.humanExpressionMapping.entityAliases` to map human names directly to canonical `locationId`.
+- Removed repeated `locationId` from resource entries; resource-to-location association is derived from `locationBasedServices[locationId].resourceIds`.
+- Kept `resourceId` inside each resource entry for readability and self-contained payload construction.

@@ -8,10 +8,10 @@
     "configId": "hospital-surgical-slice-kp-v1",
     "version": "1.0",
     "domain": "intent-enabler",
-    "description": "Compact KP master config containing source-of-truth knowledge for location-based service availability, design-time benchmarks, resource inventory, logical optimiser/orchestrator/observer references, and human expression mapping.",
+    "description": "Compact KP master config containing source-of-truth knowledge for location-based service availability, design-time benchmarks, resource inventory, logical optimiser/orchestrator/observer references, and human expression mapping. Location-based services are keyed by canonical locationId for direct lookup.",
     "locationBasedServices": {
-      "Sydney-Main-Hospital": {
-        "locationId": "AU-NSW-SYD-HOSP-001",
+      "AU-NSW-SYD-HOSP-001": {
+        "displayName": "Sydney-Main-Hospital",
         "locationType": "hospital",
         "geographicScope": "campus",
         "serviceType": "surgical-connectivity",
@@ -42,10 +42,11 @@
           "SYD-PRI-02",
           "SYD-SEC-01",
           "SYD-SEC-02"
-        ]
+        ],
+        "redundancyAvailable": true
       },
-      "Melbourne-Main-Hospital": {
-        "locationId": "AU-VIC-MEL-HOSP-101",
+      "AU-VIC-MEL-HOSP-101": {
+        "displayName": "Melbourne-Main-Hospital",
         "locationType": "hospital",
         "geographicScope": "campus",
         "serviceType": "surgical-connectivity",
@@ -76,17 +77,19 @@
           "MEL-PRI-02",
           "MEL-SEC-01",
           "MEL-SEC-02"
-        ]
+        ],
+        "redundancyAvailable": true
       },
-      "Brisbane-Main-Hospital": {
-        "locationId": "AU-QLD-BNE-HOSP-201",
+      "AU-QLD-BNE-HOSP-201": {
+        "displayName": "Brisbane-Main-Hospital",
         "locationType": "hospital",
         "geographicScope": "campus",
         "serviceType": "surgical-connectivity",
         "serviceClass": "critical-gold",
         "capabilityStatus": "unknown",
         "statusReason": "Surgical critical-gold connectivity is not currently confirmed as available at this location.",
-        "resourceIds": []
+        "resourceIds": [],
+        "redundancyAvailable": false
       }
     },
     "resources": {
@@ -97,7 +100,6 @@
         "resourceRoles": [
           "primary"
         ],
-        "locationId": "AU-NSW-SYD-HOSP-001",
         "accessTechnology": "fibre",
         "provider": "fixed-access-b",
         "benchmarks": {
@@ -120,7 +122,6 @@
         "resourceRoles": [
           "primary"
         ],
-        "locationId": "AU-NSW-SYD-HOSP-001",
         "accessTechnology": "5G",
         "provider": "mobile-access-a",
         "benchmarks": {
@@ -143,7 +144,6 @@
         "resourceRoles": [
           "secondary"
         ],
-        "locationId": "AU-NSW-SYD-HOSP-001",
         "accessTechnology": "5G",
         "provider": "mobile-access-b",
         "benchmarks": {
@@ -166,7 +166,6 @@
         "resourceRoles": [
           "secondary"
         ],
-        "locationId": "AU-NSW-SYD-HOSP-001",
         "accessTechnology": "fibre",
         "provider": "fixed-access-a",
         "benchmarks": {
@@ -189,7 +188,6 @@
         "resourceRoles": [
           "primary"
         ],
-        "locationId": "AU-VIC-MEL-HOSP-101",
         "accessTechnology": "fibre",
         "provider": "fixed-access-mel-a",
         "benchmarks": {
@@ -212,7 +210,6 @@
         "resourceRoles": [
           "primary"
         ],
-        "locationId": "AU-VIC-MEL-HOSP-101",
         "accessTechnology": "5G",
         "provider": "mobile-access-mel-a",
         "benchmarks": {
@@ -235,7 +232,6 @@
         "resourceRoles": [
           "secondary"
         ],
-        "locationId": "AU-VIC-MEL-HOSP-101",
         "accessTechnology": "5G",
         "provider": "mobile-access-mel-b",
         "benchmarks": {
@@ -258,7 +254,6 @@
         "resourceRoles": [
           "secondary"
         ],
-        "locationId": "AU-VIC-MEL-HOSP-101",
         "accessTechnology": "fibre",
         "provider": "fixed-access-mel-b",
         "benchmarks": {
@@ -279,12 +274,12 @@
       "humanExpressionMapping": {
         "enabled": true,
         "entityAliases": {
-          "Sydney Hospital": "Sydney-Main-Hospital",
-          "sydney-hospital": "Sydney-Main-Hospital",
-          "Melbourne Hospital": "Melbourne-Main-Hospital",
-          "melbourne-hospital": "Melbourne-Main-Hospital",
-          "Brisbane Hospital": "Brisbane-Main-Hospital",
-          "brisbane-hospital": "Brisbane-Main-Hospital"
+          "Sydney Hospital": "AU-NSW-SYD-HOSP-001",
+          "sydney-hospital": "AU-NSW-SYD-HOSP-001",
+          "Melbourne Hospital": "AU-VIC-MEL-HOSP-101",
+          "melbourne-hospital": "AU-VIC-MEL-HOSP-101",
+          "Brisbane Hospital": "AU-QLD-BNE-HOSP-201",
+          "brisbane-hospital": "AU-QLD-BNE-HOSP-201"
         },
         "fieldPatterns": [
           {
@@ -371,6 +366,15 @@
             ]
           },
           {
+            "field": "redundancyRequired",
+            "patterns": [
+              {
+                "regex": "(?i)redundant|redundancy|required backup|backup path|secondary path",
+                "value": true
+              }
+            ]
+          },
+          {
             "field": "preferredAccessTechnology",
             "patterns": [
               {
@@ -387,7 +391,8 @@
         "defaults": {
           "serviceType": "surgical-connectivity",
           "serviceClass": "critical-gold",
-          "priority": "critical"
+          "priority": "critical",
+          "redundancyRequired": true
         },
         "conflictPolicy": {
           "precedence": [
@@ -406,10 +411,15 @@
 ## Baseline notes
 
 - KP contains current available knowledge, not optimiser/orchestrator execution logic.
+- `locationBasedServices` entries are keyed by canonical `locationId` for direct 1-to-1 lookup.
+- `displayName` holds the friendly location/service label.
+- `expressionMapping.humanExpressionMapping.entityAliases` maps human names directly to canonical `locationId`.
 - `benchmarks` are design-time known capability values.
 - `targets` remain runtime/request/event terminology, not KP terminology.
 - `resourceIds` identify resources currently known for a location-based service.
+- Resource entries do not repeat `locationId`; location-resource association is derived from `locationBasedServices[locationId].resourceIds`.
 - `capabilityStatus` uses `available` or `unknown`.
 - Logical references such as `optimiserTarget`, `optimiserModel`, `orchestratorTarget`, `orchestratorProfile`, `observerTarget`, and `observerProfile` are names only, not endpoint/payload/credential details.
 - KP does not include `semanticProfile`, `assuranceProfiles`, optimiser objective rules, hops, or service attributes by default.
-- Redundancy is derived from `resourceRoles` and selected resources, not from an NLP-mapped `redundancyRequired` field by default.
+- KP uses `redundancyAvailable` to describe current redundant resource capability. Human/NLP input may map `redundancyRequired`, but II MS validates it against `redundancyAvailable` and `resourceRoles`.
+
