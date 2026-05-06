@@ -434,7 +434,95 @@ Neither this lightweight KP nor `t7.knowledge plane` is exposed as the external 
         "semanticStatus": "REJECTED",
         "includeRejectionMessage": true
       }
-    }
+    },
+    "expressionValidationProfiles": [
+      {
+        "profileId": "hospital-surgical-slice-expression-v1",
+        "intentSpecificationId": "hospital-surgical-slice-spec-v1.20",
+        "normalisation": {
+          "locationAliases": {
+            "sydney-hospital": "AU-NSW-SYD-HOSP-001"
+          },
+          "locationTypeAliases": {
+            "hospital": "HOSPITAL"
+          },
+          "geographicScopeAliases": {
+            "campus": "AU-NSW-SYD"
+          },
+          "priorityAliases": {
+            "critical": "CRITICAL",
+            "high": "HIGH",
+            "standard": "STANDARD"
+          }
+        },
+        "locationRules": {
+          "allowedLocationIds": [
+            "AU-NSW-SYD-HOSP-001"
+          ],
+          "allowedLocationTypes": [
+            "HOSPITAL"
+          ],
+          "allowedGeographicScopes": [
+            "AU-NSW-SYD"
+          ],
+          "requiredFields": [
+            "locationId",
+            "locationType",
+            "geographicScope"
+          ]
+        },
+        "serviceRules": {
+          "allowedServiceClasses": [
+            "critical-gold"
+          ],
+          "allowedPriorities": [
+            "CRITICAL",
+            "HIGH",
+            "STANDARD"
+          ],
+          "requiredFields": [
+            "serviceClass",
+            "priority"
+          ]
+        },
+        "targetRules": {
+          "maxLatencyMs": {
+            "operator": "<=",
+            "maxAllowedValue": 10,
+            "unit": "ms"
+          },
+          "minAvailabilityPercent": {
+            "operator": ">=",
+            "minAllowedValue": 99.99,
+            "unit": "percent"
+          },
+          "maxJitterMs": {
+            "operator": "<=",
+            "maxAllowedValue": 2,
+            "unit": "ms"
+          },
+          "maxPacketLossPercent": {
+            "operator": "<=",
+            "maxAllowedValue": 0.01,
+            "unit": "percent"
+          }
+        },
+        "redundancyRules": {
+          "allowed": true,
+          "requiredForServiceClasses": [
+            "critical-gold"
+          ]
+        },
+        "accessTechnologyRules": {
+          "allowedValues": [
+            "5G",
+            "fibre"
+          ],
+          "availabilityMustMatchLocation": true,
+          "availabilityMustMatchServiceClass": true
+        }
+      }
+    ]
   }
 }
 ```
@@ -632,6 +720,10 @@ II MS uses this profile to validate structured expression values after IC MS adm
 | `maxPacketLossPercent` | Within allowed service/target limits |
 | `redundancyRequired` | Allowed or required for service class |
 | `preferredAccessTechnology` | Available/applicable for location and service class |
+
+### Embedded in master config JSON:
+
+The active `knowledgePlaneConfig` JSON now includes `expressionValidationProfiles` directly. The example below is retained as a readable extract of the embedded structure.
 
 ### Expression validation profile example:
 

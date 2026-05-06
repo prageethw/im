@@ -617,153 +617,178 @@ The cache bypass / fresh-read rule is now documented explicitly: clients may sen
 ### Current rule:
 All successful GET responses include `Cache-Control`. Non-GET operations do not have a caching strategy baseline. ETag is used for unsafe-operation concurrency through `If-Match`.
 
-## Baseline update — stable terminology and JSON repair:
+## Baseline update — IC MS consistency sweep:
 
-Date: 2026-05-06T01:11:47.933166+00:00
+Date: 2026-05-05T13:33:21.556132+00:00
 
-### Updated files:
-- `intent_internal_events_specification.md`
-- stable baseline files containing old terminology where applicable
+### Updated file:
+- `ic_ms_design_brief.md`
 
-### Repair:
-Fixed terminology alignment and JSON validity in the internal events specification.
+### Checked files:
+- `ic_ms_design_brief.md`
+- `ic_ms_specification.md`
+
+### Result:
+IC MS consistency sweep completed with result: **PASS WITH NOTES**.
 
 ### Confirmed:
-- All JSON code blocks in `intent_internal_events_specification.md` validate successfully.
-- Current internal event examples use `location.locationId`.
-- `IntentResolvedEvent` uses `context`, no generic request block, no optimiser input-selection block, and no successful semantic/policy evaluation block.
-- `IntentValidatedEvent` has a concrete expression sample and no validation object.
-- Resource references use named `references` objects with `id` and `href`.
-- Knowledge Plane naming uses `t7-knowledge-plane`.
+- External REST interfaces are documented.
+- IntentReport interfaces are documented.
+- Hub subscription interfaces are documented.
+- External `Intent*Event` and `IntentReport*Event` examples are documented.
+- Internal produced/consumed event interfaces are documented.
+- Runtime create/update uses concrete `intentSpecification.id` only.
+- `GET /intent/{id}` returns the current projected Intent state.
+- `DELETE /intent/{id}` is termination, not physical deletion.
+- Intent-level and version-level lifecycle models are separated.
+- GET response examples include `Cache-Control`.
+- Cache bypass using `Cache-Control: no-cache` is documented.
+- ETag is used for unsafe-operation concurrency through `If-Match`.
+- Security boundary places system authentication at NGW and business/user authorisation at OEX.
+- IC MS boundaries exclude semantic validation, policy validation, optimisation, runtime assurance truth, raw telemetry, and callback ingestion.
 
-## Baseline update — optimiser status and evaluation model:
+## Baseline update — IC MS consistency sweep cleanup:
 
-Date: 2026-05-06T02:34:00.185092+00:00
-
-### Updated file:
-- `intent_internal_events_specification.md`
-
-### Baseline:
-Use optimiser statuses as the primary outcome for the optimisation run, target evaluations, and context evaluations.
-
-### Supported statuses:
-`ACKNOWLEDGED`, `QUEUED`, `PROCESSING`, `COMPLETED`, `INFEASIBLE`, `FAILED`, `CANCELLING`, `CANCELLED`.
-
-### Rule:
-Do not add a separate `result` field by default. `COMPLETED` means the item was successfully evaluated and satisfied. `INFEASIBLE` means the item was evaluated but cannot be satisfied with the available candidates/constraints. `FAILED` means technical/runtime/model/data failure.
-
-### Applied change:
-Updated `IntentOptimisedEvent` to use `optimisationRun`, `targetEvaluations`, and `contextEvaluations`, and added an infeasible optimisation example.
-
-## Baseline update — IntentNetworkReadyEvent does not imply apply success:
-
-Date: 2026-05-06T02:56:52.481405+00:00
-
-### Updated file:
-- `intent_internal_events_specification.md`
-
-### Baseline:
-`IntentNetworkReadyEvent` means the network-ready configuration/resource set has been prepared for orchestration/apply. It does not mean the network has already been applied.
-
-### Rule:
-Do not use `applyOutcome` in `IntentNetworkReadyEvent`. Apply success/failure is confirmed later through callback and assurance processing, then projected through `IntentAssuranceEvent`.
-
-### Applied change:
-Updated the `IntentNetworkReadyEvent` example to use `lifecycleStatus: InProgress`, added `networkReadiness.status: READY_FOR_APPLY`, and removed the previous `applyOutcome.status: Applied` block.
-
-## Baseline update — IntentNetworkReadyEvent networkConfiguration:
-
-Date: 2026-05-06T03:05:33.522401+00:00
-
-### Updated file:
-- `intent_internal_events_specification.md`
-
-### Baseline:
-Keep `IntentNetworkReadyEvent`, but remove the generic `networkReadiness` object.
-
-### Rule:
-Use `networkConfiguration` to carry the orchestrator-ready configuration derived from KP master config, `t7-knowledge-plane`, and the selected optimisation resources.
-
-### Meaning:
-`IntentNetworkReadyEvent` means the configuration is ready to be submitted to the orchestrator/apply path. It does not mean the network has already been applied.
-
-### Apply outcome:
-Apply success/failure is confirmed later through callback and assurance processing, then projected through `IntentAssuranceEvent`.
-
-## Baseline update — KP master config as source of truth:
-
-Date: 2026-05-06T03:13:56.623169+00:00
+Date: 2026-05-05T15:12:47.650875+00:00
 
 ### Updated files:
-- `kp_master_config.md`
+- `ic_ms_design_brief.md`
+- `ic_ms_specification.md`
+
+### Cleanup:
+Added canonical endpoint summary to `ic_ms_specification.md` and exact NGW/OEX/IC security boundary wording to `ic_ms_design_brief.md`.
+
+### Result:
+IC MS consistency sweep now completes with result: **PASS**.
+
+### Notes:
+- None.
+
+## Baseline update — internal events specification document:
+
+Date: 2026-05-05T22:52:21.040037+00:00
+
+### New stable file:
 - `intent_internal_events_specification.md`
 
 ### Baseline:
-KP master config is the source of truth for intent-domain semantic validation rules, network-ready configuration rules, and telemetry/assurance rule interpretation.
+Created the internal events specification document for Intent Enabler internal workflow events.
 
-### Applies to:
-- II MS semantic validation, expression mapping, and candidate-resource resolution
-- Optimiser MS candidate resource attributes, constraints, and metrics
-- IA/apply-preparation path network-ready configuration derivation
-- IA MS telemetry/assurance metric interpretation and status mapping
+### Events covered:
+- `IntentValidatedEvent`
+- `IntentRejectedEvent`
+- `IntentResolvedEvent`
+- `IntentOptimisedEvent`
+- `IntentAssuranceEvent`
+- `IntentCallbackEvent`
 
-### Event rule:
-`IntentResolvedEvent.candidates` and `IntentNetworkReadyEvent.networkConfiguration` must use attributes derived from KP master config, `t7-knowledge-plane`, and selected optimisation resources. Internal event examples must not invent resource/configuration/telemetry attributes independently.
+### Common rules:
+The document includes CloudEvents header conventions, common payload style, idempotency/replay requirements, topic/key baseline, and producer/consumer ownership boundaries.
 
-## Baseline update — KP expression validation profile:
+## Baseline update — add IntentNetworkReadyEvent to internal events specification:
 
-Date: 2026-05-06T03:35:44.379440+00:00
+Date: 2026-05-05T22:56:16.136761+00:00
+
+### Updated file:
+- `intent_internal_events_specification.md`
+
+### Baseline:
+Added `IntentNetworkReadyEvent` to the internal events specification.
+
+### Event meaning:
+`IntentNetworkReadyEvent` is an internal milestone event indicating that the optimised intent has been successfully applied and the network/service is ready.
+
+### Relationship to IntentAssuranceEvent:
+`IntentNetworkReadyEvent` is the network-ready/apply-success milestone. `IntentAssuranceEvent` remains the ongoing assurance/runtime outcome event used for active, degraded, failed, paused, and recovered projection updates.
+
+### Updated internal event catalogue:
+- `IntentValidatedEvent`
+- `IntentRejectedEvent`
+- `IntentResolvedEvent`
+- `IntentOptimisedEvent`
+- `IntentNetworkReadyEvent`
+- `IntentAssuranceEvent`
+- `IntentCallbackEvent`
+
+## Baseline update — lean internal event payload rule:
+
+Date: 2026-05-05T23:21:29.812933+00:00
+
+### Updated file:
+- `intent_internal_events_specification.md`
+
+### Baseline:
+Internal events should carry milestone-specific fields directly and avoid embedding full external TMF resource objects unless the consumer genuinely needs that full resource snapshot.
+
+### Rule:
+Use top-level event-body fields for the event fact, such as `intentId`, `version`, `lifecycleStatus`, `statusReason`, and milestone-specific outcomes. Use `references` for links/hrefs and related resource references instead of duplicating IDs, version, lifecycle, and resource metadata inside embedded external resource objects.
+
+### Applied example:
+`IntentValidatedEvent` was updated to remove the embedded full external `intent` object. The event now keeps top-level `intentId`, `version`, `lifecycleStatus`, concrete `intentSpecification.id`, expression, validation outcome, and reference hrefs.
+
+## Baseline update — remove request-id field from internal event examples:
+
+Date: 2026-05-05T23:31:54.534720+00:00
+
+### Updated file:
+- `intent_internal_events_specification.md`
+
+### Baseline:
+Use `correlationId` as the standard cross-service trace/correlation reference in internal event examples.
+
+### Rule:
+Do not include `request-id field` in internal event examples unless a request-ID propagation model is explicitly baselined later.
+
+### Applied change:
+Removed `request-id field` from the `IntentValidatedEvent` example references.
+
+## Baseline update — internal events stale terminology cleanup:
+
+Date: 2026-05-06T00:46:21.968142+00:00
+
+### Updated file:
+- `intent_internal_events_specification.md`
+
+### Baseline correction:
+Regenerated the internal events specification to remove stale active examples and align with the latest agreed event terminology and payload-shape rules.
+
+### Confirmed active rules:
+- Use `location.locationId`, not a separate site block.
+- Use `context` in `IntentResolvedEvent`.
+- Do not include optimiser input-selection details or successful semantic/policy evaluation details in `IntentResolvedEvent`.
+- Do not include a validation object in `IntentValidatedEvent`.
+- Do not include extra request-id fields in internal event examples.
+- Use named `references` objects with `id` and `href`.
+- Use `t7-knowledge-plane` when the Knowledge Plane must be referenced.
+
+## Baseline update — concrete IntentResolvedEvent candidates:
+
+Date: 2026-05-06T00:56:31.388531+00:00
+
+### Updated file:
+- `intent_internal_events_specification.md`
+
+### Baseline:
+`IntentResolvedEvent.candidates` should show the concrete reusable resource-entry shape in the main example instead of a placeholder-only array.
+
+### Rule:
+Use `roles`, `resourceId`, `resourceType`, `resourceClass`, `resourceAttributes`, `relationships`, and `metrics`.
+
+### Role names:
+Use simple role names such as `primary` and `secondary`, not `primaryCandidate` or `backupCandidate`.
+
+## Baseline update — embed expressionValidationProfiles in KP master config JSON:
+
+Date: 2026-05-06T04:30:39.832361+00:00
 
 ### Updated file:
 - `kp_master_config.md`
 
-### Baseline:
-KP master config must explicitly support semantic validation for runtime Intent expressions.
+### Baseline correction:
+The expression validation profile is now embedded directly inside the active `knowledgePlaneConfig` JSON as `expressionValidationProfiles`, not only documented as a separate Markdown section.
 
-### Added:
-An `expressionValidationProfiles` baseline for the surgical hospital slice expression covering:
-- `location.locationId`
-- `location.locationType`
-- `location.geographicScope`
-- `serviceClass`
-- `priority`
-- `maxLatencyMs`
-- `minAvailabilityPercent`
-- `maxJitterMs`
-- `maxPacketLossPercent`
-- `redundancyRequired`
-- `preferredAccessTechnology`
+### Additive nature:
+This remains an additive improvement. It does not change the original KP semantic model; it makes the previously implied semantic validation profile explicit inside the master config itself.
 
-### Runtime rule:
-If semantic validation passes, II MS may continue candidate/resource resolution and emit `IntentResolvedEvent`. If semantic validation fails, II MS emits `IntentRejectedEvent`. If semantic validation passes but no candidate/resource set can satisfy the constraints, the optimiser may return `INFEASIBLE` through `IntentOptimisedEvent`.
-
-## Baseline confirmation — KP expression validation profile is additive:
-
-Date: 2026-05-06T03:37:48.122296+00:00
-
-### Confirmed:
-The KP expression validation profile addition does not change the original semantic thinking of the KP master config.
-
-### Position:
-The change is additive. It makes previously implied semantic-validation attributes explicit so II MS can validate runtime expression fields in a concrete and auditable way.
-
-### Preserved baseline:
-- KP remains the source of truth for semantic validation.
-- II MS uses KP for expression mapping, policy hints, service/location interpretation, and candidate-resource resolution.
-- Optimiser uses KP-derived candidates and constraints.
-- IA/apply-preparation path uses KP-derived network-ready configuration rules.
-- IA MS uses KP-derived telemetry and assurance rule interpretation.
-
-### New explicit coverage:
-The added `expressionValidationProfiles` section explicitly covers validation for:
-- `location.locationId`
-- `location.locationType`
-- `location.geographicScope`
-- `serviceClass`
-- `priority`
-- `maxLatencyMs`
-- `minAvailabilityPercent`
-- `maxJitterMs`
-- `maxPacketLossPercent`
-- `redundancyRequired`
-- `preferredAccessTechnology`
+### Included support:
+The embedded profile includes normalisation for the runtime expression values such as `sydney-hospital`, `hospital`, `campus`, and `critical`, while preserving the existing internal KP canonical values.
