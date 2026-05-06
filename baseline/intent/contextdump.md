@@ -935,3 +935,22 @@ Use `serviceConfiguration` in `IntentNetworkReadyEvent`, not `networkConfigurati
 - Include logical `orchestratorTarget`, `orchestratorProfile`, `observerTarget`, and `observerProfile` from KP.
 - Do not include `applyOutcome`.
 - Do not include QoS, bandwidth, routing policy, hops, or service attributes by default.
+
+## Baseline update — IntentAssuranceEvent observation scope:
+
+Date: 2026-05-06T11:02:18.994838+00:00
+
+### Updated file:
+- `intent_internal_events_specification.md`
+
+### Baseline:
+`IntentAssuranceEvent` uses `resources` for selected/applied resources and `observations[].metrics` for telemetry.
+
+### Applied event rules:
+- Do not include `assuranceStatus` by default; `lifecycleStatus` carries the assurance outcome.
+- Healthy/active assurance events stay lean and include observations for selected/applied resources only.
+- When `lifecycleStatus` is `Degraded`, `Failed`, or the event supports re-optimisation, IA MS may include observations for all monitored paths from `observerResourceIds`.
+- Do not include top-level `targets` and `observedMetrics` when values are already in `observations[].evaluations`.
+- Do not include `controlLoop` by default.
+- Do not include a `knowledgePlane` reference by default.
+- No separate `IntentDriftOccurredEvent` is needed by default.
