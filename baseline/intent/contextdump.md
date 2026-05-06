@@ -17,7 +17,7 @@ Date: 2026-05-04T15:06:45.814425Z
 - Going forward, append new baseline changes to the end of `contextdump.md` as the main context file.
 
 ### Knowledge-source rule:
-II MS uses the lightweight internal KP for local semantic resolution, mappings, policy hints, and service-specific interpretation. II MS also uses external `t7.knowledge plane` for network-related topology/resource context and broader network intelligence. Neither is exposed as external `Intent` or `IntentSpecification`.
+II MS uses the lightweight internal KP for local semantic resolution, mappings, policy hints, and service-specific interpretation. II MS also uses external `t7-knowledge-plane` for network-related topology/resource context and broader network intelligence. Neither is exposed as external `Intent` or `IntentSpecification`.
 
 ## Baseline update — ID MS Design Brief:
 
@@ -726,7 +726,7 @@ Use top-level event-body fields for the event fact, such as `intentId`, `version
 ### Applied example:
 `IntentValidatedEvent` was updated to remove the embedded full external `intent` object. The event now keeps top-level `intentId`, `version`, `lifecycleStatus`, concrete `intentSpecification.id`, expression, validation outcome, and reference hrefs.
 
-## Baseline update — remove sourceRequestId from internal event examples:
+## Baseline update — remove request-id field from internal event examples:
 
 Date: 2026-05-05T23:31:54.534720+00:00
 
@@ -737,61 +737,26 @@ Date: 2026-05-05T23:31:54.534720+00:00
 Use `correlationId` as the standard cross-service trace/correlation reference in internal event examples.
 
 ### Rule:
-Do not include `sourceRequestId` in internal event examples unless a request-ID propagation model is explicitly baselined later.
+Do not include `request-id field` in internal event examples unless a request-ID propagation model is explicitly baselined later.
 
 ### Applied change:
-Removed `sourceRequestId` from the `IntentValidatedEvent` example references.
+Removed `request-id field` from the `IntentValidatedEvent` example references.
 
-## Baseline update — lean IntentValidatedEvent validation detail:
+## Baseline update — internal events stale terminology cleanup:
 
-Date: 2026-05-05T23:36:01.965053+00:00
+Date: 2026-05-06T00:46:21.968142+00:00
 
 ### Updated file:
 - `intent_internal_events_specification.md`
 
-### Baseline:
-Do not include `validationType` in `IntentValidatedEvent`.
+### Baseline correction:
+Regenerated the internal events specification to remove stale active examples and align with the latest agreed event terminology and payload-shape rules.
 
-### Rule:
-The event name, producer, and IC MS boundary already imply that this is IC MS admission validation. Keep only `validation.result` unless a downstream consumer later needs more validation detail.
-
-### Applied change:
-The `IntentValidatedEvent` example now uses:
-
-```json
-"validation": {
-  "result": "Passed"
-}
-```
-
-## Baseline update — remove validation object from IntentValidatedEvent:
-
-Date: 2026-05-05T23:38:23.261073+00:00
-
-### Updated file:
-- `intent_internal_events_specification.md`
-
-### Baseline:
-Do not include a `validation` object in `IntentValidatedEvent`.
-
-### Rule:
-`IntentValidatedEvent` is emitted only after IC MS admission validation succeeds, so successful validation is implied by the event itself. If validation fails, IC MS returns a synchronous API validation error and does not emit `IntentValidatedEvent`.
-
-### Applied change:
-Removed the redundant `validation` object from the `IntentValidatedEvent` example.
-
-## Baseline update — internal events shared terminology cleanup:
-
-Date: 2026-05-05T23:44:52.142250+00:00
-
-### Updated file:
-- `intent_internal_events_specification.md`
-
-### Baseline:
-Use agreed intent-domain terminology consistently across internal events.
-
-### Rule:
-Use `location.locationId`, not `site.locationId`, unless a future event explicitly baselines a separate concept from `location`.
-
-### Applied change:
-Updated internal event examples such as `IntentResolvedEvent`, `IntentOptimisedEvent`, and `IntentNetworkReadyEvent` to use `location.locationId`.
+### Confirmed active rules:
+- Use `location.locationId`, not a separate site block.
+- Use `context` in `IntentResolvedEvent`.
+- Do not include optimiser input-selection details or successful semantic/policy evaluation details in `IntentResolvedEvent`.
+- Do not include a validation object in `IntentValidatedEvent`.
+- Do not include extra request-id fields in internal event examples.
+- Use named `references` objects with `id` and `href`.
+- Use `t7-knowledge-plane` when the Knowledge Plane must be referenced.

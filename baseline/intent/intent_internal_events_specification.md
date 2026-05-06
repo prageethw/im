@@ -33,7 +33,6 @@ Internal events are state/progress/outcome facts, not point-to-point commands fo
 | Sensitive data | Do not include secrets, tokens, credentials, or raw internal stack traces |
 | External exposure | Internal payloads are not directly exposed as external TMF events |
 
-
 ### Lean internal payload rule:
 
 Internal events should carry milestone-specific fields directly and avoid embedding full external TMF resource objects unless the consumer genuinely needs that full resource snapshot.
@@ -44,15 +43,15 @@ Use `references` for links/hrefs and related resource references instead of dupl
 
 This keeps each internal event lean and avoids duplicate truth.
 
-### Request ID reference rule:
+### Standard correlation rule:
 
 Use `correlationId` as the standard cross-service trace/correlation reference in internal event examples.
 
-Do not include `sourceRequestId` in internal event examples unless a request-ID propagation model is explicitly baselined later.
+No additional request-id reference field is baselined by default.
 
-### IntentValidatedEvent validation object rule:
+### IntentValidatedEvent admission rule:
 
-Do not include a `validation` object in `IntentValidatedEvent`.
+Do not include a validation object in `IntentValidatedEvent`.
 
 The event is emitted only after IC MS admission validation succeeds, so successful validation is implied by the event itself.
 
@@ -70,17 +69,45 @@ Use:
 }
 ```
 
-Do not use:
+Do not introduce a separate site block unless a future event explicitly baselines a separate concept from `location`.
+
+### Common references shape:
+
+Internal event `references` should use named resource reference objects with `id` and `href` where available.
+
+Use `correlationId` as a common scalar reference.
+
+Recommended shape:
 
 ```json
-"site": {
-  "locationId": "sydney-hospital"
+"references": {
+  "correlationId": "corr-intent-create-001",
+  "intent": {
+    "id": "INT-HOSP-2026-001",
+    "href": "/intentManagement/v5/intent/INT-HOSP-2026-001"
+  },
+  "intentSpecification": {
+    "id": "hospital-surgical-slice-spec-v1.20",
+    "href": "/intentManagement/v5/intentSpecification/hospital-surgical-slice-spec-v1.20"
+  }
 }
 ```
 
-unless a future event explicitly baselines a separate concept from `location`.
+Where a reference is not useful to the consuming event, it may be omitted rather than included as an empty object.
 
-Current internal event examples use `location.locationId`.
+### IntentResolvedEvent handoff content rule:
+
+For `IntentResolvedEvent`, use `context` for non-measurable contextual attributes such as `priority`, `redundancyRequired`, and `preferredAccessTechnology`.
+
+Do not use a generic HTTP/request-shaped block for this context.
+
+Do not include optimiser input-selection details or successful semantic/policy evaluation details in `IntentResolvedEvent` by default.
+
+II MS emits `IntentResolvedEvent` only when semantic/policy resolution succeeds, so successful evaluation is implied by the event itself.
+
+The optimiser owns its optimisation data-source, model, and method selection unless an explicit optimisation-profile handoff is baselined later.
+
+Use `t7-knowledge-plane` as the standard service-style name where the Knowledge Plane must be referenced.
 
 ---
 
@@ -104,7 +131,7 @@ content-type: application/json
 |---|---|---|---|
 | `IntentValidatedEvent` | `intent-controller-ms` | `intent-intelligence-ms` | Runtime Intent passed IC MS syntactic validation and was admitted into the lifecycle |
 | `IntentRejectedEvent` | `intent-intelligence-ms` | `intent-controller-ms` | Semantic/policy validation rejected the admitted Intent |
-| `IntentResolvedEvent` | `intent-intelligence-ms` | `intent-optimiser-ms` | Intent was semantically resolved into a canonical internal request for optimisation |
+| `IntentResolvedEvent` | `intent-intelligence-ms` | `intent-optimiser-ms` | Intent was semantically resolved into a canonical internal handoff for optimisation |
 | `IntentOptimisedEvent` | `intent-optimiser-ms` | `intent-assurance-ms` / downstream orchestration path | Optimisation completed and selected resources/outcome are available |
 | `IntentNetworkReadyEvent` | `intent-assurance-ms` / network apply path | `intent-controller-ms` / assurance projection path | Optimised intent has been successfully applied and the network/service is ready |
 | `IntentAssuranceEvent` | `intent-assurance-ms` | `intent-controller-ms` | Assurance/apply/runtime outcome truth for external Intent and IntentReport projection |
@@ -128,7 +155,7 @@ intent-intelligence-ms
 
 ### Meaning:
 
-The runtime Intent has passed IC MS syntactic validation and has been admitted into the intent lifecycle.
+The runtime Intent has passed IC MS admission validation and has been admitted into the intent lifecycle.
 
 This event is a state/progress event, not a point-to-point command.
 
@@ -152,7 +179,7 @@ content-type: application/json
     "intentId": "INT-HOSP-2026-001",
     "version": "v1",
     "lifecycleStatus": "Acknowledged",
-    "statusReason": "Intent request passed IC MS syntactic validation and was admitted for downstream processing.",
+    "statusReason": "Intent request passed IC MS admission validation and was admitted for downstream processing.",
     "intentSpecification": {
       "id": "hospital-surgical-slice-spec-v1.20"
     },
@@ -160,13 +187,15 @@ content-type: application/json
       "...similar payload to create intent request..."
     },
     "references": {
+      "correlationId": "corr-intent-create-001",
       "intent": {
+        "id": "INT-HOSP-2026-001",
         "href": "/intentManagement/v5/intent/INT-HOSP-2026-001"
       },
       "intentSpecification": {
+        "id": "hospital-surgical-slice-spec-v1.20",
         "href": "/intentManagement/v5/intentSpecification/hospital-surgical-slice-spec-v1.20"
-      },
-      "correlationId": "corr-intent-create-001"
+      }
     }
   }
 }
@@ -176,6 +205,7 @@ content-type: application/json
 
 - IC MS emits this only after the external Intent projection and outbox record are durably committed.
 - The referenced `IntentSpecification.id` is concrete and must have been confirmed `ACTIVE` or validated from a valid fresh cached active spec.
+- The event itself implies admission validation success.
 - The payload is curated for downstream processing and does not expose DB/cache/internal implementation details.
 
 ---
@@ -232,11 +262,24 @@ content-type: application/json
     ],
     "references": {
       "correlationId": "corr-intent-create-001",
-      "intentSpecificationId": "hospital-surgical-slice-spec-v1.20"
+      "intent": {
+        "id": "INT-HOSP-2026-001",
+        "href": "/intentManagement/v5/intent/INT-HOSP-2026-001"
+      },
+      "intentSpecification": {
+        "id": "hospital-surgical-slice-spec-v1.20",
+        "href": "/intentManagement/v5/intentSpecification/hospital-surgical-slice-spec-v1.20"
+      }
     }
   }
 }
 ```
+
+### Notes:
+
+- IC MS consumes this idempotently through inbox handling.
+- IC MS emits external `IntentStatusChangeEvent` after the external projection changes to `Rejected`.
+- IC MS may create or update an `IntentReport` projection where useful.
 
 ---
 
@@ -256,7 +299,7 @@ intent-optimiser-ms
 
 ### Meaning:
 
-The admitted Intent has been semantically resolved into a canonical internal request that can be optimised.
+The admitted Intent has been semantically resolved into a canonical internal handoff that can be optimised.
 
 ### Example headers:
 
@@ -290,39 +333,36 @@ content-type: application/json
       "maxJitterMs": 2,
       "maxPacketLossPercent": 0.01
     },
-    "request": {
+    "context": {
       "priority": "critical",
       "redundancyRequired": true,
       "preferredAccessTechnology": "5G"
     },
-    "inputs": {
-      "knowledgeSource": "t7.knowledge plane",
-      "resolutionProfile": "hospital-surgical-slice"
-    },
     "candidates": [
-      "...candidate resources resolved from knowledge plane..."
-    ],
-    "evaluations": [
-      {
-        "type": "Semantic",
-        "result": "Passed"
-      },
-      {
-        "type": "Policy",
-        "result": "Passed"
-      }
+      "...candidate resources resolved from t7-knowledge-plane..."
     ],
     "references": {
       "correlationId": "corr-intent-create-001",
-      "intentSpecificationId": "hospital-surgical-slice-spec-v1.20",
       "intent": {
         "id": "INT-HOSP-2026-001",
         "href": "/intentManagement/v5/intent/INT-HOSP-2026-001"
+      },
+      "intentSpecification": {
+        "id": "hospital-surgical-slice-spec-v1.20",
+        "href": "/intentManagement/v5/intentSpecification/hospital-surgical-slice-spec-v1.20"
       }
     }
   }
 }
 ```
+
+### Notes:
+
+- Successful semantic/policy resolution is implied by the event.
+- The optimiser owns optimisation data-source/model/method selection unless an explicit optimisation-profile handoff is baselined later.
+- `context` holds non-measurable contextual attributes.
+- `targets` holds measurable desired outcomes/constraints.
+- `candidates` carries the candidate resources resolved for optimisation where required.
 
 ---
 
@@ -420,7 +460,10 @@ content-type: application/json
         "id": "INT-HOSP-2026-001",
         "href": "/intentManagement/v5/intent/INT-HOSP-2026-001"
       },
-      "intentSpecificationId": "hospital-surgical-slice-spec-v1.20"
+      "intentSpecification": {
+        "id": "hospital-surgical-slice-spec-v1.20",
+        "href": "/intentManagement/v5/intentSpecification/hospital-surgical-slice-spec-v1.20"
+      }
     }
   }
 }
@@ -432,7 +475,6 @@ content-type: application/json
 - If optimisation cannot produce a valid result, use `optimisationOutcome.status = NotOptimisable` or `Error`.
 
 ---
-
 
 ## IntentNetworkReadyEvent:
 
@@ -518,7 +560,10 @@ content-type: application/json
         "id": "INT-HOSP-2026-001",
         "href": "/intentManagement/v5/intent/INT-HOSP-2026-001"
       },
-      "intentSpecificationId": "hospital-surgical-slice-spec-v1.20"
+      "intentSpecification": {
+        "id": "hospital-surgical-slice-spec-v1.20",
+        "href": "/intentManagement/v5/intentSpecification/hospital-surgical-slice-spec-v1.20"
+      }
     }
   }
 }
@@ -530,6 +575,8 @@ content-type: application/json
 - IC MS may use this event to project the external Intent lifecycle to `Active` where that is the selected flow.
 - IA MS may also use this milestone as part of its assurance state model.
 - Ongoing assurance updates, degradation, recovery, pause, and failure signals should use `IntentAssuranceEvent`.
+
+---
 
 ## IntentAssuranceEvent:
 
@@ -583,7 +630,14 @@ IC MS consumes this event and updates the external `Intent` and `IntentReport` p
     ],
     "references": {
       "correlationId": "corr-intent-assurance-001",
-      "intentSpecificationId": "hospital-surgical-slice-spec-v1.20"
+      "intent": {
+        "id": "INT-HOSP-2026-001",
+        "href": "/intentManagement/v5/intent/INT-HOSP-2026-001"
+      },
+      "intentSpecification": {
+        "id": "hospital-surgical-slice-spec-v1.20",
+        "href": "/intentManagement/v5/intentSpecification/hospital-surgical-slice-spec-v1.20"
+      }
     }
   }
 }
@@ -613,7 +667,14 @@ IC MS consumes this event and updates the external `Intent` and `IntentReport` p
     ],
     "references": {
       "correlationId": "corr-intent-assurance-002",
-      "intentSpecificationId": "hospital-surgical-slice-spec-v1.20"
+      "intent": {
+        "id": "INT-HOSP-2026-001",
+        "href": "/intentManagement/v5/intent/INT-HOSP-2026-001"
+      },
+      "intentSpecification": {
+        "id": "hospital-surgical-slice-spec-v1.20",
+        "href": "/intentManagement/v5/intentSpecification/hospital-surgical-slice-spec-v1.20"
+      }
     }
   }
 }
@@ -748,10 +809,9 @@ IA MS owns correlation, mapping, skip/dead-letter decisions, and downstream assu
 - Internal events are not external TMF events.
 - External TMF events must be curated projection/resource events.
 - Internal events must not leak secrets, credentials, tokens, or raw platform stack traces.
-- Use `intent-intelligence-ms`, not `intent-interpreter-ms`.
-- Use `intent-controller-ms`, not `intent-creation-ms`.
-- Use `priority`, not `priority_level`.
-- Use `critical`, not `clinical-critical`.
+- Use `intent-intelligence-ms`, not the old interpreter service name.
+- Use `intent-controller-ms`, not any creation-service wording.
+- Use `priority`, not legacy priority field names.
+- Use `critical`, not old clinical-specific priority values.
 - Use `resources` for selected optimisation resources in `IntentOptimisedEvent`.
 - Use typed placeholders in examples when abbreviating arrays or objects.
-- Internal event payloads should be lean and avoid embedding full external TMF resource objects unless genuinely required by consumers.
