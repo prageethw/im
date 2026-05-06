@@ -671,3 +671,25 @@ For simple semantic/capability rejection, `IntentRejectedEvent` carries `lifecyc
 - Replaced `SERVICE_CAPABILITY_UNKNOWN` with `SERVICE_NOT_AVAILABLE`.
 - Removed the simple `evaluations` block.
 - Kept `knowledgePlane` reference because the rejection is based on semantic/KP lookup.
+
+## Baseline update — common metrics container:
+
+Date: 2026-05-06T12:34:03.490482+00:00
+
+### Updated files:
+- `intent_internal_events_specification.md`
+- `kp_master_config.md`
+
+### Baseline:
+Use `metrics` as the common resource performance container.
+
+### Rules:
+- Use `metrics.benchmark` for KP/design-time expected values.
+- Use `metrics.telemetry` for observed/runtime values.
+- Avoid a separate resource-level `benchmarks` object in event resource entries.
+- Evaluation entries may still use `benchmarkValue` or `observedValue` to identify which value is being compared.
+- Location/service-level `benchmarks` in KP remain valid because they represent design-time service capability values, not per-resource performance samples.
+
+### Applied:
+- Converted event resource-entry `benchmarks` to `metrics.benchmark`.
+- Converted KP resource `benchmarks` to `metrics.benchmark`.
