@@ -599,3 +599,120 @@ Example shape:
 `IntentNetworkReadyEvent.networkConfiguration` must be derived from selected optimiser resources plus KP master config / `t7-knowledge-plane` orchestration-facing attributes.
 
 Internal event examples must not invent resource/configuration/telemetry attributes independently of KP master config.
+
+## Expression validation profile baseline:
+
+### Purpose:
+
+KP master config must explicitly support semantic validation for runtime Intent expressions.
+
+II MS uses this profile to validate structured expression values after IC MS admission and before emitting `IntentResolvedEvent`.
+
+### Baseline validation split:
+
+| **Layer / MS** | **Validation responsibility** |
+|---|---|
+| ID MS | Design-time `IntentSpecification` syntax/schema definition |
+| IC MS | Runtime request shape and concrete active `intentSpecification.id` admission |
+| II MS | Semantic validation using KP master config |
+| Optimiser MS | Feasibility and optimisation using KP-derived candidates/constraints |
+
+### Required expression validation coverage:
+
+| **Expression field** | **KP validation requirement** |
+|---|---|
+| `location.locationId` | Location exists in KP master config |
+| `location.locationType` | Matches configured type for that location |
+| `location.geographicScope` | Valid for that location |
+| `serviceClass` | Supported service class |
+| `priority` | Allowed priority for the service/location policy |
+| `maxLatencyMs` | Within allowed service/target limits |
+| `minAvailabilityPercent` | Within allowed service/target limits |
+| `maxJitterMs` | Within allowed service/target limits |
+| `maxPacketLossPercent` | Within allowed service/target limits |
+| `redundancyRequired` | Allowed or required for service class |
+| `preferredAccessTechnology` | Available/applicable for location and service class |
+
+### Expression validation profile example:
+
+```json
+{
+  "expressionValidationProfiles": [
+    {
+      "profileId": "hospital-surgical-slice-expression-v1",
+      "intentSpecificationId": "hospital-surgical-slice-spec-v1.20",
+      "locationRules": {
+        "allowedLocationTypes": [
+          "hospital"
+        ],
+        "allowedGeographicScopes": [
+          "campus"
+        ],
+        "requiredFields": [
+          "locationId",
+          "locationType",
+          "geographicScope"
+        ]
+      },
+      "serviceRules": {
+        "allowedServiceClasses": [
+          "critical-gold"
+        ],
+        "allowedPriorities": [
+          "critical",
+          "high",
+          "standard"
+        ],
+        "requiredFields": [
+          "serviceClass",
+          "priority"
+        ]
+      },
+      "targetRules": {
+        "maxLatencyMs": {
+          "operator": "<=",
+          "maxAllowedValue": 10,
+          "unit": "ms"
+        },
+        "minAvailabilityPercent": {
+          "operator": ">=",
+          "minAllowedValue": 99.99,
+          "unit": "percent"
+        },
+        "maxJitterMs": {
+          "operator": "<=",
+          "maxAllowedValue": 2,
+          "unit": "ms"
+        },
+        "maxPacketLossPercent": {
+          "operator": "<=",
+          "maxAllowedValue": 0.01,
+          "unit": "percent"
+        }
+      },
+      "redundancyRules": {
+        "allowed": true,
+        "requiredForServiceClasses": [
+          "critical-gold"
+        ]
+      },
+      "accessTechnologyRules": {
+        "allowedValues": [
+          "5G",
+          "fibre"
+        ],
+        "availabilityMustMatchLocation": true,
+        "availabilityMustMatchServiceClass": true
+      }
+    }
+  ]
+}
+```
+
+### Runtime outcome rule:
+
+If semantic validation passes, II MS may continue candidate/resource resolution and emit `IntentResolvedEvent`.
+
+If semantic validation fails, II MS emits `IntentRejectedEvent`.
+
+If semantic validation passes but no candidate/resource set can satisfy the constraints, the optimiser may return `INFEASIBLE` through `IntentOptimisedEvent`.
