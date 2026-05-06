@@ -760,3 +760,19 @@ Regenerated the internal events specification to remove stale active examples an
 - Do not include extra request-id fields in internal event examples.
 - Use named `references` objects with `id` and `href`.
 - Use `t7-knowledge-plane` when the Knowledge Plane must be referenced.
+
+## Baseline update — concrete IntentResolvedEvent candidates:
+
+Date: 2026-05-06T00:56:31.388531+00:00
+
+### Updated file:
+- `intent_internal_events_specification.md`
+
+### Baseline:
+`IntentResolvedEvent.candidates` should show the concrete reusable resource-entry shape in the main example instead of a placeholder-only array.
+
+### Rule:
+Use `roles`, `resourceId`, `resourceType`, `resourceClass`, `resourceAttributes`, `relationships`, and `metrics`.
+
+### Role names:
+Use simple role names such as `primary` and `secondary`, not `primaryCandidate` or `backupCandidate`.

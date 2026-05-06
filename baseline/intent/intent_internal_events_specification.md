@@ -109,6 +109,16 @@ The optimiser owns its optimisation data-source, model, and method selection unl
 
 Use `t7-knowledge-plane` as the standard service-style name where the Knowledge Plane must be referenced.
 
+### Candidate resource example rule:
+
+`IntentResolvedEvent.candidates` should show the concrete reusable resource-entry shape in the main example.
+
+Use `roles`, `resourceId`, `resourceType`, `resourceClass`, `resourceAttributes`, `relationships`, and `metrics`.
+
+Use simple role names such as `primary` and `secondary`.
+
+Avoid placeholder-only candidates arrays in the main event example.
+
 ---
 
 ## Common CloudEvents headers:
@@ -339,7 +349,52 @@ content-type: application/json
       "preferredAccessTechnology": "5G"
     },
     "candidates": [
-      "...candidate resources resolved from t7-knowledge-plane..."
+      {
+        "roles": [
+          "primary"
+        ],
+        "resourceId": "path-syd-hosp-5g-primary",
+        "resourceType": "networkPath",
+        "resourceClass": "critical-gold-access",
+        "resourceAttributes": {
+          "accessTechnology": "5G"
+        },
+        "relationships": [
+          {
+            "type": "secondary",
+            "resourceId": "path-syd-hosp-fibre-secondary"
+          }
+        ],
+        "metrics": {
+          "expectedLatencyMs": 8,
+          "expectedAvailabilityPercent": 99.995,
+          "expectedJitterMs": 1.5,
+          "expectedPacketLossPercent": 0.005
+        }
+      },
+      {
+        "roles": [
+          "secondary"
+        ],
+        "resourceId": "path-syd-hosp-fibre-secondary",
+        "resourceType": "networkPath",
+        "resourceClass": "critical-gold-access",
+        "resourceAttributes": {
+          "accessTechnology": "fibre"
+        },
+        "relationships": [
+          {
+            "type": "protects",
+            "resourceId": "path-syd-hosp-5g-primary"
+          }
+        ],
+        "metrics": {
+          "expectedLatencyMs": 9,
+          "expectedAvailabilityPercent": 99.997,
+          "expectedJitterMs": 1.2,
+          "expectedPacketLossPercent": 0.003
+        }
+      }
     ],
     "references": {
       "correlationId": "corr-intent-create-001",
