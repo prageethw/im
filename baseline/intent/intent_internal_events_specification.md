@@ -117,7 +117,10 @@ Use `roles`, `resourceId`, `resourceType`, `resourceClass`, `resourceAttributes`
 
 Use simple role names such as `primary` and `secondary`.
 
+The main example should include at least two primary candidate paths and two secondary candidate paths so it is clear that the optimiser has a real candidate set to choose from.
+
 Avoid placeholder-only candidates arrays in the main event example.
+
 
 ### Expression example rule:
 
@@ -374,18 +377,99 @@ content-type: application/json
         "roles": [
           "primary"
         ],
-        "resourceId": "path-syd-hosp-5g-primary",
+        "resourceId": "path-syd-hosp-5g-primary-a",
         "resourceType": "networkPath",
         "resourceClass": "critical-gold-access",
         "resourceAttributes": {
-          "accessTechnology": "5G"
+          "accessTechnology": "5G",
+          "provider": "mobile-access-a"
         },
         "relationships": [
           {
-            "type": "secondary",
-            "resourceId": "path-syd-hosp-fibre-secondary"
+            "type": "pairedSecondary",
+            "resourceId": "path-syd-hosp-fibre-secondary-a"
           }
         ],
+        "metrics": {
+          "expectedLatencyMs": 8,
+          "expectedAvailabilityPercent": 99.995,
+          "expectedJitterMs": 1.5,
+          "expectedPacketLossPercent": 0.005
+        }
+      },
+      {
+        "roles": [
+          "primary"
+        ],
+        "resourceId": "path-syd-hosp-fibre-primary-b",
+        "resourceType": "networkPath",
+        "resourceClass": "critical-gold-access",
+        "resourceAttributes": {
+          "accessTechnology": "fibre",
+          "provider": "fixed-access-b"
+        },
+        "relationships": [
+          {
+            "type": "pairedSecondary",
+            "resourceId": "path-syd-hosp-5g-secondary-b"
+          }
+        ],
+        "metrics": {
+          "expectedLatencyMs": 7,
+          "expectedAvailabilityPercent": 99.996,
+          "expectedJitterMs": 1.1,
+          "expectedPacketLossPercent": 0.004
+        }
+      },
+      {
+        "roles": [
+          "secondary"
+        ],
+        "resourceId": "path-syd-hosp-fibre-secondary-a",
+        "resourceType": "networkPath",
+        "resourceClass": "critical-gold-access",
+        "resourceAttributes": {
+          "accessTechnology": "fibre",
+          "provider": "fixed-access-a"
+        },
+        "relationships": [
+          {
+            "type": "protects",
+            "resourceId": "path-syd-hosp-5g-primary-a"
+          }
+        ],
+        "metrics": {
+          "expectedLatencyMs": 9,
+          "expectedAvailabilityPercent": 99.997,
+          "expectedJitterMs": 1.2,
+          "expectedPacketLossPercent": 0.003
+        }
+      },
+      {
+        "roles": [
+          "secondary"
+        ],
+        "resourceId": "path-syd-hosp-5g-secondary-b",
+        "resourceType": "networkPath",
+        "resourceClass": "critical-gold-access",
+        "resourceAttributes": {
+          "accessTechnology": "5G",
+          "provider": "mobile-access-b"
+        },
+        "relationships": [
+          {
+            "type": "protects",
+            "resourceId": "path-syd-hosp-fibre-primary-b"
+          }
+        ],
+        "metrics": {
+          "expectedLatencyMs": 10,
+          "expectedAvailabilityPercent": 99.994,
+          "expectedJitterMs": 1.8,
+          "expectedPacketLossPercent": 0.006
+        }
+      }
+    ],
         "metrics": {
           "expectedLatencyMs": 8,
           "expectedAvailabilityPercent": 99.995,

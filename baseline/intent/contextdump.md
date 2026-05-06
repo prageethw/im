@@ -789,3 +789,21 @@ When `IntentValidatedEvent.expression` is shown in the main example, include a c
 
 ### Applied change:
 Replaced the placeholder expression object with a full sample containing `location`, `serviceClass`, `priority`, latency/availability/jitter/packet-loss targets, `redundancyRequired`, `preferredAccessTechnology`, and `timeWindow`.
+
+## Baseline update — richer IntentResolvedEvent candidate set:
+
+Date: 2026-05-06T01:01:09.900785+00:00
+
+### Updated file:
+- `intent_internal_events_specification.md`
+
+### Baseline:
+`IntentResolvedEvent.candidates` must show a real optimisation candidate set in the main example.
+
+### Rule:
+The main example should include at least two primary candidate paths and two secondary candidate paths. Use simple role names `primary` and `secondary`.
+
+### Applied change:
+Updated `IntentResolvedEvent.candidates` to include four candidate paths:
+- two primary paths
+- two secondary paths
