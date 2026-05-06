@@ -158,15 +158,19 @@ Do not add a separate `result` field by default.
 
 The same status vocabulary may be applied at overall optimisation-run level, individual target-evaluation level, and context-evaluation level.
 
-### Network-ready configuration rule
+### Service-ready configuration rule
 
-`IntentNetworkReadyEvent` means the network-ready configuration has been prepared for orchestration/apply.
+`IntentNetworkReadyEvent` means the service configuration has been prepared for orchestration/apply.
 
-It does not mean the network has already been applied.
+It does not mean the service has already been applied.
 
-Do not use a generic `networkReadiness` object in `IntentNetworkReadyEvent`.
+Do not use `networkConfiguration` in `IntentNetworkReadyEvent` by default.
 
-Use `networkConfiguration` to carry the orchestrator-ready configuration derived from KP master config, `t7-knowledge-plane`, and the selected optimisation resources.
+Use `serviceConfiguration` to carry the service apply plan derived from selected optimiser resources and KP logical target/profile references.
+
+`serviceConfiguration.resourcePlan` contains the selected resources to apply.
+
+`serviceConfiguration.observerResourceIds` contains all KP resource IDs for the location-based service that IA/observer should monitor.
 
 Apply success/failure is confirmed later through callback and assurance processing, then projected through `IntentAssuranceEvent`.
 
@@ -901,9 +905,9 @@ intent-controller-ms
 
 ### Meaning
 
-`IntentNetworkReadyEvent` is an internal milestone event indicating that the network-ready configuration/resource set has been prepared for orchestration/apply.
+`IntentNetworkReadyEvent` is an internal milestone event indicating that the service configuration/resource set has been prepared for orchestration/apply.
 
-It represents a network-ready-for-apply milestone, not proof that the network has already been applied.
+It represents a service-ready-for-apply milestone, not proof that the network has already been applied.
 
 `IntentCallbackEvent` and `IntentAssuranceEvent` carry later apply/runtime outcomes. `IntentAssuranceEvent` remains the ongoing assurance/runtime outcome event used for active, degraded, failed, paused, and recovered projection updates.
 
@@ -913,7 +917,7 @@ It represents a network-ready-for-apply milestone, not proof that the network ha
 ce-specversion: 1.0
 ce-type: IntentNetworkReadyEvent
 ce-source: intent-assurance-ms
-ce-id: evt-intent-network-ready-001
+ce-id: evt-intent-service-ready-001
 ce-time: 2026-04-18T12:12:00+10:00
 ce-subject: INT-HOSP-2026-001
 content-type: application/json
@@ -927,116 +931,35 @@ content-type: application/json
     "intentId": "INT-HOSP-2026-001",
     "version": "v1",
     "lifecycleStatus": "InProgress",
-    "statusReason": "Network-ready configuration has been prepared for orchestration/apply.",
-    "location": {
-      "locationId": "sydney-hospital"
-    },
-    "service": {
+    "statusReason": "Service configuration has been prepared for orchestration/apply.",
+    "locationBasedService": {
+      "locationId": "AU-NSW-SYD-HOSP-001",
+      "displayName": "Sydney-Main-Hospital",
+      "serviceType": "surgical-connectivity",
       "serviceClass": "critical-gold"
     },
-    "networkConfiguration": {
-      "orchestratorProfile": "hospital-surgical-slice-apply",
-      "location": {
-        "locationId": "sydney-hospital"
-      },
-      "service": {
-        "serviceClass": "critical-gold"
-      },
+    "serviceConfiguration": {
+      "orchestratorTarget": "t7-network-orchestrator",
+      "orchestratorProfile": "hospital-surgical-slice-apply-v1",
       "resourcePlan": [
         {
           "role": "primary",
-          "resourceId": "path-syd-hosp-fibre-primary-b",
-          "resourceType": "networkPath",
-          "resourceClass": "critical-gold-access",
-          "pathClass": "primary",
-          "configuration": {
-            "accessTechnology": "fibre",
-            "bandwidthProfile": "surgical-critical",
-            "qosProfile": "critical-low-latency",
-            "routingPolicy": "primary-preferred",
-            "latencyTargetMs": 10,
-            "jitterTargetMs": 2,
-            "packetLossTargetPercent": 0.01
-          }
+          "resourceId": "SYD-PRI-01"
         },
         {
           "role": "secondary",
-          "resourceId": "path-syd-hosp-5g-secondary-b",
-          "resourceType": "networkPath",
-          "resourceClass": "critical-gold-access",
-          "pathClass": "secondary",
-          "configuration": {
-            "accessTechnology": "5G",
-            "bandwidthProfile": "surgical-critical",
-            "qosProfile": "critical-low-latency",
-            "routingPolicy": "standby-protection",
-            "latencyTargetMs": 10,
-            "jitterTargetMs": 2,
-            "packetLossTargetPercent": 0.01
-          }
+          "resourceId": "SYD-SEC-01"
         }
       ],
-      "orchestrationParameters": {
-        "activationMode": "apply",
-        "redundancyMode": "primary-secondary",
-        "failoverPolicy": "automatic",
-        "monitoringProfile": "critical-gold-assurance"
-      },
-      "sourceReferences": {
-        "kpMasterConfigVersion": "kp-master-config-v1.0",
-        "knowledgePlane": "t7-knowledge-plane"
-      }
+      "observerTarget": "t7-observability-platform",
+      "observerProfile": "critical-gold-assurance-observation-v1",
+      "observerResourceIds": [
+        "SYD-PRI-01",
+        "SYD-PRI-02",
+        "SYD-SEC-01",
+        "SYD-SEC-02"
+      ]
     },
-    "resources": [
-      {
-        "roles": [
-          "primary"
-        ],
-        "resourceId": "path-syd-hosp-fibre-primary-b",
-        "resourceType": "networkPath",
-        "resourceClass": "critical-gold-access",
-        "resourceAttributes": {
-          "accessTechnology": "fibre",
-          "provider": "fixed-access-b"
-        },
-        "relationships": [
-          {
-            "type": "pairedSecondary",
-            "resourceId": "path-syd-hosp-5g-secondary-b"
-          }
-        ],
-        "metrics": {
-          "expectedLatencyMs": 7,
-          "expectedAvailabilityPercent": 99.996,
-          "expectedJitterMs": 1.1,
-          "expectedPacketLossPercent": 0.004
-        }
-      },
-      {
-        "roles": [
-          "secondary"
-        ],
-        "resourceId": "path-syd-hosp-5g-secondary-b",
-        "resourceType": "networkPath",
-        "resourceClass": "critical-gold-access",
-        "resourceAttributes": {
-          "accessTechnology": "5G",
-          "provider": "mobile-access-b"
-        },
-        "relationships": [
-          {
-            "type": "protects",
-            "resourceId": "path-syd-hosp-fibre-primary-b"
-          }
-        ],
-        "metrics": {
-          "expectedLatencyMs": 10,
-          "expectedAvailabilityPercent": 99.994,
-          "expectedJitterMs": 1.8,
-          "expectedPacketLossPercent": 0.006
-        }
-      }
-    ],
     "references": {
       "correlationId": "corr-intent-create-001",
       "intent": {
@@ -1046,16 +969,30 @@ content-type: application/json
       "intentSpecification": {
         "id": "hospital-surgical-slice-spec-v1.20",
         "href": "/intentManagement/v5/intentSpecification/hospital-surgical-slice-spec-v1.20"
+      },
+      "knowledgePlane": {
+        "configId": "hospital-surgical-slice-kp-v1",
+        "version": "1.0"
       }
     }
   }
 }
 ```
 
+### Event-specific rules
+
+- `IntentNetworkReadyEvent` means service configuration is ready for orchestration/apply, not that apply has succeeded.
+- Use `serviceConfiguration`, not `networkConfiguration`, because the event carries the service apply plan rather than low-level network configuration.
+- `serviceConfiguration.resourcePlan` contains the selected resources to apply.
+- `serviceConfiguration.observerResourceIds` contains all KP resource IDs for the location-based service that IA/observer should monitor, including selected and non-selected paths.
+- Include logical `orchestratorTarget`, `orchestratorProfile`, `observerTarget`, and `observerProfile` from KP.
+- Do not include `applyOutcome`.
+- Do not include QoS, bandwidth, routing policy, hops, or service attributes by default.
+
 ### Notes
 
-- `networkConfiguration` carries the orchestrator-ready configuration derived from KP master config, `t7-knowledge-plane`, and the selected optimisation resources.
-- This event does not mean the network orchestrator has applied the configuration.
+- `serviceConfiguration` carries the orchestrator-ready configuration derived from KP master config, `t7-knowledge-plane`, and the selected optimisation resources.
+- This event does not mean the orchestrator has applied the service configuration.
 - `IntentNetworkReadyEvent` is a milestone event, not an ongoing telemetry event.
 - IC MS should not project the external Intent lifecycle to `Active` from this event alone.
 - Apply success/failure must be confirmed later by callback/assurance processing.

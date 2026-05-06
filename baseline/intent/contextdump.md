@@ -917,3 +917,21 @@ Date: 2026-05-06T09:57:01.489945+00:00
 - Keep `targetEvaluations` for SLA-like target fields.
 - Keep `contextEvaluations` for non-target checks such as redundancy and preferred access technology.
 - Do not include optimiser objective/rule configuration in the event; optimiser owns that internally.
+
+## Baseline update — IntentNetworkReadyEvent serviceConfiguration:
+
+Date: 2026-05-06T10:23:03.771521+00:00
+
+### Updated file:
+- `intent_internal_events_specification.md`
+
+### Baseline:
+Use `serviceConfiguration` in `IntentNetworkReadyEvent`, not `networkConfiguration`.
+
+### Applied event rules:
+- `IntentNetworkReadyEvent` means service configuration is ready for orchestration/apply, not that apply has succeeded.
+- `serviceConfiguration.resourcePlan` contains the selected resources to apply.
+- `serviceConfiguration.observerResourceIds` contains all KP resource IDs for the location-based service that IA/observer should monitor, including selected and non-selected paths.
+- Include logical `orchestratorTarget`, `orchestratorProfile`, `observerTarget`, and `observerProfile` from KP.
+- Do not include `applyOutcome`.
+- Do not include QoS, bandwidth, routing policy, hops, or service attributes by default.
