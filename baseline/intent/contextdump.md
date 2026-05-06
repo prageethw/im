@@ -729,3 +729,25 @@ Date: 2026-05-06T14:26:54.078317+00:00
 - Moved `preferredAccessTechnology` under `preferences`.
 - Replaced `contextEvaluations` with `constraintEvaluations` and `preferenceEvaluations`.
 - Removed boolean/string `target`/`benchmarkValue` comparisons from constraints/preferences by default.
+
+## Baseline update — use resources consistently across events:
+
+Date: 2026-05-06T23:11:55.236490+00:00
+
+### Updated file:
+- `intent_internal_events_specification.md`
+
+### Baseline:
+Use `resources` consistently across internal event bodies. The event type defines what the resources mean.
+
+### Meaning by event:
+- `IntentResolvedEvent.resources` = available resources for optimiser consideration.
+- `IntentOptimisedEvent.resources` = optimiser-selected resources.
+- `IntentNetworkReadyEvent.serviceConfiguration.resources` = selected resources ready for apply.
+- `IntentAssuranceEvent.resources` = applied/assured selected resources.
+
+### Applied:
+- Replaced `IntentResolvedEvent.candidates` with `IntentResolvedEvent.resources`.
+- Replaced `IntentNetworkReadyEvent.serviceConfiguration.resourcePlan` with `serviceConfiguration.resources`.
+- Updated common rules, event-specific rules, and examples.
+- Kept `observerResourceIds` because that is a different wider monitoring set, not the selected resource set.

@@ -66,7 +66,7 @@ Do not add a separate `result` field by default.
 
 `COMPLETED` means the item was successfully evaluated and satisfied.
 
-`INFEASIBLE` means the item was evaluated but cannot be satisfied with the available candidates/constraints.
+`INFEASIBLE` means the item was evaluated but cannot be satisfied with the available resources/constraints.
 
 `FAILED` means technical/runtime/model/data failure.
 
@@ -78,7 +78,7 @@ It does not mean the service has already been applied.
 
 Use `serviceConfiguration` to carry the service apply plan derived from selected optimiser resources and KP logical target/profile references.
 
-`serviceConfiguration.resourcePlan` contains the selected resources to apply.
+`serviceConfiguration.resources` contains the selected resources to apply.
 
 `serviceConfiguration.observerResourceIds` contains all KP resource IDs for the location-based service that IA/observer should monitor.
 
@@ -106,7 +106,7 @@ content-type: application/json
 |---|---|---|---|
 | `IntentValidatedEvent` | `intent-controller-ms` | `intent-intelligence-ms` | Runtime Intent passed IC MS admission validation and was admitted into the lifecycle |
 | `IntentRejectedEvent` | `intent-intelligence-ms` | `intent-controller-ms` | Semantic/policy validation rejected the admitted Intent |
-| `IntentResolvedEvent` | `intent-intelligence-ms` | `intent-optimiser-ms` | Intent was semantically resolved into a canonical internal handoff for optimisation |
+| `IntentResolvedEvent` | `intent-intelligence-ms` | `intent-optimiser-ms` | Intent was semantically resolved into a canonical internal handoff with available resources for optimisation |
 | `IntentOptimisedEvent` | `intent-optimiser-ms` | `intent-assurance-ms` / downstream orchestration path | Optimisation completed and selected resources/outcome are available |
 | `IntentNetworkReadyEvent` | `intent-assurance-ms` / network preparation path | `intent-controller-ms` / assurance projection path | Optimised resource set is ready for orchestration/apply; apply success is not yet confirmed |
 | `IntentAssuranceEvent` | `intent-assurance-ms` | `intent-controller-ms` | Assurance/apply/runtime outcome truth for external Intent and IntentReport projection |
@@ -193,7 +193,7 @@ content-type: application/json
 - It carries the admitted runtime `expression`.
 - It includes `serviceType`.
 - It keeps `redundancyRequired` when it came from expression mapping/defaults.
-- It does not include KP `benchmarks`, `resources`, `candidates`, optimiser details, orchestrator details, or a `validation` object.
+- It does not include KP `benchmarks`, `resources`, `resources`, optimiser details, orchestrator details, or a `validation` object.
 - It uses canonical `location.locationId` in the baseline event example.
 
 ---
@@ -329,7 +329,22 @@ content-type: application/json
     "preferences": {
       "preferredAccessTechnology": "5G"
     },
-    "candidates": [
+    "references": {
+      "correlationId": "corr-intent-create-001",
+      "intent": {
+        "id": "INT-HOSP-2026-001",
+        "href": "/intentManagement/v5/intent/INT-HOSP-2026-001"
+      },
+      "intentSpecification": {
+        "id": "hospital-surgical-slice-spec-v1.20",
+        "href": "/intentManagement/v5/intentSpecification/hospital-surgical-slice-spec-v1.20"
+      },
+      "knowledgePlane": {
+        "configId": "hospital-surgical-slice-kp-v1",
+        "version": "1.0"
+      }
+    },
+    "resources": [
       {
         "resourceId": "SYD-PRI-01",
         "resourceType": "networkPath",
@@ -426,22 +441,7 @@ content-type: application/json
           }
         ]
       }
-    ],
-    "references": {
-      "correlationId": "corr-intent-create-001",
-      "intent": {
-        "id": "INT-HOSP-2026-001",
-        "href": "/intentManagement/v5/intent/INT-HOSP-2026-001"
-      },
-      "intentSpecification": {
-        "id": "hospital-surgical-slice-spec-v1.20",
-        "href": "/intentManagement/v5/intentSpecification/hospital-surgical-slice-spec-v1.20"
-      },
-      "knowledgePlane": {
-        "configId": "hospital-surgical-slice-kp-v1",
-        "version": "1.0"
-      }
-    }
+    ]
   }
 }
 ```
@@ -456,12 +456,12 @@ content-type: application/json
 - Use `preferences` for soft selection guidance such as `preferredAccessTechnology`.
 - Do not include direct top-level `priority`, `preferredAccessTechnology`, or `redundancyRequired`; place them under `constraints` or `preferences`.
 - Do not include a generic `context` wrapper by default.
-- Do not include `resourceRoles` or `accessTechnologies`; candidates already expose actual roles and access technologies.
+- Do not include `resourceRoles` or `accessTechnologies`; resources already expose actual roles and access technologies.
 - Do not include a separate top-level KP `benchmarks` block when it duplicates `targets`.
-- Map KP/domain `resources` to runtime optimiser handoff `candidates`.
-- `IntentResolvedEvent.candidates` contains all available resources for the resolved location/service that the optimiser may consider, not a shortened selected list.
-- Candidate entries use runtime `roles`, mapped from KP `resourceRoles`.
-- For first-pass optimisation candidates use `metrics.benchmark`; for degradation/control-loop re-optimisation candidates use `metrics.telemetry` and omit `metrics.benchmark` by default.
+- Map KP/domain resource knowledge to runtime optimiser handoff `resources`.
+- `IntentResolvedEvent.resources` contains all available resources for the resolved location/service that the optimiser may consider, not a shortened selected list.
+- Resource entries use runtime `roles`, mapped from KP `resourceRoles`.
+- For first-pass optimisation resources use `metrics.benchmark`; for degradation/control-loop re-optimisation resources use `metrics.telemetry` and omit `metrics.benchmark` by default.
 
 ## IntentOptimisedEvent
 
@@ -631,7 +631,7 @@ content-type: application/json
     "serviceClass": "critical-gold",
     "optimisationRun": {
       "status": "INFEASIBLE",
-      "statusReason": "No candidate resource set could satisfy all required targets and constraints."
+      "statusReason": "No resource resource set could satisfy all required targets and constraints."
     },
     "targetEvaluations": [
       {
@@ -691,14 +691,14 @@ content-type: application/json
 ### Event-specific rules
 
 - Use direct `location`, `serviceType`, and `serviceClass` fields; do not wrap them in `context` or `serviceContext`.
-- Use selected `resources`, not `candidates`.
+- Use `resources` for optimiser-selected resources.
 - Use optimiser statuses such as `COMPLETED`, `INFEASIBLE`, and `FAILED`.
 - Use `targetEvaluations` for measurable SLA-style target checks.
 - Use `constraintEvaluations` for checks that correspond to `IntentResolvedEvent.constraints`.
 - Use `preferenceEvaluations` for checks that correspond to `IntentResolvedEvent.preferences`.
 - Use value comparison fields such as `target`, `benchmarkValue`, and `observedValue` for measurable target evaluations.
 - For boolean/string constraints and preferences, use `name`, `status`, and `statusReason` unless the actual comparison value adds meaningful diagnostic value.
-- Do not use `constraintEvaluations`; this avoids reintroducing generic context terminology.
+- Do not use `contextEvaluations`; this avoids reintroducing generic context terminology.
 - Do not include optimiser objective/rule configuration in the event; optimiser owns that internally.
 
 ## IntentNetworkReadyEvent
@@ -751,7 +751,15 @@ content-type: application/json
     "serviceConfiguration": {
       "orchestratorTarget": "t7-network-orchestrator",
       "orchestratorProfile": "hospital-surgical-slice-apply-v1",
-      "resourcePlan": [
+      "observerTarget": "t7-observability-platform",
+      "observerProfile": "critical-gold-assurance-observation-v1",
+      "observerResourceIds": [
+        "SYD-PRI-01",
+        "SYD-PRI-02",
+        "SYD-SEC-01",
+        "SYD-SEC-02"
+      ],
+      "resources": [
         {
           "role": "primary",
           "resourceId": "SYD-PRI-01"
@@ -760,14 +768,6 @@ content-type: application/json
           "role": "secondary",
           "resourceId": "SYD-SEC-01"
         }
-      ],
-      "observerTarget": "t7-observability-platform",
-      "observerProfile": "critical-gold-assurance-observation-v1",
-      "observerResourceIds": [
-        "SYD-PRI-01",
-        "SYD-PRI-02",
-        "SYD-SEC-01",
-        "SYD-SEC-02"
       ]
     },
     "references": {
@@ -794,8 +794,8 @@ content-type: application/json
 - `IntentNetworkReadyEvent` means service configuration is ready for orchestration/apply, not that apply has succeeded.
 - Use direct `location`, `serviceType`, and `serviceClass` fields; do not wrap them in `context` or `serviceContext`.
 - Use `serviceConfiguration` because the event carries the service apply plan rather than low-level network configuration.
-- `serviceConfiguration.resourcePlan` contains the selected resources to apply.
-- `serviceConfiguration.observerResourceIds` contains all KP resource IDs for the location-based service that IA/observer should monitor, including selected and non-selected paths.
+- `serviceConfiguration.resources` contains the selected resources ready for apply.
+- `serviceConfiguration.observerResourceIds` contains all KP resource IDs for the location/service that IA/observer should monitor, including selected and non-selected paths.
 - Include logical `orchestratorTarget`, `orchestratorProfile`, `observerTarget`, and `observerProfile` from KP.
 - Do not include `applyOutcome`.
 - Do not include QoS, bandwidth, routing policy, hops, or service attributes by default.
@@ -1207,6 +1207,21 @@ IA MS owns correlation, mapping, skip/dead-letter decisions, and downstream assu
 - Use `critical`, not old clinical-specific priority values.
 - Use `resources` for selected optimisation resources in `IntentOptimisedEvent`.
 
+
+### Resource field naming rule
+
+Use `resources` consistently across internal event bodies.
+
+The event type defines what those resources mean:
+
+| **Event** | **`resources` meaning** |
+|---|---|
+| `IntentResolvedEvent` | Available resources for optimiser consideration |
+| `IntentOptimisedEvent` | Optimiser-selected resources |
+| `IntentNetworkReadyEvent` | Selected resources ready for apply |
+| `IntentAssuranceEvent` | Applied/assured selected resources |
+
+Avoid stage-specific field names such as `candidates` and `resourcePlan` unless a future event genuinely needs multiple resource sets in the same payload.
 
 ### Optimisation input/evaluation bucket rule
 
