@@ -635,3 +635,22 @@ Fixed terminology alignment and JSON validity in the internal events specificati
 - `IntentValidatedEvent` has a concrete expression sample and no validation object.
 - Resource references use named `references` objects with `id` and `href`.
 - Knowledge Plane naming uses `t7-knowledge-plane`.
+
+## Baseline update — optimiser status and evaluation model:
+
+Date: 2026-05-06T02:34:00.185092+00:00
+
+### Updated file:
+- `intent_internal_events_specification.md`
+
+### Baseline:
+Use optimiser statuses as the primary outcome for the optimisation run, target evaluations, and context evaluations.
+
+### Supported statuses:
+`ACKNOWLEDGED`, `QUEUED`, `PROCESSING`, `COMPLETED`, `INFEASIBLE`, `FAILED`, `CANCELLING`, `CANCELLED`.
+
+### Rule:
+Do not add a separate `result` field by default. `COMPLETED` means the item was successfully evaluated and satisfied. `INFEASIBLE` means the item was evaluated but cannot be satisfied with the available candidates/constraints. `FAILED` means technical/runtime/model/data failure.
+
+### Applied change:
+Updated `IntentOptimisedEvent` to use `optimisationRun`, `targetEvaluations`, and `contextEvaluations`, and added an infeasible optimisation example.

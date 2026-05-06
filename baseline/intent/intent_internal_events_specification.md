@@ -117,6 +117,34 @@ When `IntentValidatedEvent.expression` is shown in the main example, include a c
 
 The expression sample should match the runtime Intent create request shape and preserve the same field names used by IC MS and the active `IntentSpecification`.
 
+### Optimiser status and evaluation rule
+
+Use optimiser statuses as the primary outcome for the optimisation run, target evaluations, and context evaluations.
+
+Supported statuses:
+
+```text
+ACKNOWLEDGED
+QUEUED
+PROCESSING
+COMPLETED
+INFEASIBLE
+FAILED
+CANCELLING
+CANCELLED
+```
+
+Do not add a separate `result` field by default.
+
+`COMPLETED` means the item was successfully evaluated and satisfied.
+
+`INFEASIBLE` means the item was evaluated but cannot be satisfied with the available candidates/constraints.
+
+`FAILED` means technical/runtime/model/data failure.
+
+The same status vocabulary may be applied at overall optimisation-run level, individual target-evaluation level, and context-evaluation level.
+
+
 ---
 
 ## Common CloudEvents headers
@@ -502,12 +530,17 @@ intent-assurance-ms
 
 Optimisation completed and selected resources/outcome are available for downstream apply/assurance processing.
 
-### Allowed optimisation outcome statuses
+### Allowed optimiser statuses
 
 ```text
-Optimised
-NotOptimisable
-Error
+ACKNOWLEDGED
+QUEUED
+PROCESSING
+COMPLETED
+INFEASIBLE
+FAILED
+CANCELLING
+CANCELLED
 ```
 
 ### Example headers
@@ -585,16 +618,110 @@ content-type: application/json
         }
       }
     ],
-    "optimisationOutcome": {
-      "status": "Optimised",
+    "optimisationRun": {
+      "status": "COMPLETED",
       "statusReason": "Optimisation completed and selected a compliant primary/secondary resource set."
     },
-    "evaluations": [
+    "targetEvaluations": [
       {
         "name": "latency",
-        "result": "Compliant",
+        "status": "COMPLETED",
         "target": 10,
-        "expectedValue": 7
+        "expectedValue": 7,
+        "unit": "ms"
+      },
+      {
+        "name": "availability",
+        "status": "COMPLETED",
+        "target": 99.99,
+        "expectedValue": 99.996,
+        "unit": "percent"
+      },
+      {
+        "name": "jitter",
+        "status": "COMPLETED",
+        "target": 2,
+        "expectedValue": 1.1,
+        "unit": "ms"
+      },
+      {
+        "name": "packetLoss",
+        "status": "COMPLETED",
+        "target": 0.01,
+        "expectedValue": 0.004,
+        "unit": "percent"
+      }
+    ],
+    "contextEvaluations": [
+      {
+        "name": "redundancyRequired",
+        "status": "COMPLETED",
+        "target": true,
+        "expectedValue": true
+      },
+      {
+        "name": "preferredAccessTechnology",
+        "status": "COMPLETED",
+        "target": "5G",
+        "expectedValue": "fibre",
+        "statusReason": "Preferred technology was considered, but fibre primary with 5G secondary produced the best feasible resource set."
+      }
+    ],
+    "references": {
+      "correlationId": "corr-intent-create-001",
+      "intent": {
+        "id": "INT-HOSP-2026-001",
+        "href": "/intentManagement/v5/intent/INT-HOSP-2026-001"
+      },
+      "intentSpecification": {
+        "id": "hospital-surgical-slice-spec-v1.20",
+        "href": "/intentManagement/v5/intentSpecification/hospital-surgical-slice-spec-v1.20"
+      }
+    }
+  }
+}
+```
+
+### Infeasible optimisation example
+
+```json
+{
+  "body": {
+    "intentId": "INT-HOSP-2026-001",
+    "version": "v1",
+    "location": {
+      "locationId": "sydney-hospital"
+    },
+    "service": {
+      "serviceClass": "critical-gold"
+    },
+    "optimisationRun": {
+      "status": "INFEASIBLE",
+      "statusReason": "No candidate resource set could satisfy all required targets."
+    },
+    "targetEvaluations": [
+      {
+        "name": "latency",
+        "status": "INFEASIBLE",
+        "target": 10,
+        "bestExpectedValue": 18,
+        "unit": "ms",
+        "reasonCode": "OPTIMISATION_LATENCY_UNSATISFIABLE"
+      },
+      {
+        "name": "availability",
+        "status": "COMPLETED",
+        "target": 99.99,
+        "bestExpectedValue": 99.995,
+        "unit": "percent"
+      }
+    ],
+    "contextEvaluations": [
+      {
+        "name": "redundancyRequired",
+        "status": "COMPLETED",
+        "target": true,
+        "expectedValue": true
       }
     ],
     "references": {
@@ -615,7 +742,7 @@ content-type: application/json
 ### Notes
 
 - Use `resources`, not `selectedResources` or `selected`.
-- If optimisation cannot produce a valid result, use `optimisationOutcome.status = NotOptimisable` or `Error`.
+- If optimisation cannot produce a valid result, use `optimisationRun.status = INFEASIBLE` when no candidate set can satisfy required targets, or `FAILED` for technical/runtime/model/data failure.
 
 ---
 
