@@ -792,3 +792,36 @@ This remains an additive improvement. It does not change the original KP semanti
 
 ### Included support:
 The embedded profile includes normalisation for the runtime expression values such as `sydney-hospital`, `hospital`, `campus`, and `critical`, while preserving the existing internal KP canonical values.
+
+## Baseline update — simplified KP master config final draft:
+
+Date: 2026-05-06T09:07:23.303757+00:00
+
+### Updated file:
+- `kp_master_config.md`
+
+### Baseline:
+KP master config is simplified to current available knowledge for location-based service availability, design-time benchmarks, resource inventory, logical optimiser/orchestrator/observer references, and human expression mapping.
+
+### Final top-level sections:
+- `locationBasedServices`
+- `resources`
+- `expressionMapping`
+
+### Key naming decisions:
+- Use `benchmarks` in KP, not `targets`.
+- Use `resourceRoles`, `accessTechnologies`, `resourceIds`, and `resources`.
+- Use `serviceType`, not `serviceName`.
+- Use `capabilityStatus` values `available` and `unknown`.
+- Use `optimiserTarget`, `optimiserModel`, `orchestratorTarget`, `orchestratorProfile`, `observerTarget`, and `observerProfile` as logical references only.
+
+### Removed from KP by default:
+- `semanticProfile`
+- `assuranceProfiles`
+- optimiser objective rules
+- hops/topology details
+- `serviceAttributes`
+- NLP-mapped `redundancyRequired`
+
+### Runtime interpretation:
+Only `capabilityStatus: available` can proceed to fulfilment/optimisation. `unknown` means the service capability is not currently confirmed usable. Redundancy is derived from KP `resourceRoles` and selected resources.
