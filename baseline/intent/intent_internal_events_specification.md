@@ -82,32 +82,6 @@ unless a future event explicitly baselines a separate concept from `location`.
 
 Current internal event examples use `location.locationId`.
 
-### Common references shape:
-
-Internal event `references` should use named resource reference objects with `id` and `href` where available.
-
-Use `correlationId` as a common scalar reference.
-
-Recommended shape:
-
-```json
-"references": {
-  "correlationId": "corr-intent-create-001",
-  "intent": {
-    "id": "INT-HOSP-2026-001",
-    "href": "/intentManagement/v5/intent/INT-HOSP-2026-001"
-  },
-  "intentSpecification": {
-    "id": "hospital-surgical-slice-spec-v1.20",
-    "href": "/intentManagement/v5/intentSpecification/hospital-surgical-slice-spec-v1.20"
-  }
-}
-```
-
-Avoid flat one-off fields such as `intentSpecificationId` when the same concept can be represented as a named reference object.
-
-Where a reference is not useful to the consuming event, it may be omitted rather than included as an empty object.
-
 ---
 
 ## Common CloudEvents headers:
@@ -187,11 +161,9 @@ content-type: application/json
     },
     "references": {
       "intent": {
-        "id": "INT-HOSP-2026-001",
         "href": "/intentManagement/v5/intent/INT-HOSP-2026-001"
       },
       "intentSpecification": {
-        "id": "hospital-surgical-slice-spec-v1.20",
         "href": "/intentManagement/v5/intentSpecification/hospital-surgical-slice-spec-v1.20"
       },
       "correlationId": "corr-intent-create-001"
@@ -260,10 +232,7 @@ content-type: application/json
     ],
     "references": {
       "correlationId": "corr-intent-create-001",
-      "intentSpecification": {
-        "id": "hospital-surgical-slice-spec-v1.20",
-        "href": "/intentManagement/v5/intentSpecification/hospital-surgical-slice-spec-v1.20"
-      }
+      "intentSpecificationId": "hospital-surgical-slice-spec-v1.20"
     }
   }
 }
@@ -288,20 +257,6 @@ intent-optimiser-ms
 ### Meaning:
 
 The admitted Intent has been semantically resolved into a canonical internal request that can be optimised.
-
-### IntentResolvedEvent handoff content rule:
-
-For `IntentResolvedEvent`, use `intentContext` for non-measurable contextual intent attributes such as `priority`, `redundancyRequired`, and `preferredAccessTechnology`.
-
-Do not use generic `request` for this block.
-
-Do not include `inputs` or successful `evaluations` in `IntentResolvedEvent` by default.
-
-II MS emits `IntentResolvedEvent` only when semantic/policy resolution succeeds, so successful evaluation is implied by the event itself.
-
-The optimiser owns its optimisation data-source, model, and method selection unless an explicit optimisation-profile handoff is baselined later.
-
-Use `t7-knowledge-plane` as the standard one-word service-style name where the Knowledge Plane must be referenced.
 
 ### Example headers:
 
@@ -335,20 +290,31 @@ content-type: application/json
       "maxJitterMs": 2,
       "maxPacketLossPercent": 0.01
     },
-    "intentContext": {
+    "request": {
       "priority": "critical",
       "redundancyRequired": true,
       "preferredAccessTechnology": "5G"
     },
+    "inputs": {
+      "knowledgeSource": "t7.knowledge plane",
+      "resolutionProfile": "hospital-surgical-slice"
+    },
     "candidates": [
       "...candidate resources resolved from knowledge plane..."
     ],
+    "evaluations": [
+      {
+        "type": "Semantic",
+        "result": "Passed"
+      },
+      {
+        "type": "Policy",
+        "result": "Passed"
+      }
+    ],
     "references": {
       "correlationId": "corr-intent-create-001",
-      "intentSpecification": {
-        "id": "hospital-surgical-slice-spec-v1.20",
-        "href": "/intentManagement/v5/intentSpecification/hospital-surgical-slice-spec-v1.20"
-      },
+      "intentSpecificationId": "hospital-surgical-slice-spec-v1.20",
       "intent": {
         "id": "INT-HOSP-2026-001",
         "href": "/intentManagement/v5/intent/INT-HOSP-2026-001"
@@ -454,10 +420,7 @@ content-type: application/json
         "id": "INT-HOSP-2026-001",
         "href": "/intentManagement/v5/intent/INT-HOSP-2026-001"
       },
-      "intentSpecification": {
-        "id": "hospital-surgical-slice-spec-v1.20",
-        "href": "/intentManagement/v5/intentSpecification/hospital-surgical-slice-spec-v1.20"
-      }
+      "intentSpecificationId": "hospital-surgical-slice-spec-v1.20"
     }
   }
 }
@@ -555,10 +518,7 @@ content-type: application/json
         "id": "INT-HOSP-2026-001",
         "href": "/intentManagement/v5/intent/INT-HOSP-2026-001"
       },
-      "intentSpecification": {
-        "id": "hospital-surgical-slice-spec-v1.20",
-        "href": "/intentManagement/v5/intentSpecification/hospital-surgical-slice-spec-v1.20"
-      }
+      "intentSpecificationId": "hospital-surgical-slice-spec-v1.20"
     }
   }
 }
@@ -623,10 +583,7 @@ IC MS consumes this event and updates the external `Intent` and `IntentReport` p
     ],
     "references": {
       "correlationId": "corr-intent-assurance-001",
-      "intentSpecification": {
-        "id": "hospital-surgical-slice-spec-v1.20",
-        "href": "/intentManagement/v5/intentSpecification/hospital-surgical-slice-spec-v1.20"
-      }
+      "intentSpecificationId": "hospital-surgical-slice-spec-v1.20"
     }
   }
 }
@@ -656,10 +613,7 @@ IC MS consumes this event and updates the external `Intent` and `IntentReport` p
     ],
     "references": {
       "correlationId": "corr-intent-assurance-002",
-      "intentSpecification": {
-        "id": "hospital-surgical-slice-spec-v1.20",
-        "href": "/intentManagement/v5/intentSpecification/hospital-surgical-slice-spec-v1.20"
-      }
+      "intentSpecificationId": "hospital-surgical-slice-spec-v1.20"
     }
   }
 }
