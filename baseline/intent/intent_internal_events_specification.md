@@ -82,6 +82,32 @@ unless a future event explicitly baselines a separate concept from `location`.
 
 Current internal event examples use `location.locationId`.
 
+### Common references shape:
+
+Internal event `references` should use named resource reference objects with `id` and `href` where available.
+
+Use `correlationId` as a common scalar reference.
+
+Recommended shape:
+
+```json
+"references": {
+  "correlationId": "corr-intent-create-001",
+  "intent": {
+    "id": "INT-HOSP-2026-001",
+    "href": "/intentManagement/v5/intent/INT-HOSP-2026-001"
+  },
+  "intentSpecification": {
+    "id": "hospital-surgical-slice-spec-v1.20",
+    "href": "/intentManagement/v5/intentSpecification/hospital-surgical-slice-spec-v1.20"
+  }
+}
+```
+
+Avoid flat one-off fields such as `intentSpecificationId` when the same concept can be represented as a named reference object.
+
+Where a reference is not useful to the consuming event, it may be omitted rather than included as an empty object.
+
 ---
 
 ## Common CloudEvents headers:
@@ -161,9 +187,11 @@ content-type: application/json
     },
     "references": {
       "intent": {
+        "id": "INT-HOSP-2026-001",
         "href": "/intentManagement/v5/intent/INT-HOSP-2026-001"
       },
       "intentSpecification": {
+        "id": "hospital-surgical-slice-spec-v1.20",
         "href": "/intentManagement/v5/intentSpecification/hospital-surgical-slice-spec-v1.20"
       },
       "correlationId": "corr-intent-create-001"
@@ -232,7 +260,10 @@ content-type: application/json
     ],
     "references": {
       "correlationId": "corr-intent-create-001",
-      "intentSpecificationId": "hospital-surgical-slice-spec-v1.20"
+      "intentSpecification": {
+        "id": "hospital-surgical-slice-spec-v1.20",
+        "href": "/intentManagement/v5/intentSpecification/hospital-surgical-slice-spec-v1.20"
+      }
     }
   }
 }
@@ -314,7 +345,10 @@ content-type: application/json
     ],
     "references": {
       "correlationId": "corr-intent-create-001",
-      "intentSpecificationId": "hospital-surgical-slice-spec-v1.20",
+      "intentSpecification": {
+        "id": "hospital-surgical-slice-spec-v1.20",
+        "href": "/intentManagement/v5/intentSpecification/hospital-surgical-slice-spec-v1.20"
+      },
       "intent": {
         "id": "INT-HOSP-2026-001",
         "href": "/intentManagement/v5/intent/INT-HOSP-2026-001"
@@ -420,7 +454,10 @@ content-type: application/json
         "id": "INT-HOSP-2026-001",
         "href": "/intentManagement/v5/intent/INT-HOSP-2026-001"
       },
-      "intentSpecificationId": "hospital-surgical-slice-spec-v1.20"
+      "intentSpecification": {
+        "id": "hospital-surgical-slice-spec-v1.20",
+        "href": "/intentManagement/v5/intentSpecification/hospital-surgical-slice-spec-v1.20"
+      }
     }
   }
 }
@@ -518,7 +555,10 @@ content-type: application/json
         "id": "INT-HOSP-2026-001",
         "href": "/intentManagement/v5/intent/INT-HOSP-2026-001"
       },
-      "intentSpecificationId": "hospital-surgical-slice-spec-v1.20"
+      "intentSpecification": {
+        "id": "hospital-surgical-slice-spec-v1.20",
+        "href": "/intentManagement/v5/intentSpecification/hospital-surgical-slice-spec-v1.20"
+      }
     }
   }
 }
@@ -583,7 +623,10 @@ IC MS consumes this event and updates the external `Intent` and `IntentReport` p
     ],
     "references": {
       "correlationId": "corr-intent-assurance-001",
-      "intentSpecificationId": "hospital-surgical-slice-spec-v1.20"
+      "intentSpecification": {
+        "id": "hospital-surgical-slice-spec-v1.20",
+        "href": "/intentManagement/v5/intentSpecification/hospital-surgical-slice-spec-v1.20"
+      }
     }
   }
 }
@@ -613,7 +656,10 @@ IC MS consumes this event and updates the external `Intent` and `IntentReport` p
     ],
     "references": {
       "correlationId": "corr-intent-assurance-002",
-      "intentSpecificationId": "hospital-surgical-slice-spec-v1.20"
+      "intentSpecification": {
+        "id": "hospital-surgical-slice-spec-v1.20",
+        "href": "/intentManagement/v5/intentSpecification/hospital-surgical-slice-spec-v1.20"
+      }
     }
   }
 }
