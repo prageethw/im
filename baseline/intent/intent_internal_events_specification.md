@@ -70,14 +70,6 @@ Do not add a separate `result` field by default.
 
 `FAILED` means technical/runtime/model/data failure.
 
-### Control-loop metrics rule
-
-For first-pass optimisation, `IntentResolvedEvent.candidates[].metrics.benchmark` carries KP/design-time resource metrics.
-
-For degradation/control-loop re-optimisation, `IntentResolvedEvent.candidates[].metrics.telemetry` carries latest IA-observed telemetry metrics instead.
-
-Do not include `metrics.benchmark` in the control-loop re-optimisation event by default unless a consumer explicitly needs baseline comparison.
-
 ### Service-ready configuration rule
 
 `IntentNetworkReadyEvent` means the service configuration has been prepared for orchestration/apply.
@@ -244,8 +236,8 @@ content-type: application/json
     "intentId": "INT-HOSP-2026-002",
     "version": "v1",
     "lifecycleStatus": "Rejected",
-    "reasonCode": "SERVICE_NOT_AVAILABLE",
-    "statusReason": "Surgical critical-gold connectivity is not currently available at the requested location.",
+    "reasonCode": "SERVICE_CAPABILITY_UNKNOWN",
+    "statusReason": "Surgical critical-gold connectivity is not currently confirmed as available at the requested location.",
     "serviceContext": {
       "location": {
         "locationId": "AU-QLD-BNE-HOSP-201",
@@ -254,8 +246,18 @@ content-type: application/json
         "geographicScope": "campus"
       },
       "serviceType": "surgical-connectivity",
-      "serviceClass": "critical-gold"
+      "serviceClass": "critical-gold",
+      "capabilityStatus": "unknown"
     },
+    "evaluations": [
+      {
+        "name": "capabilityStatus",
+        "status": "INFEASIBLE",
+        "target": "available",
+        "observedValue": "unknown",
+        "reasonCode": "SERVICE_CAPABILITY_UNKNOWN"
+      }
+    ],
     "references": {
       "correlationId": "corr-intent-create-002",
       "intent": {
@@ -277,11 +279,12 @@ content-type: application/json
 
 ### Event-specific rules
 
-- `IntentRejectedEvent` is the semantic/policy/capability rejection event.
-- For simple semantic/capability rejection, carry `lifecycleStatus`, `reasonCode`, `statusReason`, `serviceContext`, and references.
-- Use `reasonCode: SERVICE_NOT_AVAILABLE` when the requested service is not currently available for the resolved service context.
-- Do not include an `evaluations` block unless multiple checks or detailed rejection evidence is genuinely useful.
-- Do not include optimiser, orchestration, or assurance payloads.
+- Use `serviceContext` outside KP.
+- Use `lifecycleStatus: Rejected`.
+- Include a clear `reasonCode` and `statusReason`.
+- IC MS consumes this idempotently and projects the external Intent lifecycle/status to `Rejected`.
+
+---
 
 ## IntentResolvedEvent
 
@@ -321,37 +324,20 @@ content-type: application/json
     "intentId": "INT-HOSP-2026-001",
     "version": "v1",
     "lifecycleStatus": "InProgress",
-    "serviceContext": {
-      "location": {
-        "locationId": "AU-NSW-SYD-HOSP-001",
-        "displayName": "Sydney-Main-Hospital",
-        "locationType": "hospital",
-        "geographicScope": "campus"
-      },
-      "serviceType": "surgical-connectivity",
-      "serviceClass": "critical-gold",
-      "capabilityStatus": "available"
+    "location": {
+      "locationId": "AU-NSW-SYD-HOSP-001",
+      "displayName": "Sydney-Main-Hospital"
     },
+    "serviceType": "surgical-connectivity",
+    "serviceClass": "critical-gold",
+    "priority": "critical",
+    "preferredAccessTechnology": "5G",
+    "redundancyRequired": true,
     "targets": {
       "maxLatencyMs": 10,
       "minAvailabilityPercent": 99.99,
       "maxJitterMs": 2,
       "maxPacketLossPercent": 0.01
-    },
-    "context": {
-      "priority": "critical",
-      "preferredAccessTechnology": "5G",
-      "redundancyRequired": true,
-      "resourceRoles": [
-        "primary",
-        "secondary"
-      ],
-      "accessTechnologies": [
-        "5G",
-        "fibre"
-      ],
-      "optimiserTarget": "t7-gurobi-optimiser",
-      "optimiserModel": "gurobi-surgical-slice-resource-selection-v1"
     },
     "candidates": [
       {
@@ -363,11 +349,13 @@ content-type: application/json
         ],
         "accessTechnology": "fibre",
         "provider": "fixed-access-b",
-        "benchmarks": {
-          "expectedLatencyMs": 7,
-          "expectedAvailabilityPercent": 99.996,
-          "expectedJitterMs": 1.1,
-          "expectedPacketLossPercent": 0.004
+        "metrics": {
+          "benchmark": {
+            "latencyMs": 7,
+            "availabilityPercent": 99.996,
+            "jitterMs": 1.1,
+            "packetLossPercent": 0.004
+          }
         },
         "relationships": [
           {
@@ -385,11 +373,13 @@ content-type: application/json
         ],
         "accessTechnology": "5G",
         "provider": "mobile-access-a",
-        "benchmarks": {
-          "expectedLatencyMs": 8,
-          "expectedAvailabilityPercent": 99.995,
-          "expectedJitterMs": 1.5,
-          "expectedPacketLossPercent": 0.005
+        "metrics": {
+          "benchmark": {
+            "latencyMs": 8,
+            "availabilityPercent": 99.995,
+            "jitterMs": 1.5,
+            "packetLossPercent": 0.005
+          }
         },
         "relationships": [
           {
@@ -407,11 +397,13 @@ content-type: application/json
         ],
         "accessTechnology": "5G",
         "provider": "mobile-access-b",
-        "benchmarks": {
-          "expectedLatencyMs": 10,
-          "expectedAvailabilityPercent": 99.994,
-          "expectedJitterMs": 1.8,
-          "expectedPacketLossPercent": 0.006
+        "metrics": {
+          "benchmark": {
+            "latencyMs": 10,
+            "availabilityPercent": 99.994,
+            "jitterMs": 1.8,
+            "packetLossPercent": 0.006
+          }
         },
         "relationships": [
           {
@@ -429,11 +421,13 @@ content-type: application/json
         ],
         "accessTechnology": "fibre",
         "provider": "fixed-access-a",
-        "benchmarks": {
-          "expectedLatencyMs": 9,
-          "expectedAvailabilityPercent": 99.997,
-          "expectedJitterMs": 1.2,
-          "expectedPacketLossPercent": 0.003
+        "metrics": {
+          "benchmark": {
+            "latencyMs": 9,
+            "availabilityPercent": 99.997,
+            "jitterMs": 1.2,
+            "packetLossPercent": 0.003
+          }
         },
         "relationships": [
           {
@@ -464,20 +458,20 @@ content-type: application/json
 
 ### Event-specific rules
 
-- `IntentResolvedEvent` is the first internal event that is clearly semantically resolved from KP/domain knowledge.
-- Use `serviceContext` outside KP.
-- `serviceContext.location` carries location details when the resolved service is location-scoped.
+- `IntentResolvedEvent` is the lean optimiser handoff.
+- Do not use `serviceContext` in `IntentResolvedEvent`.
+- Do not include `capabilityStatus`; successful `IntentResolvedEvent` emission implies semantic/capability resolution succeeded.
+- Use direct `location`, `serviceType`, and `serviceClass` fields.
+- Keep `priority`, `preferredAccessTechnology`, and `redundancyRequired` as direct optimiser inputs.
 - Pass runtime `targets` to the optimiser.
+- Do not include a generic `context` wrapper by default.
+- Do not include `resourceRoles` or `accessTechnologies`; candidates already expose actual roles and access technologies.
 - Do not include a separate top-level KP `benchmarks` block when it duplicates `targets`.
-- Keep `redundancyRequired` in `context` when it came from expression mapping/defaults.
-- Do not include `redundancyAvailable`; it remains KP capability knowledge.
-- Map KP `resources` to runtime optimiser handoff `candidates`.
+- Map KP/domain `resources` to runtime optimiser handoff `candidates`.
+- `IntentResolvedEvent.candidates` contains all available resources for the resolved location/service that the optimiser may consider, not a shortened selected list.
 - Candidate entries use runtime `roles`, mapped from KP `resourceRoles`.
-- Candidate entries keep KP resource `benchmarks`.
-- Include logical `optimiserTarget` and `optimiserModel` in `context`.
-
----
 - For first-pass optimisation candidates use `metrics.benchmark`; for degradation/control-loop re-optimisation candidates use `metrics.telemetry` and omit `metrics.benchmark` by default.
+
 ## IntentOptimisedEvent
 
 ### Producer

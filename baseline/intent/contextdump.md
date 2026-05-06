@@ -672,66 +672,22 @@ For simple semantic/capability rejection, `IntentRejectedEvent` carries `lifecyc
 - Removed the simple `evaluations` block.
 - Kept `knowledgePlane` reference because the rejection is based on semantic/KP lookup.
 
-## Baseline update — common metrics container:
+## Correction — IntentResolvedEvent lean handoff:
 
-Date: 2026-05-06T12:34:03.490482+00:00
-
-### Updated files:
-- `intent_internal_events_specification.md`
-- `kp_master_config.md`
-
-### Baseline:
-Use `metrics` as the common resource performance container.
-
-### Rules:
-- Use `metrics.benchmark` for KP/design-time expected values.
-- Use `metrics.telemetry` for observed/runtime values.
-- Avoid a separate resource-level `benchmarks` object in event resource entries.
-- Evaluation entries may still use `benchmarkValue` or `observedValue` to identify which value is being compared.
-- Location/service-level `benchmarks` in KP remain valid because they represent design-time service capability values, not per-resource performance samples.
-
-### Applied:
-- Converted event resource-entry `benchmarks` to `metrics.benchmark`.
-- Converted KP resource `benchmarks` to `metrics.benchmark`.
-
-## Baseline confirmation — nested metrics container:
-
-Date: 2026-05-06T12:44:51.728517+00:00
-
-### Confirmed baseline:
-Use the nested `metrics` container shape for resource performance values.
-
-### Final shape:
-```json
-{
-  "metrics": {
-    "benchmark": {
-      "latencyMs": 7,
-      "availabilityPercent": 99.996,
-      "jitterMs": 1.1,
-      "packetLossPercent": 0.004
-    }
-  }
-}
-```
-
-### Rule:
-- `metrics.benchmark` is used for KP/design-time expected resource values.
-- `metrics.telemetry` is reserved for observed/runtime telemetry values, especially after control-loop/re-optimisation triggers.
-- Do not use the flat `metrics.source` pattern by default.
-- Location/service-level KP `benchmarks` remain valid for design-time service capability values.
-
-## Baseline update — control-loop candidate metrics source:
-
-Date: 2026-05-06T12:53:56.437536+00:00
+Date: 2026-05-06T13:21:47.810835+00:00
 
 ### Updated file:
 - `intent_internal_events_specification.md`
 
+### Correction:
+`IntentResolvedEvent` no longer uses `serviceContext`, `capabilityStatus`, or a generic `context` wrapper.
+
 ### Baseline:
-For first-pass optimisation, `IntentResolvedEvent.candidates[].metrics.benchmark` carries KP/design-time resource metrics.
+`IntentResolvedEvent` uses direct fields: `location`, `serviceType`, `serviceClass`, `priority`, `preferredAccessTechnology`, `redundancyRequired`, `targets`, and `candidates`.
 
-For degradation/control-loop re-optimisation, `IntentResolvedEvent.candidates[].metrics.telemetry` carries latest IA-observed telemetry metrics instead.
-
-### Rule:
-Do not include `metrics.benchmark` in the control-loop re-optimisation event by default unless a consumer explicitly needs baseline comparison.
+### Confirmed:
+- No `serviceContext` in `IntentResolvedEvent`.
+- No `capabilityStatus` in `IntentResolvedEvent`.
+- No generic `context` wrapper in `IntentResolvedEvent`.
+- No `resourceRoles` / `accessTechnologies` in `IntentResolvedEvent`.
+- `candidates` contains all available resources for the resolved location/service.
