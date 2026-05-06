@@ -689,3 +689,50 @@ Use `networkConfiguration` to carry the orchestrator-ready configuration derived
 
 ### Apply outcome:
 Apply success/failure is confirmed later through callback and assurance processing, then projected through `IntentAssuranceEvent`.
+
+## Baseline update — KP master config as source of truth:
+
+Date: 2026-05-06T03:13:56.623169+00:00
+
+### Updated files:
+- `kp_master_config.md`
+- `intent_internal_events_specification.md`
+
+### Baseline:
+KP master config is the source of truth for intent-domain semantic validation rules, network-ready configuration rules, and telemetry/assurance rule interpretation.
+
+### Applies to:
+- II MS semantic validation, expression mapping, and candidate-resource resolution
+- Optimiser MS candidate resource attributes, constraints, and metrics
+- IA/apply-preparation path network-ready configuration derivation
+- IA MS telemetry/assurance metric interpretation and status mapping
+
+### Event rule:
+`IntentResolvedEvent.candidates` and `IntentNetworkReadyEvent.networkConfiguration` must use attributes derived from KP master config, `t7-knowledge-plane`, and selected optimisation resources. Internal event examples must not invent resource/configuration/telemetry attributes independently.
+
+## Baseline update — KP expression validation profile:
+
+Date: 2026-05-06T03:35:44.379440+00:00
+
+### Updated file:
+- `kp_master_config.md`
+
+### Baseline:
+KP master config must explicitly support semantic validation for runtime Intent expressions.
+
+### Added:
+An `expressionValidationProfiles` baseline for the surgical hospital slice expression covering:
+- `location.locationId`
+- `location.locationType`
+- `location.geographicScope`
+- `serviceClass`
+- `priority`
+- `maxLatencyMs`
+- `minAvailabilityPercent`
+- `maxJitterMs`
+- `maxPacketLossPercent`
+- `redundancyRequired`
+- `preferredAccessTechnology`
+
+### Runtime rule:
+If semantic validation passes, II MS may continue candidate/resource resolution and emit `IntentResolvedEvent`. If semantic validation fails, II MS emits `IntentRejectedEvent`. If semantic validation passes but no candidate/resource set can satisfy the constraints, the optimiser may return `INFEASIBLE` through `IntentOptimisedEvent`.
