@@ -954,3 +954,35 @@ Date: 2026-05-06T11:02:18.994838+00:00
 - Do not include `controlLoop` by default.
 - Do not include a `knowledgePlane` reference by default.
 - No separate `IntentDriftOccurredEvent` is needed by default.
+
+## Baseline confirmation — IntentValidatedEvent current baseline:
+
+Date: 2026-05-06T11:42:25.391494+00:00
+
+### Confirmed:
+`IntentValidatedEvent` remains the lean IC MS admission-focused event.
+
+### Baseline rules:
+- Carries the admitted runtime `expression`.
+- Includes `serviceType`.
+- Keeps `redundancyRequired` when it came from expression mapping/defaults.
+- Does not include KP `benchmarks`, `resources`, `candidates`, optimiser details, orchestrator details, or a `validation` object.
+- Uses canonical `location.locationId` in the baseline event example.
+
+## Baseline update — IntentValidatedEvent rules written to event spec:
+
+Date: 2026-05-06T11:44:03.816248+00:00
+
+### Updated file:
+- `intent_internal_events_specification.md`
+
+### Confirmed:
+The `IntentValidatedEvent` event-specific rules are now written directly into the intent internal events specification.
+
+### Rules:
+- Lean IC MS admission-focused event.
+- Carries the admitted runtime `expression`.
+- Includes `serviceType`.
+- Keeps `redundancyRequired` when it came from expression mapping/defaults.
+- Does not include KP `benchmarks`, `resources`, `candidates`, optimiser details, orchestrator details, or a `validation` object.
+- Uses canonical `location.locationId` in the baseline event example.
