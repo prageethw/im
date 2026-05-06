@@ -899,3 +899,21 @@ Date: 2026-05-06T09:49:30.198698+00:00
 - Map KP `resources` to runtime optimiser handoff `candidates`.
 - Candidate entries use runtime `roles`, mapped from KP `resourceRoles`, and keep KP resource `benchmarks`.
 - Include logical `optimiserTarget` and `optimiserModel` in `context`.
+
+## Baseline update — IntentOptimisedEvent after simplified KP:
+
+Date: 2026-05-06T09:57:01.489945+00:00
+
+### Updated file:
+- `intent_internal_events_specification.md`
+
+### Baseline:
+`IntentOptimisedEvent` carries the optimiser-selected resources from `IntentResolvedEvent.candidates`, plus optimiser-run status, target evaluations, and context evaluations.
+
+### Applied event rules:
+- Use selected `resources`, not `candidates`.
+- Use optimiser statuses such as `COMPLETED`, `INFEASIBLE`, and `FAILED`.
+- Use `benchmarkValue` because selected resource performance came from KP resource benchmarks.
+- Keep `targetEvaluations` for SLA-like target fields.
+- Keep `contextEvaluations` for non-target checks such as redundancy and preferred access technology.
+- Do not include optimiser objective/rule configuration in the event; optimiser owns that internally.

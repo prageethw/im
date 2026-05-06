@@ -703,31 +703,23 @@ content-type: application/json
   "body": {
     "intentId": "INT-HOSP-2026-001",
     "version": "v1",
-    "location": {
-      "locationId": "sydney-hospital"
-    },
-    "service": {
+    "locationBasedService": {
+      "locationId": "AU-NSW-SYD-HOSP-001",
+      "displayName": "Sydney-Main-Hospital",
+      "serviceType": "surgical-connectivity",
       "serviceClass": "critical-gold"
     },
     "resources": [
       {
+        "resourceId": "SYD-PRI-01",
         "roles": [
           "primary"
         ],
-        "resourceId": "path-syd-hosp-fibre-primary-b",
         "resourceType": "networkPath",
         "resourceClass": "critical-gold-access",
-        "resourceAttributes": {
-          "accessTechnology": "fibre",
-          "provider": "fixed-access-b"
-        },
-        "relationships": [
-          {
-            "type": "pairedSecondary",
-            "resourceId": "path-syd-hosp-5g-secondary-b"
-          }
-        ],
-        "metrics": {
+        "accessTechnology": "fibre",
+        "provider": "fixed-access-b",
+        "benchmarks": {
           "expectedLatencyMs": 7,
           "expectedAvailabilityPercent": 99.996,
           "expectedJitterMs": 1.1,
@@ -735,23 +727,15 @@ content-type: application/json
         }
       },
       {
+        "resourceId": "SYD-SEC-01",
         "roles": [
           "secondary"
         ],
-        "resourceId": "path-syd-hosp-5g-secondary-b",
         "resourceType": "networkPath",
         "resourceClass": "critical-gold-access",
-        "resourceAttributes": {
-          "accessTechnology": "5G",
-          "provider": "mobile-access-b"
-        },
-        "relationships": [
-          {
-            "type": "protects",
-            "resourceId": "path-syd-hosp-fibre-primary-b"
-          }
-        ],
-        "metrics": {
+        "accessTechnology": "5G",
+        "provider": "mobile-access-b",
+        "benchmarks": {
           "expectedLatencyMs": 10,
           "expectedAvailabilityPercent": 99.994,
           "expectedJitterMs": 1.8,
@@ -761,35 +745,35 @@ content-type: application/json
     ],
     "optimisationRun": {
       "status": "COMPLETED",
-      "statusReason": "Optimisation completed and selected a compliant primary/secondary resource set."
+      "statusReason": "Optimisation completed and selected a feasible primary/secondary resource set."
     },
     "targetEvaluations": [
       {
         "name": "latency",
         "status": "COMPLETED",
         "target": 10,
-        "expectedValue": 7,
+        "benchmarkValue": 7,
         "unit": "ms"
       },
       {
         "name": "availability",
         "status": "COMPLETED",
         "target": 99.99,
-        "expectedValue": 99.996,
+        "benchmarkValue": 99.996,
         "unit": "percent"
       },
       {
         "name": "jitter",
         "status": "COMPLETED",
         "target": 2,
-        "expectedValue": 1.1,
+        "benchmarkValue": 1.1,
         "unit": "ms"
       },
       {
         "name": "packetLoss",
         "status": "COMPLETED",
         "target": 0.01,
-        "expectedValue": 0.004,
+        "benchmarkValue": 0.004,
         "unit": "percent"
       }
     ],
@@ -798,14 +782,15 @@ content-type: application/json
         "name": "redundancyRequired",
         "status": "COMPLETED",
         "target": true,
-        "expectedValue": true
+        "benchmarkValue": true,
+        "statusReason": "Selected resources include primary and secondary roles."
       },
       {
         "name": "preferredAccessTechnology",
         "status": "COMPLETED",
         "target": "5G",
-        "expectedValue": "fibre",
-        "statusReason": "Preferred technology was considered, but fibre primary with 5G secondary produced the best feasible resource set."
+        "benchmarkValue": "5G",
+        "statusReason": "Selected secondary resource uses preferred access technology."
       }
     ],
     "references": {
@@ -817,6 +802,10 @@ content-type: application/json
       "intentSpecification": {
         "id": "hospital-surgical-slice-spec-v1.20",
         "href": "/intentManagement/v5/intentSpecification/hospital-surgical-slice-spec-v1.20"
+      },
+      "knowledgePlane": {
+        "configId": "hospital-surgical-slice-kp-v1",
+        "version": "1.0"
       }
     }
   }
@@ -845,7 +834,7 @@ content-type: application/json
         "name": "latency",
         "status": "INFEASIBLE",
         "target": 10,
-        "bestExpectedValue": 18,
+        "bestBenchmarkValue": 18,
         "unit": "ms",
         "reasonCode": "OPTIMISATION_LATENCY_UNSATISFIABLE"
       },
@@ -853,7 +842,7 @@ content-type: application/json
         "name": "availability",
         "status": "COMPLETED",
         "target": 99.99,
-        "bestExpectedValue": 99.995,
+        "bestBenchmarkValue": 99.995,
         "unit": "percent"
       }
     ],
@@ -862,7 +851,7 @@ content-type: application/json
         "name": "redundancyRequired",
         "status": "COMPLETED",
         "target": true,
-        "expectedValue": true
+        "benchmarkValue": true
       }
     ],
     "references": {
@@ -879,6 +868,15 @@ content-type: application/json
   }
 }
 ```
+
+### Event-specific rules
+
+- Use selected `resources`, not `candidates`.
+- Use optimiser statuses such as `COMPLETED`, `INFEASIBLE`, and `FAILED`.
+- Use `benchmarkValue` because selected resource performance came from KP resource benchmarks.
+- Keep `targetEvaluations` for SLA-like target fields.
+- Keep `contextEvaluations` for non-target checks such as redundancy and preferred access technology.
+- Do not include optimiser objective/rule configuration in the event; optimiser owns that internally.
 
 ### Notes
 
