@@ -693,3 +693,30 @@ Use `metrics` as the common resource performance container.
 ### Applied:
 - Converted event resource-entry `benchmarks` to `metrics.benchmark`.
 - Converted KP resource `benchmarks` to `metrics.benchmark`.
+
+## Baseline confirmation — nested metrics container:
+
+Date: 2026-05-06T12:44:51.728517+00:00
+
+### Confirmed baseline:
+Use the nested `metrics` container shape for resource performance values.
+
+### Final shape:
+```json
+{
+  "metrics": {
+    "benchmark": {
+      "latencyMs": 7,
+      "availabilityPercent": 99.996,
+      "jitterMs": 1.1,
+      "packetLossPercent": 0.004
+    }
+  }
+}
+```
+
+### Rule:
+- `metrics.benchmark` is used for KP/design-time expected resource values.
+- `metrics.telemetry` is reserved for observed/runtime telemetry values, especially after control-loop/re-optimisation triggers.
+- Do not use the flat `metrics.source` pattern by default.
+- Location/service-level KP `benchmarks` remain valid for design-time service capability values.
