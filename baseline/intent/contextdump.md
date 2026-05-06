@@ -795,3 +795,34 @@ Use `location.locationId`, not `site.locationId`, unless a future event explicit
 
 ### Applied change:
 Updated internal event examples such as `IntentResolvedEvent`, `IntentOptimisedEvent`, and `IntentNetworkReadyEvent` to use `location.locationId`.
+
+## Baseline update — common internal event references shape:
+
+Date: 2026-05-05T23:53:06.427232+00:00
+
+### Updated file:
+- `intent_internal_events_specification.md`
+
+### Baseline:
+Internal event `references` should use named resource reference objects with `id` and `href` where available.
+
+### Rule:
+Use `correlationId` as a common scalar reference. Avoid flat one-off fields such as `intentSpecificationId` when the same concept can be represented as a named reference object.
+
+### Recommended shape:
+```json
+"references": {
+  "correlationId": "corr-intent-create-001",
+  "intent": {
+    "id": "INT-HOSP-2026-001",
+    "href": "/intentManagement/v5/intent/INT-HOSP-2026-001"
+  },
+  "intentSpecification": {
+    "id": "hospital-surgical-slice-spec-v1.20",
+    "href": "/intentManagement/v5/intentSpecification/hospital-surgical-slice-spec-v1.20"
+  }
+}
+```
+
+### Applied change:
+Standardised internal event examples to use named resource references instead of flat `intentSpecificationId` fields where applicable.
