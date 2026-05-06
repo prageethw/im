@@ -99,6 +99,20 @@ The optimiser owns its optimisation data-source, model, and method selection unl
 
 Use `t7-knowledge-plane` as the standard service-style name where the Knowledge Plane must be referenced.
 
+### KP-derived event attribute rule
+
+`IntentResolvedEvent.candidates` and `IntentNetworkReadyEvent.networkConfiguration` must use attributes derived from KP master config, `t7-knowledge-plane`, and selected optimisation resources.
+
+Do not invent resource, network-configuration, or telemetry attributes independently inside internal event examples.
+
+The KP master config is the source of truth for:
+
+- semantic validation rules
+- expression mapping
+- candidate-resource attributes
+- network-ready configuration rules
+- telemetry/assurance rule interpretation
+
 ### Candidate resource example rule
 
 `IntentResolvedEvent.candidates` should show the concrete reusable resource-entry shape in the main example.
@@ -226,29 +240,127 @@ content-type: application/json
   "body": {
     "intentId": "INT-HOSP-2026-001",
     "version": "v1",
-    "lifecycleStatus": "Acknowledged",
-    "statusReason": "Intent request passed IC MS admission validation and was admitted for downstream processing.",
-    "intentSpecification": {
-      "id": "hospital-surgical-slice-spec-v1.20"
-    },
-    "expression": {
-      "location": {
-        "locationId": "sydney-hospital",
-        "locationType": "hospital",
-        "geographicScope": "campus"
-      },
+    "lifecycleStatus": "InProgress",
+    "locationBasedService": {
+      "locationId": "AU-NSW-SYD-HOSP-001",
+      "displayName": "Sydney-Main-Hospital",
+      "locationType": "hospital",
+      "geographicScope": "campus",
+      "serviceType": "surgical-connectivity",
       "serviceClass": "critical-gold",
-      "priority": "critical",
+      "capabilityStatus": "available"
+    },
+    "targets": {
       "maxLatencyMs": 10,
       "minAvailabilityPercent": 99.99,
       "maxJitterMs": 2,
-      "maxPacketLossPercent": 0.01,
-      "redundancyRequired": true,
-      "preferredAccessTechnology": "5G",
-      "timeWindow": {
-        "startDateTime": "2026-04-18T12:00:00+10:00"
-      }
+      "maxPacketLossPercent": 0.01
     },
+    "context": {
+      "priority": "critical",
+      "preferredAccessTechnology": "5G",
+      "redundancyRequired": true,
+      "resourceRoles": [
+        "primary",
+        "secondary"
+      ],
+      "accessTechnologies": [
+        "5G",
+        "fibre"
+      ],
+      "optimiserTarget": "t7-gurobi-optimiser",
+      "optimiserModel": "gurobi-surgical-slice-resource-selection-v1"
+    },
+    "candidates": [
+      {
+        "resourceId": "SYD-PRI-01",
+        "resourceType": "networkPath",
+        "resourceClass": "critical-gold-access",
+        "roles": [
+          "primary"
+        ],
+        "accessTechnology": "fibre",
+        "provider": "fixed-access-b",
+        "benchmarks": {
+          "expectedLatencyMs": 7,
+          "expectedAvailabilityPercent": 99.996,
+          "expectedJitterMs": 1.1,
+          "expectedPacketLossPercent": 0.004
+        },
+        "relationships": [
+          {
+            "type": "pairedSecondary",
+            "resourceId": "SYD-SEC-01"
+          }
+        ]
+      },
+      {
+        "resourceId": "SYD-PRI-02",
+        "resourceType": "networkPath",
+        "resourceClass": "critical-gold-access",
+        "roles": [
+          "primary"
+        ],
+        "accessTechnology": "5G",
+        "provider": "mobile-access-a",
+        "benchmarks": {
+          "expectedLatencyMs": 8,
+          "expectedAvailabilityPercent": 99.995,
+          "expectedJitterMs": 1.5,
+          "expectedPacketLossPercent": 0.005
+        },
+        "relationships": [
+          {
+            "type": "pairedSecondary",
+            "resourceId": "SYD-SEC-02"
+          }
+        ]
+      },
+      {
+        "resourceId": "SYD-SEC-01",
+        "resourceType": "networkPath",
+        "resourceClass": "critical-gold-access",
+        "roles": [
+          "secondary"
+        ],
+        "accessTechnology": "5G",
+        "provider": "mobile-access-b",
+        "benchmarks": {
+          "expectedLatencyMs": 10,
+          "expectedAvailabilityPercent": 99.994,
+          "expectedJitterMs": 1.8,
+          "expectedPacketLossPercent": 0.006
+        },
+        "relationships": [
+          {
+            "type": "protects",
+            "resourceId": "SYD-PRI-01"
+          }
+        ]
+      },
+      {
+        "resourceId": "SYD-SEC-02",
+        "resourceType": "networkPath",
+        "resourceClass": "critical-gold-access",
+        "roles": [
+          "secondary"
+        ],
+        "accessTechnology": "fibre",
+        "provider": "fixed-access-a",
+        "benchmarks": {
+          "expectedLatencyMs": 9,
+          "expectedAvailabilityPercent": 99.997,
+          "expectedJitterMs": 1.2,
+          "expectedPacketLossPercent": 0.003
+        },
+        "relationships": [
+          {
+            "type": "protects",
+            "resourceId": "SYD-PRI-02"
+          }
+        ]
+      }
+    ],
     "references": {
       "correlationId": "corr-intent-create-001",
       "intent": {
@@ -258,11 +370,28 @@ content-type: application/json
       "intentSpecification": {
         "id": "hospital-surgical-slice-spec-v1.20",
         "href": "/intentManagement/v5/intentSpecification/hospital-surgical-slice-spec-v1.20"
+      },
+      "knowledgePlane": {
+        "configId": "hospital-surgical-slice-kp-v1",
+        "version": "1.0"
       }
     }
   }
 }
 ```
+
+### Event-specific rules
+
+- This is the first internal event that is clearly KP-derived.
+- Use `locationBasedService` from KP `locationBasedServices[locationId]`.
+- Pass runtime `targets` to the optimiser.
+- Do not include a separate top-level KP `benchmarks` block when it duplicates `targets`.
+- Keep `redundancyRequired` in `context` when it came from expression mapping/defaults.
+- Do not include `redundancyAvailable`; it remains KP capability knowledge.
+- Map KP `resources` to runtime optimiser handoff `candidates`.
+- Candidate entries use runtime `roles`, mapped from KP `resourceRoles`.
+- Candidate entries keep KP resource `benchmarks`.
+- Include logical `optimiserTarget` and `optimiserModel` in `context`.
 
 ### Notes
 
@@ -516,11 +645,11 @@ content-type: application/json
 
 ### Notes
 
-- Successful semantic/policy resolution is implied by the event.
+- Successful KP semantic/policy resolution is implied by the event.
 - The optimiser owns optimisation data-source/model/method selection unless an explicit optimisation-profile handoff is baselined later.
 - `context` holds non-measurable contextual attributes.
 - `targets` holds measurable desired outcomes/constraints.
-- `candidates` carries the candidate resources resolved for optimisation where required.
+- `candidates` carries KP-derived resources from `locationBasedServices.resourceIds`, mapped for optimiser handoff.
 
 ---
 

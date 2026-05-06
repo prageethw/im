@@ -863,3 +863,39 @@ KP `locationBasedServices` entries are now keyed by canonical `locationId` to re
 - Changed `expressionMapping.humanExpressionMapping.entityAliases` to map human names directly to canonical `locationId`.
 - Removed repeated `locationId` from resource entries; resource-to-location association is derived from `locationBasedServices[locationId].resourceIds`.
 - Kept `resourceId` inside each resource entry for readability and self-contained payload construction.
+
+## Baseline update — IntentValidatedEvent after simplified KP:
+
+Date: 2026-05-06T09:46:41.816139+00:00
+
+### Updated file:
+- `intent_internal_events_specification.md`
+
+### Baseline:
+`IntentValidatedEvent` remains lean and admission-focused. It carries the admitted runtime expression but does not carry KP-derived resources, candidates, benchmarks, optimiser details, or orchestrator details.
+
+### Applied event rules:
+- Include `serviceType`.
+- Keep `redundancyRequired` when it came from expression mapping/defaults.
+- Do not include a `validation` object; admission success is implied by the event.
+- Use canonical `location.locationId` in the baseline event example.
+
+## Baseline update — IntentResolvedEvent after simplified KP:
+
+Date: 2026-05-06T09:49:30.198698+00:00
+
+### Updated file:
+- `intent_internal_events_specification.md`
+
+### Baseline:
+`IntentResolvedEvent` is the first internal event that is clearly KP-derived. It uses `locationBasedService`, runtime `targets`, KP-derived `candidates`, and logical optimiser references from KP.
+
+### Applied event rules:
+- Use `locationBasedService` from KP `locationBasedServices[locationId]`.
+- Pass runtime `targets` to optimiser.
+- Do not include a separate top-level KP `benchmarks` block when it duplicates `targets`.
+- Keep `redundancyRequired` in `context` when mapped/defaulted.
+- Do not include `redundancyAvailable`; it remains KP capability knowledge.
+- Map KP `resources` to runtime optimiser handoff `candidates`.
+- Candidate entries use runtime `roles`, mapped from KP `resourceRoles`, and keep KP resource `benchmarks`.
+- Include logical `optimiserTarget` and `optimiserModel` in `context`.
