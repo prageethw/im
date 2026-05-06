@@ -617,336 +617,57 @@ The cache bypass / fresh-read rule is now documented explicitly: clients may sen
 ### Current rule:
 All successful GET responses include `Cache-Control`. Non-GET operations do not have a caching strategy baseline. ETag is used for unsafe-operation concurrency through `If-Match`.
 
-## Baseline update — IC MS consistency sweep:
+## Baseline update — stable terminology and JSON repair:
 
-Date: 2026-05-05T13:33:21.556132+00:00
-
-### Updated file:
-- `ic_ms_design_brief.md`
-
-### Checked files:
-- `ic_ms_design_brief.md`
-- `ic_ms_specification.md`
-
-### Result:
-IC MS consistency sweep completed with result: **PASS WITH NOTES**.
-
-### Confirmed:
-- External REST interfaces are documented.
-- IntentReport interfaces are documented.
-- Hub subscription interfaces are documented.
-- External `Intent*Event` and `IntentReport*Event` examples are documented.
-- Internal produced/consumed event interfaces are documented.
-- Runtime create/update uses concrete `intentSpecification.id` only.
-- `GET /intent/{id}` returns the current projected Intent state.
-- `DELETE /intent/{id}` is termination, not physical deletion.
-- Intent-level and version-level lifecycle models are separated.
-- GET response examples include `Cache-Control`.
-- Cache bypass using `Cache-Control: no-cache` is documented.
-- ETag is used for unsafe-operation concurrency through `If-Match`.
-- Security boundary places system authentication at NGW and business/user authorisation at OEX.
-- IC MS boundaries exclude semantic validation, policy validation, optimisation, runtime assurance truth, raw telemetry, and callback ingestion.
-
-## Baseline update — IC MS consistency sweep cleanup:
-
-Date: 2026-05-05T15:12:47.650875+00:00
+Date: 2026-05-06T01:11:47.933166+00:00
 
 ### Updated files:
-- `ic_ms_design_brief.md`
-- `ic_ms_specification.md`
-
-### Cleanup:
-Added canonical endpoint summary to `ic_ms_specification.md` and exact NGW/OEX/IC security boundary wording to `ic_ms_design_brief.md`.
-
-### Result:
-IC MS consistency sweep now completes with result: **PASS**.
-
-### Notes:
-- None.
-
-## Baseline update — internal events specification document:
-
-Date: 2026-05-05T22:52:21.040037+00:00
-
-### New stable file:
 - `intent_internal_events_specification.md`
+- stable baseline files containing old terminology where applicable
 
-### Baseline:
-Created the internal events specification document for Intent Enabler internal workflow events.
-
-### Events covered:
-- `IntentValidatedEvent`
-- `IntentRejectedEvent`
-- `IntentResolvedEvent`
-- `IntentOptimisedEvent`
-- `IntentAssuranceEvent`
-- `IntentCallbackEvent`
-
-### Common rules:
-The document includes CloudEvents header conventions, common payload style, idempotency/replay requirements, topic/key baseline, and producer/consumer ownership boundaries.
-
-## Baseline update — add IntentNetworkReadyEvent to internal events specification:
-
-Date: 2026-05-05T22:56:16.136761+00:00
-
-### Updated file:
-- `intent_internal_events_specification.md`
-
-### Baseline:
-Added `IntentNetworkReadyEvent` to the internal events specification.
-
-### Event meaning:
-`IntentNetworkReadyEvent` is an internal milestone event indicating that the optimised intent has been successfully applied and the network/service is ready.
-
-### Relationship to IntentAssuranceEvent:
-`IntentNetworkReadyEvent` is the network-ready/apply-success milestone. `IntentAssuranceEvent` remains the ongoing assurance/runtime outcome event used for active, degraded, failed, paused, and recovered projection updates.
-
-### Updated internal event catalogue:
-- `IntentValidatedEvent`
-- `IntentRejectedEvent`
-- `IntentResolvedEvent`
-- `IntentOptimisedEvent`
-- `IntentNetworkReadyEvent`
-- `IntentAssuranceEvent`
-- `IntentCallbackEvent`
-
-## Baseline update — lean internal event payload rule:
-
-Date: 2026-05-05T23:21:29.812933+00:00
-
-### Updated file:
-- `intent_internal_events_specification.md`
-
-### Baseline:
-Internal events should carry milestone-specific fields directly and avoid embedding full external TMF resource objects unless the consumer genuinely needs that full resource snapshot.
-
-### Rule:
-Use top-level event-body fields for the event fact, such as `intentId`, `version`, `lifecycleStatus`, `statusReason`, and milestone-specific outcomes. Use `references` for links/hrefs and related resource references instead of duplicating IDs, version, lifecycle, and resource metadata inside embedded external resource objects.
-
-### Applied example:
-`IntentValidatedEvent` was updated to remove the embedded full external `intent` object. The event now keeps top-level `intentId`, `version`, `lifecycleStatus`, concrete `intentSpecification.id`, expression, validation outcome, and reference hrefs.
-
-## Baseline update — remove request-id field from internal event examples:
-
-Date: 2026-05-05T23:31:54.534720+00:00
-
-### Updated file:
-- `intent_internal_events_specification.md`
-
-### Baseline:
-Use `correlationId` as the standard cross-service trace/correlation reference in internal event examples.
-
-### Rule:
-Do not include `request-id field` in internal event examples unless a request-ID propagation model is explicitly baselined later.
-
-### Applied change:
-Removed `request-id field` from the `IntentValidatedEvent` example references.
-
-## Baseline update — internal events stale terminology cleanup:
-
-Date: 2026-05-06T00:46:21.968142+00:00
-
-### Updated file:
-- `intent_internal_events_specification.md`
-
-### Baseline correction:
-Regenerated the internal events specification to remove stale active examples and align with the latest agreed event terminology and payload-shape rules.
-
-### Confirmed active rules:
-- Use `location.locationId`, not a separate site block.
-- Use `context` in `IntentResolvedEvent`.
-- Do not include optimiser input-selection details or successful semantic/policy evaluation details in `IntentResolvedEvent`.
-- Do not include a validation object in `IntentValidatedEvent`.
-- Do not include extra request-id fields in internal event examples.
-- Use named `references` objects with `id` and `href`.
-- Use `t7-knowledge-plane` when the Knowledge Plane must be referenced.
-
-## Baseline update — concrete IntentResolvedEvent candidates:
-
-Date: 2026-05-06T00:56:31.388531+00:00
-
-### Updated file:
-- `intent_internal_events_specification.md`
-
-### Baseline:
-`IntentResolvedEvent.candidates` should show the concrete reusable resource-entry shape in the main example instead of a placeholder-only array.
-
-### Rule:
-Use `roles`, `resourceId`, `resourceType`, `resourceClass`, `resourceAttributes`, `relationships`, and `metrics`.
-
-### Role names:
-Use simple role names such as `primary` and `secondary`, not `primaryCandidate` or `backupCandidate`.
-
-## Baseline update — embed expressionValidationProfiles in KP master config JSON:
-
-Date: 2026-05-06T04:30:39.832361+00:00
-
-### Updated file:
-- `kp_master_config.md`
-
-### Baseline correction:
-The expression validation profile is now embedded directly inside the active `knowledgePlaneConfig` JSON as `expressionValidationProfiles`, not only documented as a separate Markdown section.
-
-### Additive nature:
-This remains an additive improvement. It does not change the original KP semantic model; it makes the previously implied semantic validation profile explicit inside the master config itself.
-
-### Included support:
-The embedded profile includes normalisation for the runtime expression values such as `sydney-hospital`, `hospital`, `campus`, and `critical`, while preserving the existing internal KP canonical values.
-
-## Baseline update — simplified KP master config final draft:
-
-Date: 2026-05-06T09:07:23.303757+00:00
-
-### Updated file:
-- `kp_master_config.md`
-
-### Baseline:
-KP master config is simplified to current available knowledge for location-based service availability, design-time benchmarks, resource inventory, logical optimiser/orchestrator/observer references, and human expression mapping.
-
-### Final top-level sections:
-- `locationBasedServices`
-- `resources`
-- `expressionMapping`
-
-### Key naming decisions:
-- Use `benchmarks` in KP, not `targets`.
-- Use `resourceRoles`, `accessTechnologies`, `resourceIds`, and `resources`.
-- Use `serviceType`, not `serviceName`.
-- Use `capabilityStatus` values `available` and `unknown`.
-- Use `optimiserTarget`, `optimiserModel`, `orchestratorTarget`, `orchestratorProfile`, `observerTarget`, and `observerProfile` as logical references only.
-
-### Removed from KP by default:
-- `semanticProfile`
-- `assuranceProfiles`
-- optimiser objective rules
-- hops/topology details
-- `serviceAttributes`
-- NLP-mapped `redundancyRequired`
-
-### Runtime interpretation:
-Only `capabilityStatus: available` can proceed to fulfilment/optimisation. `unknown` means the service capability is not currently confirmed usable. Redundancy is derived from KP `resourceRoles` and selected resources.
-
-## Baseline update — KP redundancy capability and human expression mapping:
-
-Date: 2026-05-06T09:11:36.694484+00:00
-
-### Updated file:
-- `kp_master_config.md`
-
-### Baseline:
-KP uses `redundancyAvailable` to describe whether the current location-based service has redundant resource capability.
-
-### Applied values:
-- `Sydney-Main-Hospital.redundancyAvailable = true`
-- `Melbourne-Main-Hospital.redundancyAvailable = true`
-- `Brisbane-Main-Hospital.redundancyAvailable = false`
-
-### Human expression mapping:
-Added `redundancyRequired` mapping back into `expressionMapping.humanExpressionMapping.fieldPatterns` using phrases such as redundant, redundancy, required backup, backup path, and secondary path.
-
-### Runtime rule:
-Human/NLP input may map `redundancyRequired`, but II MS must validate it against KP `redundancyAvailable` and `resourceRoles`. Optimiser then verifies whether a valid primary/secondary resource set can actually be selected.
-
-## Baseline update — KP direct 1-to-1 location lookup:
-
-Date: 2026-05-06T09:32:23.531170+00:00
-
-### Updated file:
-- `kp_master_config.md`
-
-### Baseline:
-KP `locationBasedServices` entries are now keyed by canonical `locationId` to reduce mapping overhead.
-
-### Applied changes:
-- Changed `locationBasedServices` keys from friendly labels such as `Sydney-Main-Hospital` to canonical IDs such as `AU-NSW-SYD-HOSP-001`.
-- Added `displayName` to keep friendly labels.
-- Changed `expressionMapping.humanExpressionMapping.entityAliases` to map human names directly to canonical `locationId`.
-- Removed repeated `locationId` from resource entries; resource-to-location association is derived from `locationBasedServices[locationId].resourceIds`.
-- Kept `resourceId` inside each resource entry for readability and self-contained payload construction.
-
-## Baseline update — IntentValidatedEvent after simplified KP:
-
-Date: 2026-05-06T09:46:41.816139+00:00
-
-### Updated file:
-- `intent_internal_events_specification.md`
-
-### Baseline:
-`IntentValidatedEvent` remains lean and admission-focused. It carries the admitted runtime expression but does not carry KP-derived resources, candidates, benchmarks, optimiser details, or orchestrator details.
-
-### Applied event rules:
-- Include `serviceType`.
-- Keep `redundancyRequired` when it came from expression mapping/defaults.
-- Do not include a `validation` object; admission success is implied by the event.
-- Use canonical `location.locationId` in the baseline event example.
-
-## Baseline update — IntentResolvedEvent after simplified KP:
-
-Date: 2026-05-06T09:49:30.198698+00:00
-
-### Updated file:
-- `intent_internal_events_specification.md`
-
-### Baseline:
-`IntentResolvedEvent` is the first internal event that is clearly KP-derived. It uses `locationBasedService`, runtime `targets`, KP-derived `candidates`, and logical optimiser references from KP.
-
-### Applied event rules:
-- Use `locationBasedService` from KP `locationBasedServices[locationId]`.
-- Pass runtime `targets` to optimiser.
-- Do not include a separate top-level KP `benchmarks` block when it duplicates `targets`.
-- Keep `redundancyRequired` in `context` when mapped/defaulted.
-- Do not include `redundancyAvailable`; it remains KP capability knowledge.
-- Map KP `resources` to runtime optimiser handoff `candidates`.
-- Candidate entries use runtime `roles`, mapped from KP `resourceRoles`, and keep KP resource `benchmarks`.
-- Include logical `optimiserTarget` and `optimiserModel` in `context`.
-
-## Baseline update — IntentOptimisedEvent after simplified KP:
-
-Date: 2026-05-06T09:57:01.489945+00:00
-
-### Updated file:
-- `intent_internal_events_specification.md`
-
-### Baseline:
-`IntentOptimisedEvent` carries the optimiser-selected resources from `IntentResolvedEvent.candidates`, plus optimiser-run status, target evaluations, and context evaluations.
-
-### Applied event rules:
-- Use selected `resources`, not `candidates`.
-- Use optimiser statuses such as `COMPLETED`, `INFEASIBLE`, and `FAILED`.
-- Use `benchmarkValue` because selected resource performance came from KP resource benchmarks.
-- Keep `targetEvaluations` for SLA-like target fields.
-- Keep `contextEvaluations` for non-target checks such as redundancy and preferred access technology.
-- Do not include optimiser objective/rule configuration in the event; optimiser owns that internally.
-
-## Baseline update — IntentNetworkReadyEvent serviceConfiguration:
-
-Date: 2026-05-06T10:23:03.771521+00:00
-
-### Updated file:
-- `intent_internal_events_specification.md`
-
-### Baseline:
-Use `serviceConfiguration` in `IntentNetworkReadyEvent`, not `networkConfiguration`.
-
-### Applied event rules:
-- `IntentNetworkReadyEvent` means service configuration is ready for orchestration/apply, not that apply has succeeded.
-- `serviceConfiguration.resourcePlan` contains the selected resources to apply.
-- `serviceConfiguration.observerResourceIds` contains all KP resource IDs for the location-based service that IA/observer should monitor, including selected and non-selected paths.
-- Include logical `orchestratorTarget`, `orchestratorProfile`, `observerTarget`, and `observerProfile` from KP.
-- Do not include `applyOutcome`.
-- Do not include QoS, bandwidth, routing policy, hops, or service attributes by default.
-
-## Correction — actual IntentValidatedEvent section repaired:
-
-Date: 2026-05-06T11:46:31.125446+00:00
-
-### Updated file:
-- `intent_internal_events_specification.md`
-
-### Correction:
-The actual `## IntentValidatedEvent` section now contains the intended admission-focused example with `lifecycleStatus: Acknowledged` and runtime `expression`.
+### Repair:
+Fixed terminology alignment and JSON validity in the internal events specification.
 
 ### Confirmed:
-- No `locationBasedService` in `IntentValidatedEvent`.
-- No `candidates` in `IntentValidatedEvent`.
-- No KP benchmarks/resources/optimiser/orchestrator details in `IntentValidatedEvent`.
+- All JSON code blocks in `intent_internal_events_specification.md` validate successfully.
+- Current internal event examples use `location.locationId`.
+- `IntentResolvedEvent` uses `context`, no generic request block, no optimiser input-selection block, and no successful semantic/policy evaluation block.
+- `IntentValidatedEvent` has a concrete expression sample and no validation object.
+- Resource references use named `references` objects with `id` and `href`.
+- Knowledge Plane naming uses `t7-knowledge-plane`.
+
+## Full rewrite — internal events spec repaired and normalised:
+
+Date: 2026-05-06T11:56:11.910239+00:00
+
+### Updated file:
+- `intent_internal_events_specification.md`
+
+### Reason:
+The previous file had stale examples and invalid/non-object JSON snippets in the event specification. The file has been rewritten to the current baseline.
+
+### Confirmed:
+- All JSON code blocks validate.
+- Event examples use `serviceContext` outside KP.
+- No event JSON example uses `locationBasedService`.
+- `IntentValidatedEvent` is admission-focused and uses runtime `expression`.
+- `IntentResolvedEvent` uses `serviceContext`, `targets`, `context`, and `candidates`.
+- `IntentOptimisedEvent` uses selected `resources`, `optimisationRun`, `targetEvaluations`, and `contextEvaluations`.
+- `IntentNetworkReadyEvent` uses `serviceConfiguration`.
+- `IntentAssuranceEvent` uses `resources` and `observations[].metrics`.
+
+## Baseline update — IntentRejectedEvent simplified rejection payload:
+
+Date: 2026-05-06T12:15:43.379760+00:00
+
+### Updated file:
+- `intent_internal_events_specification.md`
+
+### Baseline:
+For simple semantic/capability rejection, `IntentRejectedEvent` carries `lifecycleStatus`, `reasonCode`, `statusReason`, `serviceContext`, and references.
+
+### Applied:
+- Removed `capabilityStatus` from `serviceContext`.
+- Replaced `SERVICE_CAPABILITY_UNKNOWN` with `SERVICE_NOT_AVAILABLE`.
+- Removed the simple `evaluations` block.
+- Kept `knowledgePlane` reference because the rejection is based on semantic/KP lookup.

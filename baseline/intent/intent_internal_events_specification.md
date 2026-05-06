@@ -236,8 +236,8 @@ content-type: application/json
     "intentId": "INT-HOSP-2026-002",
     "version": "v1",
     "lifecycleStatus": "Rejected",
-    "reasonCode": "SERVICE_CAPABILITY_UNKNOWN",
-    "statusReason": "Surgical critical-gold connectivity is not currently confirmed as available at the requested location.",
+    "reasonCode": "SERVICE_NOT_AVAILABLE",
+    "statusReason": "Surgical critical-gold connectivity is not currently available at the requested location.",
     "serviceContext": {
       "location": {
         "locationId": "AU-QLD-BNE-HOSP-201",
@@ -246,18 +246,8 @@ content-type: application/json
         "geographicScope": "campus"
       },
       "serviceType": "surgical-connectivity",
-      "serviceClass": "critical-gold",
-      "capabilityStatus": "unknown"
+      "serviceClass": "critical-gold"
     },
-    "evaluations": [
-      {
-        "name": "capabilityStatus",
-        "status": "INFEASIBLE",
-        "target": "available",
-        "observedValue": "unknown",
-        "reasonCode": "SERVICE_CAPABILITY_UNKNOWN"
-      }
-    ],
     "references": {
       "correlationId": "corr-intent-create-002",
       "intent": {
@@ -279,12 +269,11 @@ content-type: application/json
 
 ### Event-specific rules
 
-- Use `serviceContext` outside KP.
-- Use `lifecycleStatus: Rejected`.
-- Include a clear `reasonCode` and `statusReason`.
-- IC MS consumes this idempotently and projects the external Intent lifecycle/status to `Rejected`.
-
----
+- `IntentRejectedEvent` is the semantic/policy/capability rejection event.
+- For simple semantic/capability rejection, carry `lifecycleStatus`, `reasonCode`, `statusReason`, `serviceContext`, and references.
+- Use `reasonCode: SERVICE_NOT_AVAILABLE` when the requested service is not currently available for the resolved service context.
+- Do not include an `evaluations` block unless multiple checks or detailed rejection evidence is genuinely useful.
+- Do not include optimiser, orchestration, or assurance payloads.
 
 ## IntentResolvedEvent
 
