@@ -720,3 +720,18 @@ Use the nested `metrics` container shape for resource performance values.
 - `metrics.telemetry` is reserved for observed/runtime telemetry values, especially after control-loop/re-optimisation triggers.
 - Do not use the flat `metrics.source` pattern by default.
 - Location/service-level KP `benchmarks` remain valid for design-time service capability values.
+
+## Baseline update — control-loop candidate metrics source:
+
+Date: 2026-05-06T12:53:56.437536+00:00
+
+### Updated file:
+- `intent_internal_events_specification.md`
+
+### Baseline:
+For first-pass optimisation, `IntentResolvedEvent.candidates[].metrics.benchmark` carries KP/design-time resource metrics.
+
+For degradation/control-loop re-optimisation, `IntentResolvedEvent.candidates[].metrics.telemetry` carries latest IA-observed telemetry metrics instead.
+
+### Rule:
+Do not include `metrics.benchmark` in the control-loop re-optimisation event by default unless a consumer explicitly needs baseline comparison.
