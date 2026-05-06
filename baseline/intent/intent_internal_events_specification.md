@@ -144,6 +144,18 @@ Do not add a separate `result` field by default.
 
 The same status vocabulary may be applied at overall optimisation-run level, individual target-evaluation level, and context-evaluation level.
 
+### Network-ready configuration rule
+
+`IntentNetworkReadyEvent` means the network-ready configuration has been prepared for orchestration/apply.
+
+It does not mean the network has already been applied.
+
+Do not use a generic `networkReadiness` object in `IntentNetworkReadyEvent`.
+
+Use `networkConfiguration` to carry the orchestrator-ready configuration derived from KP master config, `t7-knowledge-plane`, and the selected optimisation resources.
+
+Apply success/failure is confirmed later through callback and assurance processing, then projected through `IntentAssuranceEvent`.
+
 
 ---
 
@@ -169,7 +181,7 @@ content-type: application/json
 | `IntentRejectedEvent` | `intent-intelligence-ms` | `intent-controller-ms` | Semantic/policy validation rejected the admitted Intent |
 | `IntentResolvedEvent` | `intent-intelligence-ms` | `intent-optimiser-ms` | Intent was semantically resolved into a canonical internal handoff for optimisation |
 | `IntentOptimisedEvent` | `intent-optimiser-ms` | `intent-assurance-ms` / downstream orchestration path | Optimisation completed and selected resources/outcome are available |
-| `IntentNetworkReadyEvent` | `intent-assurance-ms` / network apply path | `intent-controller-ms` / assurance projection path | Optimised intent has been successfully applied and the network/service is ready |
+| `IntentNetworkReadyEvent` | `intent-assurance-ms` / network preparation path | `intent-controller-ms` / assurance projection path | Optimised resource set is ready for orchestration/apply; apply success is not yet confirmed |
 | `IntentAssuranceEvent` | `intent-assurance-ms` | `intent-controller-ms` | Assurance/apply/runtime outcome truth for external Intent and IntentReport projection |
 | `IntentCallbackEvent` | `intent-callback-ms` | `intent-assurance-ms` | Accepted raw orchestrator callback relayed to the internal event backbone |
 
@@ -762,11 +774,11 @@ intent-controller-ms
 
 ### Meaning
 
-`IntentNetworkReadyEvent` is an internal milestone event indicating that the optimised intent has been successfully applied and the network/service is ready.
+`IntentNetworkReadyEvent` is an internal milestone event indicating that the network-ready configuration/resource set has been prepared for orchestration/apply.
 
-It represents a network-ready/apply-success milestone.
+It represents a network-ready-for-apply milestone, not proof that the network has already been applied.
 
-`IntentAssuranceEvent` remains the ongoing assurance/runtime outcome event used for active, degraded, failed, paused, and recovered projection updates.
+`IntentCallbackEvent` and `IntentAssuranceEvent` carry later apply/runtime outcomes. `IntentAssuranceEvent` remains the ongoing assurance/runtime outcome event used for active, degraded, failed, paused, and recovered projection updates.
 
 ### Example headers
 
@@ -787,13 +799,66 @@ content-type: application/json
   "body": {
     "intentId": "INT-HOSP-2026-001",
     "version": "v1",
-    "lifecycleStatus": "Active",
-    "statusReason": "Optimised intent has been applied and the network service is ready.",
+    "lifecycleStatus": "InProgress",
+    "statusReason": "Network-ready configuration has been prepared for orchestration/apply.",
     "location": {
       "locationId": "sydney-hospital"
     },
     "service": {
       "serviceClass": "critical-gold"
+    },
+    "networkConfiguration": {
+      "orchestratorProfile": "hospital-surgical-slice-apply",
+      "location": {
+        "locationId": "sydney-hospital"
+      },
+      "service": {
+        "serviceClass": "critical-gold"
+      },
+      "resourcePlan": [
+        {
+          "role": "primary",
+          "resourceId": "path-syd-hosp-fibre-primary-b",
+          "resourceType": "networkPath",
+          "resourceClass": "critical-gold-access",
+          "pathClass": "primary",
+          "configuration": {
+            "accessTechnology": "fibre",
+            "bandwidthProfile": "surgical-critical",
+            "qosProfile": "critical-low-latency",
+            "routingPolicy": "primary-preferred",
+            "latencyTargetMs": 10,
+            "jitterTargetMs": 2,
+            "packetLossTargetPercent": 0.01
+          }
+        },
+        {
+          "role": "secondary",
+          "resourceId": "path-syd-hosp-5g-secondary-b",
+          "resourceType": "networkPath",
+          "resourceClass": "critical-gold-access",
+          "pathClass": "secondary",
+          "configuration": {
+            "accessTechnology": "5G",
+            "bandwidthProfile": "surgical-critical",
+            "qosProfile": "critical-low-latency",
+            "routingPolicy": "standby-protection",
+            "latencyTargetMs": 10,
+            "jitterTargetMs": 2,
+            "packetLossTargetPercent": 0.01
+          }
+        }
+      ],
+      "orchestrationParameters": {
+        "activationMode": "apply",
+        "redundancyMode": "primary-secondary",
+        "failoverPolicy": "automatic",
+        "monitoringProfile": "critical-gold-assurance"
+      },
+      "sourceReferences": {
+        "kpMasterConfigVersion": "kp-master-config-v1.0",
+        "knowledgePlane": "t7-knowledge-plane"
+      }
     },
     "resources": [
       {
@@ -845,10 +910,6 @@ content-type: application/json
         }
       }
     ],
-    "applyOutcome": {
-      "status": "Applied",
-      "statusReason": "Network orchestrator confirmed successful apply."
-    },
     "references": {
       "correlationId": "corr-intent-create-001",
       "intent": {
@@ -866,10 +927,12 @@ content-type: application/json
 
 ### Notes
 
+- `networkConfiguration` carries the orchestrator-ready configuration derived from KP master config, `t7-knowledge-plane`, and the selected optimisation resources.
+- This event does not mean the network orchestrator has applied the configuration.
 - `IntentNetworkReadyEvent` is a milestone event, not an ongoing telemetry event.
-- IC MS may use this event to project the external Intent lifecycle to `Active` where that is the selected flow.
-- IA MS may also use this milestone as part of its assurance state model.
-- Ongoing assurance updates, degradation, recovery, pause, and failure signals should use `IntentAssuranceEvent`.
+- IC MS should not project the external Intent lifecycle to `Active` from this event alone.
+- Apply success/failure must be confirmed later by callback/assurance processing.
+- Ongoing assurance updates, apply confirmation, degradation, recovery, pause, and failure signals should use `IntentAssuranceEvent`.
 
 ---
 

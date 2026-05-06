@@ -654,3 +654,38 @@ Do not add a separate `result` field by default. `COMPLETED` means the item was 
 
 ### Applied change:
 Updated `IntentOptimisedEvent` to use `optimisationRun`, `targetEvaluations`, and `contextEvaluations`, and added an infeasible optimisation example.
+
+## Baseline update — IntentNetworkReadyEvent does not imply apply success:
+
+Date: 2026-05-06T02:56:52.481405+00:00
+
+### Updated file:
+- `intent_internal_events_specification.md`
+
+### Baseline:
+`IntentNetworkReadyEvent` means the network-ready configuration/resource set has been prepared for orchestration/apply. It does not mean the network has already been applied.
+
+### Rule:
+Do not use `applyOutcome` in `IntentNetworkReadyEvent`. Apply success/failure is confirmed later through callback and assurance processing, then projected through `IntentAssuranceEvent`.
+
+### Applied change:
+Updated the `IntentNetworkReadyEvent` example to use `lifecycleStatus: InProgress`, added `networkReadiness.status: READY_FOR_APPLY`, and removed the previous `applyOutcome.status: Applied` block.
+
+## Baseline update — IntentNetworkReadyEvent networkConfiguration:
+
+Date: 2026-05-06T03:05:33.522401+00:00
+
+### Updated file:
+- `intent_internal_events_specification.md`
+
+### Baseline:
+Keep `IntentNetworkReadyEvent`, but remove the generic `networkReadiness` object.
+
+### Rule:
+Use `networkConfiguration` to carry the orchestrator-ready configuration derived from KP master config, `t7-knowledge-plane`, and the selected optimisation resources.
+
+### Meaning:
+`IntentNetworkReadyEvent` means the configuration is ready to be submitted to the orchestrator/apply path. It does not mean the network has already been applied.
+
+### Apply outcome:
+Apply success/failure is confirmed later through callback and assurance processing, then projected through `IntentAssuranceEvent`.
