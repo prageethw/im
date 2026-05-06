@@ -936,53 +936,17 @@ Use `serviceConfiguration` in `IntentNetworkReadyEvent`, not `networkConfigurati
 - Do not include `applyOutcome`.
 - Do not include QoS, bandwidth, routing policy, hops, or service attributes by default.
 
-## Baseline update — IntentAssuranceEvent observation scope:
+## Correction — actual IntentValidatedEvent section repaired:
 
-Date: 2026-05-06T11:02:18.994838+00:00
-
-### Updated file:
-- `intent_internal_events_specification.md`
-
-### Baseline:
-`IntentAssuranceEvent` uses `resources` for selected/applied resources and `observations[].metrics` for telemetry.
-
-### Applied event rules:
-- Do not include `assuranceStatus` by default; `lifecycleStatus` carries the assurance outcome.
-- Healthy/active assurance events stay lean and include observations for selected/applied resources only.
-- When `lifecycleStatus` is `Degraded`, `Failed`, or the event supports re-optimisation, IA MS may include observations for all monitored paths from `observerResourceIds`.
-- Do not include top-level `targets` and `observedMetrics` when values are already in `observations[].evaluations`.
-- Do not include `controlLoop` by default.
-- Do not include a `knowledgePlane` reference by default.
-- No separate `IntentDriftOccurredEvent` is needed by default.
-
-## Baseline confirmation — IntentValidatedEvent current baseline:
-
-Date: 2026-05-06T11:42:25.391494+00:00
-
-### Confirmed:
-`IntentValidatedEvent` remains the lean IC MS admission-focused event.
-
-### Baseline rules:
-- Carries the admitted runtime `expression`.
-- Includes `serviceType`.
-- Keeps `redundancyRequired` when it came from expression mapping/defaults.
-- Does not include KP `benchmarks`, `resources`, `candidates`, optimiser details, orchestrator details, or a `validation` object.
-- Uses canonical `location.locationId` in the baseline event example.
-
-## Baseline update — IntentValidatedEvent rules written to event spec:
-
-Date: 2026-05-06T11:44:03.816248+00:00
+Date: 2026-05-06T11:46:31.125446+00:00
 
 ### Updated file:
 - `intent_internal_events_specification.md`
 
-### Confirmed:
-The `IntentValidatedEvent` event-specific rules are now written directly into the intent internal events specification.
+### Correction:
+The actual `## IntentValidatedEvent` section now contains the intended admission-focused example with `lifecycleStatus: Acknowledged` and runtime `expression`.
 
-### Rules:
-- Lean IC MS admission-focused event.
-- Carries the admitted runtime `expression`.
-- Includes `serviceType`.
-- Keeps `redundancyRequired` when it came from expression mapping/defaults.
-- Does not include KP `benchmarks`, `resources`, `candidates`, optimiser details, orchestrator details, or a `validation` object.
-- Uses canonical `location.locationId` in the baseline event example.
+### Confirmed:
+- No `locationBasedService` in `IntentValidatedEvent`.
+- No `candidates` in `IntentValidatedEvent`.
+- No KP benchmarks/resources/optimiser/orchestrator details in `IntentValidatedEvent`.

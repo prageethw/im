@@ -31,105 +31,19 @@ Internal events are state/progress/outcome facts, not point-to-point commands fo
 | Sensitive data | Do not include secrets, tokens, credentials, or raw internal stack traces |
 | External exposure | Internal payloads are not directly exposed as external TMF events |
 
-### Lean internal payload rule
+### Stable event ontology rule
 
-Internal events should carry milestone-specific fields directly and avoid embedding full external TMF resource objects unless the consumer genuinely needs that full resource snapshot.
+Internal events are not raw KP-schema projections.
 
-Use top-level event-body fields for the event fact, such as `intentId`, `version`, `lifecycleStatus`, `statusReason`, and milestone-specific outcomes.
+Internal events use stable shared intent-domain terms. Domain-specific KP structures may vary, and II MS maps domain KP knowledge into the stable internal event contract.
 
-Use `references` for links/hrefs and related resource references instead of duplicating IDs, version, lifecycle, and resource metadata inside embedded external resource objects.
-
-### Standard correlation rule
-
-Use `correlationId` as the standard cross-service trace/correlation reference in internal event examples.
-
-No additional request-id reference field is baselined by default.
-
-### IntentValidatedEvent admission rule
-
-Do not include a validation object in `IntentValidatedEvent`.
-
-The event is emitted only after IC MS admission validation succeeds, so successful validation is implied by the event itself.
-
-If validation fails, IC MS returns a synchronous API validation error and does not emit `IntentValidatedEvent`.
-
-### Shared terminology rule
-
-Use agreed intent-domain terminology consistently across internal events.
-
-Use `location.locationId`, not a separate site block, unless a future event explicitly baselines a separate concept from `location`.
+Use `serviceContext` outside KP. Do not use `locationBasedService` in internal event JSON examples.
 
 ### Common references shape
 
 Internal event `references` should use named resource reference objects with `id` and `href` where available.
 
 Use `correlationId` as a common scalar reference.
-
-Recommended shape:
-
-```json
-{
-  "references": {
-    "correlationId": "corr-intent-create-001",
-    "intent": {
-      "id": "INT-HOSP-2026-001",
-      "href": "/intentManagement/v5/intent/INT-HOSP-2026-001"
-    },
-    "intentSpecification": {
-      "id": "hospital-surgical-slice-spec-v1.20",
-      "href": "/intentManagement/v5/intentSpecification/hospital-surgical-slice-spec-v1.20"
-    }
-  }
-}
-```
-
-Where a reference is not useful to the consuming event, it may be omitted rather than included as an empty object.
-
-### IntentResolvedEvent handoff content rule
-
-For `IntentResolvedEvent`, use `context` for non-measurable contextual attributes such as `priority`, `redundancyRequired`, and `preferredAccessTechnology`.
-
-Do not use a generic HTTP/request-shaped block for this context.
-
-Do not include optimiser input-selection details or successful semantic/policy evaluation details in `IntentResolvedEvent` by default.
-
-II MS emits `IntentResolvedEvent` only when semantic/policy resolution succeeds, so successful evaluation is implied by the event itself.
-
-The optimiser owns its optimisation data-source, model, and method selection unless an explicit optimisation-profile handoff is baselined later.
-
-Use `t7-knowledge-plane` as the standard service-style name where the Knowledge Plane must be referenced.
-
-### KP-derived event attribute rule
-
-`IntentResolvedEvent.candidates` and `IntentNetworkReadyEvent.networkConfiguration` must use attributes derived from KP master config, `t7-knowledge-plane`, and selected optimisation resources.
-
-Do not invent resource, network-configuration, or telemetry attributes independently inside internal event examples.
-
-The KP master config is the source of truth for:
-
-- semantic validation rules
-- expression mapping
-- candidate-resource attributes
-- network-ready configuration rules
-- telemetry/assurance rule interpretation
-
-### Candidate resource example rule
-
-`IntentResolvedEvent.candidates` should show the concrete reusable resource-entry shape in the main example.
-
-Use `roles`, `resourceId`, `resourceType`, `resourceClass`, `resourceAttributes`, `relationships`, and `metrics`.
-
-Use simple role names such as `primary` and `secondary`.
-
-The main example should include at least two primary candidate paths and two secondary candidate paths so it is clear that the optimiser has a real candidate set to choose from.
-
-Avoid placeholder-only candidates arrays in the main event example.
-
-### Expression example rule
-
-When `IntentValidatedEvent.expression` is shown in the main example, include a concrete expression sample rather than a placeholder-only object.
-
-The expression sample should match the runtime Intent create request shape and preserve the same field names used by IC MS and the active `IntentSpecification`.
 
 ### Optimiser status and evaluation rule
 
@@ -156,15 +70,11 @@ Do not add a separate `result` field by default.
 
 `FAILED` means technical/runtime/model/data failure.
 
-The same status vocabulary may be applied at overall optimisation-run level, individual target-evaluation level, and context-evaluation level.
-
 ### Service-ready configuration rule
 
 `IntentNetworkReadyEvent` means the service configuration has been prepared for orchestration/apply.
 
 It does not mean the service has already been applied.
-
-Do not use `networkConfiguration` in `IntentNetworkReadyEvent` by default.
 
 Use `serviceConfiguration` to carry the service apply plan derived from selected optimiser resources and KP logical target/profile references.
 
@@ -173,7 +83,6 @@ Use `serviceConfiguration` to carry the service apply plan derived from selected
 `serviceConfiguration.observerResourceIds` contains all KP resource IDs for the location-based service that IA/observer should monitor.
 
 Apply success/failure is confirmed later through callback and assurance processing, then projected through `IntentAssuranceEvent`.
-
 
 ---
 
@@ -223,8 +132,6 @@ intent-intelligence-ms
 
 The runtime Intent has passed IC MS admission validation and has been admitted into the intent lifecycle.
 
-This event is a state/progress event, not a point-to-point command.
-
 ### Example headers
 
 ```http
@@ -244,12 +151,186 @@ content-type: application/json
   "body": {
     "intentId": "INT-HOSP-2026-001",
     "version": "v1",
+    "lifecycleStatus": "Acknowledged",
+    "statusReason": "Intent request passed IC MS admission validation and was admitted for downstream processing.",
+    "intentSpecification": {
+      "id": "hospital-surgical-slice-spec-v1.20"
+    },
+    "expression": {
+      "location": {
+        "locationId": "AU-NSW-SYD-HOSP-001",
+        "locationType": "hospital",
+        "geographicScope": "campus"
+      },
+      "serviceType": "surgical-connectivity",
+      "serviceClass": "critical-gold",
+      "priority": "critical",
+      "maxLatencyMs": 10,
+      "minAvailabilityPercent": 99.99,
+      "maxJitterMs": 2,
+      "maxPacketLossPercent": 0.01,
+      "preferredAccessTechnology": "5G",
+      "redundancyRequired": true
+    },
+    "references": {
+      "correlationId": "corr-intent-create-001",
+      "intent": {
+        "id": "INT-HOSP-2026-001",
+        "href": "/intentManagement/v5/intent/INT-HOSP-2026-001"
+      },
+      "intentSpecification": {
+        "id": "hospital-surgical-slice-spec-v1.20",
+        "href": "/intentManagement/v5/intentSpecification/hospital-surgical-slice-spec-v1.20"
+      }
+    }
+  }
+}
+```
+
+### Event-specific rules
+
+- `IntentValidatedEvent` is the lean IC MS admission-focused event.
+- It carries the admitted runtime `expression`.
+- It includes `serviceType`.
+- It keeps `redundancyRequired` when it came from expression mapping/defaults.
+- It does not include KP `benchmarks`, `resources`, `candidates`, optimiser details, orchestrator details, or a `validation` object.
+- It uses canonical `location.locationId` in the baseline event example.
+
+---
+
+## IntentRejectedEvent
+
+### Producer
+
+```text
+intent-intelligence-ms
+```
+
+### Current primary consumer
+
+```text
+intent-controller-ms
+```
+
+### Meaning
+
+Semantic, policy, or downstream interpretation validation rejected the admitted Intent.
+
+### Example headers
+
+```http
+ce-specversion: 1.0
+ce-type: IntentRejectedEvent
+ce-source: intent-intelligence-ms
+ce-id: evt-intent-rejected-001
+ce-time: 2026-04-18T12:01:00+10:00
+ce-subject: INT-HOSP-2026-002
+content-type: application/json
+```
+
+### Example body
+
+```json
+{
+  "body": {
+    "intentId": "INT-HOSP-2026-002",
+    "version": "v1",
+    "lifecycleStatus": "Rejected",
+    "reasonCode": "SERVICE_CAPABILITY_UNKNOWN",
+    "statusReason": "Surgical critical-gold connectivity is not currently confirmed as available at the requested location.",
+    "serviceContext": {
+      "location": {
+        "locationId": "AU-QLD-BNE-HOSP-201",
+        "displayName": "Brisbane-Main-Hospital",
+        "locationType": "hospital",
+        "geographicScope": "campus"
+      },
+      "serviceType": "surgical-connectivity",
+      "serviceClass": "critical-gold",
+      "capabilityStatus": "unknown"
+    },
+    "evaluations": [
+      {
+        "name": "capabilityStatus",
+        "status": "INFEASIBLE",
+        "target": "available",
+        "observedValue": "unknown",
+        "reasonCode": "SERVICE_CAPABILITY_UNKNOWN"
+      }
+    ],
+    "references": {
+      "correlationId": "corr-intent-create-002",
+      "intent": {
+        "id": "INT-HOSP-2026-002",
+        "href": "/intentManagement/v5/intent/INT-HOSP-2026-002"
+      },
+      "intentSpecification": {
+        "id": "hospital-surgical-slice-spec-v1.20",
+        "href": "/intentManagement/v5/intentSpecification/hospital-surgical-slice-spec-v1.20"
+      },
+      "knowledgePlane": {
+        "configId": "hospital-surgical-slice-kp-v1",
+        "version": "1.0"
+      }
+    }
+  }
+}
+```
+
+### Event-specific rules
+
+- Use `serviceContext` outside KP.
+- Use `lifecycleStatus: Rejected`.
+- Include a clear `reasonCode` and `statusReason`.
+- IC MS consumes this idempotently and projects the external Intent lifecycle/status to `Rejected`.
+
+---
+
+## IntentResolvedEvent
+
+### Producer
+
+```text
+intent-intelligence-ms
+```
+
+### Current primary consumer
+
+```text
+intent-optimiser-ms
+```
+
+### Meaning
+
+The admitted Intent has been semantically resolved into a canonical internal handoff that can be optimised.
+
+### Example headers
+
+```http
+ce-specversion: 1.0
+ce-type: IntentResolvedEvent
+ce-source: intent-intelligence-ms
+ce-id: evt-intent-resolved-001
+ce-time: 2026-04-18T12:03:00+10:00
+ce-subject: INT-HOSP-2026-001
+content-type: application/json
+```
+
+### Example body
+
+```json
+{
+  "body": {
+    "intentId": "INT-HOSP-2026-001",
+    "version": "v1",
     "lifecycleStatus": "InProgress",
-    "locationBasedService": {
-      "locationId": "AU-NSW-SYD-HOSP-001",
-      "displayName": "Sydney-Main-Hospital",
-      "locationType": "hospital",
-      "geographicScope": "campus",
+    "serviceContext": {
+      "location": {
+        "locationId": "AU-NSW-SYD-HOSP-001",
+        "displayName": "Sydney-Main-Hospital",
+        "locationType": "hospital",
+        "geographicScope": "campus"
+      },
       "serviceType": "surgical-connectivity",
       "serviceClass": "critical-gold",
       "capabilityStatus": "available"
@@ -386,270 +467,17 @@ content-type: application/json
 
 ### Event-specific rules
 
-- `IntentValidatedEvent` is the lean IC MS admission-focused event.
-- It carries the admitted runtime `expression`.
-- It includes `serviceType`.
-- It keeps `redundancyRequired` when it came from expression mapping/defaults.
-- It does not include KP `benchmarks`, `resources`, `candidates`, optimiser details, orchestrator details, or a `validation` object.
-- It uses canonical `location.locationId` in the baseline event example.
-
-### Notes
-
-- IC MS emits this only after the external Intent projection and outbox record are durably committed.
-- The referenced `IntentSpecification.id` is concrete and must have been confirmed `ACTIVE` or validated from a valid fresh cached active spec.
-- The event itself implies admission validation success.
-- The payload is curated for downstream processing and does not expose DB/cache/internal implementation details.
-
----
-
-## IntentRejectedEvent
-
-### Producer
-
-```text
-intent-intelligence-ms
-```
-
-### Current primary consumer
-
-```text
-intent-controller-ms
-```
-
-### Meaning
-
-Semantic, policy, or downstream interpretation validation rejected the admitted Intent.
-
-IC MS consumes this event and projects the external Intent lifecycle/status to `Rejected`.
-
-### Example headers
-
-```http
-ce-specversion: 1.0
-ce-type: IntentRejectedEvent
-ce-source: intent-intelligence-ms
-ce-id: evt-intent-rejected-001
-ce-time: 2026-04-18T12:01:00+10:00
-ce-subject: INT-HOSP-2026-001
-content-type: application/json
-```
-
-### Example body
-
-```json
-{
-  "body": {
-    "intentId": "INT-HOSP-2026-001",
-    "version": "v1",
-    "lifecycleStatus": "Rejected",
-    "reasonCode": "SEMANTIC_LOCATION_UNSUPPORTED",
-    "statusReason": "Requested hospital location is not currently supported for this service class.",
-    "evaluations": [
-      {
-        "type": "Semantic",
-        "result": "Failed",
-        "reasonCode": "SEMANTIC_LOCATION_UNSUPPORTED",
-        "message": "The requested location could not be resolved to a supported service location."
-      }
-    ],
-    "references": {
-      "correlationId": "corr-intent-create-001",
-      "intent": {
-        "id": "INT-HOSP-2026-001",
-        "href": "/intentManagement/v5/intent/INT-HOSP-2026-001"
-      },
-      "intentSpecification": {
-        "id": "hospital-surgical-slice-spec-v1.20",
-        "href": "/intentManagement/v5/intentSpecification/hospital-surgical-slice-spec-v1.20"
-      }
-    }
-  }
-}
-```
-
-### Notes
-
-- IC MS consumes this idempotently through inbox handling.
-- IC MS emits external `IntentStatusChangeEvent` after the external projection changes to `Rejected`.
-- IC MS may create or update an `IntentReport` projection where useful.
-
----
-
-## IntentResolvedEvent
-
-### Producer
-
-```text
-intent-intelligence-ms
-```
-
-### Current primary consumer
-
-```text
-intent-optimiser-ms
-```
-
-### Meaning
-
-The admitted Intent has been semantically resolved into a canonical internal handoff that can be optimised.
-
-### Example headers
-
-```http
-ce-specversion: 1.0
-ce-type: IntentResolvedEvent
-ce-source: intent-intelligence-ms
-ce-id: evt-intent-resolved-001
-ce-time: 2026-04-18T12:03:00+10:00
-ce-subject: INT-HOSP-2026-001
-content-type: application/json
-```
-
-### Example body
-
-```json
-{
-  "body": {
-    "intentId": "INT-HOSP-2026-001",
-    "version": "v1",
-    "lifecycleStatus": "InProgress",
-    "location": {
-      "locationId": "sydney-hospital"
-    },
-    "service": {
-      "serviceClass": "critical-gold"
-    },
-    "targets": {
-      "maxLatencyMs": 10,
-      "minAvailabilityPercent": 99.99,
-      "maxJitterMs": 2,
-      "maxPacketLossPercent": 0.01
-    },
-    "context": {
-      "priority": "critical",
-      "redundancyRequired": true,
-      "preferredAccessTechnology": "5G"
-    },
-    "candidates": [
-      {
-        "roles": [
-          "primary"
-        ],
-        "resourceId": "path-syd-hosp-5g-primary-a",
-        "resourceType": "networkPath",
-        "resourceClass": "critical-gold-access",
-        "resourceAttributes": {
-          "accessTechnology": "5G",
-          "provider": "mobile-access-a"
-        },
-        "relationships": [
-          {
-            "type": "pairedSecondary",
-            "resourceId": "path-syd-hosp-fibre-secondary-a"
-          }
-        ],
-        "metrics": {
-          "expectedLatencyMs": 8,
-          "expectedAvailabilityPercent": 99.995,
-          "expectedJitterMs": 1.5,
-          "expectedPacketLossPercent": 0.005
-        }
-      },
-      {
-        "roles": [
-          "primary"
-        ],
-        "resourceId": "path-syd-hosp-fibre-primary-b",
-        "resourceType": "networkPath",
-        "resourceClass": "critical-gold-access",
-        "resourceAttributes": {
-          "accessTechnology": "fibre",
-          "provider": "fixed-access-b"
-        },
-        "relationships": [
-          {
-            "type": "pairedSecondary",
-            "resourceId": "path-syd-hosp-5g-secondary-b"
-          }
-        ],
-        "metrics": {
-          "expectedLatencyMs": 7,
-          "expectedAvailabilityPercent": 99.996,
-          "expectedJitterMs": 1.1,
-          "expectedPacketLossPercent": 0.004
-        }
-      },
-      {
-        "roles": [
-          "secondary"
-        ],
-        "resourceId": "path-syd-hosp-fibre-secondary-a",
-        "resourceType": "networkPath",
-        "resourceClass": "critical-gold-access",
-        "resourceAttributes": {
-          "accessTechnology": "fibre",
-          "provider": "fixed-access-a"
-        },
-        "relationships": [
-          {
-            "type": "protects",
-            "resourceId": "path-syd-hosp-5g-primary-a"
-          }
-        ],
-        "metrics": {
-          "expectedLatencyMs": 9,
-          "expectedAvailabilityPercent": 99.997,
-          "expectedJitterMs": 1.2,
-          "expectedPacketLossPercent": 0.003
-        }
-      },
-      {
-        "roles": [
-          "secondary"
-        ],
-        "resourceId": "path-syd-hosp-5g-secondary-b",
-        "resourceType": "networkPath",
-        "resourceClass": "critical-gold-access",
-        "resourceAttributes": {
-          "accessTechnology": "5G",
-          "provider": "mobile-access-b"
-        },
-        "relationships": [
-          {
-            "type": "protects",
-            "resourceId": "path-syd-hosp-fibre-primary-b"
-          }
-        ],
-        "metrics": {
-          "expectedLatencyMs": 10,
-          "expectedAvailabilityPercent": 99.994,
-          "expectedJitterMs": 1.8,
-          "expectedPacketLossPercent": 0.006
-        }
-      }
-    ],
-    "references": {
-      "correlationId": "corr-intent-create-001",
-      "intent": {
-        "id": "INT-HOSP-2026-001",
-        "href": "/intentManagement/v5/intent/INT-HOSP-2026-001"
-      },
-      "intentSpecification": {
-        "id": "hospital-surgical-slice-spec-v1.20",
-        "href": "/intentManagement/v5/intentSpecification/hospital-surgical-slice-spec-v1.20"
-      }
-    }
-  }
-}
-```
-
-### Notes
-
-- Successful KP semantic/policy resolution is implied by the event.
-- The optimiser owns optimisation data-source/model/method selection unless an explicit optimisation-profile handoff is baselined later.
-- `context` holds non-measurable contextual attributes.
-- `targets` holds measurable desired outcomes/constraints.
-- `candidates` carries KP-derived resources from `locationBasedServices.resourceIds`, mapped for optimiser handoff.
+- `IntentResolvedEvent` is the first internal event that is clearly semantically resolved from KP/domain knowledge.
+- Use `serviceContext` outside KP.
+- `serviceContext.location` carries location details when the resolved service is location-scoped.
+- Pass runtime `targets` to the optimiser.
+- Do not include a separate top-level KP `benchmarks` block when it duplicates `targets`.
+- Keep `redundancyRequired` in `context` when it came from expression mapping/defaults.
+- Do not include `redundancyAvailable`; it remains KP capability knowledge.
+- Map KP `resources` to runtime optimiser handoff `candidates`.
+- Candidate entries use runtime `roles`, mapped from KP `resourceRoles`.
+- Candidate entries keep KP resource `benchmarks`.
+- Include logical `optimiserTarget` and `optimiserModel` in `context`.
 
 ---
 
@@ -671,19 +499,6 @@ intent-assurance-ms
 
 Optimisation completed and selected resources/outcome are available for downstream apply/assurance processing.
 
-### Allowed optimiser statuses
-
-```text
-ACKNOWLEDGED
-QUEUED
-PROCESSING
-COMPLETED
-INFEASIBLE
-FAILED
-CANCELLING
-CANCELLED
-```
-
 ### Example headers
 
 ```http
@@ -703,9 +518,11 @@ content-type: application/json
   "body": {
     "intentId": "INT-HOSP-2026-001",
     "version": "v1",
-    "locationBasedService": {
-      "locationId": "AU-NSW-SYD-HOSP-001",
-      "displayName": "Sydney-Main-Hospital",
+    "serviceContext": {
+      "location": {
+        "locationId": "AU-NSW-SYD-HOSP-001",
+        "displayName": "Sydney-Main-Hospital"
+      },
       "serviceType": "surgical-connectivity",
       "serviceClass": "critical-gold"
     },
@@ -819,10 +636,12 @@ content-type: application/json
   "body": {
     "intentId": "INT-HOSP-2026-001",
     "version": "v1",
-    "location": {
-      "locationId": "sydney-hospital"
-    },
-    "service": {
+    "serviceContext": {
+      "location": {
+        "locationId": "AU-NSW-SYD-HOSP-001",
+        "displayName": "Sydney-Main-Hospital"
+      },
+      "serviceType": "surgical-connectivity",
       "serviceClass": "critical-gold"
     },
     "optimisationRun": {
@@ -863,6 +682,10 @@ content-type: application/json
       "intentSpecification": {
         "id": "hospital-surgical-slice-spec-v1.20",
         "href": "/intentManagement/v5/intentSpecification/hospital-surgical-slice-spec-v1.20"
+      },
+      "knowledgePlane": {
+        "configId": "hospital-surgical-slice-kp-v1",
+        "version": "1.0"
       }
     }
   }
@@ -871,17 +694,13 @@ content-type: application/json
 
 ### Event-specific rules
 
+- Use `serviceContext` outside KP.
 - Use selected `resources`, not `candidates`.
 - Use optimiser statuses such as `COMPLETED`, `INFEASIBLE`, and `FAILED`.
 - Use `benchmarkValue` because selected resource performance came from KP resource benchmarks.
 - Keep `targetEvaluations` for SLA-like target fields.
 - Keep `contextEvaluations` for non-target checks such as redundancy and preferred access technology.
 - Do not include optimiser objective/rule configuration in the event; optimiser owns that internally.
-
-### Notes
-
-- Use `resources`, not `selectedResources` or `selected`.
-- If optimisation cannot produce a valid result, use `optimisationRun.status = INFEASIBLE` when no candidate set can satisfy required targets, or `FAILED` for technical/runtime/model/data failure.
 
 ---
 
@@ -890,7 +709,7 @@ content-type: application/json
 ### Producer
 
 ```text
-intent-assurance-ms / network apply path
+intent-assurance-ms / network preparation path
 ```
 
 ### Current primary consumer
@@ -903,9 +722,7 @@ intent-controller-ms
 
 `IntentNetworkReadyEvent` is an internal milestone event indicating that the service configuration/resource set has been prepared for orchestration/apply.
 
-It represents a service-ready-for-apply milestone, not proof that the network has already been applied.
-
-`IntentCallbackEvent` and `IntentAssuranceEvent` carry later apply/runtime outcomes. `IntentAssuranceEvent` remains the ongoing assurance/runtime outcome event used for active, degraded, failed, paused, and recovered projection updates.
+It does not mean the service has already been applied.
 
 ### Example headers
 
@@ -913,7 +730,7 @@ It represents a service-ready-for-apply milestone, not proof that the network ha
 ce-specversion: 1.0
 ce-type: IntentNetworkReadyEvent
 ce-source: intent-assurance-ms
-ce-id: evt-intent-service-ready-001
+ce-id: evt-intent-network-ready-001
 ce-time: 2026-04-18T12:12:00+10:00
 ce-subject: INT-HOSP-2026-001
 content-type: application/json
@@ -928,9 +745,11 @@ content-type: application/json
     "version": "v1",
     "lifecycleStatus": "InProgress",
     "statusReason": "Service configuration has been prepared for orchestration/apply.",
-    "locationBasedService": {
-      "locationId": "AU-NSW-SYD-HOSP-001",
-      "displayName": "Sydney-Main-Hospital",
+    "serviceContext": {
+      "location": {
+        "locationId": "AU-NSW-SYD-HOSP-001",
+        "displayName": "Sydney-Main-Hospital"
+      },
       "serviceType": "surgical-connectivity",
       "serviceClass": "critical-gold"
     },
@@ -978,21 +797,13 @@ content-type: application/json
 ### Event-specific rules
 
 - `IntentNetworkReadyEvent` means service configuration is ready for orchestration/apply, not that apply has succeeded.
-- Use `serviceConfiguration`, not `networkConfiguration`, because the event carries the service apply plan rather than low-level network configuration.
+- Use `serviceContext` outside KP.
+- Use `serviceConfiguration` because the event carries the service apply plan rather than low-level network configuration.
 - `serviceConfiguration.resourcePlan` contains the selected resources to apply.
 - `serviceConfiguration.observerResourceIds` contains all KP resource IDs for the location-based service that IA/observer should monitor, including selected and non-selected paths.
 - Include logical `orchestratorTarget`, `orchestratorProfile`, `observerTarget`, and `observerProfile` from KP.
 - Do not include `applyOutcome`.
 - Do not include QoS, bandwidth, routing policy, hops, or service attributes by default.
-
-### Notes
-
-- `serviceConfiguration` carries the orchestrator-ready configuration derived from KP master config, `t7-knowledge-plane`, and the selected optimisation resources.
-- This event does not mean the orchestrator has applied the service configuration.
-- `IntentNetworkReadyEvent` is a milestone event, not an ongoing telemetry event.
-- IC MS should not project the external Intent lifecycle to `Active` from this event alone.
-- Apply success/failure must be confirmed later by callback/assurance processing.
-- Ongoing assurance updates, apply confirmation, degradation, recovery, pause, and failure signals should use `IntentAssuranceEvent`.
 
 ---
 
@@ -1022,28 +833,107 @@ IC MS consumes this event and updates the external `Intent` and `IntentReport` p
 {
   "body": {
     "intentId": "INT-HOSP-2026-001",
-    "version": "v2",
+    "version": "v1",
     "lifecycleStatus": "Active",
-    "statusReason": "Intent version v2 is active and assurance is healthy.",
-    "assuranceStatus": "Healthy",
-    "service": {
+    "statusReason": "Observed telemetry for selected resources is within resolved targets.",
+    "serviceContext": {
+      "location": {
+        "locationId": "AU-NSW-SYD-HOSP-001",
+        "displayName": "Sydney-Main-Hospital"
+      },
+      "serviceType": "surgical-connectivity",
       "serviceClass": "critical-gold"
     },
-    "location": {
-      "locationId": "sydney-hospital"
-    },
-    "metrics": {
-      "latencyMs": 8,
-      "availabilityPercent": 99.995,
-      "jitterMs": 1.5,
-      "packetLossPercent": 0.005
-    },
-    "evaluations": [
+    "resources": [
       {
-        "name": "latency",
-        "result": "Compliant",
-        "observedValue": 8,
-        "threshold": 10
+        "role": "primary",
+        "resourceId": "SYD-PRI-01"
+      },
+      {
+        "role": "secondary",
+        "resourceId": "SYD-SEC-01"
+      }
+    ],
+    "observations": [
+      {
+        "resourceId": "SYD-PRI-01",
+        "role": "primary",
+        "metrics": {
+          "latencyMs": 8,
+          "availabilityPercent": 99.995,
+          "jitterMs": 1.5,
+          "packetLossPercent": 0.005
+        },
+        "evaluations": [
+          {
+            "name": "latency",
+            "status": "COMPLETED",
+            "target": 10,
+            "observedValue": 8,
+            "unit": "ms"
+          },
+          {
+            "name": "availability",
+            "status": "COMPLETED",
+            "target": 99.99,
+            "observedValue": 99.995,
+            "unit": "percent"
+          },
+          {
+            "name": "jitter",
+            "status": "COMPLETED",
+            "target": 2,
+            "observedValue": 1.5,
+            "unit": "ms"
+          },
+          {
+            "name": "packetLoss",
+            "status": "COMPLETED",
+            "target": 0.01,
+            "observedValue": 0.005,
+            "unit": "percent"
+          }
+        ]
+      },
+      {
+        "resourceId": "SYD-SEC-01",
+        "role": "secondary",
+        "metrics": {
+          "latencyMs": 10,
+          "availabilityPercent": 99.994,
+          "jitterMs": 1.8,
+          "packetLossPercent": 0.006
+        },
+        "evaluations": [
+          {
+            "name": "latency",
+            "status": "COMPLETED",
+            "target": 10,
+            "observedValue": 10,
+            "unit": "ms"
+          },
+          {
+            "name": "availability",
+            "status": "COMPLETED",
+            "target": 99.99,
+            "observedValue": 99.994,
+            "unit": "percent"
+          },
+          {
+            "name": "jitter",
+            "status": "COMPLETED",
+            "target": 2,
+            "observedValue": 1.8,
+            "unit": "ms"
+          },
+          {
+            "name": "packetLoss",
+            "status": "COMPLETED",
+            "target": 0.01,
+            "observedValue": 0.006,
+            "unit": "percent"
+          }
+        ]
       }
     ],
     "references": {
@@ -1067,20 +957,112 @@ IC MS consumes this event and updates the external `Intent` and `IntentReport` p
 {
   "body": {
     "intentId": "INT-HOSP-2026-001",
-    "version": "v2",
+    "version": "v1",
     "lifecycleStatus": "Degraded",
-    "statusReason": "Latency assurance is degraded.",
-    "assuranceStatus": "Degraded",
-    "metrics": {
-      "latencyMs": 18,
-      "availabilityPercent": 99.99
+    "statusReason": "Observed latency is outside the resolved target.",
+    "serviceContext": {
+      "location": {
+        "locationId": "AU-NSW-SYD-HOSP-001",
+        "displayName": "Sydney-Main-Hospital"
+      },
+      "serviceType": "surgical-connectivity",
+      "serviceClass": "critical-gold"
     },
-    "evaluations": [
+    "resources": [
       {
-        "name": "latency",
-        "result": "NonCompliant",
-        "observedValue": 18,
-        "threshold": 10
+        "role": "primary",
+        "resourceId": "SYD-PRI-01"
+      },
+      {
+        "role": "secondary",
+        "resourceId": "SYD-SEC-01"
+      }
+    ],
+    "observations": [
+      {
+        "resourceId": "SYD-PRI-01",
+        "role": "primary",
+        "metrics": {
+          "latencyMs": 18,
+          "availabilityPercent": 99.992,
+          "jitterMs": 1.8,
+          "packetLossPercent": 0.006
+        },
+        "evaluations": [
+          {
+            "name": "latency",
+            "status": "INFEASIBLE",
+            "target": 10,
+            "observedValue": 18,
+            "unit": "ms",
+            "statusReason": "Observed latency is above the resolved maximum latency target."
+          },
+          {
+            "name": "availability",
+            "status": "COMPLETED",
+            "target": 99.99,
+            "observedValue": 99.992,
+            "unit": "percent"
+          }
+        ]
+      },
+      {
+        "resourceId": "SYD-PRI-02",
+        "role": "observedAlternative",
+        "metrics": {
+          "latencyMs": 9,
+          "availabilityPercent": 99.996,
+          "jitterMs": 1.4,
+          "packetLossPercent": 0.004
+        },
+        "evaluations": [
+          {
+            "name": "latency",
+            "status": "COMPLETED",
+            "target": 10,
+            "observedValue": 9,
+            "unit": "ms"
+          }
+        ]
+      },
+      {
+        "resourceId": "SYD-SEC-01",
+        "role": "secondary",
+        "metrics": {
+          "latencyMs": 12,
+          "availabilityPercent": 99.994,
+          "jitterMs": 1.8,
+          "packetLossPercent": 0.006
+        },
+        "evaluations": [
+          {
+            "name": "latency",
+            "status": "INFEASIBLE",
+            "target": 10,
+            "observedValue": 12,
+            "unit": "ms",
+            "statusReason": "Observed latency is above the resolved maximum latency target."
+          }
+        ]
+      },
+      {
+        "resourceId": "SYD-SEC-02",
+        "role": "observedAlternative",
+        "metrics": {
+          "latencyMs": 9,
+          "availabilityPercent": 99.997,
+          "jitterMs": 1.2,
+          "packetLossPercent": 0.003
+        },
+        "evaluations": [
+          {
+            "name": "latency",
+            "status": "COMPLETED",
+            "target": 10,
+            "observedValue": 9,
+            "unit": "ms"
+          }
+        ]
       }
     ],
     "references": {
@@ -1098,12 +1080,18 @@ IC MS consumes this event and updates the external `Intent` and `IntentReport` p
 }
 ```
 
-### Notes
+### Event-specific rules
 
-- IC MS processes `IntentAssuranceEvent` idempotently through inbox handling.
-- IC MS updates the current projected external `Intent` resource.
-- IC MS creates or updates the `IntentReport` projection.
-- Raw telemetry remains outside IC MS; IC MS consumes curated assurance outcomes.
+- Use `serviceContext` outside KP.
+- Do not include `assuranceStatus` by default; `lifecycleStatus` carries the assurance outcome.
+- Use `resources` for selected/applied resources.
+- Use `observations[].metrics` for telemetry observed for each monitored resource.
+- Keep healthy/active assurance events lean and include observations for selected/applied resources only.
+- When `lifecycleStatus` is `Degraded`, `Failed`, or the event supports re-optimisation, IA MS may include observations for all monitored paths from `observerResourceIds`.
+- Do not include top-level `targets` and `observedMetrics` when the same values are already carried in `observations[].evaluations`.
+- Do not include `controlLoop` by default; downstream control-loop consumers derive the next action from the assurance event.
+- Do not include a `knowledgePlane` reference by default; IA MS works from applied service configuration, observer scope, and resolved targets.
+- No separate `IntentDriftOccurredEvent` is needed by default; drift/degradation is represented by `IntentAssuranceEvent`.
 
 ---
 
@@ -1228,8 +1216,6 @@ IA MS owns correlation, mapping, skip/dead-letter decisions, and downstream assu
 - External TMF events must be curated projection/resource events.
 - Internal events must not leak secrets, credentials, tokens, or raw platform stack traces.
 - Use `intent-intelligence-ms`, not the old interpreter service name.
-- Use `intent-controller-ms`, not any creation-service wording.
 - Use `priority`, not legacy priority field names.
 - Use `critical`, not old clinical-specific priority values.
 - Use `resources` for selected optimisation resources in `IntentOptimisedEvent`.
-- Use typed placeholders in examples when abbreviating arrays or objects.
