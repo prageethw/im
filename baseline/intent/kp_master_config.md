@@ -6,9 +6,9 @@ This file is the baseline lightweight II MS KP / Master Knowledge Config.
 
 II MS uses this lightweight KP for local semantic resolution, mappings, policy hints, and service-specific interpretation.
 
-II MS also uses external `t7-knowledge-plane` for network-related topology/resource context and broader network intelligence.
+II MS also uses external `t7.knowledge plane` for network-related topology/resource context and broader network intelligence.
 
-Neither this lightweight KP nor `t7-knowledge-plane` is exposed as the external `Intent` or `IntentSpecification`.
+Neither this lightweight KP nor `t7.knowledge plane` is exposed as the external `Intent` or `IntentSpecification`.
 
 ## Baseline rules:
 
@@ -438,3 +438,164 @@ Neither this lightweight KP nor `t7-knowledge-plane` is exposed as the external 
   }
 }
 ```
+
+## KP master config source-of-truth role
+
+### Baseline position
+
+The KP master config is the source of truth for intent-domain semantic validation rules, network-ready configuration rules, and telemetry/assurance rule interpretation.
+
+It is used by II MS, optimiser/apply-preparation components, and IA MS in different ways:
+
+| **Consumer** | **Uses KP master config for** |
+|---|---|
+| II MS | Semantic validation, expression mapping, location/service/resource interpretation, policy hints, candidate-resource resolution |
+| Optimiser MS | Candidate resource attributes, constraints, metrics, and optimisation-relevant resource metadata |
+| IA/apply-preparation path | Network-ready configuration derivation, orchestrator profile selection, resource-plan construction |
+| IA MS | Telemetry/assurance rule interpretation, monitored metric names, thresholds, and status mapping |
+
+### Required KP coverage
+
+The KP master config must cover the following source-of-truth areas:
+
+| **Area** | **Purpose** |
+|---|---|
+| `locations` | Platform-controlled location identifiers, location types, geographic scope, and location-to-resource mappings |
+| `services` | Service classes, service constraints, service-to-resource applicability, and service-specific defaults |
+| `policyRules` | Governance and semantic policy rules used during interpretation and admission workflow |
+| `resourceCatalogue` | Candidate resources with roles, resource type/class, path class, resource attributes, relationships, and metrics |
+| `expressionMapping` | Human/request expression-to-structured-field mapping rules |
+| `resolutionOutput` | Standard resolved decision/candidate output shape used by II MS handoff |
+| `networkConfigurationRules` | Rules for deriving orchestrator-ready network configuration from selected resources |
+| `telemetryRules` | Assurance metric names, thresholds, observation rules, and status interpretation rules |
+
+### Resource catalogue entry shape
+
+Resource entries should use the shared internal resource-entry shape:
+
+```json
+{
+  "roles": [
+    "primary"
+  ],
+  "resourceId": "path-syd-hosp-fibre-primary-b",
+  "resourceType": "networkPath",
+  "resourceClass": "critical-gold-access",
+  "pathClass": "primary",
+  "resourceAttributes": {
+    "accessTechnology": "fibre",
+    "provider": "fixed-access-b",
+    "qosProfile": "critical-low-latency",
+    "bandwidthProfile": "surgical-critical"
+  },
+  "relationships": [
+    {
+      "type": "pairedSecondary",
+      "resourceId": "path-syd-hosp-5g-secondary-b"
+    }
+  ],
+  "metrics": {
+    "expectedLatencyMs": 7,
+    "expectedAvailabilityPercent": 99.996,
+    "expectedJitterMs": 1.1,
+    "expectedPacketLossPercent": 0.004
+  }
+}
+```
+
+### Network configuration rule shape
+
+`networkConfigurationRules` should define how a selected optimiser resource set becomes an orchestrator-ready configuration.
+
+Example shape:
+
+```json
+{
+  "networkConfigurationRules": {
+    "orchestratorProfiles": [
+      {
+        "orchestratorProfile": "hospital-surgical-slice-apply",
+        "serviceClass": "critical-gold",
+        "resourceType": "networkPath",
+        "configurationMapping": {
+          "accessTechnology": "resourceAttributes.accessTechnology",
+          "bandwidthProfile": "resourceAttributes.bandwidthProfile",
+          "qosProfile": "resourceAttributes.qosProfile",
+          "routingPolicy": "pathClass",
+          "latencyTargetMs": "service.constraints.latencyMs.max",
+          "jitterTargetMs": "service.constraints.jitterMs.max",
+          "packetLossTargetPercent": "service.constraints.packetLossPercent.max"
+        },
+        "orchestrationParameters": {
+          "activationMode": "apply",
+          "redundancyMode": "primary-secondary",
+          "failoverPolicy": "automatic",
+          "monitoringProfile": "critical-gold-assurance"
+        }
+      }
+    ]
+  }
+}
+```
+
+### Telemetry rule shape
+
+`telemetryRules` should define how IA MS interprets monitored values.
+
+Example shape:
+
+```json
+{
+  "telemetryRules": {
+    "monitoringProfiles": [
+      {
+        "monitoringProfile": "critical-gold-assurance",
+        "serviceClass": "critical-gold",
+        "metrics": [
+          {
+            "name": "latency",
+            "sourceMetric": "observedLatencyMs",
+            "targetField": "maxLatencyMs",
+            "unit": "ms",
+            "healthyWhen": "observedValue <= target"
+          },
+          {
+            "name": "availability",
+            "sourceMetric": "observedAvailabilityPercent",
+            "targetField": "minAvailabilityPercent",
+            "unit": "percent",
+            "healthyWhen": "observedValue >= target"
+          },
+          {
+            "name": "jitter",
+            "sourceMetric": "observedJitterMs",
+            "targetField": "maxJitterMs",
+            "unit": "ms",
+            "healthyWhen": "observedValue <= target"
+          },
+          {
+            "name": "packetLoss",
+            "sourceMetric": "observedPacketLossPercent",
+            "targetField": "maxPacketLossPercent",
+            "unit": "percent",
+            "healthyWhen": "observedValue <= target"
+          }
+        ],
+        "statusMapping": {
+          "allHealthy": "Active",
+          "anyDegraded": "Degraded",
+          "applyFailed": "Failed"
+        }
+      }
+    ]
+  }
+}
+```
+
+### Internal event dependency rule
+
+`IntentResolvedEvent.candidates` must use KP-derived resource attributes from `resourceCatalogue`, `services`, `locations`, `policyRules`, and `resolutionOutput`.
+
+`IntentNetworkReadyEvent.networkConfiguration` must be derived from selected optimiser resources plus KP master config / `t7-knowledge-plane` orchestration-facing attributes.
+
+Internal event examples must not invent resource/configuration/telemetry attributes independently of KP master config.
