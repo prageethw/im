@@ -826,3 +826,23 @@ Use `correlationId` as a common scalar reference. Avoid flat one-off fields such
 
 ### Applied change:
 Standardised internal event examples to use named resource references instead of flat `intentSpecificationId` fields where applicable.
+
+## Baseline update — IntentResolvedEvent handoff content refinement:
+
+Date: 2026-05-06T00:31:12.846346+00:00
+
+### Updated file:
+- `intent_internal_events_specification.md`
+
+### Baseline:
+For `IntentResolvedEvent`, use `intentContext` for non-measurable contextual intent attributes such as `priority`, `redundancyRequired`, and `preferredAccessTechnology`.
+
+### Rules:
+- Do not use generic `request` for this block.
+- Do not include `inputs` or successful `evaluations` in `IntentResolvedEvent` by default.
+- II MS emits `IntentResolvedEvent` only when semantic/policy resolution succeeds, so successful evaluation is implied by the event itself.
+- The optimiser owns its optimisation data-source, model, and method selection unless an explicit optimisation-profile handoff is baselined later.
+- Use `t7-knowledge-plane` as the standard one-word service-style name where the Knowledge Plane must be referenced.
+
+### Applied change:
+Updated the `IntentResolvedEvent` example to use `intentContext`, removed `inputs`, removed successful `evaluations`, and standardised Knowledge Plane naming.

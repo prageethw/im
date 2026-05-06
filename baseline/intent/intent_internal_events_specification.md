@@ -289,6 +289,20 @@ intent-optimiser-ms
 
 The admitted Intent has been semantically resolved into a canonical internal request that can be optimised.
 
+### IntentResolvedEvent handoff content rule:
+
+For `IntentResolvedEvent`, use `intentContext` for non-measurable contextual intent attributes such as `priority`, `redundancyRequired`, and `preferredAccessTechnology`.
+
+Do not use generic `request` for this block.
+
+Do not include `inputs` or successful `evaluations` in `IntentResolvedEvent` by default.
+
+II MS emits `IntentResolvedEvent` only when semantic/policy resolution succeeds, so successful evaluation is implied by the event itself.
+
+The optimiser owns its optimisation data-source, model, and method selection unless an explicit optimisation-profile handoff is baselined later.
+
+Use `t7-knowledge-plane` as the standard one-word service-style name where the Knowledge Plane must be referenced.
+
 ### Example headers:
 
 ```http
@@ -321,27 +335,13 @@ content-type: application/json
       "maxJitterMs": 2,
       "maxPacketLossPercent": 0.01
     },
-    "request": {
+    "intentContext": {
       "priority": "critical",
       "redundancyRequired": true,
       "preferredAccessTechnology": "5G"
     },
-    "inputs": {
-      "knowledgeSource": "t7.knowledge plane",
-      "resolutionProfile": "hospital-surgical-slice"
-    },
     "candidates": [
       "...candidate resources resolved from knowledge plane..."
-    ],
-    "evaluations": [
-      {
-        "type": "Semantic",
-        "result": "Passed"
-      },
-      {
-        "type": "Policy",
-        "result": "Passed"
-      }
     ],
     "references": {
       "correlationId": "corr-intent-create-001",
