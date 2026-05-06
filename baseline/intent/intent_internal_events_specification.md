@@ -70,6 +70,18 @@ Do not add a separate `result` field by default.
 
 `FAILED` means technical/runtime/model/data failure.
 
+### Metrics container rule
+
+Use `metrics` as the common resource performance container.
+
+Use `metrics.benchmark` for KP/design-time expected values.
+
+Use `metrics.telemetry` for observed/runtime values.
+
+Avoid a separate resource-level `benchmarks` object in event examples.
+
+Evaluation entries may still use `benchmarkValue` or `observedValue` to identify the value used in that specific comparison.
+
 ### Service-ready configuration rule
 
 `IntentNetworkReadyEvent` means the service configuration has been prepared for orchestration/apply.
@@ -355,18 +367,20 @@ content-type: application/json
         ],
         "accessTechnology": "fibre",
         "provider": "fixed-access-b",
-        "benchmarks": {
-          "expectedLatencyMs": 7,
-          "expectedAvailabilityPercent": 99.996,
-          "expectedJitterMs": 1.1,
-          "expectedPacketLossPercent": 0.004
-        },
         "relationships": [
           {
             "type": "pairedSecondary",
             "resourceId": "SYD-SEC-01"
           }
-        ]
+        ],
+        "metrics": {
+          "benchmark": {
+            "latencyMs": 7,
+            "availabilityPercent": 99.996,
+            "jitterMs": 1.1,
+            "packetLossPercent": 0.004
+          }
+        }
       },
       {
         "resourceId": "SYD-PRI-02",
@@ -377,18 +391,20 @@ content-type: application/json
         ],
         "accessTechnology": "5G",
         "provider": "mobile-access-a",
-        "benchmarks": {
-          "expectedLatencyMs": 8,
-          "expectedAvailabilityPercent": 99.995,
-          "expectedJitterMs": 1.5,
-          "expectedPacketLossPercent": 0.005
-        },
         "relationships": [
           {
             "type": "pairedSecondary",
             "resourceId": "SYD-SEC-02"
           }
-        ]
+        ],
+        "metrics": {
+          "benchmark": {
+            "latencyMs": 8,
+            "availabilityPercent": 99.995,
+            "jitterMs": 1.5,
+            "packetLossPercent": 0.005
+          }
+        }
       },
       {
         "resourceId": "SYD-SEC-01",
@@ -399,18 +415,20 @@ content-type: application/json
         ],
         "accessTechnology": "5G",
         "provider": "mobile-access-b",
-        "benchmarks": {
-          "expectedLatencyMs": 10,
-          "expectedAvailabilityPercent": 99.994,
-          "expectedJitterMs": 1.8,
-          "expectedPacketLossPercent": 0.006
-        },
         "relationships": [
           {
             "type": "protects",
             "resourceId": "SYD-PRI-01"
           }
-        ]
+        ],
+        "metrics": {
+          "benchmark": {
+            "latencyMs": 10,
+            "availabilityPercent": 99.994,
+            "jitterMs": 1.8,
+            "packetLossPercent": 0.006
+          }
+        }
       },
       {
         "resourceId": "SYD-SEC-02",
@@ -421,18 +439,20 @@ content-type: application/json
         ],
         "accessTechnology": "fibre",
         "provider": "fixed-access-a",
-        "benchmarks": {
-          "expectedLatencyMs": 9,
-          "expectedAvailabilityPercent": 99.997,
-          "expectedJitterMs": 1.2,
-          "expectedPacketLossPercent": 0.003
-        },
         "relationships": [
           {
             "type": "protects",
             "resourceId": "SYD-PRI-02"
           }
-        ]
+        ],
+        "metrics": {
+          "benchmark": {
+            "latencyMs": 9,
+            "availabilityPercent": 99.997,
+            "jitterMs": 1.2,
+            "packetLossPercent": 0.003
+          }
+        }
       }
     ],
     "references": {
@@ -465,7 +485,7 @@ content-type: application/json
 - Do not include `redundancyAvailable`; it remains KP capability knowledge.
 - Map KP `resources` to runtime optimiser handoff `candidates`.
 - Candidate entries use runtime `roles`, mapped from KP `resourceRoles`.
-- Candidate entries keep KP resource `benchmarks`.
+- Candidate entries carry KP resource values under `metrics.benchmark`.
 - Include logical `optimiserTarget` and `optimiserModel` in `context`.
 
 ---
@@ -525,11 +545,13 @@ content-type: application/json
         "resourceClass": "critical-gold-access",
         "accessTechnology": "fibre",
         "provider": "fixed-access-b",
-        "benchmarks": {
-          "expectedLatencyMs": 7,
-          "expectedAvailabilityPercent": 99.996,
-          "expectedJitterMs": 1.1,
-          "expectedPacketLossPercent": 0.004
+        "metrics": {
+          "benchmark": {
+            "latencyMs": 7,
+            "availabilityPercent": 99.996,
+            "jitterMs": 1.1,
+            "packetLossPercent": 0.004
+          }
         }
       },
       {
@@ -541,11 +563,13 @@ content-type: application/json
         "resourceClass": "critical-gold-access",
         "accessTechnology": "5G",
         "provider": "mobile-access-b",
-        "benchmarks": {
-          "expectedLatencyMs": 10,
-          "expectedAvailabilityPercent": 99.994,
-          "expectedJitterMs": 1.8,
-          "expectedPacketLossPercent": 0.006
+        "metrics": {
+          "benchmark": {
+            "latencyMs": 10,
+            "availabilityPercent": 99.994,
+            "jitterMs": 1.8,
+            "packetLossPercent": 0.006
+          }
         }
       }
     ],
@@ -686,7 +710,7 @@ content-type: application/json
 - Use `serviceContext` outside KP.
 - Use selected `resources`, not `candidates`.
 - Use optimiser statuses such as `COMPLETED`, `INFEASIBLE`, and `FAILED`.
-- Use `benchmarkValue` because selected resource performance came from KP resource benchmarks.
+- Use `benchmarkValue` in evaluations because the comparison value came from `metrics.benchmark`.
 - Keep `targetEvaluations` for SLA-like target fields.
 - Keep `contextEvaluations` for non-target checks such as redundancy and preferred access technology.
 - Do not include optimiser objective/rule configuration in the event; optimiser owns that internally.
