@@ -37,7 +37,7 @@ Internal events are not raw KP-schema projections.
 
 Internal events use stable shared intent-domain terms. Domain-specific KP structures may vary, and II MS maps domain KP knowledge into the stable internal event contract.
 
-Use `serviceContext` outside KP. Do not use `locationBasedService` in internal event JSON examples.
+Use direct `location`, `serviceType`, and `serviceClass` fields outside KP. Do not wrap them in `context`, `location`, `serviceType`, and `serviceClass`, or `locationBasedService` in internal event JSON examples.
 
 ### Common references shape
 
@@ -236,28 +236,14 @@ content-type: application/json
     "intentId": "INT-HOSP-2026-002",
     "version": "v1",
     "lifecycleStatus": "Rejected",
-    "reasonCode": "SERVICE_CAPABILITY_UNKNOWN",
-    "statusReason": "Surgical critical-gold connectivity is not currently confirmed as available at the requested location.",
-    "serviceContext": {
-      "location": {
-        "locationId": "AU-QLD-BNE-HOSP-201",
-        "displayName": "Brisbane-Main-Hospital",
-        "locationType": "hospital",
-        "geographicScope": "campus"
-      },
-      "serviceType": "surgical-connectivity",
-      "serviceClass": "critical-gold",
-      "capabilityStatus": "unknown"
+    "reasonCode": "SERVICE_NOT_AVAILABLE",
+    "statusReason": "Surgical critical-gold connectivity is not currently available at the requested location.",
+    "location": {
+      "locationId": "AU-QLD-BNE-HOSP-201",
+      "displayName": "Brisbane-Main-Hospital"
     },
-    "evaluations": [
-      {
-        "name": "capabilityStatus",
-        "status": "INFEASIBLE",
-        "target": "available",
-        "observedValue": "unknown",
-        "reasonCode": "SERVICE_CAPABILITY_UNKNOWN"
-      }
-    ],
+    "serviceType": "surgical-connectivity",
+    "serviceClass": "critical-gold",
     "references": {
       "correlationId": "corr-intent-create-002",
       "intent": {
@@ -279,12 +265,12 @@ content-type: application/json
 
 ### Event-specific rules
 
-- Use `serviceContext` outside KP.
-- Use `lifecycleStatus: Rejected`.
-- Include a clear `reasonCode` and `statusReason`.
-- IC MS consumes this idempotently and projects the external Intent lifecycle/status to `Rejected`.
-
----
+- `IntentRejectedEvent` is the semantic/policy/capability rejection event.
+- For simple semantic/capability rejection, carry `lifecycleStatus`, `reasonCode`, `statusReason`, direct `location`, `serviceType`, `serviceClass`, and references.
+- Use `reasonCode: SERVICE_NOT_AVAILABLE` when the requested service is not currently available for the resolved service/location.
+- Do not include a `serviceContext` or generic `context` wrapper.
+- Do not include an `evaluations` block unless multiple checks or detailed rejection evidence is genuinely useful.
+- Do not include optimiser, orchestration, or assurance payloads.
 
 ## IntentResolvedEvent
 
@@ -349,13 +335,11 @@ content-type: application/json
         ],
         "accessTechnology": "fibre",
         "provider": "fixed-access-b",
-        "metrics": {
-          "benchmark": {
-            "latencyMs": 7,
-            "availabilityPercent": 99.996,
-            "jitterMs": 1.1,
-            "packetLossPercent": 0.004
-          }
+        "benchmarks": {
+          "expectedLatencyMs": 7,
+          "expectedAvailabilityPercent": 99.996,
+          "expectedJitterMs": 1.1,
+          "expectedPacketLossPercent": 0.004
         },
         "relationships": [
           {
@@ -373,13 +357,11 @@ content-type: application/json
         ],
         "accessTechnology": "5G",
         "provider": "mobile-access-a",
-        "metrics": {
-          "benchmark": {
-            "latencyMs": 8,
-            "availabilityPercent": 99.995,
-            "jitterMs": 1.5,
-            "packetLossPercent": 0.005
-          }
+        "benchmarks": {
+          "expectedLatencyMs": 8,
+          "expectedAvailabilityPercent": 99.995,
+          "expectedJitterMs": 1.5,
+          "expectedPacketLossPercent": 0.005
         },
         "relationships": [
           {
@@ -397,13 +379,11 @@ content-type: application/json
         ],
         "accessTechnology": "5G",
         "provider": "mobile-access-b",
-        "metrics": {
-          "benchmark": {
-            "latencyMs": 10,
-            "availabilityPercent": 99.994,
-            "jitterMs": 1.8,
-            "packetLossPercent": 0.006
-          }
+        "benchmarks": {
+          "expectedLatencyMs": 10,
+          "expectedAvailabilityPercent": 99.994,
+          "expectedJitterMs": 1.8,
+          "expectedPacketLossPercent": 0.006
         },
         "relationships": [
           {
@@ -421,13 +401,11 @@ content-type: application/json
         ],
         "accessTechnology": "fibre",
         "provider": "fixed-access-a",
-        "metrics": {
-          "benchmark": {
-            "latencyMs": 9,
-            "availabilityPercent": 99.997,
-            "jitterMs": 1.2,
-            "packetLossPercent": 0.003
-          }
+        "benchmarks": {
+          "expectedLatencyMs": 9,
+          "expectedAvailabilityPercent": 99.997,
+          "expectedJitterMs": 1.2,
+          "expectedPacketLossPercent": 0.003
         },
         "relationships": [
           {
@@ -459,9 +437,8 @@ content-type: application/json
 ### Event-specific rules
 
 - `IntentResolvedEvent` is the lean optimiser handoff.
-- Do not use `serviceContext` in `IntentResolvedEvent`.
+- Use direct `location`, `serviceType`, and `serviceClass` fields; do not wrap them in `context` or `serviceContext`.
 - Do not include `capabilityStatus`; successful `IntentResolvedEvent` emission implies semantic/capability resolution succeeded.
-- Use direct `location`, `serviceType`, and `serviceClass` fields.
 - Keep `priority`, `preferredAccessTechnology`, and `redundancyRequired` as direct optimiser inputs.
 - Pass runtime `targets` to the optimiser.
 - Do not include a generic `context` wrapper by default.
@@ -509,14 +486,12 @@ content-type: application/json
   "body": {
     "intentId": "INT-HOSP-2026-001",
     "version": "v1",
-    "serviceContext": {
-      "location": {
-        "locationId": "AU-NSW-SYD-HOSP-001",
-        "displayName": "Sydney-Main-Hospital"
-      },
-      "serviceType": "surgical-connectivity",
-      "serviceClass": "critical-gold"
+    "location": {
+      "locationId": "AU-NSW-SYD-HOSP-001",
+      "displayName": "Sydney-Main-Hospital"
     },
+    "serviceType": "surgical-connectivity",
+    "serviceClass": "critical-gold",
     "resources": [
       {
         "resourceId": "SYD-PRI-01",
@@ -627,14 +602,12 @@ content-type: application/json
   "body": {
     "intentId": "INT-HOSP-2026-001",
     "version": "v1",
-    "serviceContext": {
-      "location": {
-        "locationId": "AU-NSW-SYD-HOSP-001",
-        "displayName": "Sydney-Main-Hospital"
-      },
-      "serviceType": "surgical-connectivity",
-      "serviceClass": "critical-gold"
+    "location": {
+      "locationId": "AU-NSW-SYD-HOSP-001",
+      "displayName": "Sydney-Main-Hospital"
     },
+    "serviceType": "surgical-connectivity",
+    "serviceClass": "critical-gold",
     "optimisationRun": {
       "status": "INFEASIBLE",
       "statusReason": "No candidate resource set could satisfy all required targets."
@@ -685,15 +658,13 @@ content-type: application/json
 
 ### Event-specific rules
 
-- Use `serviceContext` outside KP.
+- Use direct `location`, `serviceType`, and `serviceClass` fields; do not wrap them in `context` or `serviceContext`.
 - Use selected `resources`, not `candidates`.
 - Use optimiser statuses such as `COMPLETED`, `INFEASIBLE`, and `FAILED`.
-- Use `benchmarkValue` because selected resource performance came from KP resource benchmarks.
+- Use `benchmarkValue` in evaluations when the comparison value came from `metrics.benchmark`.
 - Keep `targetEvaluations` for SLA-like target fields.
 - Keep `contextEvaluations` for non-target checks such as redundancy and preferred access technology.
 - Do not include optimiser objective/rule configuration in the event; optimiser owns that internally.
-
----
 
 ## IntentNetworkReadyEvent
 
@@ -736,14 +707,12 @@ content-type: application/json
     "version": "v1",
     "lifecycleStatus": "InProgress",
     "statusReason": "Service configuration has been prepared for orchestration/apply.",
-    "serviceContext": {
-      "location": {
-        "locationId": "AU-NSW-SYD-HOSP-001",
-        "displayName": "Sydney-Main-Hospital"
-      },
-      "serviceType": "surgical-connectivity",
-      "serviceClass": "critical-gold"
+    "location": {
+      "locationId": "AU-NSW-SYD-HOSP-001",
+      "displayName": "Sydney-Main-Hospital"
     },
+    "serviceType": "surgical-connectivity",
+    "serviceClass": "critical-gold",
     "serviceConfiguration": {
       "orchestratorTarget": "t7-network-orchestrator",
       "orchestratorProfile": "hospital-surgical-slice-apply-v1",
@@ -788,15 +757,13 @@ content-type: application/json
 ### Event-specific rules
 
 - `IntentNetworkReadyEvent` means service configuration is ready for orchestration/apply, not that apply has succeeded.
-- Use `serviceContext` outside KP.
+- Use direct `location`, `serviceType`, and `serviceClass` fields; do not wrap them in `context` or `serviceContext`.
 - Use `serviceConfiguration` because the event carries the service apply plan rather than low-level network configuration.
 - `serviceConfiguration.resourcePlan` contains the selected resources to apply.
 - `serviceConfiguration.observerResourceIds` contains all KP resource IDs for the location-based service that IA/observer should monitor, including selected and non-selected paths.
 - Include logical `orchestratorTarget`, `orchestratorProfile`, `observerTarget`, and `observerProfile` from KP.
 - Do not include `applyOutcome`.
 - Do not include QoS, bandwidth, routing policy, hops, or service attributes by default.
-
----
 
 ## IntentAssuranceEvent
 
@@ -827,14 +794,12 @@ IC MS consumes this event and updates the external `Intent` and `IntentReport` p
     "version": "v1",
     "lifecycleStatus": "Active",
     "statusReason": "Observed telemetry for selected resources is within resolved targets.",
-    "serviceContext": {
-      "location": {
-        "locationId": "AU-NSW-SYD-HOSP-001",
-        "displayName": "Sydney-Main-Hospital"
-      },
-      "serviceType": "surgical-connectivity",
-      "serviceClass": "critical-gold"
+    "location": {
+      "locationId": "AU-NSW-SYD-HOSP-001",
+      "displayName": "Sydney-Main-Hospital"
     },
+    "serviceType": "surgical-connectivity",
+    "serviceClass": "critical-gold",
     "resources": [
       {
         "role": "primary",
@@ -951,14 +916,12 @@ IC MS consumes this event and updates the external `Intent` and `IntentReport` p
     "version": "v1",
     "lifecycleStatus": "Degraded",
     "statusReason": "Observed latency is outside the resolved target.",
-    "serviceContext": {
-      "location": {
-        "locationId": "AU-NSW-SYD-HOSP-001",
-        "displayName": "Sydney-Main-Hospital"
-      },
-      "serviceType": "surgical-connectivity",
-      "serviceClass": "critical-gold"
+    "location": {
+      "locationId": "AU-NSW-SYD-HOSP-001",
+      "displayName": "Sydney-Main-Hospital"
     },
+    "serviceType": "surgical-connectivity",
+    "serviceClass": "critical-gold",
     "resources": [
       {
         "role": "primary",
@@ -1073,7 +1036,7 @@ IC MS consumes this event and updates the external `Intent` and `IntentReport` p
 
 ### Event-specific rules
 
-- Use `serviceContext` outside KP.
+- Use direct `location`, `serviceType`, and `serviceClass` fields; do not wrap them in `context` or `serviceContext`.
 - Do not include `assuranceStatus` by default; `lifecycleStatus` carries the assurance outcome.
 - Use `resources` for selected/applied resources.
 - Use `observations[].metrics` for telemetry observed for each monitored resource.
@@ -1083,8 +1046,6 @@ IC MS consumes this event and updates the external `Intent` and `IntentReport` p
 - Do not include `controlLoop` by default; downstream control-loop consumers derive the next action from the assurance event.
 - Do not include a `knowledgePlane` reference by default; IA MS works from applied service configuration, observer scope, and resolved targets.
 - No separate `IntentDriftOccurredEvent` is needed by default; drift/degradation is represented by `IntentAssuranceEvent`.
-
----
 
 ## IntentCallbackEvent
 
@@ -1141,12 +1102,12 @@ content-type: application/json
 ```json
 {
   "body": {
+    "intentId": "INT-HOSP-2026-001",
     "eventType": "IntentCallbackEvent",
     "eventVersion": "1.0",
     "source": "intent-callback-ms",
     "eventTime": "2026-04-18T12:15:00+10:00",
     "correlationId": "corr-intent-callback-001",
-    "intentId": "INT-HOSP-2026-001",
     "orchestratorState": {
       "state": "APPLIED",
       "details": {

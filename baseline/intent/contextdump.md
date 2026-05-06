@@ -672,22 +672,39 @@ For simple semantic/capability rejection, `IntentRejectedEvent` carries `lifecyc
 - Removed the simple `evaluations` block.
 - Kept `knowledgePlane` reference because the rejection is based on semantic/KP lookup.
 
-## Correction — IntentResolvedEvent lean handoff:
+## Baseline update — common metrics container:
 
-Date: 2026-05-06T13:21:47.810835+00:00
+Date: 2026-05-06T12:34:03.490482+00:00
+
+### Updated files:
+- `intent_internal_events_specification.md`
+- `kp_master_config.md`
+
+### Baseline:
+Use `metrics` as the common resource performance container.
+
+### Rules:
+- Use `metrics.benchmark` for KP/design-time expected values.
+- Use `metrics.telemetry` for observed/runtime values.
+- Avoid a separate resource-level `benchmarks` object in event resource entries.
+- Evaluation entries may still use `benchmarkValue` or `observedValue` to identify which value is being compared.
+- Location/service-level `benchmarks` in KP remain valid because they represent design-time service capability values, not per-resource performance samples.
+
+### Applied:
+- Converted event resource-entry `benchmarks` to `metrics.benchmark`.
+- Converted KP resource `benchmarks` to `metrics.benchmark`.
+
+## Baseline update — direct location/service fields applied across events:
+
+Date: 2026-05-06T13:47:53.357187+00:00
 
 ### Updated file:
 - `intent_internal_events_specification.md`
 
-### Correction:
-`IntentResolvedEvent` no longer uses `serviceContext`, `capabilityStatus`, or a generic `context` wrapper.
-
 ### Baseline:
-`IntentResolvedEvent` uses direct fields: `location`, `serviceType`, `serviceClass`, `priority`, `preferredAccessTechnology`, `redundancyRequired`, `targets`, and `candidates`.
+Where applicable, internal events use direct `location`, `serviceType`, and `serviceClass` fields. Do not wrap them in `context`, `serviceContext`, or `locationBasedService`.
 
-### Confirmed:
-- No `serviceContext` in `IntentResolvedEvent`.
-- No `capabilityStatus` in `IntentResolvedEvent`.
-- No generic `context` wrapper in `IntentResolvedEvent`.
-- No `resourceRoles` / `accessTechnologies` in `IntentResolvedEvent`.
-- `candidates` contains all available resources for the resolved location/service.
+### Applied:
+- Flattened `serviceContext` in `IntentRejectedEvent`, `IntentOptimisedEvent`, `IntentNetworkReadyEvent`, and `IntentAssuranceEvent`.
+- Confirmed `IntentResolvedEvent` remains lean with direct fields and no generic `context` wrapper.
+- Confirmed no event body uses `serviceContext` or a top-level generic `context` wrapper.
