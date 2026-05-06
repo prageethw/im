@@ -708,3 +708,24 @@ Where applicable, internal events use direct `location`, `serviceType`, and `ser
 - Flattened `serviceContext` in `IntentRejectedEvent`, `IntentOptimisedEvent`, `IntentNetworkReadyEvent`, and `IntentAssuranceEvent`.
 - Confirmed `IntentResolvedEvent` remains lean with direct fields and no generic `context` wrapper.
 - Confirmed no event body uses `serviceContext` or a top-level generic `context` wrapper.
+
+## Baseline update — optimiser input/evaluation buckets:
+
+Date: 2026-05-06T14:26:54.078317+00:00
+
+### Updated file:
+- `intent_internal_events_specification.md`
+
+### Baseline:
+`IntentResolvedEvent` separates optimiser inputs into `targets`, `constraints`, and `preferences`.
+
+### Mapping:
+- `targets` -> `targetEvaluations`
+- `constraints` -> `constraintEvaluations`
+- `preferences` -> `preferenceEvaluations`
+
+### Applied:
+- Moved `priority` and `redundancyRequired` under `constraints`.
+- Moved `preferredAccessTechnology` under `preferences`.
+- Replaced `contextEvaluations` with `constraintEvaluations` and `preferenceEvaluations`.
+- Removed boolean/string `target`/`benchmarkValue` comparisons from constraints/preferences by default.

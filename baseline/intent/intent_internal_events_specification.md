@@ -47,7 +47,7 @@ Use `correlationId` as a common scalar reference.
 
 ### Optimiser status and evaluation rule
 
-Use optimiser statuses as the primary outcome for the optimisation run, target evaluations, and context evaluations.
+Use optimiser statuses as the primary outcome for the optimisation run, target evaluations, and constraint evaluations.
 
 Supported statuses:
 
@@ -316,14 +316,18 @@ content-type: application/json
     },
     "serviceType": "surgical-connectivity",
     "serviceClass": "critical-gold",
-    "priority": "critical",
-    "preferredAccessTechnology": "5G",
-    "redundancyRequired": true,
     "targets": {
       "maxLatencyMs": 10,
       "minAvailabilityPercent": 99.99,
       "maxJitterMs": 2,
       "maxPacketLossPercent": 0.01
+    },
+    "constraints": {
+      "priority": "critical",
+      "redundancyRequired": true
+    },
+    "preferences": {
+      "preferredAccessTechnology": "5G"
     },
     "candidates": [
       {
@@ -335,11 +339,13 @@ content-type: application/json
         ],
         "accessTechnology": "fibre",
         "provider": "fixed-access-b",
-        "benchmarks": {
-          "expectedLatencyMs": 7,
-          "expectedAvailabilityPercent": 99.996,
-          "expectedJitterMs": 1.1,
-          "expectedPacketLossPercent": 0.004
+        "metrics": {
+          "benchmark": {
+            "latencyMs": 7,
+            "availabilityPercent": 99.996,
+            "jitterMs": 1.1,
+            "packetLossPercent": 0.004
+          }
         },
         "relationships": [
           {
@@ -357,11 +363,13 @@ content-type: application/json
         ],
         "accessTechnology": "5G",
         "provider": "mobile-access-a",
-        "benchmarks": {
-          "expectedLatencyMs": 8,
-          "expectedAvailabilityPercent": 99.995,
-          "expectedJitterMs": 1.5,
-          "expectedPacketLossPercent": 0.005
+        "metrics": {
+          "benchmark": {
+            "latencyMs": 8,
+            "availabilityPercent": 99.995,
+            "jitterMs": 1.5,
+            "packetLossPercent": 0.005
+          }
         },
         "relationships": [
           {
@@ -379,11 +387,13 @@ content-type: application/json
         ],
         "accessTechnology": "5G",
         "provider": "mobile-access-b",
-        "benchmarks": {
-          "expectedLatencyMs": 10,
-          "expectedAvailabilityPercent": 99.994,
-          "expectedJitterMs": 1.8,
-          "expectedPacketLossPercent": 0.006
+        "metrics": {
+          "benchmark": {
+            "latencyMs": 10,
+            "availabilityPercent": 99.994,
+            "jitterMs": 1.8,
+            "packetLossPercent": 0.006
+          }
         },
         "relationships": [
           {
@@ -401,11 +411,13 @@ content-type: application/json
         ],
         "accessTechnology": "fibre",
         "provider": "fixed-access-a",
-        "benchmarks": {
-          "expectedLatencyMs": 9,
-          "expectedAvailabilityPercent": 99.997,
-          "expectedJitterMs": 1.2,
-          "expectedPacketLossPercent": 0.003
+        "metrics": {
+          "benchmark": {
+            "latencyMs": 9,
+            "availabilityPercent": 99.997,
+            "jitterMs": 1.2,
+            "packetLossPercent": 0.003
+          }
         },
         "relationships": [
           {
@@ -439,8 +451,10 @@ content-type: application/json
 - `IntentResolvedEvent` is the lean optimiser handoff.
 - Use direct `location`, `serviceType`, and `serviceClass` fields; do not wrap them in `context` or `serviceContext`.
 - Do not include `capabilityStatus`; successful `IntentResolvedEvent` emission implies semantic/capability resolution succeeded.
-- Keep `priority`, `preferredAccessTechnology`, and `redundancyRequired` as direct optimiser inputs.
-- Pass runtime `targets` to the optimiser.
+- Use `targets` for measurable SLA-style objectives.
+- Use `constraints` for hard non-target inputs such as `priority` and `redundancyRequired`.
+- Use `preferences` for soft selection guidance such as `preferredAccessTechnology`.
+- Do not include direct top-level `priority`, `preferredAccessTechnology`, or `redundancyRequired`; place them under `constraints` or `preferences`.
 - Do not include a generic `context` wrapper by default.
 - Do not include `resourceRoles` or `accessTechnologies`; candidates already expose actual roles and access technologies.
 - Do not include a separate top-level KP `benchmarks` block when it duplicates `targets`.
@@ -502,11 +516,13 @@ content-type: application/json
         "resourceClass": "critical-gold-access",
         "accessTechnology": "fibre",
         "provider": "fixed-access-b",
-        "benchmarks": {
-          "expectedLatencyMs": 7,
-          "expectedAvailabilityPercent": 99.996,
-          "expectedJitterMs": 1.1,
-          "expectedPacketLossPercent": 0.004
+        "metrics": {
+          "benchmark": {
+            "latencyMs": 7,
+            "availabilityPercent": 99.996,
+            "jitterMs": 1.1,
+            "packetLossPercent": 0.004
+          }
         }
       },
       {
@@ -518,11 +534,13 @@ content-type: application/json
         "resourceClass": "critical-gold-access",
         "accessTechnology": "5G",
         "provider": "mobile-access-b",
-        "benchmarks": {
-          "expectedLatencyMs": 10,
-          "expectedAvailabilityPercent": 99.994,
-          "expectedJitterMs": 1.8,
-          "expectedPacketLossPercent": 0.006
+        "metrics": {
+          "benchmark": {
+            "latencyMs": 10,
+            "availabilityPercent": 99.994,
+            "jitterMs": 1.8,
+            "packetLossPercent": 0.006
+          }
         }
       }
     ],
@@ -560,19 +578,22 @@ content-type: application/json
         "unit": "percent"
       }
     ],
-    "contextEvaluations": [
+    "constraintEvaluations": [
+      {
+        "name": "priority",
+        "status": "COMPLETED",
+        "statusReason": "Critical priority was accepted as an optimisation constraint."
+      },
       {
         "name": "redundancyRequired",
         "status": "COMPLETED",
-        "target": true,
-        "benchmarkValue": true,
         "statusReason": "Selected resources include primary and secondary roles."
-      },
+      }
+    ],
+    "preferenceEvaluations": [
       {
         "name": "preferredAccessTechnology",
         "status": "COMPLETED",
-        "target": "5G",
-        "benchmarkValue": "5G",
         "statusReason": "Selected secondary resource uses preferred access technology."
       }
     ],
@@ -610,7 +631,7 @@ content-type: application/json
     "serviceClass": "critical-gold",
     "optimisationRun": {
       "status": "INFEASIBLE",
-      "statusReason": "No candidate resource set could satisfy all required targets."
+      "statusReason": "No candidate resource set could satisfy all required targets and constraints."
     },
     "targetEvaluations": [
       {
@@ -629,12 +650,23 @@ content-type: application/json
         "unit": "percent"
       }
     ],
-    "contextEvaluations": [
+    "constraintEvaluations": [
+      {
+        "name": "priority",
+        "status": "COMPLETED",
+        "statusReason": "Critical priority was accepted as an optimisation constraint."
+      },
       {
         "name": "redundancyRequired",
+        "status": "INFEASIBLE",
+        "statusReason": "No feasible primary/secondary resource set could satisfy the resolved targets."
+      }
+    ],
+    "preferenceEvaluations": [
+      {
+        "name": "preferredAccessTechnology",
         "status": "COMPLETED",
-        "target": true,
-        "benchmarkValue": true
+        "statusReason": "Preferred access technology was considered during infeasibility analysis."
       }
     ],
     "references": {
@@ -661,9 +693,12 @@ content-type: application/json
 - Use direct `location`, `serviceType`, and `serviceClass` fields; do not wrap them in `context` or `serviceContext`.
 - Use selected `resources`, not `candidates`.
 - Use optimiser statuses such as `COMPLETED`, `INFEASIBLE`, and `FAILED`.
-- Use `benchmarkValue` in evaluations when the comparison value came from `metrics.benchmark`.
-- Keep `targetEvaluations` for SLA-like target fields.
-- Keep `contextEvaluations` for non-target checks such as redundancy and preferred access technology.
+- Use `targetEvaluations` for measurable SLA-style target checks.
+- Use `constraintEvaluations` for checks that correspond to `IntentResolvedEvent.constraints`.
+- Use `preferenceEvaluations` for checks that correspond to `IntentResolvedEvent.preferences`.
+- Use value comparison fields such as `target`, `benchmarkValue`, and `observedValue` for measurable target evaluations.
+- For boolean/string constraints and preferences, use `name`, `status`, and `statusReason` unless the actual comparison value adds meaningful diagnostic value.
+- Do not use `constraintEvaluations`; this avoids reintroducing generic context terminology.
 - Do not include optimiser objective/rule configuration in the event; optimiser owns that internally.
 
 ## IntentNetworkReadyEvent
@@ -1171,3 +1206,15 @@ IA MS owns correlation, mapping, skip/dead-letter decisions, and downstream assu
 - Use `priority`, not legacy priority field names.
 - Use `critical`, not old clinical-specific priority values.
 - Use `resources` for selected optimisation resources in `IntentOptimisedEvent`.
+
+
+### Optimisation input/evaluation bucket rule
+
+`IntentResolvedEvent` separates optimiser inputs into `targets`, `constraints`, and `preferences`.
+
+`IntentOptimisedEvent` maps those input buckets to `targetEvaluations`, `constraintEvaluations`, and `preferenceEvaluations`.
+
+Use measurable value comparison fields such as `target`, `benchmarkValue`, and `observedValue` for target evaluations.
+
+For boolean/string constraints and preferences, use `name`, `status`, and `statusReason` unless the actual comparison value adds useful diagnostic value.
+
