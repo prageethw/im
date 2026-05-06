@@ -119,6 +119,12 @@ Use simple role names such as `primary` and `secondary`.
 
 Avoid placeholder-only candidates arrays in the main event example.
 
+### Expression example rule:
+
+When `IntentValidatedEvent.expression` is shown in the main example, include a concrete expression sample rather than a placeholder-only object.
+
+The expression sample should match the runtime Intent create request shape and preserve the same field names used by IC MS and the active `IntentSpecification`.
+
 ---
 
 ## Common CloudEvents headers:
@@ -194,7 +200,22 @@ content-type: application/json
       "id": "hospital-surgical-slice-spec-v1.20"
     },
     "expression": {
-      "...similar payload to create intent request..."
+      "location": {
+        "locationId": "sydney-hospital",
+        "locationType": "hospital",
+        "geographicScope": "campus"
+      },
+      "serviceClass": "critical-gold",
+      "priority": "critical",
+      "maxLatencyMs": 10,
+      "minAvailabilityPercent": 99.99,
+      "maxJitterMs": 2,
+      "maxPacketLossPercent": 0.01,
+      "redundancyRequired": true,
+      "preferredAccessTechnology": "5G",
+      "timeWindow": {
+        "startDateTime": "2026-04-18T12:00:00+10:00"
+      }
     },
     "references": {
       "correlationId": "corr-intent-create-001",

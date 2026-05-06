@@ -776,3 +776,16 @@ Use `roles`, `resourceId`, `resourceType`, `resourceClass`, `resourceAttributes`
 
 ### Role names:
 Use simple role names such as `primary` and `secondary`, not `primaryCandidate` or `backupCandidate`.
+
+## Baseline update — concrete IntentValidatedEvent expression sample:
+
+Date: 2026-05-06T00:58:07.387898+00:00
+
+### Updated file:
+- `intent_internal_events_specification.md`
+
+### Baseline:
+When `IntentValidatedEvent.expression` is shown in the main example, include a concrete expression sample rather than a placeholder-only object.
+
+### Applied change:
+Replaced the placeholder expression object with a full sample containing `location`, `serviceClass`, `priority`, latency/availability/jitter/packet-loss targets, `redundancyRequired`, `preferredAccessTechnology`, and `timeWindow`.
