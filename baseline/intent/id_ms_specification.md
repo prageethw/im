@@ -36,7 +36,7 @@ ID MS does not own runtime `Intent`, `IntentReport`, semantic validation, policy
 | Full replace specification | `PUT` | `/intentManagement/v5/intentSpecification/{id}` |
 | Partial update specification | `PATCH` | `/intentManagement/v5/intentSpecification/{id}` |
 | Delete specification | `DELETE` | `/intentManagement/v5/intentSpecification/{id}` |
-| Activate specification | `PUT` / `PATCH` | `/intentManagement/v5/intentSpecification/{id}` |
+| Activate specification | `POST` | `/intentManagement/v5/intentSpecification/{id}/activate` |
 
 ### Hub subscription APIs:
 
@@ -77,20 +77,10 @@ There is no `DELETED` lifecycle status. Delete is an operation/outcome, not a no
 - Single-resource GET responses may use private cache with bounded TTL.
 - List GET responses may use shorter private cache with bounded TTL.
 - Clients may request a fresh GET response with `Cache-Control: no-cache`.
+- ETag is not used for GET revalidation.
+- `If-None-Match` and `304 Not Modified` are not baselined.
 - ETag is used only for unsafe operation concurrency through `If-Match`.
 - No caching strategy is baselined for non-GET operations.
-
-### Client cache bypass / fresh-read rule:
-
-For any GET request, clients may request a fresh response by sending:
-
-```http
-Cache-Control: no-cache
-```
-
-When this header is present on a GET request, the service should bypass or refresh any cached representation and return a fresh `200 OK` response from the authoritative read path where available.
-
-This applies to resource GETs, list GETs, report GETs, and hub subscription GETs.
 
 ---
 
@@ -643,44 +633,15 @@ Content-Type: application/json
 
 ---
 
-## 10. Activate IntentSpecification through lifecycle update:
+## 10. Activate IntentSpecification:
 
-Activation is not exposed through a custom action endpoint.
-
-Do not use:
+### Request:
 
 ```http
-POST /intentManagement/v5/intentSpecification/{id}
-```
-
-Use the existing TMF-style resource update endpoint instead.
-
-### PATCH request:
-
-```http
-PATCH /intentManagement/v5/intentSpecification/hospital-surgical-slice-spec-v1.20
-Content-Type: application/json
+POST /intentManagement/v5/intentSpecification/hospital-surgical-slice-spec-v1.20/activate
 Accept: application/json
 If-Match: "intent-spec-hospital-surgical-slice-spec-v1.20-v1"
 ```
-
-```json
-{
-  "lifecycleStatus": "ACTIVE"
-}
-```
-
-### PUT request option:
-
-`PUT` may also be used when the caller sends the full replacement representation with:
-
-```json
-{
-  "lifecycleStatus": "ACTIVE"
-}
-```
-
-as part of the complete `IntentSpecification` resource.
 
 ### Success response:
 
@@ -711,14 +672,12 @@ ETag: "intent-spec-hospital-surgical-slice-spec-v1.20-v2"
 
 ### Rules:
 
-- Activation is represented as a lifecycle/status update on the `IntentSpecification` resource.
-- Use `PUT` or `PATCH` against `/intentSpecification/{id}`.
-- `PUT` is preferred for deterministic full replacement.
-- `PATCH` is supported for TMF compatibility but is not encouraged for ordinary edits.
-- The requested target version changes from `DRAFT` to `ACTIVE`.
-- ID MS retires the previous active version in the same specification family.
+- Activation changes the target version from `DRAFT` to `ACTIVE`.
+- Activation retires the previous active version in the same family.
 - ID MS refreshes its own active-spec cache through an internal no-cache/refresh path.
 - ID MS emits status-change events for the new active version and the previous retired version.
+
+---
 
 ## 11. Hub create subscription:
 
@@ -776,7 +735,6 @@ Accept: application/json
 HTTP/1.1 200 OK
 Content-Type: application/json
 ETag: "subscription-sub-001-v1"
-Cache-Control: private, max-age=300
 ```
 
 ```json
@@ -844,7 +802,7 @@ ID MS emits external TMF-style resource events for `IntentSpecification` changes
 
 These are external subscription events for the `IntentSpecification` resource.
 
-They are not internal fulfilment events and must not expose II MS semantic validation details, lightweight II MS KP details, `t7.knowledge plane` data, optimiser decisions, runtime assurance state, telemetry, callback payloads, or internal candidate/resource scoring details.
+They are not internal fulfilment events and must not expose II MS semantic validation details, lightweight II MS KP details, `t7-knowledge-plane` data, optimiser decisions, runtime assurance state, telemetry, callback payloads, or internal candidate/resource scoring details.
 
 ---
 
@@ -1030,4 +988,4 @@ They are not internal fulfilment events and must not expose II MS semantic valid
 - Do not use `DELETED` as an `IntentSpecification.lifecycleStatus`.
 - ETag is used for unsafe-operation concurrency only.
 - Caching is GET-only.
-- Activation is represented through PUT/PATCH lifecycle update, not a custom action endpoint.
+- `If-None-Match` and `304 Not Modified` are not baselined.

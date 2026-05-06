@@ -617,193 +617,21 @@ The cache bypass / fresh-read rule is now documented explicitly: clients may sen
 ### Current rule:
 All successful GET responses include `Cache-Control`. Non-GET operations do not have a caching strategy baseline. ETag is used for unsafe-operation concurrency through `If-Match`.
 
-## Baseline update — IC MS consistency sweep:
+## Baseline update — stable terminology and JSON repair:
 
-Date: 2026-05-05T13:33:21.556132+00:00
-
-### Updated file:
-- `ic_ms_design_brief.md`
-
-### Checked files:
-- `ic_ms_design_brief.md`
-- `ic_ms_specification.md`
-
-### Result:
-IC MS consistency sweep completed with result: **PASS WITH NOTES**.
-
-### Confirmed:
-- External REST interfaces are documented.
-- IntentReport interfaces are documented.
-- Hub subscription interfaces are documented.
-- External `Intent*Event` and `IntentReport*Event` examples are documented.
-- Internal produced/consumed event interfaces are documented.
-- Runtime create/update uses concrete `intentSpecification.id` only.
-- `GET /intent/{id}` returns the current projected Intent state.
-- `DELETE /intent/{id}` is termination, not physical deletion.
-- Intent-level and version-level lifecycle models are separated.
-- GET response examples include `Cache-Control`.
-- Cache bypass using `Cache-Control: no-cache` is documented.
-- ETag is used for unsafe-operation concurrency through `If-Match`.
-- Security boundary places system authentication at NGW and business/user authorisation at OEX.
-- IC MS boundaries exclude semantic validation, policy validation, optimisation, runtime assurance truth, raw telemetry, and callback ingestion.
-
-## Baseline update — IC MS consistency sweep cleanup:
-
-Date: 2026-05-05T15:12:47.650875+00:00
+Date: 2026-05-06T01:11:47.933166+00:00
 
 ### Updated files:
-- `ic_ms_design_brief.md`
-- `ic_ms_specification.md`
-
-### Cleanup:
-Added canonical endpoint summary to `ic_ms_specification.md` and exact NGW/OEX/IC security boundary wording to `ic_ms_design_brief.md`.
-
-### Result:
-IC MS consistency sweep now completes with result: **PASS**.
-
-### Notes:
-- None.
-
-## Baseline update — internal events specification document:
-
-Date: 2026-05-05T22:52:21.040037+00:00
-
-### New stable file:
 - `intent_internal_events_specification.md`
+- stable baseline files containing old terminology where applicable
 
-### Baseline:
-Created the internal events specification document for Intent Enabler internal workflow events.
+### Repair:
+Fixed terminology alignment and JSON validity in the internal events specification.
 
-### Events covered:
-- `IntentValidatedEvent`
-- `IntentRejectedEvent`
-- `IntentResolvedEvent`
-- `IntentOptimisedEvent`
-- `IntentAssuranceEvent`
-- `IntentCallbackEvent`
-
-### Common rules:
-The document includes CloudEvents header conventions, common payload style, idempotency/replay requirements, topic/key baseline, and producer/consumer ownership boundaries.
-
-## Baseline update — add IntentNetworkReadyEvent to internal events specification:
-
-Date: 2026-05-05T22:56:16.136761+00:00
-
-### Updated file:
-- `intent_internal_events_specification.md`
-
-### Baseline:
-Added `IntentNetworkReadyEvent` to the internal events specification.
-
-### Event meaning:
-`IntentNetworkReadyEvent` is an internal milestone event indicating that the optimised intent has been successfully applied and the network/service is ready.
-
-### Relationship to IntentAssuranceEvent:
-`IntentNetworkReadyEvent` is the network-ready/apply-success milestone. `IntentAssuranceEvent` remains the ongoing assurance/runtime outcome event used for active, degraded, failed, paused, and recovered projection updates.
-
-### Updated internal event catalogue:
-- `IntentValidatedEvent`
-- `IntentRejectedEvent`
-- `IntentResolvedEvent`
-- `IntentOptimisedEvent`
-- `IntentNetworkReadyEvent`
-- `IntentAssuranceEvent`
-- `IntentCallbackEvent`
-
-## Baseline update — lean internal event payload rule:
-
-Date: 2026-05-05T23:21:29.812933+00:00
-
-### Updated file:
-- `intent_internal_events_specification.md`
-
-### Baseline:
-Internal events should carry milestone-specific fields directly and avoid embedding full external TMF resource objects unless the consumer genuinely needs that full resource snapshot.
-
-### Rule:
-Use top-level event-body fields for the event fact, such as `intentId`, `version`, `lifecycleStatus`, `statusReason`, and milestone-specific outcomes. Use `references` for links/hrefs and related resource references instead of duplicating IDs, version, lifecycle, and resource metadata inside embedded external resource objects.
-
-### Applied example:
-`IntentValidatedEvent` was updated to remove the embedded full external `intent` object. The event now keeps top-level `intentId`, `version`, `lifecycleStatus`, concrete `intentSpecification.id`, expression, validation outcome, and reference hrefs.
-
-## Baseline update — remove request-id field from internal event examples:
-
-Date: 2026-05-05T23:31:54.534720+00:00
-
-### Updated file:
-- `intent_internal_events_specification.md`
-
-### Baseline:
-Use `correlationId` as the standard cross-service trace/correlation reference in internal event examples.
-
-### Rule:
-Do not include `request-id field` in internal event examples unless a request-ID propagation model is explicitly baselined later.
-
-### Applied change:
-Removed `request-id field` from the `IntentValidatedEvent` example references.
-
-## Baseline update — internal events stale terminology cleanup:
-
-Date: 2026-05-06T00:46:21.968142+00:00
-
-### Updated file:
-- `intent_internal_events_specification.md`
-
-### Baseline correction:
-Regenerated the internal events specification to remove stale active examples and align with the latest agreed event terminology and payload-shape rules.
-
-### Confirmed active rules:
-- Use `location.locationId`, not a separate site block.
-- Use `context` in `IntentResolvedEvent`.
-- Do not include optimiser input-selection details or successful semantic/policy evaluation details in `IntentResolvedEvent`.
-- Do not include a validation object in `IntentValidatedEvent`.
-- Do not include extra request-id fields in internal event examples.
-- Use named `references` objects with `id` and `href`.
-- Use `t7-knowledge-plane` when the Knowledge Plane must be referenced.
-
-## Baseline update — concrete IntentResolvedEvent candidates:
-
-Date: 2026-05-06T00:56:31.388531+00:00
-
-### Updated file:
-- `intent_internal_events_specification.md`
-
-### Baseline:
-`IntentResolvedEvent.candidates` should show the concrete reusable resource-entry shape in the main example instead of a placeholder-only array.
-
-### Rule:
-Use `roles`, `resourceId`, `resourceType`, `resourceClass`, `resourceAttributes`, `relationships`, and `metrics`.
-
-### Role names:
-Use simple role names such as `primary` and `secondary`, not `primaryCandidate` or `backupCandidate`.
-
-## Baseline update — concrete IntentValidatedEvent expression sample:
-
-Date: 2026-05-06T00:58:07.387898+00:00
-
-### Updated file:
-- `intent_internal_events_specification.md`
-
-### Baseline:
-When `IntentValidatedEvent.expression` is shown in the main example, include a concrete expression sample rather than a placeholder-only object.
-
-### Applied change:
-Replaced the placeholder expression object with a full sample containing `location`, `serviceClass`, `priority`, latency/availability/jitter/packet-loss targets, `redundancyRequired`, `preferredAccessTechnology`, and `timeWindow`.
-
-## Baseline update — richer IntentResolvedEvent candidate set:
-
-Date: 2026-05-06T01:01:09.900785+00:00
-
-### Updated file:
-- `intent_internal_events_specification.md`
-
-### Baseline:
-`IntentResolvedEvent.candidates` must show a real optimisation candidate set in the main example.
-
-### Rule:
-The main example should include at least two primary candidate paths and two secondary candidate paths. Use simple role names `primary` and `secondary`.
-
-### Applied change:
-Updated `IntentResolvedEvent.candidates` to include four candidate paths:
-- two primary paths
-- two secondary paths
+### Confirmed:
+- All JSON code blocks in `intent_internal_events_specification.md` validate successfully.
+- Current internal event examples use `location.locationId`.
+- `IntentResolvedEvent` uses `context`, no generic request block, no optimiser input-selection block, and no successful semantic/policy evaluation block.
+- `IntentValidatedEvent` has a concrete expression sample and no validation object.
+- Resource references use named `references` objects with `id` and `href`.
+- Knowledge Plane naming uses `t7-knowledge-plane`.

@@ -6,9 +6,9 @@ This file is the baseline lightweight II MS KP / Master Knowledge Config.
 
 II MS uses this lightweight KP for local semantic resolution, mappings, policy hints, and service-specific interpretation.
 
-II MS also uses external `t7.knowledge plane` for network-related topology/resource context and broader network intelligence.
+II MS also uses external `t7-knowledge-plane` for network-related topology/resource context and broader network intelligence.
 
-Neither this lightweight KP nor `t7.knowledge plane` is exposed as the external `Intent` or `IntentSpecification`.
+Neither this lightweight KP nor `t7-knowledge-plane` is exposed as the external `Intent` or `IntentSpecification`.
 
 ## Baseline rules:
 

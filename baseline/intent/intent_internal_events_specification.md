@@ -1,16 +1,14 @@
 # intent_internal_events_specification.md
 
-## Intent internal events specification:
+## Intent internal events specification
 
-### Purpose:
+### Purpose
 
 This document defines the current baseline internal event contracts for the Intent Enabler workflow.
 
-Internal events are platform events exchanged between Intent Enabler microservices and internal platform components.
+Internal events are platform events exchanged between Intent Enabler microservices and internal platform components. They are not external TMF listener events.
 
-They are not external TMF listener events.
-
-### Event style:
+### Event style
 
 Internal events use CloudEvents-style metadata in transport headers and a plain JSON body.
 
@@ -18,7 +16,7 @@ The JSON payload uses a top-level `body` object.
 
 Internal events are state/progress/outcome facts, not point-to-point commands for one specific consumer.
 
-### Common internal event rules:
+### Common internal event rules
 
 | **Rule** | **Baseline** |
 |---|---|
@@ -33,7 +31,7 @@ Internal events are state/progress/outcome facts, not point-to-point commands fo
 | Sensitive data | Do not include secrets, tokens, credentials, or raw internal stack traces |
 | External exposure | Internal payloads are not directly exposed as external TMF events |
 
-### Lean internal payload rule:
+### Lean internal payload rule
 
 Internal events should carry milestone-specific fields directly and avoid embedding full external TMF resource objects unless the consumer genuinely needs that full resource snapshot.
 
@@ -41,15 +39,13 @@ Use top-level event-body fields for the event fact, such as `intentId`, `version
 
 Use `references` for links/hrefs and related resource references instead of duplicating IDs, version, lifecycle, and resource metadata inside embedded external resource objects.
 
-This keeps each internal event lean and avoids duplicate truth.
-
-### Standard correlation rule:
+### Standard correlation rule
 
 Use `correlationId` as the standard cross-service trace/correlation reference in internal event examples.
 
 No additional request-id reference field is baselined by default.
 
-### IntentValidatedEvent admission rule:
+### IntentValidatedEvent admission rule
 
 Do not include a validation object in `IntentValidatedEvent`.
 
@@ -57,21 +53,13 @@ The event is emitted only after IC MS admission validation succeeds, so successf
 
 If validation fails, IC MS returns a synchronous API validation error and does not emit `IntentValidatedEvent`.
 
-### Shared terminology rule:
+### Shared terminology rule
 
 Use agreed intent-domain terminology consistently across internal events.
 
-Use:
+Use `location.locationId`, not a separate site block, unless a future event explicitly baselines a separate concept from `location`.
 
-```json
-"location": {
-  "locationId": "sydney-hospital"
-}
-```
-
-Do not introduce a separate site block unless a future event explicitly baselines a separate concept from `location`.
-
-### Common references shape:
+### Common references shape
 
 Internal event `references` should use named resource reference objects with `id` and `href` where available.
 
@@ -80,22 +68,24 @@ Use `correlationId` as a common scalar reference.
 Recommended shape:
 
 ```json
-"references": {
-  "correlationId": "corr-intent-create-001",
-  "intent": {
-    "id": "INT-HOSP-2026-001",
-    "href": "/intentManagement/v5/intent/INT-HOSP-2026-001"
-  },
-  "intentSpecification": {
-    "id": "hospital-surgical-slice-spec-v1.20",
-    "href": "/intentManagement/v5/intentSpecification/hospital-surgical-slice-spec-v1.20"
+{
+  "references": {
+    "correlationId": "corr-intent-create-001",
+    "intent": {
+      "id": "INT-HOSP-2026-001",
+      "href": "/intentManagement/v5/intent/INT-HOSP-2026-001"
+    },
+    "intentSpecification": {
+      "id": "hospital-surgical-slice-spec-v1.20",
+      "href": "/intentManagement/v5/intentSpecification/hospital-surgical-slice-spec-v1.20"
+    }
   }
 }
 ```
 
 Where a reference is not useful to the consuming event, it may be omitted rather than included as an empty object.
 
-### IntentResolvedEvent handoff content rule:
+### IntentResolvedEvent handoff content rule
 
 For `IntentResolvedEvent`, use `context` for non-measurable contextual attributes such as `priority`, `redundancyRequired`, and `preferredAccessTechnology`.
 
@@ -109,7 +99,7 @@ The optimiser owns its optimisation data-source, model, and method selection unl
 
 Use `t7-knowledge-plane` as the standard service-style name where the Knowledge Plane must be referenced.
 
-### Candidate resource example rule:
+### Candidate resource example rule
 
 `IntentResolvedEvent.candidates` should show the concrete reusable resource-entry shape in the main example.
 
@@ -121,8 +111,7 @@ The main example should include at least two primary candidate paths and two sec
 
 Avoid placeholder-only candidates arrays in the main event example.
 
-
-### Expression example rule:
+### Expression example rule
 
 When `IntentValidatedEvent.expression` is shown in the main example, include a concrete expression sample rather than a placeholder-only object.
 
@@ -130,7 +119,7 @@ The expression sample should match the runtime Intent create request shape and p
 
 ---
 
-## Common CloudEvents headers:
+## Common CloudEvents headers
 
 ```http
 ce-specversion: 1.0
@@ -144,11 +133,11 @@ content-type: application/json
 
 ---
 
-## Internal event catalogue:
+## Internal event catalogue
 
 | **Event** | **Producer** | **Current primary consumer(s)** | **Purpose** |
 |---|---|---|---|
-| `IntentValidatedEvent` | `intent-controller-ms` | `intent-intelligence-ms` | Runtime Intent passed IC MS syntactic validation and was admitted into the lifecycle |
+| `IntentValidatedEvent` | `intent-controller-ms` | `intent-intelligence-ms` | Runtime Intent passed IC MS admission validation and was admitted into the lifecycle |
 | `IntentRejectedEvent` | `intent-intelligence-ms` | `intent-controller-ms` | Semantic/policy validation rejected the admitted Intent |
 | `IntentResolvedEvent` | `intent-intelligence-ms` | `intent-optimiser-ms` | Intent was semantically resolved into a canonical internal handoff for optimisation |
 | `IntentOptimisedEvent` | `intent-optimiser-ms` | `intent-assurance-ms` / downstream orchestration path | Optimisation completed and selected resources/outcome are available |
@@ -158,27 +147,27 @@ content-type: application/json
 
 ---
 
-## IntentValidatedEvent:
+## IntentValidatedEvent
 
-### Producer:
+### Producer
 
 ```text
 intent-controller-ms
 ```
 
-### Current primary consumer:
+### Current primary consumer
 
 ```text
 intent-intelligence-ms
 ```
 
-### Meaning:
+### Meaning
 
 The runtime Intent has passed IC MS admission validation and has been admitted into the intent lifecycle.
 
 This event is a state/progress event, not a point-to-point command.
 
-### Example headers:
+### Example headers
 
 ```http
 ce-specversion: 1.0
@@ -190,7 +179,7 @@ ce-subject: INT-HOSP-2026-001
 content-type: application/json
 ```
 
-### Example body:
+### Example body
 
 ```json
 {
@@ -235,7 +224,7 @@ content-type: application/json
 }
 ```
 
-### Notes:
+### Notes
 
 - IC MS emits this only after the external Intent projection and outbox record are durably committed.
 - The referenced `IntentSpecification.id` is concrete and must have been confirmed `ACTIVE` or validated from a valid fresh cached active spec.
@@ -244,27 +233,27 @@ content-type: application/json
 
 ---
 
-## IntentRejectedEvent:
+## IntentRejectedEvent
 
-### Producer:
+### Producer
 
 ```text
 intent-intelligence-ms
 ```
 
-### Current primary consumer:
+### Current primary consumer
 
 ```text
 intent-controller-ms
 ```
 
-### Meaning:
+### Meaning
 
 Semantic, policy, or downstream interpretation validation rejected the admitted Intent.
 
 IC MS consumes this event and projects the external Intent lifecycle/status to `Rejected`.
 
-### Example headers:
+### Example headers
 
 ```http
 ce-specversion: 1.0
@@ -276,7 +265,7 @@ ce-subject: INT-HOSP-2026-001
 content-type: application/json
 ```
 
-### Example body:
+### Example body
 
 ```json
 {
@@ -309,7 +298,7 @@ content-type: application/json
 }
 ```
 
-### Notes:
+### Notes
 
 - IC MS consumes this idempotently through inbox handling.
 - IC MS emits external `IntentStatusChangeEvent` after the external projection changes to `Rejected`.
@@ -317,25 +306,25 @@ content-type: application/json
 
 ---
 
-## IntentResolvedEvent:
+## IntentResolvedEvent
 
-### Producer:
+### Producer
 
 ```text
 intent-intelligence-ms
 ```
 
-### Current primary consumer:
+### Current primary consumer
 
 ```text
 intent-optimiser-ms
 ```
 
-### Meaning:
+### Meaning
 
 The admitted Intent has been semantically resolved into a canonical internal handoff that can be optimised.
 
-### Example headers:
+### Example headers
 
 ```http
 ce-specversion: 1.0
@@ -347,7 +336,7 @@ ce-subject: INT-HOSP-2026-001
 content-type: application/json
 ```
 
-### Example body:
+### Example body
 
 ```json
 {
@@ -470,37 +459,6 @@ content-type: application/json
         }
       }
     ],
-        "metrics": {
-          "expectedLatencyMs": 8,
-          "expectedAvailabilityPercent": 99.995,
-          "expectedJitterMs": 1.5,
-          "expectedPacketLossPercent": 0.005
-        }
-      },
-      {
-        "roles": [
-          "secondary"
-        ],
-        "resourceId": "path-syd-hosp-fibre-secondary",
-        "resourceType": "networkPath",
-        "resourceClass": "critical-gold-access",
-        "resourceAttributes": {
-          "accessTechnology": "fibre"
-        },
-        "relationships": [
-          {
-            "type": "protects",
-            "resourceId": "path-syd-hosp-5g-primary"
-          }
-        ],
-        "metrics": {
-          "expectedLatencyMs": 9,
-          "expectedAvailabilityPercent": 99.997,
-          "expectedJitterMs": 1.2,
-          "expectedPacketLossPercent": 0.003
-        }
-      }
-    ],
     "references": {
       "correlationId": "corr-intent-create-001",
       "intent": {
@@ -516,7 +474,7 @@ content-type: application/json
 }
 ```
 
-### Notes:
+### Notes
 
 - Successful semantic/policy resolution is implied by the event.
 - The optimiser owns optimisation data-source/model/method selection unless an explicit optimisation-profile handoff is baselined later.
@@ -526,25 +484,25 @@ content-type: application/json
 
 ---
 
-## IntentOptimisedEvent:
+## IntentOptimisedEvent
 
-### Producer:
+### Producer
 
 ```text
 intent-optimiser-ms
 ```
 
-### Current primary consumer:
+### Current primary consumer
 
 ```text
 intent-assurance-ms
 ```
 
-### Meaning:
+### Meaning
 
 Optimisation completed and selected resources/outcome are available for downstream apply/assurance processing.
 
-### Allowed optimisation outcome statuses:
+### Allowed optimisation outcome statuses
 
 ```text
 Optimised
@@ -552,7 +510,7 @@ NotOptimisable
 Error
 ```
 
-### Example headers:
+### Example headers
 
 ```http
 ce-specversion: 1.0
@@ -564,7 +522,7 @@ ce-subject: INT-HOSP-2026-001
 content-type: application/json
 ```
 
-### Example body:
+### Example body
 
 ```json
 {
@@ -582,36 +540,61 @@ content-type: application/json
         "roles": [
           "primary"
         ],
-        "resourceId": "path-syd-hosp-5g-primary",
+        "resourceId": "path-syd-hosp-fibre-primary-b",
         "resourceType": "networkPath",
         "resourceClass": "critical-gold-access",
         "resourceAttributes": {
-          "accessTechnology": "5G"
+          "accessTechnology": "fibre",
+          "provider": "fixed-access-b"
         },
         "relationships": [
           {
-            "type": "backup",
-            "resourceId": "path-syd-hosp-fibre-backup"
+            "type": "pairedSecondary",
+            "resourceId": "path-syd-hosp-5g-secondary-b"
           }
         ],
         "metrics": {
-          "expectedLatencyMs": 8,
-          "expectedAvailabilityPercent": 99.995,
-          "expectedJitterMs": 1.5,
-          "expectedPacketLossPercent": 0.005
+          "expectedLatencyMs": 7,
+          "expectedAvailabilityPercent": 99.996,
+          "expectedJitterMs": 1.1,
+          "expectedPacketLossPercent": 0.004
+        }
+      },
+      {
+        "roles": [
+          "secondary"
+        ],
+        "resourceId": "path-syd-hosp-5g-secondary-b",
+        "resourceType": "networkPath",
+        "resourceClass": "critical-gold-access",
+        "resourceAttributes": {
+          "accessTechnology": "5G",
+          "provider": "mobile-access-b"
+        },
+        "relationships": [
+          {
+            "type": "protects",
+            "resourceId": "path-syd-hosp-fibre-primary-b"
+          }
+        ],
+        "metrics": {
+          "expectedLatencyMs": 10,
+          "expectedAvailabilityPercent": 99.994,
+          "expectedJitterMs": 1.8,
+          "expectedPacketLossPercent": 0.006
         }
       }
     ],
     "optimisationOutcome": {
       "status": "Optimised",
-      "statusReason": "Optimisation completed and selected a compliant primary/backup resource set."
+      "statusReason": "Optimisation completed and selected a compliant primary/secondary resource set."
     },
     "evaluations": [
       {
         "name": "latency",
         "result": "Compliant",
         "target": 10,
-        "expectedValue": 8
+        "expectedValue": 7
       }
     ],
     "references": {
@@ -629,28 +612,28 @@ content-type: application/json
 }
 ```
 
-### Notes:
+### Notes
 
 - Use `resources`, not `selectedResources` or `selected`.
 - If optimisation cannot produce a valid result, use `optimisationOutcome.status = NotOptimisable` or `Error`.
 
 ---
 
-## IntentNetworkReadyEvent:
+## IntentNetworkReadyEvent
 
-### Producer:
+### Producer
 
 ```text
 intent-assurance-ms / network apply path
 ```
 
-### Current primary consumer:
+### Current primary consumer
 
 ```text
 intent-controller-ms
 ```
 
-### Meaning:
+### Meaning
 
 `IntentNetworkReadyEvent` is an internal milestone event indicating that the optimised intent has been successfully applied and the network/service is ready.
 
@@ -658,7 +641,7 @@ It represents a network-ready/apply-success milestone.
 
 `IntentAssuranceEvent` remains the ongoing assurance/runtime outcome event used for active, degraded, failed, paused, and recovered projection updates.
 
-### Example headers:
+### Example headers
 
 ```http
 ce-specversion: 1.0
@@ -670,7 +653,7 @@ ce-subject: INT-HOSP-2026-001
 content-type: application/json
 ```
 
-### Example body:
+### Example body
 
 ```json
 {
@@ -690,23 +673,48 @@ content-type: application/json
         "roles": [
           "primary"
         ],
-        "resourceId": "path-syd-hosp-5g-primary",
+        "resourceId": "path-syd-hosp-fibre-primary-b",
         "resourceType": "networkPath",
         "resourceClass": "critical-gold-access",
         "resourceAttributes": {
-          "accessTechnology": "5G"
+          "accessTechnology": "fibre",
+          "provider": "fixed-access-b"
         },
         "relationships": [
           {
-            "type": "backup",
-            "resourceId": "path-syd-hosp-fibre-backup"
+            "type": "pairedSecondary",
+            "resourceId": "path-syd-hosp-5g-secondary-b"
           }
         ],
         "metrics": {
-          "expectedLatencyMs": 8,
-          "expectedAvailabilityPercent": 99.995,
-          "expectedJitterMs": 1.5,
-          "expectedPacketLossPercent": 0.005
+          "expectedLatencyMs": 7,
+          "expectedAvailabilityPercent": 99.996,
+          "expectedJitterMs": 1.1,
+          "expectedPacketLossPercent": 0.004
+        }
+      },
+      {
+        "roles": [
+          "secondary"
+        ],
+        "resourceId": "path-syd-hosp-5g-secondary-b",
+        "resourceType": "networkPath",
+        "resourceClass": "critical-gold-access",
+        "resourceAttributes": {
+          "accessTechnology": "5G",
+          "provider": "mobile-access-b"
+        },
+        "relationships": [
+          {
+            "type": "protects",
+            "resourceId": "path-syd-hosp-fibre-primary-b"
+          }
+        ],
+        "metrics": {
+          "expectedLatencyMs": 10,
+          "expectedAvailabilityPercent": 99.994,
+          "expectedJitterMs": 1.8,
+          "expectedPacketLossPercent": 0.006
         }
       }
     ],
@@ -729,7 +737,7 @@ content-type: application/json
 }
 ```
 
-### Notes:
+### Notes
 
 - `IntentNetworkReadyEvent` is a milestone event, not an ongoing telemetry event.
 - IC MS may use this event to project the external Intent lifecycle to `Active` where that is the selected flow.
@@ -738,27 +746,27 @@ content-type: application/json
 
 ---
 
-## IntentAssuranceEvent:
+## IntentAssuranceEvent
 
-### Producer:
+### Producer
 
 ```text
 intent-assurance-ms
 ```
 
-### Current primary consumer:
+### Current primary consumer
 
 ```text
 intent-controller-ms
 ```
 
-### Meaning:
+### Meaning
 
 IA MS reports curated assurance/apply/runtime outcome truth.
 
 IC MS consumes this event and updates the external `Intent` and `IntentReport` projections.
 
-### Example body — active outcome:
+### Example body — active outcome
 
 ```json
 {
@@ -803,7 +811,7 @@ IC MS consumes this event and updates the external `Intent` and `IntentReport` p
 }
 ```
 
-### Example body — degraded outcome:
+### Example body — degraded outcome
 
 ```json
 {
@@ -840,7 +848,7 @@ IC MS consumes this event and updates the external `Intent` and `IntentReport` p
 }
 ```
 
-### Notes:
+### Notes
 
 - IC MS processes `IntentAssuranceEvent` idempotently through inbox handling.
 - IC MS updates the current projected external `Intent` resource.
@@ -849,45 +857,45 @@ IC MS consumes this event and updates the external `Intent` and `IntentReport` p
 
 ---
 
-## IntentCallbackEvent:
+## IntentCallbackEvent
 
-### Producer:
+### Producer
 
 ```text
 intent-callback-ms
 ```
 
-### Current primary consumer:
+### Current primary consumer
 
 ```text
 intent-assurance-ms
 ```
 
-### Topic:
+### Topic
 
 ```text
 t7.intent.management.events.callbacks
 ```
 
-### Kafka key:
+### Kafka key
 
 ```text
 intentId
 ```
 
-### CloudEvents type:
+### CloudEvents type
 
 ```text
 au.com.mycsp.intent.callback.v1
 ```
 
-### Meaning:
+### Meaning
 
 ICB MS publishes accepted raw callbacks to Kafka as `IntentCallbackEvent`.
 
 IA MS consumes this event, validates/correlates intent state, maps raw orchestrator state into lifecycle/assurance meaning, and emits assurance outcomes where applicable.
 
-### Example headers:
+### Example headers
 
 ```http
 ce-specversion: 1.0
@@ -899,7 +907,7 @@ ce-subject: INT-HOSP-2026-001
 content-type: application/json
 ```
 
-### Example body:
+### Example body
 
 ```json
 {
@@ -913,7 +921,7 @@ content-type: application/json
     "orchestratorState": {
       "state": "APPLIED",
       "details": {
-        "...raw orchestrator callback payload..."
+        "message": "Raw orchestrator callback payload retained by ICB MS"
       }
     },
     "orchestratorSource": "t7.orchestrator",
@@ -922,7 +930,7 @@ content-type: application/json
 }
 ```
 
-### ICB MS ownership boundary:
+### ICB MS ownership boundary
 
 ICB MS does not validate intent existence, map orchestrator state, derive orchestrator type, decide actionability, or emit assurance/lifecycle events.
 
@@ -930,7 +938,7 @@ IA MS owns correlation, mapping, skip/dead-letter decisions, and downstream assu
 
 ---
 
-## Idempotency and replay:
+## Idempotency and replay
 
 | **Requirement** | **Producer baseline** |
 |---|---|
@@ -950,7 +958,7 @@ IA MS owns correlation, mapping, skip/dead-letter decisions, and downstream assu
 
 ---
 
-## Topic/key baseline:
+## Topic/key baseline
 
 | **Event** | **Suggested topic** | **Kafka key** |
 |---|---|---|
@@ -964,7 +972,7 @@ IA MS owns correlation, mapping, skip/dead-letter decisions, and downstream assu
 
 ---
 
-## Final notes:
+## Final notes
 
 - Internal events are not external TMF events.
 - External TMF events must be curated projection/resource events.
