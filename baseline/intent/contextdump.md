@@ -812,3 +812,21 @@ When displaying examples in chat or terminal-style output for review, placeholde
 
 ### Important distinction:
 This does not change the Markdown specification/design file rule. Markdown spec/design files should still be written fully with complete JSON payloads, headers, examples, and related details unless a shortened file is explicitly requested.
+
+## Baseline update — IntentAssuranceEvent lean metrics-only observations:
+
+Date: 2026-05-07T01:22:15.434300+00:00
+
+### Updated file:
+- `intent_internal_events_specification.md`
+
+### Baseline:
+`IntentAssuranceEvent` does not include `evaluations` by default, including degraded state.
+
+### Applied:
+- Active payload includes selected/applied resource observations only.
+- Degraded payload includes all monitored resource observations needed for control-loop re-optimisation.
+- Observations carry `metrics` only, not `evaluations`.
+- Observation `role` always uses the actual resource role, such as `primary` or `secondary`.
+- Removed `observedAlternative` from assurance examples.
+- IA MS reports lifecycle state and observed metrics; II MS/optimiser handle control-loop evaluation and selection.
