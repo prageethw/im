@@ -174,10 +174,26 @@ Example:
 ```json
 {
   "resources": [
-    "...similar payload to previous example..."
+    {
+      "resourceId": "SYD-PRI-01",
+      "roles": [
+        "primary"
+      ],
+      "resourceType": "networkPath",
+      "resourceClass": "critical-gold-access",
+      "metrics": {
+        "benchmark": {
+          "latencyMs": 7,
+          "availabilityPercent": 99.996,
+          "jitterMs": 1.1,
+          "packetLossPercent": 0.004
+        }
+      }
+    }
   ],
   "evaluationSummary": {
-    "...similar payload to previous example..."
+    "status": "COMPLETED",
+    "statusReason": "Selected resource set satisfies the resolved targets and constraints."
   }
 }
 ```
@@ -235,20 +251,27 @@ Accept: application/json
   },
   "expression": {
     "location": {
-      "locationId": "sydney-hospital",
+      "locationId": "AU-NSW-SYD-HOSP-001",
       "locationType": "hospital",
       "geographicScope": "campus"
     },
+    "serviceType": "surgical-connectivity",
     "serviceClass": "critical-gold",
-    "priority": "critical",
-    "maxLatencyMs": 10,
-    "minAvailabilityPercent": 99.99,
-    "maxJitterMs": 2,
-    "maxPacketLossPercent": 0.01,
-    "redundancyRequired": true,
-    "preferredAccessTechnology": "5G",
-    "timeWindow": {
-      "startDateTime": "2026-04-18T12:00:00+10:00"
+    "targets": {
+      "maxLatencyMs": 10,
+      "minAvailabilityPercent": 99.99,
+      "maxJitterMs": 2,
+      "maxPacketLossPercent": 0.01
+    },
+    "constraints": {
+      "priority": "critical",
+      "redundancyRequired": true,
+      "timeWindow": {
+        "startDateTime": "2026-04-18T12:00:00+10:00"
+      }
+    },
+    "preferences": {
+      "preferredAccessTechnology": "5G"
     }
   },
   "validFor": {
@@ -286,7 +309,29 @@ Last-Modified: Sat, 18 Apr 2026 02:00:00 GMT
     "href": "/intentManagement/v5/intentSpecification/hospital-surgical-slice-spec-v1.20"
   },
   "expression": {
-    "...same payload as request..."
+    "location": {
+      "locationId": "AU-NSW-SYD-HOSP-001",
+      "locationType": "hospital",
+      "geographicScope": "campus"
+    },
+    "serviceType": "surgical-connectivity",
+    "serviceClass": "critical-gold",
+    "targets": {
+      "maxLatencyMs": 10,
+      "minAvailabilityPercent": 99.99,
+      "maxJitterMs": 2,
+      "maxPacketLossPercent": 0.01
+    },
+    "constraints": {
+      "priority": "critical",
+      "redundancyRequired": true,
+      "timeWindow": {
+        "startDateTime": "2026-04-18T12:00:00+10:00"
+      }
+    },
+    "preferences": {
+      "preferredAccessTechnology": "5G"
+    }
   },
   "validFor": {
     "startDateTime": "2026-04-18T12:00:00+10:00"
@@ -303,7 +348,7 @@ Last-Modified: Sat, 18 Apr 2026 02:00:00 GMT
     "partialUpdate": {
       "href": "/intentManagement/v5/intent/INT-HOSP-2026-001",
       "method": "PATCH",
-      "warning": "PATCH is supported for TMF compatibility but not encouraged for ordinary edits. Prefer PUT where deterministic full replacement is supported."
+      "warning": "PATCH is supported for compatibility but PUT is preferred for deterministic full updates."
     }
   }
 }
@@ -423,20 +468,27 @@ Cache-Control: private, max-age=300
   },
   "expression": {
     "location": {
-      "locationId": "sydney-hospital",
+      "locationId": "AU-NSW-SYD-HOSP-001",
       "locationType": "hospital",
       "geographicScope": "campus"
     },
+    "serviceType": "surgical-connectivity",
     "serviceClass": "critical-gold",
-    "priority": "critical",
-    "maxLatencyMs": 8,
-    "minAvailabilityPercent": 99.99,
-    "maxJitterMs": 2,
-    "maxPacketLossPercent": 0.01,
-    "redundancyRequired": true,
-    "preferredAccessTechnology": "5G",
-    "timeWindow": {
-      "startDateTime": "2026-04-18T12:00:00+10:00"
+    "targets": {
+      "maxLatencyMs": 8,
+      "minAvailabilityPercent": 99.99,
+      "maxJitterMs": 2,
+      "maxPacketLossPercent": 0.01
+    },
+    "constraints": {
+      "priority": "critical",
+      "redundancyRequired": true,
+      "timeWindow": {
+        "startDateTime": "2026-04-18T12:00:00+10:00"
+      }
+    },
+    "preferences": {
+      "preferredAccessTechnology": "5G"
     }
   },
   "validFor": {
@@ -498,20 +550,27 @@ If-Match: "intent-INT-HOSP-2026-001-v3"
   },
   "expression": {
     "location": {
-      "locationId": "sydney-hospital",
+      "locationId": "AU-NSW-SYD-HOSP-001",
       "locationType": "hospital",
       "geographicScope": "campus"
     },
+    "serviceType": "surgical-connectivity",
     "serviceClass": "critical-gold",
-    "priority": "critical",
-    "maxLatencyMs": 8,
-    "minAvailabilityPercent": 99.99,
-    "maxJitterMs": 2,
-    "maxPacketLossPercent": 0.01,
-    "redundancyRequired": true,
-    "preferredAccessTechnology": "5G",
-    "timeWindow": {
-      "startDateTime": "2026-04-18T12:00:00+10:00"
+    "targets": {
+      "maxLatencyMs": 8,
+      "minAvailabilityPercent": 99.99,
+      "maxJitterMs": 2,
+      "maxPacketLossPercent": 0.01
+    },
+    "constraints": {
+      "priority": "critical",
+      "redundancyRequired": true,
+      "timeWindow": {
+        "startDateTime": "2026-04-18T12:00:00+10:00"
+      }
+    },
+    "preferences": {
+      "preferredAccessTechnology": "5G"
     }
   },
   "@type": "Intent",
@@ -534,19 +593,58 @@ ETag: "intent-INT-HOSP-2026-001-v4"
   "href": "/intentManagement/v5/intent/INT-HOSP-2026-001",
   "name": "Sydney Hospital Surgical Connection Intent",
   "description": "Updated surgical connection request with lower latency target.",
-  "version": "v3",
+  "humanExpression": "I need a surgical connection in Sydney Hospital with latency less than or equal to 10 ms and availability at least 99.99%.",
+  "version": "v4",
   "lifecycleStatus": "Acknowledged",
   "statusReason": "Updated intent version accepted for semantic validation and fulfilment.",
-  "statusChangeDate": "2026-04-18T12:30:00+10:00",
+  "statusChangeDate": "2026-04-18T12:00:00+10:00",
   "intentSpecification": {
     "id": "hospital-surgical-slice-spec-v1.20",
     "href": "/intentManagement/v5/intentSpecification/hospital-surgical-slice-spec-v1.20"
   },
   "expression": {
-    "...similar payload to request..."
+    "location": {
+      "locationId": "AU-NSW-SYD-HOSP-001",
+      "locationType": "hospital",
+      "geographicScope": "campus"
+    },
+    "serviceType": "surgical-connectivity",
+    "serviceClass": "critical-gold",
+    "targets": {
+      "maxLatencyMs": 8,
+      "minAvailabilityPercent": 99.99,
+      "maxJitterMs": 2,
+      "maxPacketLossPercent": 0.01
+    },
+    "constraints": {
+      "priority": "critical",
+      "redundancyRequired": true,
+      "timeWindow": {
+        "startDateTime": "2026-04-18T12:00:00+10:00"
+      }
+    },
+    "preferences": {
+      "preferredAccessTechnology": "5G"
+    }
+  },
+  "validFor": {
+    "startDateTime": "2026-04-18T12:00:00+10:00"
   },
   "@type": "Intent",
-  "@baseType": "Entity"
+  "@baseType": "Entity",
+  "_links": {
+    "self": {
+      "href": "/intentManagement/v5/intent/INT-HOSP-2026-001"
+    },
+    "intentReport": {
+      "href": "/intentManagement/v5/intent/INT-HOSP-2026-001/intentReport"
+    },
+    "partialUpdate": {
+      "href": "/intentManagement/v5/intent/INT-HOSP-2026-001",
+      "method": "PATCH",
+      "warning": "PATCH is supported for compatibility but PUT is preferred for deterministic full updates."
+    }
+  }
 }
 ```
 
@@ -575,7 +673,26 @@ If-Match: "intent-INT-HOSP-2026-001-v4"
     "id": "hospital-surgical-slice-spec-v1.20"
   },
   "expression": {
-    "maxLatencyMs": 7
+    "location": {
+      "locationId": "AU-NSW-SYD-HOSP-001",
+      "locationType": "hospital",
+      "geographicScope": "campus"
+    },
+    "serviceType": "surgical-connectivity",
+    "serviceClass": "critical-gold",
+    "targets": {
+      "maxLatencyMs": 7
+    },
+    "constraints": {
+      "priority": "critical",
+      "redundancyRequired": true,
+      "timeWindow": {
+        "startDateTime": "2026-04-18T12:00:00+10:00"
+      }
+    },
+    "preferences": {
+      "preferredAccessTechnology": "5G"
+    }
   }
 }
 ```
@@ -594,18 +711,59 @@ ETag: "intent-INT-HOSP-2026-001-v5"
   "id": "INT-HOSP-2026-001",
   "href": "/intentManagement/v5/intent/INT-HOSP-2026-001",
   "name": "Sydney Hospital Surgical Connection Intent",
-  "version": "v4",
+  "description": "Patched surgical connection request with lower latency target.",
+  "humanExpression": "I need a surgical connection in Sydney Hospital with latency less than or equal to 10 ms and availability at least 99.99%.",
+  "version": "v5",
   "lifecycleStatus": "Acknowledged",
   "statusReason": "Patched intent version accepted for semantic validation and fulfilment.",
-  "statusChangeDate": "2026-04-18T12:40:00+10:00",
+  "statusChangeDate": "2026-04-18T12:00:00+10:00",
   "intentSpecification": {
-    "id": "hospital-surgical-slice-spec-v1.20"
+    "id": "hospital-surgical-slice-spec-v1.20",
+    "href": "/intentManagement/v5/intentSpecification/hospital-surgical-slice-spec-v1.20"
   },
   "expression": {
-    "...similar payload to previous projected intent with patched maxLatencyMs..."
+    "location": {
+      "locationId": "AU-NSW-SYD-HOSP-001",
+      "locationType": "hospital",
+      "geographicScope": "campus"
+    },
+    "serviceType": "surgical-connectivity",
+    "serviceClass": "critical-gold",
+    "targets": {
+      "maxLatencyMs": 7,
+      "minAvailabilityPercent": 99.99,
+      "maxJitterMs": 2,
+      "maxPacketLossPercent": 0.01
+    },
+    "constraints": {
+      "priority": "critical",
+      "redundancyRequired": true,
+      "timeWindow": {
+        "startDateTime": "2026-04-18T12:00:00+10:00"
+      }
+    },
+    "preferences": {
+      "preferredAccessTechnology": "5G"
+    }
+  },
+  "validFor": {
+    "startDateTime": "2026-04-18T12:00:00+10:00"
   },
   "@type": "Intent",
-  "@baseType": "Entity"
+  "@baseType": "Entity",
+  "_links": {
+    "self": {
+      "href": "/intentManagement/v5/intent/INT-HOSP-2026-001"
+    },
+    "intentReport": {
+      "href": "/intentManagement/v5/intent/INT-HOSP-2026-001/intentReport"
+    },
+    "partialUpdate": {
+      "href": "/intentManagement/v5/intent/INT-HOSP-2026-001",
+      "method": "PATCH",
+      "warning": "PATCH is supported for compatibility but PUT is preferred for deterministic full updates."
+    }
+  }
 }
 ```
 
@@ -973,7 +1131,7 @@ IC MS emits external TMF-style resource events for `Intent` projection changes.
 
 These are external projection/resource events only.
 
-They must not expose raw telemetry, raw optimiser decisions, raw `t7-knowledge-plane` data, raw callback payloads, internal candidate scoring, or internal Kafka event payloads.
+They must not expose raw telemetry, raw optimiser decisions, raw `t7.knowledge plane` data, raw callback payloads, internal candidate scoring, or internal Kafka event payloads.
 
 ---
 
@@ -1039,7 +1197,7 @@ They must not expose raw telemetry, raw optimiser decisions, raw `t7-knowledge-p
     },
     "changedAttributes": [
       {
-        "name": "expression.maxLatencyMs",
+        "name": "expression.targets.maxLatencyMs",
         "oldValue": 8,
         "newValue": 7
       }
@@ -1292,3 +1450,112 @@ Current primary consumer is II MS / `intent-intelligence-ms`, but the event may 
 - Clients may request a fresh GET using `Cache-Control: no-cache`.
 - `IntentDeleteEvent` represents termination acceptance, not physical deletion.
 - External `Intent*Event` and `IntentReport*Event` payloads are curated projection events and must not expose raw telemetry, raw callback payloads, raw optimiser details, raw knowledge-plane data, or internal candidate scoring.
+
+## Shared semantic bucket baseline
+
+### Runtime Intent expression
+
+IC MS accepts and projects runtime Intent resources using the shared semantic buckets `targets`, `constraints`, and `preferences`.
+
+### Complete POST /intent request body example
+
+```json
+{
+  "name": "Sydney Hospital Surgical Connection Intent",
+  "description": "Request for a surgical connection in Sydney Hospital.",
+  "humanExpression": "I need a surgical connection in Sydney Hospital with latency less than or equal to 10 ms and availability at least 99.99%.",
+  "intentSpecification": {
+    "id": "hospital-surgical-slice-spec-v1.20"
+  },
+  "expression": {
+    "location": {
+      "locationId": "AU-NSW-SYD-HOSP-001",
+      "locationType": "hospital",
+      "geographicScope": "campus"
+    },
+    "serviceType": "surgical-connectivity",
+    "serviceClass": "critical-gold",
+    "targets": {
+      "maxLatencyMs": 10,
+      "minAvailabilityPercent": 99.99,
+      "maxJitterMs": 2,
+      "maxPacketLossPercent": 0.01
+    },
+    "constraints": {
+      "priority": "critical",
+      "redundancyRequired": true,
+      "timeWindow": {
+        "startDateTime": "2026-04-18T12:00:00+10:00"
+      }
+    },
+    "preferences": {
+      "preferredAccessTechnology": "5G"
+    }
+  },
+  "validFor": {
+    "startDateTime": "2026-04-18T12:00:00+10:00"
+  },
+  "@type": "Intent",
+  "@baseType": "Entity"
+}
+```
+
+### Complete IntentValidatedEvent body example
+
+```json
+{
+  "body": {
+    "intentId": "INT-HOSP-2026-001",
+    "version": "v1",
+    "lifecycleStatus": "Acknowledged",
+    "statusReason": "Intent request passed IC MS admission validation and was admitted for downstream processing.",
+    "intentSpecification": {
+      "id": "hospital-surgical-slice-spec-v1.20"
+    },
+    "expression": {
+      "location": {
+        "locationId": "AU-NSW-SYD-HOSP-001",
+        "locationType": "hospital",
+        "geographicScope": "campus"
+      },
+      "serviceType": "surgical-connectivity",
+      "serviceClass": "critical-gold",
+      "targets": {
+        "maxLatencyMs": 10,
+        "minAvailabilityPercent": 99.99,
+        "maxJitterMs": 2,
+        "maxPacketLossPercent": 0.01
+      },
+      "constraints": {
+        "priority": "critical",
+        "redundancyRequired": true,
+        "timeWindow": {
+          "startDateTime": "2026-04-18T12:00:00+10:00"
+        }
+      },
+      "preferences": {
+        "preferredAccessTechnology": "5G"
+      }
+    },
+    "references": {
+      "correlationId": "corr-intent-create-001",
+      "intent": {
+        "id": "INT-HOSP-2026-001",
+        "href": "/intentManagement/v5/intent/INT-HOSP-2026-001"
+      },
+      "intentSpecification": {
+        "id": "hospital-surgical-slice-spec-v1.20",
+        "href": "/intentManagement/v5/intentSpecification/hospital-surgical-slice-spec-v1.20"
+      }
+    }
+  }
+}
+```
+
+### Baseline rules
+
+- `/intent.expression` uses `targets`, `constraints`, and `preferences`.
+- `IntentValidatedEvent.expression` carries the same semantic buckets.
+- IC MS validates syntactic shape against the active ID MS `expressionSpecification`.
+- IC MS does not perform semantic/KP validation, optimisation, orchestration, or assurance.
+

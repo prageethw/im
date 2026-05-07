@@ -178,13 +178,19 @@ content-type: application/json
       },
       "serviceType": "surgical-connectivity",
       "serviceClass": "critical-gold",
-      "priority": "critical",
-      "maxLatencyMs": 10,
-      "minAvailabilityPercent": 99.99,
-      "maxJitterMs": 2,
-      "maxPacketLossPercent": 0.01,
-      "preferredAccessTechnology": "5G",
-      "redundancyRequired": true
+      "targets": {
+        "maxLatencyMs": 10,
+        "minAvailabilityPercent": 99.99,
+        "maxJitterMs": 2,
+        "maxPacketLossPercent": 0.01
+      },
+      "constraints": {
+        "priority": "critical",
+        "redundancyRequired": true
+      },
+      "preferences": {
+        "preferredAccessTechnology": "5G"
+      }
     },
     "references": {
       "correlationId": "corr-intent-create-001",
@@ -205,12 +211,11 @@ content-type: application/json
 
 - `IntentValidatedEvent` is the lean IC MS admission-focused event.
 - It carries the admitted runtime `expression`.
+- The admitted expression uses the shared semantic buckets: `targets`, `constraints`, and `preferences`.
 - It includes `serviceType`.
-- It keeps `redundancyRequired` when it came from expression mapping/defaults.
-- It does not include KP `benchmarks`, `resources`, `resources`, optimiser details, orchestrator details, or a `validation` object.
+- It keeps `redundancyRequired` under `expression.constraints` when it came from expression mapping/defaults.
+- It does not include KP `benchmarks`, optimiser details, orchestration details, assurance details, or a `validation` object.
 - It uses canonical `location.locationId` in the baseline event example.
-
----
 
 ## IntentRejectedEvent
 
@@ -464,17 +469,13 @@ content-type: application/json
 
 - `IntentResolvedEvent` is the lean optimiser handoff.
 - Use direct `location`, `serviceType`, and `serviceClass` fields; do not wrap them in `context` or `serviceContext`.
-- Do not include `capabilityStatus`; successful `IntentResolvedEvent` emission implies semantic/capability resolution succeeded.
 - Use `targets` for measurable SLA-style objectives.
 - Use `constraints` for hard non-target inputs such as `priority` and `redundancyRequired`.
 - Use `preferences` for soft selection guidance such as `preferredAccessTechnology`.
 - Do not include direct top-level `priority`, `preferredAccessTechnology`, or `redundancyRequired`; place them under `constraints` or `preferences`.
 - Do not include a generic `context` wrapper by default.
-- Do not include `resourceRoles` or `accessTechnologies`; resources already expose actual roles and access technologies.
-- Do not include a separate top-level KP `benchmarks` block when it duplicates `targets`.
-- Map KP/domain resource knowledge to runtime optimiser handoff `resources`.
+- Do not include `capabilityStatus`; successful `IntentResolvedEvent` emission implies semantic/capability resolution succeeded.
 - `IntentResolvedEvent.resources` contains all available resources for the resolved location/service that the optimiser may consider, not a shortened selected list.
-- Resource entries use runtime `roles`, mapped from KP `resourceRoles`.
 - For first-pass optimisation resources use `metrics.benchmark`; for degradation/control-loop re-optimisation resources use `metrics.telemetry` and omit `metrics.benchmark` by default.
 
 ## IntentOptimisedEvent
@@ -562,7 +563,7 @@ content-type: application/json
       "status": "COMPLETED",
       "statusReason": "Optimisation completed and selected a feasible primary/secondary resource set."
     },
-    "targetEvaluations": [
+    "targets": [
       {
         "name": "latency",
         "status": "COMPLETED",
@@ -592,7 +593,7 @@ content-type: application/json
         "unit": "percent"
       }
     ],
-    "constraintEvaluations": [
+    "constraints": [
       {
         "name": "priority",
         "status": "COMPLETED",
@@ -604,7 +605,7 @@ content-type: application/json
         "statusReason": "Selected resources include primary and secondary roles."
       }
     ],
-    "preferenceEvaluations": [
+    "preferences": [
       {
         "name": "preferredAccessTechnology",
         "status": "COMPLETED",
@@ -645,9 +646,9 @@ content-type: application/json
     "serviceClass": "critical-gold",
     "optimisationRun": {
       "status": "INFEASIBLE",
-      "statusReason": "No resource resource set could satisfy all required targets and constraints."
+      "statusReason": "No resource set could satisfy all required targets and constraints."
     },
-    "targetEvaluations": [
+    "targets": [
       {
         "name": "latency",
         "status": "INFEASIBLE",
@@ -664,7 +665,7 @@ content-type: application/json
         "unit": "percent"
       }
     ],
-    "constraintEvaluations": [
+    "constraints": [
       {
         "name": "priority",
         "status": "COMPLETED",
@@ -676,7 +677,7 @@ content-type: application/json
         "statusReason": "No feasible primary/secondary resource set could satisfy the resolved targets."
       }
     ],
-    "preferenceEvaluations": [
+    "preferences": [
       {
         "name": "preferredAccessTechnology",
         "status": "COMPLETED",
@@ -707,12 +708,11 @@ content-type: application/json
 - Use direct `location`, `serviceType`, and `serviceClass` fields; do not wrap them in `context` or `serviceContext`.
 - Use `resources` for optimiser-selected resources.
 - Use optimiser statuses such as `COMPLETED`, `INFEASIBLE`, and `FAILED`.
-- Use `targetEvaluations` for measurable SLA-style target checks.
-- Use `constraintEvaluations` for checks that correspond to `IntentResolvedEvent.constraints`.
-- Use `preferenceEvaluations` for checks that correspond to `IntentResolvedEvent.preferences`.
+- Use `targets`, `constraints`, and `preferences` in `IntentOptimisedEvent` as evaluated outcome buckets.
+- The event type and `optimisationRun.status` make clear that these buckets are optimisation results, not raw input.
 - Use value comparison fields such as `target`, `benchmarkValue`, and `observedValue` for measurable target evaluations.
 - For boolean/string constraints and preferences, use `name`, `status`, and `statusReason` unless the actual comparison value adds meaningful diagnostic value.
-- Do not use `contextEvaluations`; this avoids reintroducing generic context terminology.
+- Do not use `targetEvaluations`, `constraintEvaluations`, `preferenceEvaluations`, or `contextEvaluations` by default.
 - Do not include optimiser objective/rule configuration in the event; optimiser owns that internally.
 
 ## IntentNetworkReadyEvent
@@ -856,6 +856,12 @@ IC MS consumes this event and updates the external `Intent` and `IntentReport` p
     },
     "serviceType": "surgical-connectivity",
     "serviceClass": "critical-gold",
+    "targets": {
+      "maxLatencyMs": 10,
+      "minAvailabilityPercent": 99.99,
+      "maxJitterMs": 2,
+      "maxPacketLossPercent": 0.01
+    },
     "resources": [
       {
         "role": "primary",
@@ -918,6 +924,12 @@ IC MS consumes this event and updates the external `Intent` and `IntentReport` p
     },
     "serviceType": "surgical-connectivity",
     "serviceClass": "critical-gold",
+    "targets": {
+      "maxLatencyMs": 10,
+      "minAvailabilityPercent": 99.99,
+      "maxJitterMs": 2,
+      "maxPacketLossPercent": 0.01
+    },
     "resources": [
       {
         "role": "primary",
@@ -988,16 +1000,17 @@ IC MS consumes this event and updates the external `Intent` and `IntentReport` p
 ### Event-specific rules
 
 - Use direct `location`, `serviceType`, and `serviceClass` fields; do not wrap them in `context` or `serviceContext`.
+- Include `targets` so control-loop consumers know which runtime objectives the observed metrics relate to.
+- Do not include `constraints` or `preferences` in assurance by default unless a future control-loop consumer explicitly needs them.
 - Do not include `assuranceStatus` by default; `lifecycleStatus` carries the assurance outcome.
 - Use `resources` for selected/applied resources.
 - Use `observations[].metrics` for telemetry observed for each monitored resource.
 - Do not include `evaluations` in `IntentAssuranceEvent` by default, including degraded state.
-- IA MS reports lifecycle state and observed metrics; II MS uses those metrics to trigger a new `IntentResolvedEvent`, and the optimiser evaluates feasibility/selection.
+- IA MS reports lifecycle state, runtime targets, and observed metrics; II MS uses those metrics to trigger a new `IntentResolvedEvent`, and the optimiser evaluates feasibility/selection.
 - Keep healthy/active assurance events lean and include observations for selected/applied resources only.
 - When `lifecycleStatus` is `Degraded`, `Failed`, or the event supports re-optimisation, IA MS may include observations for all monitored resources from the observer scope.
 - In `observations`, always use the actual resource role, such as `primary` or `secondary`; do not use `observedAlternative`.
-- Selected/applied resources are identified separately by `IntentAssuranceEvent.resources`.
-- Do not include top-level `targets` or `observedMetrics`; runtime telemetry belongs in `observations[].metrics`.
+- Do not include top-level `observedMetrics`; runtime telemetry belongs in `observations[].metrics`.
 - Do not include `controlLoop` by default; downstream control-loop consumers derive the next action from the assurance event.
 - Do not include a `knowledgePlane` reference by default; IA MS works from applied service configuration, observer scope, and resolved targets.
 - No separate `IntentDriftOccurredEvent` is needed by default; drift/degradation is represented by `IntentAssuranceEvent`.
@@ -1057,29 +1070,41 @@ content-type: application/json
 ```json
 {
   "body": {
-    "intentId": "INT-HOSP-2026-001",
     "eventType": "IntentCallbackEvent",
     "eventVersion": "1.0",
     "source": "intent-callback-ms",
     "eventTime": "2026-04-18T12:15:00+10:00",
     "correlationId": "corr-intent-callback-001",
-    "orchestratorState": {
+    "intentId": "INT-HOSP-2026-001",
+    "callbackSource": "t7-network-orchestrator",
+    "callbackTimestamp": "2026-04-18T12:14:58+10:00",
+    "sourceState": {
       "state": "APPLIED",
       "details": {
-        "message": "Raw orchestrator callback payload retained by ICB MS"
+        "message": "Raw callback payload retained by ICB MS"
       }
-    },
-    "orchestratorSource": "t7.orchestrator",
-    "orchestratorTimestamp": "2026-04-18T12:14:58+10:00"
+    }
   }
 }
 ```
 
+### Event-specific rules
+
+- `IntentCallbackEvent` is a raw callback relay event.
+- ICB MS only accepts, persists, and publishes the callback.
+- IA MS owns intent correlation, source-state mapping, skip/dead-letter decisions, and downstream assurance outcome publication.
+- Use `source` for the event producer, which is `intent-callback-ms`.
+- Use `callbackSource` for the external system/component that submitted the callback.
+- Use `callbackTimestamp` for the timestamp supplied by that callback source.
+- Use `sourceState` for the raw state/payload supplied by the callback source.
+- Avoid `orchestratorSource`, `orchestratorTimestamp`, and `orchestratorState` because callback sources may not always be orchestrators.
+- Do not include lifecycle, service, optimisation, service-configuration, or assurance interpretation fields in this event.
+
 ### ICB MS ownership boundary
 
-ICB MS does not validate intent existence, map orchestrator state, derive orchestrator type, decide actionability, or emit assurance/lifecycle events.
+ICB MS does not validate intent existence, map source state, derive callback source type, decide actionability, or emit assurance/lifecycle events.
 
-IA MS owns correlation, mapping, skip/dead-letter decisions, and downstream assurance outcome publication.
+IA MS owns correlation, source-state mapping, skip/dead-letter decisions, and downstream assurance outcome publication.
 
 ---
 
@@ -1128,6 +1153,40 @@ IA MS owns correlation, mapping, skip/dead-letter decisions, and downstream assu
 - Use `resources` for selected optimisation resources in `IntentOptimisedEvent`.
 
 
+### Shared semantic bucket rule
+
+Use `targets`, `constraints`, and `preferences` as shared intent semantic buckets from IntentSpecification through `/intent`, `IntentValidatedEvent`, `IntentResolvedEvent`, and `IntentOptimisedEvent`.
+
+IntentSpecification should expose these buckets in `specCharacteristic` as high-level catalogue/discovery characteristics with simple stable IDs:
+
+```json
+{
+  "specCharacteristic": [
+    {
+      "id": "targets",
+      "name": "targets",
+      "description": "Measurable runtime objectives supported by this IntentSpecification."
+    },
+    {
+      "id": "constraints",
+      "name": "constraints",
+      "description": "Hard runtime requirements supported by this IntentSpecification."
+    },
+    {
+      "id": "preferences",
+      "name": "preferences",
+      "description": "Soft runtime selection preferences supported by this IntentSpecification."
+    }
+  ]
+}
+```
+
+`expressionSpecification` remains the authoritative schema for the full request syntax and nested object structure.
+
+For `IntentOptimisedEvent`, use the same bucket names. The event type and `optimisationRun.status` make clear that the bucket entries are evaluated optimisation outcomes.
+
+For `IntentAssuranceEvent`, include `targets` so control-loop consumers know which runtime objectives the observed metrics relate to. Do not include `constraints` and `preferences` in assurance by default unless a future control-loop consumer explicitly needs them.
+
 ### Resource field naming rule
 
 Use `resources` consistently across internal event bodies.
@@ -1147,7 +1206,7 @@ Avoid stage-specific field names such as `candidates` and `resourcePlan` unless 
 
 `IntentResolvedEvent` separates optimiser inputs into `targets`, `constraints`, and `preferences`.
 
-`IntentOptimisedEvent` maps those input buckets to `targetEvaluations`, `constraintEvaluations`, and `preferenceEvaluations`.
+`IntentOptimisedEvent` uses the same bucket names for evaluated optimisation outcomes.
 
 Use measurable value comparison fields such as `target`, `benchmarkValue`, and `observedValue` for target evaluations.
 

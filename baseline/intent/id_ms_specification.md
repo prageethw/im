@@ -36,7 +36,7 @@ ID MS does not own runtime `Intent`, `IntentReport`, semantic validation, policy
 | Full replace specification | `PUT` | `/intentManagement/v5/intentSpecification/{id}` |
 | Partial update specification | `PATCH` | `/intentManagement/v5/intentSpecification/{id}` |
 | Delete specification | `DELETE` | `/intentManagement/v5/intentSpecification/{id}` |
-| Activate specification | `POST` | `/intentManagement/v5/intentSpecification/{id}/activate` |
+| Activate specification | `PUT` / `PATCH` | `/intentManagement/v5/intentSpecification/{id}` |
 
 ### Hub subscription APIs:
 
@@ -633,15 +633,44 @@ Content-Type: application/json
 
 ---
 
-## 10. Activate IntentSpecification:
+## 10. Activate IntentSpecification through lifecycle update:
 
-### Request:
+Activation is not exposed through a custom action endpoint.
+
+Do not use:
 
 ```http
-POST /intentManagement/v5/intentSpecification/hospital-surgical-slice-spec-v1.20/activate
+POST /intentManagement/v5/intentSpecification/{id}
+```
+
+Use the existing TMF-style resource update endpoint instead.
+
+### PATCH request:
+
+```http
+PATCH /intentManagement/v5/intentSpecification/hospital-surgical-slice-spec-v1.20
+Content-Type: application/json
 Accept: application/json
 If-Match: "intent-spec-hospital-surgical-slice-spec-v1.20-v1"
 ```
+
+```json
+{
+  "lifecycleStatus": "ACTIVE"
+}
+```
+
+### PUT request option:
+
+`PUT` may also be used when the caller sends the full replacement representation with:
+
+```json
+{
+  "lifecycleStatus": "ACTIVE"
+}
+```
+
+as part of the complete `IntentSpecification` resource.
 
 ### Success response:
 
@@ -672,12 +701,16 @@ ETag: "intent-spec-hospital-surgical-slice-spec-v1.20-v2"
 
 ### Rules:
 
-- Activation changes the target version from `DRAFT` to `ACTIVE`.
-- Activation retires the previous active version in the same family.
+- Activation is represented as a lifecycle/status update on the `IntentSpecification` resource.
+- Use `PUT` or `PATCH` against `/intentSpecification/{id}`.
+- `PUT` is preferred for deterministic full replacement.
+- `PATCH` is supported for TMF compatibility but is not encouraged for ordinary edits.
+- The requested target version changes from `DRAFT` to `ACTIVE`.
+- ID MS retires the previous active version in the same specification family.
 - ID MS refreshes its own active-spec cache through an internal no-cache/refresh path.
 - ID MS emits status-change events for the new active version and the previous retired version.
 
----
+
 
 ## 11. Hub create subscription:
 
@@ -802,7 +835,7 @@ ID MS emits external TMF-style resource events for `IntentSpecification` changes
 
 These are external subscription events for the `IntentSpecification` resource.
 
-They are not internal fulfilment events and must not expose II MS semantic validation details, lightweight II MS KP details, `t7-knowledge-plane` data, optimiser decisions, runtime assurance state, telemetry, callback payloads, or internal candidate/resource scoring details.
+They are not internal fulfilment events and must not expose II MS semantic validation details, lightweight II MS KP details, `t7.knowledge plane` data, optimiser decisions, runtime assurance state, telemetry, callback payloads, or internal candidate/resource scoring details.
 
 ---
 
@@ -989,3 +1022,88 @@ They are not internal fulfilment events and must not expose II MS semantic valid
 - ETag is used for unsafe-operation concurrency only.
 - Caching is GET-only.
 - `If-None-Match` and `304 Not Modified` are not baselined.
+- Activation is represented through PUT/PATCH lifecycle update, not a custom action endpoint.
+
+## TMF compliance and platform extension baseline:
+
+### Strict TMF-facing baseline:
+
+For strict TMF alignment, ID MS supports the TMF-style `IntentSpecification` operations:
+
+| **Operation** | **Endpoint** | **Position** |
+|---|---|---|
+| Create | `POST /intentManagement/v5/intentSpecification` | TMF-aligned |
+| List | `GET /intentManagement/v5/intentSpecification` | TMF-aligned |
+| Retrieve | `GET /intentManagement/v5/intentSpecification/{id}` | TMF-aligned |
+| Partial update | `PATCH /intentManagement/v5/intentSpecification/{id}` | TMF-aligned |
+| Delete | `DELETE /intentManagement/v5/intentSpecification/{id}` | TMF-aligned |
+| Event subscription | `/hub` and `/hub/{id}` | Strict TMF route form where required |
+
+### Accepted platform extensions:
+
+Controlled platform extensions are acceptable when they are documented, non-breaking, and do not conflict with TMF semantics.
+
+For ID MS, accepted platform extensions are:
+
+| **Extension** | **Purpose** | **Rule** |
+|---|---|---|
+| `PUT /intentManagement/v5/intentSpecification/{id}` | Deterministic full replacement | Preferred platform update method where supported |
+| `/intentManagement/v5/intentSpecification/hub` | Domain-scoped event subscription route | Allowed as a clearer domain-owned route when deliberately chosen |
+| `/intentManagement/v5/intentSpecification/hub/{id}` | Domain-scoped subscription delete/retrieve route | Allowed as a clearer domain-owned route when deliberately chosen |
+
+### Update method rule:
+
+`PATCH` is the strict TMF-compatible update operation.
+
+`PUT` is the platform extension for deterministic full replacement and is preferred from the platform engineering perspective where clients support it.
+
+`PATCH` remains supported for TMF compatibility but is not encouraged for ordinary edits when deterministic full replacement is available.
+
+### Lifecycle activation rule:
+
+Activation/retirement is represented as a resource update to `IntentSpecification.lifecycleStatus`.
+
+Use:
+
+```http
+PATCH /intentManagement/v5/intentSpecification/{id}
+```
+
+for strict TMF compatibility.
+
+Use:
+
+```http
+PUT /intentManagement/v5/intentSpecification/{id}
+```
+
+as a platform extension when performing deterministic full replacement.
+
+Do not expose custom lifecycle action endpoints such as:
+
+```http
+POST /intentManagement/v5/intentSpecification/{id}/activate
+```
+
+### Hub route rule:
+
+For strict TMF route compatibility, use:
+
+```http
+POST /intentManagement/v5/hub
+DELETE /intentManagement/v5/hub/{id}
+```
+
+For domain-scoped platform extension routing, ID MS may expose:
+
+```http
+POST /intentManagement/v5/intentSpecification/hub
+GET /intentManagement/v5/intentSpecification/hub/{id}
+DELETE /intentManagement/v5/intentSpecification/hub/{id}
+```
+
+The domain-scoped route is acceptable only as a documented platform extension and must preserve the same subscription semantics.
+
+### Baseline statement:
+
+ID MS and IC MS remain TMF-aligned at the external contract level. Controlled platform extensions are allowed when documented, non-breaking, and semantically compatible with TMF. For ID MS, `PATCH /intentSpecification/{id}` is the strict TMF update operation, while `PUT /intentSpecification/{id}` is an accepted platform extension for deterministic full replacement. TMF `/hub` routing is the strict subscription route form, while `/intentSpecification/hub` is an accepted domain-scoped platform extension when deliberately used.
