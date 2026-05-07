@@ -10,13 +10,13 @@
         <mxCell id="1g_pKyIUPg_Uf4EWA1Bv-1" connectable="0" parent="1g_pKyIUPg_Uf4EWA1Bv-17" style="group" value="" vertex="1">
           <mxGeometry height="860" width="1440" y="290" as="geometry" />
         </mxCell>
-        <mxCell id="c_domain" parent="1g_pKyIUPg_Uf4EWA1Bv-1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f5f5f5;strokeColor=default;dashed=1;fontStyle=1;verticalAlign=top;spacingTop=8;container=0;" value="Optimisation Domain" vertex="1">
+        <mxCell id="c_domain" parent="1g_pKyIUPg_Uf4EWA1Bv-1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f5f5f5;strokeColor=default;dashed=1;fontStyle=1;verticalAlign=top;spacingTop=8;container=0;" value="Optimisation domain services (t7)" vertex="1">
           <mxGeometry height="368.57142857142867" width="659.5804195804196" x="780.4195804195804" y="51.190476190476204" as="geometry" />
         </mxCell>
-        <mxCell id="c_events" parent="1g_pKyIUPg_Uf4EWA1Bv-1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f5f5f5;strokeColor=default;dashed=1;fontStyle=1;verticalAlign=top;spacingTop=8;container=0;" value="Event Streaming Layer" vertex="1">
+        <mxCell id="c_events" parent="1g_pKyIUPg_Uf4EWA1Bv-1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f5f5f5;strokeColor=default;dashed=1;fontStyle=1;verticalAlign=top;spacingTop=8;container=0;" value="Event Streaming Layer(t7)" vertex="1">
           <mxGeometry height="153.5714285714286" width="589.090909090909" x="780.4195804195804" y="501.6666666666668" as="geometry" />
         </mxCell>
-        <mxCell id="c_exec" parent="1g_pKyIUPg_Uf4EWA1Bv-1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f5f5f5;strokeColor=default;dashed=1;fontStyle=1;verticalAlign=top;spacingTop=8;container=0;" value="Optimisation Execution Layer" vertex="1">
+        <mxCell id="c_exec" parent="1g_pKyIUPg_Uf4EWA1Bv-1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f5f5f5;strokeColor=default;dashed=1;fontStyle=1;verticalAlign=top;spacingTop=8;container=0;" value="Optimisation Execution Layer(t7)" vertex="1">
           <mxGeometry height="153.5714285714286" width="568.951048951049" x="20.139860139860136" y="501.6666666666668" as="geometry" />
         </mxCell>
         <mxCell id="gw" parent="1g_pKyIUPg_Uf4EWA1Bv-1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f8cecc;strokeColor=default;fontStyle=1;container=0;" value="NGW" vertex="1">
