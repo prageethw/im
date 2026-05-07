@@ -721,24 +721,32 @@ Date: 2026-05-07T02:53:16.079859+00:00
 - Replaced abbreviated Intent response payloads with complete payloads using `expression.targets`, `expression.constraints`, and `expression.preferences`.
 - Confirmed IC/ID spec and design Markdown JSON blocks validate.
 
-
-## Baseline update — external schema separated in Markdown:
+## Baseline update — IC/ID TMF expression separation and interface sweep:
 
 Date: 2026-05-08
 
 ### Updated files:
 - `id_ms_design_brief.md`
 - `id_ms_specification.md`
+- `ic_ms_design_brief.md`
+- `ic_ms_specification.md`
+- `contextdump.md`
 
 ### Baseline:
-The full JSON Schema for `Intent.expression.expressionValue` must remain visibly separated from the TMF-facing API payload examples in Markdown.
+IC MS and ID MS external interfaces keep TMF-facing expression resources compliant while preserving domain attributes.
 
-The main `IntentSpecification` request/response examples show only:
-- `expressionSpecification` as the TMF expression contract reference
-- `targetEntitySchema.@schemaLocation` as the external validation schema reference
-- `schemaVersion` and `schemaHash` as drift-prevention metadata
+### ID MS:
+- `IntentSpecification.specCharacteristic` is the high-level catalogue/discovery view for `targets`, `constraints`, and `preferences`.
+- `CharacteristicSpecification.characteristicValueSpecification` may provide examples/defaults and OEX/UI prefill guidance only.
+- `IntentSpecification.expressionSpecification` uses `@type: ExpressionSpecification`, `expressionLanguage: JsonLdExpression`, and the expression model `iri`.
+- Detailed platform validation is not embedded in `expressionSpecification` and is not represented as `JSON_SCHEMA`.
+- Detailed validation for runtime `expression.expressionValue` is referenced through `targetEntitySchema.@schemaLocation` with `schemaVersion` and `schemaHash` drift controls.
+- The full JSON Schema is documented separately as an external schema artefact / appendix, not as part of the main TMF resource payload.
 
-The full JSON Schema body may be documented in a separate appendix or separate schema file, but it must not appear inline as if it is part of the `IntentSpecification` resource body or runtime `Intent.expression.expressionValue`.
-
-### Reason:
-The validation schema is an external governed artefact. Keeping it separated in the Markdown prevents engineers from accidentally embedding schema definitions inside runtime API examples and reinforces the active baseline that runtime expressions carry actual data only.
+### IC MS:
+- External `Intent.expression` uses the TMF wrapper with `@type: JsonLdExpression`, `@baseType: Expression`, `iri`, and `expressionValue`.
+- External `IntentReport.expression` uses the same TMF wrapper, with report facts under `expression.expressionValue`.
+- Runtime `Intent.expression.expressionValue` carries only request data.
+- Runtime `IntentReport.expression.expressionValue` carries only report facts.
+- Internal `IntentValidatedEvent` and other internal events keep native JSON buckets directly and do not use the TMF expression wrapper.
+- Hub GET examples include `ETag`, `Cache-Control`, and cache-bypass examples using request `Cache-Control: no-cache`.

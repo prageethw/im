@@ -82,13 +82,6 @@ Accepted domain-scoped platform extension:
 | Retrieve intent event subscription | `GET` | `/intentManagement/v5/intent/hub/{id}` |
 | Delete intent event subscription | `DELETE` | `/intentManagement/v5/intent/hub/{id}` |
 
-
-### GET cache and ETag baseline:
-
-All successful IC MS GET responses, including Intent, IntentReport, and hub subscription retrieval/list responses, return `ETag` and `Cache-Control`. Clients may request a fresh read using request header `Cache-Control: no-cache`.
-
-Unsafe IC MS operations use `If-Match` for ETag concurrency validation, including `PUT`, `PATCH`, `DELETE /intent/{id}`, `DELETE /intent/{intentId}/intentReport/{id}`, and hub subscription delete operations.
-
 ## IC MS validation responsibility:
 
 On `POST /intentManagement/v5/intent`, IC MS:
@@ -236,6 +229,17 @@ It is based on assurance truth from IA MS, but it is not raw assurance telemetry
 IntentReport may contain curated information such as current lifecycle/status, status reason, assurance summary, current service/resource summary, evaluation summary, violation/degradation summary, last assurance update time, and references to the related `Intent`.
 
 IntentReport should not expose implementation-only details unless they are explicitly approved for external reporting.
+
+
+## External expression wrapper baseline:
+
+External IC MS `Intent` and `IntentReport` resources use the TMF expression wrapper. The domain payload is carried inside `expression.expressionValue`.
+
+For runtime Intent resources, `expression.expressionValue` contains request data such as `location`, `serviceType`, `serviceClass`, `targets`, `constraints`, and `preferences`.
+
+For IntentReport resources, `expression.expressionValue` contains report facts such as `version`, `lifecycleStatus`, `reportTime`, `summary`, `serviceSummary`, `targetSummary`, and `observationSummary`.
+
+Internal events do not use the TMF expression wrapper. IC MS emits `IntentValidatedEvent` with native internal JSON buckets so downstream services do not need to unwrap TMF resource representation.
 
 ## TMF compliance and platform extension rule:
 
@@ -1254,28 +1258,34 @@ Complete expression shape:
 ```json
 {
   "expression": {
-    "location": {
-      "locationId": "AU-NSW-SYD-HOSP-001",
-      "locationType": "hospital",
-      "geographicScope": "campus"
-    },
-    "serviceType": "surgical-connectivity",
-    "serviceClass": "critical-gold",
-    "targets": {
-      "maxLatencyMs": 10,
-      "minAvailabilityPercent": 99.99,
-      "maxJitterMs": 2,
-      "maxPacketLossPercent": 0.01
-    },
-    "constraints": {
-      "priority": "critical",
-      "redundancyRequired": true,
-      "timeWindow": {
-        "startDateTime": "2026-04-18T12:00:00+10:00"
-      }
-    },
-    "preferences": {
-      "preferredAccessTechnology": "5G"
+    "@type": "JsonLdExpression",
+    "@baseType": "Expression",
+    "iri": "https://mycsp.com.au/tio/hospital-surgical-slice/v1.0",
+    "expressionValue": {
+          "location": {
+            "locationId": "AU-NSW-SYD-HOSP-001",
+            "locationType": "hospital",
+            "geographicScope": "campus"
+          },
+          "serviceType": "surgical-connectivity",
+          "serviceClass": "critical-gold",
+          "targets": {
+            "maxLatencyMs": 10,
+            "minAvailabilityPercent": 99.99,
+            "maxJitterMs": 2,
+            "maxPacketLossPercent": 0.01
+          },
+          "constraints": {
+            "priority": "critical",
+            "redundancyRequired": true,
+            "timeWindow": {
+              "startDateTime": "2026-04-18T12:00:00+10:00"
+            }
+          },
+          "preferences": {
+            "preferredAccessTechnology": "5G"
+          }
+  
     }
   }
 }

@@ -54,7 +54,6 @@ IC MS does not own:
 |---|---:|---|---|
 | List reports for intent | `GET` | `/intentManagement/v5/intent/{intentId}/intentReport` | Platform/TMF-style nested report projection |
 | Retrieve report by ID | `GET` | `/intentManagement/v5/intent/{intentId}/intentReport/{id}` | Platform/TMF-style nested report projection |
-| Delete report by ID | `DELETE` | `/intentManagement/v5/intent/{intentId}/intentReport/{id}` | TMF-aligned delete verb, platform behaviour is retained/tombstoned report by default |
 
 ### Hub subscription APIs:
 
@@ -251,28 +250,34 @@ Accept: application/json
     "id": "hospital-surgical-slice-spec-v1.20"
   },
   "expression": {
-    "location": {
-      "locationId": "AU-NSW-SYD-HOSP-001",
-      "locationType": "hospital",
-      "geographicScope": "campus"
-    },
-    "serviceType": "surgical-connectivity",
-    "serviceClass": "critical-gold",
-    "targets": {
-      "maxLatencyMs": 10,
-      "minAvailabilityPercent": 99.99,
-      "maxJitterMs": 2,
-      "maxPacketLossPercent": 0.01
-    },
-    "constraints": {
-      "priority": "critical",
-      "redundancyRequired": true,
-      "timeWindow": {
-        "startDateTime": "2026-04-18T12:00:00+10:00"
-      }
-    },
-    "preferences": {
-      "preferredAccessTechnology": "5G"
+    "@type": "JsonLdExpression",
+    "@baseType": "Expression",
+    "iri": "https://mycsp.com.au/tio/hospital-surgical-slice/v1.0",
+    "expressionValue": {
+          "location": {
+            "locationId": "AU-NSW-SYD-HOSP-001",
+            "locationType": "hospital",
+            "geographicScope": "campus"
+          },
+          "serviceType": "surgical-connectivity",
+          "serviceClass": "critical-gold",
+          "targets": {
+            "maxLatencyMs": 10,
+            "minAvailabilityPercent": 99.99,
+            "maxJitterMs": 2,
+            "maxPacketLossPercent": 0.01
+          },
+          "constraints": {
+            "priority": "critical",
+            "redundancyRequired": true,
+            "timeWindow": {
+              "startDateTime": "2026-04-18T12:00:00+10:00"
+            }
+          },
+          "preferences": {
+            "preferredAccessTechnology": "5G"
+          }
+  
     }
   },
   "validFor": {
@@ -310,28 +315,34 @@ Last-Modified: Sat, 18 Apr 2026 02:00:00 GMT
     "href": "/intentManagement/v5/intentSpecification/hospital-surgical-slice-spec-v1.20"
   },
   "expression": {
-    "location": {
-      "locationId": "AU-NSW-SYD-HOSP-001",
-      "locationType": "hospital",
-      "geographicScope": "campus"
-    },
-    "serviceType": "surgical-connectivity",
-    "serviceClass": "critical-gold",
-    "targets": {
-      "maxLatencyMs": 10,
-      "minAvailabilityPercent": 99.99,
-      "maxJitterMs": 2,
-      "maxPacketLossPercent": 0.01
-    },
-    "constraints": {
-      "priority": "critical",
-      "redundancyRequired": true,
-      "timeWindow": {
-        "startDateTime": "2026-04-18T12:00:00+10:00"
-      }
-    },
-    "preferences": {
-      "preferredAccessTechnology": "5G"
+    "@type": "JsonLdExpression",
+    "@baseType": "Expression",
+    "iri": "https://mycsp.com.au/tio/hospital-surgical-slice/v1.0",
+    "expressionValue": {
+          "location": {
+            "locationId": "AU-NSW-SYD-HOSP-001",
+            "locationType": "hospital",
+            "geographicScope": "campus"
+          },
+          "serviceType": "surgical-connectivity",
+          "serviceClass": "critical-gold",
+          "targets": {
+            "maxLatencyMs": 10,
+            "minAvailabilityPercent": 99.99,
+            "maxJitterMs": 2,
+            "maxPacketLossPercent": 0.01
+          },
+          "constraints": {
+            "priority": "critical",
+            "redundancyRequired": true,
+            "timeWindow": {
+              "startDateTime": "2026-04-18T12:00:00+10:00"
+            }
+          },
+          "preferences": {
+            "preferredAccessTechnology": "5G"
+          }
+  
     }
   },
   "validFor": {
@@ -468,28 +479,34 @@ Cache-Control: private, max-age=300
     "href": "/intentManagement/v5/intentSpecification/hospital-surgical-slice-spec-v1.20"
   },
   "expression": {
-    "location": {
-      "locationId": "AU-NSW-SYD-HOSP-001",
-      "locationType": "hospital",
-      "geographicScope": "campus"
-    },
-    "serviceType": "surgical-connectivity",
-    "serviceClass": "critical-gold",
-    "targets": {
-      "maxLatencyMs": 8,
-      "minAvailabilityPercent": 99.99,
-      "maxJitterMs": 2,
-      "maxPacketLossPercent": 0.01
-    },
-    "constraints": {
-      "priority": "critical",
-      "redundancyRequired": true,
-      "timeWindow": {
-        "startDateTime": "2026-04-18T12:00:00+10:00"
-      }
-    },
-    "preferences": {
-      "preferredAccessTechnology": "5G"
+    "@type": "JsonLdExpression",
+    "@baseType": "Expression",
+    "iri": "https://mycsp.com.au/tio/hospital-surgical-slice/v1.0",
+    "expressionValue": {
+          "location": {
+            "locationId": "AU-NSW-SYD-HOSP-001",
+            "locationType": "hospital",
+            "geographicScope": "campus"
+          },
+          "serviceType": "surgical-connectivity",
+          "serviceClass": "critical-gold",
+          "targets": {
+            "maxLatencyMs": 8,
+            "minAvailabilityPercent": 99.99,
+            "maxJitterMs": 2,
+            "maxPacketLossPercent": 0.01
+          },
+          "constraints": {
+            "priority": "critical",
+            "redundancyRequired": true,
+            "timeWindow": {
+              "startDateTime": "2026-04-18T12:00:00+10:00"
+            }
+          },
+          "preferences": {
+            "preferredAccessTechnology": "5G"
+          }
+  
     }
   },
   "validFor": {
@@ -550,28 +567,34 @@ If-Match: "intent-INT-HOSP-2026-001-v3"
     "id": "hospital-surgical-slice-spec-v1.20"
   },
   "expression": {
-    "location": {
-      "locationId": "AU-NSW-SYD-HOSP-001",
-      "locationType": "hospital",
-      "geographicScope": "campus"
-    },
-    "serviceType": "surgical-connectivity",
-    "serviceClass": "critical-gold",
-    "targets": {
-      "maxLatencyMs": 8,
-      "minAvailabilityPercent": 99.99,
-      "maxJitterMs": 2,
-      "maxPacketLossPercent": 0.01
-    },
-    "constraints": {
-      "priority": "critical",
-      "redundancyRequired": true,
-      "timeWindow": {
-        "startDateTime": "2026-04-18T12:00:00+10:00"
-      }
-    },
-    "preferences": {
-      "preferredAccessTechnology": "5G"
+    "@type": "JsonLdExpression",
+    "@baseType": "Expression",
+    "iri": "https://mycsp.com.au/tio/hospital-surgical-slice/v1.0",
+    "expressionValue": {
+          "location": {
+            "locationId": "AU-NSW-SYD-HOSP-001",
+            "locationType": "hospital",
+            "geographicScope": "campus"
+          },
+          "serviceType": "surgical-connectivity",
+          "serviceClass": "critical-gold",
+          "targets": {
+            "maxLatencyMs": 8,
+            "minAvailabilityPercent": 99.99,
+            "maxJitterMs": 2,
+            "maxPacketLossPercent": 0.01
+          },
+          "constraints": {
+            "priority": "critical",
+            "redundancyRequired": true,
+            "timeWindow": {
+              "startDateTime": "2026-04-18T12:00:00+10:00"
+            }
+          },
+          "preferences": {
+            "preferredAccessTechnology": "5G"
+          }
+  
     }
   },
   "@type": "Intent",
@@ -604,28 +627,34 @@ ETag: "intent-INT-HOSP-2026-001-v4"
     "href": "/intentManagement/v5/intentSpecification/hospital-surgical-slice-spec-v1.20"
   },
   "expression": {
-    "location": {
-      "locationId": "AU-NSW-SYD-HOSP-001",
-      "locationType": "hospital",
-      "geographicScope": "campus"
-    },
-    "serviceType": "surgical-connectivity",
-    "serviceClass": "critical-gold",
-    "targets": {
-      "maxLatencyMs": 8,
-      "minAvailabilityPercent": 99.99,
-      "maxJitterMs": 2,
-      "maxPacketLossPercent": 0.01
-    },
-    "constraints": {
-      "priority": "critical",
-      "redundancyRequired": true,
-      "timeWindow": {
-        "startDateTime": "2026-04-18T12:00:00+10:00"
-      }
-    },
-    "preferences": {
-      "preferredAccessTechnology": "5G"
+    "@type": "JsonLdExpression",
+    "@baseType": "Expression",
+    "iri": "https://mycsp.com.au/tio/hospital-surgical-slice/v1.0",
+    "expressionValue": {
+          "location": {
+            "locationId": "AU-NSW-SYD-HOSP-001",
+            "locationType": "hospital",
+            "geographicScope": "campus"
+          },
+          "serviceType": "surgical-connectivity",
+          "serviceClass": "critical-gold",
+          "targets": {
+            "maxLatencyMs": 8,
+            "minAvailabilityPercent": 99.99,
+            "maxJitterMs": 2,
+            "maxPacketLossPercent": 0.01
+          },
+          "constraints": {
+            "priority": "critical",
+            "redundancyRequired": true,
+            "timeWindow": {
+              "startDateTime": "2026-04-18T12:00:00+10:00"
+            }
+          },
+          "preferences": {
+            "preferredAccessTechnology": "5G"
+          }
+  
     }
   },
   "validFor": {
@@ -674,25 +703,31 @@ If-Match: "intent-INT-HOSP-2026-001-v4"
     "id": "hospital-surgical-slice-spec-v1.20"
   },
   "expression": {
-    "location": {
-      "locationId": "AU-NSW-SYD-HOSP-001",
-      "locationType": "hospital",
-      "geographicScope": "campus"
-    },
-    "serviceType": "surgical-connectivity",
-    "serviceClass": "critical-gold",
-    "targets": {
-      "maxLatencyMs": 7
-    },
-    "constraints": {
-      "priority": "critical",
-      "redundancyRequired": true,
-      "timeWindow": {
-        "startDateTime": "2026-04-18T12:00:00+10:00"
-      }
-    },
-    "preferences": {
-      "preferredAccessTechnology": "5G"
+    "@type": "JsonLdExpression",
+    "@baseType": "Expression",
+    "iri": "https://mycsp.com.au/tio/hospital-surgical-slice/v1.0",
+    "expressionValue": {
+          "location": {
+            "locationId": "AU-NSW-SYD-HOSP-001",
+            "locationType": "hospital",
+            "geographicScope": "campus"
+          },
+          "serviceType": "surgical-connectivity",
+          "serviceClass": "critical-gold",
+          "targets": {
+            "maxLatencyMs": 7
+          },
+          "constraints": {
+            "priority": "critical",
+            "redundancyRequired": true,
+            "timeWindow": {
+              "startDateTime": "2026-04-18T12:00:00+10:00"
+            }
+          },
+          "preferences": {
+            "preferredAccessTechnology": "5G"
+          }
+  
     }
   }
 }
@@ -723,28 +758,34 @@ ETag: "intent-INT-HOSP-2026-001-v5"
     "href": "/intentManagement/v5/intentSpecification/hospital-surgical-slice-spec-v1.20"
   },
   "expression": {
-    "location": {
-      "locationId": "AU-NSW-SYD-HOSP-001",
-      "locationType": "hospital",
-      "geographicScope": "campus"
-    },
-    "serviceType": "surgical-connectivity",
-    "serviceClass": "critical-gold",
-    "targets": {
-      "maxLatencyMs": 7,
-      "minAvailabilityPercent": 99.99,
-      "maxJitterMs": 2,
-      "maxPacketLossPercent": 0.01
-    },
-    "constraints": {
-      "priority": "critical",
-      "redundancyRequired": true,
-      "timeWindow": {
-        "startDateTime": "2026-04-18T12:00:00+10:00"
-      }
-    },
-    "preferences": {
-      "preferredAccessTechnology": "5G"
+    "@type": "JsonLdExpression",
+    "@baseType": "Expression",
+    "iri": "https://mycsp.com.au/tio/hospital-surgical-slice/v1.0",
+    "expressionValue": {
+          "location": {
+            "locationId": "AU-NSW-SYD-HOSP-001",
+            "locationType": "hospital",
+            "geographicScope": "campus"
+          },
+          "serviceType": "surgical-connectivity",
+          "serviceClass": "critical-gold",
+          "targets": {
+            "maxLatencyMs": 7,
+            "minAvailabilityPercent": 99.99,
+            "maxJitterMs": 2,
+            "maxPacketLossPercent": 0.01
+          },
+          "constraints": {
+            "priority": "critical",
+            "redundancyRequired": true,
+            "timeWindow": {
+              "startDateTime": "2026-04-18T12:00:00+10:00"
+            }
+          },
+          "preferences": {
+            "preferredAccessTechnology": "5G"
+          }
+  
     }
   },
   "validFor": {
@@ -829,6 +870,14 @@ GET /intentManagement/v5/intent/INT-HOSP-2026-001/intentReport
 Accept: application/json
 ```
 
+### Request with fresh-read override:
+
+```http
+GET /intentManagement/v5/intent/INT-HOSP-2026-001/intentReport
+Accept: application/json
+Cache-Control: no-cache
+```
+
 ### Success response:
 
 ```http
@@ -846,16 +895,46 @@ Cache-Control: private, max-age=60
   {
     "id": "IR-INT-HOSP-2026-001-003",
     "href": "/intentManagement/v5/intent/INT-HOSP-2026-001/intentReport/IR-INT-HOSP-2026-001-003",
+    "creationDate": "2026-04-18T12:20:00+10:00",
+    "name": "Sydney Hospital Surgical Connection Intent Report",
     "intent": {
       "id": "INT-HOSP-2026-001",
       "href": "/intentManagement/v5/intent/INT-HOSP-2026-001"
     },
-    "version": "v2",
-    "lifecycleStatus": "Active",
-    "reportTime": "2026-04-18T12:20:00+10:00",
-    "summary": "Intent is active and assurance is healthy.",
+    "expression": {
+      "@type": "JsonLdExpression",
+      "@baseType": "Expression",
+      "iri": "https://mycsp.com.au/tio/hospital-surgical-slice-report/v1.0",
+      "expressionValue": {
+        "version": "v2",
+        "lifecycleStatus": "Active",
+        "reportTime": "2026-04-18T12:20:00+10:00",
+        "summary": "Intent is active and assurance is healthy.",
+        "targetSummary": {
+          "targets": [
+            {
+              "name": "maxLatencyMs",
+              "target": 10,
+              "observedValue": 8,
+              "unit": "ms"
+            }
+          ]
+        },
+        "observationSummary": {
+          "observedAt": "2026-04-18T12:20:00+10:00"
+        }
+      }
+    },
     "@type": "IntentReport",
-    "@baseType": "Entity"
+    "@baseType": "Entity",
+    "_links": {
+      "self": {
+        "href": "/intentManagement/v5/intent/INT-HOSP-2026-001/intentReport/IR-INT-HOSP-2026-001-003"
+      },
+      "intent": {
+        "href": "/intentManagement/v5/intent/INT-HOSP-2026-001"
+      }
+    }
   }
 ]
 ```
@@ -869,6 +948,14 @@ Cache-Control: private, max-age=60
 ```http
 GET /intentManagement/v5/intent/INT-HOSP-2026-001/intentReport/IR-INT-HOSP-2026-001-003
 Accept: application/json
+```
+
+### Request with fresh-read override:
+
+```http
+GET /intentManagement/v5/intent/INT-HOSP-2026-001/intentReport/IR-INT-HOSP-2026-001-003
+Accept: application/json
+Cache-Control: no-cache
 ```
 
 ### Success response:
@@ -886,66 +973,74 @@ Cache-Control: private, max-age=300
 {
   "id": "IR-INT-HOSP-2026-001-003",
   "href": "/intentManagement/v5/intent/INT-HOSP-2026-001/intentReport/IR-INT-HOSP-2026-001-003",
+  "creationDate": "2026-04-18T12:20:00+10:00",
+  "name": "Sydney Hospital Surgical Connection Intent Report",
   "intent": {
     "id": "INT-HOSP-2026-001",
     "href": "/intentManagement/v5/intent/INT-HOSP-2026-001"
   },
-  "version": "v2",
-  "lifecycleStatus": "Active",
-  "reportTime": "2026-04-18T12:20:00+10:00",
-  "summary": "Intent is active and assurance is healthy.",
-  "assuranceSummary": {
-    "overallStatus": "Healthy",
-    "latencyMs": 8,
-    "availabilityPercent": 99.995,
-    "jitterMs": 1.5,
-    "packetLossPercent": 0.005
-  },
-  "serviceSummary": {
-    "serviceClass": "critical-gold",
-    "locationId": "sydney-hospital"
-  },
-  "evaluationSummary": {
-    "result": "Compliant",
-    "details": [
-      "Latency target satisfied",
-      "Availability target satisfied",
-      "Jitter target satisfied",
-      "Packet loss target satisfied"
-    ]
+  "expression": {
+    "@type": "JsonLdExpression",
+    "@baseType": "Expression",
+    "iri": "https://mycsp.com.au/tio/hospital-surgical-slice-report/v1.0",
+    "expressionValue": {
+      "version": "v2",
+      "lifecycleStatus": "Active",
+      "reportTime": "2026-04-18T12:20:00+10:00",
+      "summary": "Intent is active and assurance is healthy.",
+      "serviceSummary": {
+        "locationId": "AU-NSW-SYD-HOSP-001",
+        "serviceType": "surgical-connectivity",
+        "serviceClass": "critical-gold"
+      },
+      "targetSummary": {
+        "targets": [
+          { "name": "maxLatencyMs", "target": 10, "observedValue": 8, "unit": "ms" },
+          { "name": "minAvailabilityPercent", "target": 99.99, "observedValue": 99.995, "unit": "percent" },
+          { "name": "maxJitterMs", "target": 2, "observedValue": 1.5, "unit": "ms" },
+          { "name": "maxPacketLossPercent", "target": 0.01, "observedValue": 0.005, "unit": "percent" }
+        ]
+      },
+      "observationSummary": {
+        "observedAt": "2026-04-18T12:20:00+10:00",
+        "resources": [
+          {
+            "resourceId": "SYD-PRI-01",
+            "role": "primary",
+            "metrics": {
+              "latencyMs": 8,
+              "availabilityPercent": 99.995,
+              "jitterMs": 1.5,
+              "packetLossPercent": 0.005
+            }
+          },
+          {
+            "resourceId": "SYD-SEC-01",
+            "role": "secondary",
+            "metrics": {
+              "latencyMs": 10,
+              "availabilityPercent": 99.994,
+              "jitterMs": 1.8,
+              "packetLossPercent": 0.006
+            }
+          }
+        ]
+      }
+    }
   },
   "@type": "IntentReport",
-  "@baseType": "Entity"
+  "@baseType": "Entity",
+  "_links": {
+    "self": { "href": "/intentManagement/v5/intent/INT-HOSP-2026-001/intentReport/IR-INT-HOSP-2026-001-003" },
+    "intent": { "href": "/intentManagement/v5/intent/INT-HOSP-2026-001" },
+    "list": { "href": "/intentManagement/v5/intent/INT-HOSP-2026-001/intentReport" }
+  }
 }
 ```
 
 ---
 
-## 12. Delete IntentReport:
-
-### Request:
-
-```http
-DELETE /intentManagement/v5/intent/INT-HOSP-2026-001/intentReport/IR-INT-HOSP-2026-001-003
-Accept: application/json
-If-Match: "intent-report-IR-INT-HOSP-2026-001-003-v1"
-```
-
-### Success response:
-
-```http
-HTTP/1.1 204 No Content
-```
-
-### Rule:
-
-`DELETE /intent/{intentId}/intentReport/{id}` is supported for TMF compatibility. Platform behaviour is retained/tombstoned report handling by default where retention policy requires preserving report history.
-
-The request requires `If-Match` because report deletion/tombstoning is an unsafe operation.
-
----
-
-## 13. Hub create subscription:
+## 12. Hub create subscription:
 
 ### Strict TMF route request:
 
@@ -986,7 +1081,6 @@ HTTP/1.1 201 Created
 Location: /intentManagement/v5/intent/hub/sub-intent-001
 Content-Type: application/json
 ETag: "subscription-sub-intent-001-v1"
-Cache-Control: private, max-age=300
 ```
 
 ```json
@@ -1017,7 +1111,7 @@ IntentReportDeleteEvent
 
 ---
 
-## 14. Hub retrieve subscription:
+## 13. Hub retrieve subscription:
 
 ### Request:
 
@@ -1059,7 +1153,7 @@ Cache-Control: private, max-age=300
 
 ---
 
-## 15. Hub delete subscription:
+## 14. Hub delete subscription:
 
 ### Request:
 
@@ -1076,7 +1170,7 @@ HTTP/1.1 204 No Content
 
 ---
 
-## 16. Validation and dependency error examples:
+## 15. Validation and dependency error examples:
 
 ### Missing concrete IntentSpecification ID:
 
@@ -1153,7 +1247,7 @@ Content-Type: application/json
 
 ---
 
-## 17. External Intent event family:
+## 16. External Intent event family:
 
 IC MS emits external TMF-style resource events for `Intent` projection changes.
 
@@ -1170,7 +1264,7 @@ They must not expose raw telemetry, raw optimiser decisions, raw `t7.knowledge p
 
 ---
 
-## 18. IntentCreateEvent:
+## 17. IntentCreateEvent:
 
 ```json
 {
@@ -1209,7 +1303,7 @@ They must not expose raw telemetry, raw optimiser decisions, raw `t7.knowledge p
 
 ---
 
-## 19. IntentAttributeValueChangeEvent:
+## 18. IntentAttributeValueChangeEvent:
 
 ```json
 {
@@ -1252,7 +1346,7 @@ They must not expose raw telemetry, raw optimiser decisions, raw `t7.knowledge p
 
 ---
 
-## 20. IntentStatusChangeEvent:
+## 19. IntentStatusChangeEvent:
 
 ```json
 {
@@ -1290,7 +1384,7 @@ They must not expose raw telemetry, raw optimiser decisions, raw `t7.knowledge p
 
 ---
 
-## 21. IntentDeleteEvent:
+## 20. IntentDeleteEvent:
 
 `IntentDeleteEvent` represents accepted termination, not physical deletion.
 
@@ -1328,7 +1422,7 @@ They must not expose raw telemetry, raw optimiser decisions, raw `t7.knowledge p
 
 ---
 
-## 22. External IntentReport event family:
+## 21. External IntentReport event family:
 
 IC MS emits external TMF-style resource events for `IntentReport` projection changes.
 
@@ -1340,7 +1434,7 @@ IC MS emits external TMF-style resource events for `IntentReport` projection cha
 
 ---
 
-## 23. IntentReportCreateEvent:
+## 22. IntentReportCreateEvent:
 
 ```json
 {
@@ -1378,7 +1472,7 @@ IC MS emits external TMF-style resource events for `IntentReport` projection cha
 
 ---
 
-## 24. IntentReportAttributeValueChangeEvent:
+## 23. IntentReportAttributeValueChangeEvent:
 
 ```json
 {
@@ -1423,7 +1517,7 @@ IC MS emits external TMF-style resource events for `IntentReport` projection cha
 
 ---
 
-## 25. IntentReportDeleteEvent:
+## 24. IntentReportDeleteEvent:
 
 ```json
 {
@@ -1459,7 +1553,7 @@ IC MS emits external TMF-style resource events for `IntentReport` projection cha
 
 ---
 
-## 26. Internal event publication note:
+## 25. Internal event publication note:
 
 IC MS publishes `IntentValidatedEvent` internally after syntactic validation and admission.
 
@@ -1471,7 +1565,7 @@ Current primary consumer is II MS / `intent-intelligence-ms`, but the event may 
 
 ---
 
-## 27. Final specification notes:
+## 26. Final specification notes:
 
 - `GET /intent/{id}` returns current projected Intent state, not a full internal version aggregate.
 - `GET /intent` lists current projected Intent states for retained Intent IDs.
@@ -1503,28 +1597,34 @@ IC MS accepts and projects runtime Intent resources using the shared semantic bu
     "id": "hospital-surgical-slice-spec-v1.20"
   },
   "expression": {
-    "location": {
-      "locationId": "AU-NSW-SYD-HOSP-001",
-      "locationType": "hospital",
-      "geographicScope": "campus"
-    },
-    "serviceType": "surgical-connectivity",
-    "serviceClass": "critical-gold",
-    "targets": {
-      "maxLatencyMs": 10,
-      "minAvailabilityPercent": 99.99,
-      "maxJitterMs": 2,
-      "maxPacketLossPercent": 0.01
-    },
-    "constraints": {
-      "priority": "critical",
-      "redundancyRequired": true,
-      "timeWindow": {
-        "startDateTime": "2026-04-18T12:00:00+10:00"
-      }
-    },
-    "preferences": {
-      "preferredAccessTechnology": "5G"
+    "@type": "JsonLdExpression",
+    "@baseType": "Expression",
+    "iri": "https://mycsp.com.au/tio/hospital-surgical-slice/v1.0",
+    "expressionValue": {
+          "location": {
+            "locationId": "AU-NSW-SYD-HOSP-001",
+            "locationType": "hospital",
+            "geographicScope": "campus"
+          },
+          "serviceType": "surgical-connectivity",
+          "serviceClass": "critical-gold",
+          "targets": {
+            "maxLatencyMs": 10,
+            "minAvailabilityPercent": 99.99,
+            "maxJitterMs": 2,
+            "maxPacketLossPercent": 0.01
+          },
+          "constraints": {
+            "priority": "critical",
+            "redundancyRequired": true,
+            "timeWindow": {
+              "startDateTime": "2026-04-18T12:00:00+10:00"
+            }
+          },
+          "preferences": {
+            "preferredAccessTechnology": "5G"
+          }
+  
     }
   },
   "validFor": {
