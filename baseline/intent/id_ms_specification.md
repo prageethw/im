@@ -155,119 +155,27 @@ Accept: application/json
   "@schemaLocation": "https://mycsp.com.au/schemas/intentManagement/v5/intentSpecification/hospital-surgical-slice-spec-v1.19.schema.json",
   "specCharacteristic": [
     {
-      "id": "SC-LOCATION-001",
-      "name": "location",
-      "description": "Requested location for the surgical connectivity intent. The expression schema permits only locationId, locationType, and geographicScope. geographicScope remains intentionally open for platform-controlled extension.",
+      "id": "targets",
+      "name": "targets",
+      "description": "Measurable runtime objectives supported by this IntentSpecification.",
       "valueType": "object",
       "configurable": true,
       "minCardinality": 1,
       "maxCardinality": 1
     },
     {
-      "id": "SC-SERVICE-CLASS-001",
-      "name": "serviceClass",
-      "description": "Requested service class for the surgical connectivity intent.",
-      "valueType": "string",
+      "id": "constraints",
+      "name": "constraints",
+      "description": "Hard runtime requirements supported by this IntentSpecification.",
+      "valueType": "object",
       "configurable": true,
       "minCardinality": 1,
-      "maxCardinality": 1,
-      "characteristicValueSpecification": [
-        { "valueType": "string", "value": "critical-gold", "isDefault": true },
-        { "valueType": "string", "value": "critical-silver" }
-      ]
+      "maxCardinality": 1
     },
     {
-      "id": "SC-POLICY-PRIORITY-001",
-      "name": "priority",
-      "description": "Requested business or clinical priority. This is used as policy input by II MS and the knowledge plane, not as a syntax-only enforcement rule.",
-      "valueType": "string",
-      "configurable": true,
-      "minCardinality": 1,
-      "maxCardinality": 1,
-      "characteristicValueSpecification": [
-        { "valueType": "string", "value": "critical", "isDefault": true },
-        { "valueType": "string", "value": "high" },
-        { "valueType": "string", "value": "standard" }
-      ]
-    },
-    {
-      "id": "SC-ASSURANCE-LATENCY-001",
-      "name": "maxLatencyMs",
-      "description": "Requested maximum latency in milliseconds. Values are illustrative/default guidance only. Semantic and policy enforcement is owned by II MS and the knowledge plane.",
-      "valueType": "number",
-      "configurable": true,
-      "minCardinality": 0,
-      "maxCardinality": 1,
-      "characteristicValueSpecification": [
-        { "valueType": "number", "value": 10, "isDefault": true }
-      ]
-    },
-    {
-      "id": "SC-ASSURANCE-AVAILABILITY-001",
-      "name": "minAvailabilityPercent",
-      "description": "Requested minimum availability percentage. Values are illustrative/default guidance only. Semantic and policy enforcement is owned by II MS and the knowledge plane.",
-      "valueType": "number",
-      "configurable": true,
-      "minCardinality": 0,
-      "maxCardinality": 1,
-      "characteristicValueSpecification": [
-        { "valueType": "number", "value": 99.99, "isDefault": true }
-      ]
-    },
-    {
-      "id": "SC-ASSURANCE-JITTER-001",
-      "name": "maxJitterMs",
-      "description": "Requested maximum jitter in milliseconds. Values are illustrative/default guidance only.",
-      "valueType": "number",
-      "configurable": true,
-      "minCardinality": 0,
-      "maxCardinality": 1,
-      "characteristicValueSpecification": [
-        { "valueType": "number", "value": 2, "isDefault": true }
-      ]
-    },
-    {
-      "id": "SC-ASSURANCE-PACKET-LOSS-001",
-      "name": "maxPacketLossPercent",
-      "description": "Requested maximum packet loss percentage. Values are illustrative/default guidance only.",
-      "valueType": "number",
-      "configurable": true,
-      "minCardinality": 0,
-      "maxCardinality": 1,
-      "characteristicValueSpecification": [
-        { "valueType": "number", "value": 0.01, "isDefault": true }
-      ]
-    },
-    {
-      "id": "SC-RESILIENCE-REDUNDANCY-001",
-      "name": "redundancyRequired",
-      "description": "Whether resilient/redundant delivery is requested.",
-      "valueType": "boolean",
-      "configurable": true,
-      "minCardinality": 0,
-      "maxCardinality": 1,
-      "characteristicValueSpecification": [
-        { "valueType": "boolean", "value": true, "isDefault": true }
-      ]
-    },
-    {
-      "id": "SC-ACCESS-TECHNOLOGY-001",
-      "name": "preferredAccessTechnology",
-      "description": "Preferred access technology where supplied by the requester.",
-      "valueType": "string",
-      "configurable": true,
-      "minCardinality": 0,
-      "maxCardinality": 1,
-      "characteristicValueSpecification": [
-        { "valueType": "string", "value": "5G" },
-        { "valueType": "string", "value": "fibre" },
-        { "valueType": "string", "value": "private-wireless" }
-      ]
-    },
-    {
-      "id": "SC-DELIVERY-TIME-WINDOW-001",
-      "name": "timeWindow",
-      "description": "Optional requested delivery or validity time window. When timeWindow is present, startDateTime is required by expressionSpecification.",
+      "id": "preferences",
+      "name": "preferences",
+      "description": "Soft runtime selection preferences supported by this IntentSpecification.",
       "valueType": "object",
       "configurable": true,
       "minCardinality": 0,
@@ -1152,3 +1060,11 @@ The domain-scoped route is acceptable only as a documented platform extension an
 ### Baseline statement:
 
 ID MS and IC MS remain TMF-aligned at the external contract level. Controlled platform extensions are allowed when documented, non-breaking, and semantically compatible with TMF. For ID MS, `PATCH /intentSpecification/{id}` is the strict TMF update operation, while `PUT /intentSpecification/{id}` is an accepted platform extension for deterministic full replacement. TMF `/hub` routing is the strict subscription route form, while `/intentSpecification/hub` is an accepted domain-scoped platform extension when deliberately used.
+
+
+### SpecCharacteristic and expressionSpecification rule:
+
+- `specCharacteristic` is the high-level characteristic catalogue and should expose only the semantic buckets: `targets`, `constraints`, and `preferences`.
+- Do not duplicate individual nested fields such as `maxLatencyMs`, `priority`, `redundancyRequired`, `timeWindow`, or `preferredAccessTechnology` as separate top-level `specCharacteristic` entries by default.
+- `expressionSpecification` is the authoritative request-shape schema and defines the detailed nested structure under `targets`, `constraints`, and `preferences`.
+- `targets`, `constraints`, and `preferences` are first-class semantic buckets across the end-to-end pipeline.

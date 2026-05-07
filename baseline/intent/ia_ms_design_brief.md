@@ -104,18 +104,6 @@ IA MS is the runtime assurance truth for IME. IC MS remains the owner of the ext
 | 9 | IA MS writes IA outbox record for `IntentAssuranceEvent` |
 | 10 | IA relay publishes `IntentAssuranceEvent` to `t7.intent.management.events` |
 
-
-### Targets, constraints, and preferences assurance rule:
-
-`targets`, `constraints`, and `preferences` are canonical first-class semantic buckets across the full Intent Enabler pipeline.
-
-For IA MS:
-
-- `targets` are included by default in `IntentAssuranceEvent` so runtime observations can be interpreted against the active objectives.
-- `constraints` and `preferences` are not included in `IntentAssuranceEvent` by default.
-- `constraints` and `preferences` may be included only when an explicitly designed control-loop use case needs them.
-- IA MS must not flatten target, constraint, or preference values into unrelated top-level fields when those values belong in the canonical buckets.
-
 ### IntentAssuranceEvent Baseline:
 
 `IntentAssuranceEvent` is the single IA-owned runtime assurance event.
@@ -133,69 +121,68 @@ It represents:
 
 `IntentDriftOccurredEvent` is retired from the active baseline. Do not use it by default.
 
+
+### IntentReport projection support rule:
+
+IA MS remains the runtime assurance truth and reports lifecycle state, runtime targets, selected/applied resources, and observed metrics through `IntentAssuranceEvent`.
+
+IC MS owns the external `IntentReport` projection and curates IA-provided assurance observations into report-safe sections such as `targetSummary` and `observationSummary`. Separate `degradationSummary` and `reoptimisationSummary` sections are not baselined because degraded/re-optimisation rationale should be visible through target values and current observed metrics.
+
+For healthy/active assurance, IA events should remain lean and normally include observations for selected/applied resources only.
+
+For degraded or failed assurance, IA events may include the relevant monitored-resource observations needed by IC MS to show target/current-metric comparisons in the report. IC MS must still curate those observations before exposing them externally in `IntentReport`.
+
+IA MS must not expect IC MS to expose raw telemetry streams or the full internal `IntentAssuranceEvent` body in `IntentReport`.
+
 ### Indicative IntentAssuranceEvent Shape:
 
 ```json
 {
   "body": {
+    "eventType": "IntentAssuranceEvent",
+    "eventVersion": "1.0",
+    "source": "intent-assurance-ms",
+    "eventTime": "2026-05-04T12:20:00+10:00",
+    "correlationId": "corr-ia-20260504-002",
     "intentId": "INT-HOSP-2026-001",
-    "version": "v1",
-    "lifecycleStatus": "Degraded",
-    "statusReason": "Selected resources are outside resolved runtime targets.",
     "location": {
-      "locationId": "AU-NSW-SYD-HOSP-001",
-      "displayName": "Sydney-Main-Hospital"
+      "locationId": "sydney-hospital"
     },
-    "serviceType": "surgical-connectivity",
-    "serviceClass": "critical-gold",
-    "targets": {
-      "maxLatencyMs": 10,
-      "minAvailabilityPercent": 99.99,
-      "maxJitterMs": 2,
-      "maxPacketLossPercent": 0.01
+    "service": {
+      "serviceClass": "surgical-slice"
     },
-    "resources": [
+    "assuranceOutcome": {
+      "lifecycleStatus": "Degraded",
+      "assuranceStatus": "driftDetected",
+      "severity": "major",
+      "reason": "Primary path latency exceeded configured benchmark.",
+      "requiresReoptimisation": true
+    },
+    "runtimeState": {
+      "affectedPathId": "path-syd-hosp-primary-001",
+      "latencyMs": 18,
+      "reliabilityPercent": 99.95
+    },
+    "candidates": [
       {
-        "role": "primary",
-        "resourceId": "SYD-PRI-01"
+        "pathId": "path-syd-hosp-primary-001",
+        "pathClass": "primary",
+        "latencyMs": 18,
+        "reliabilityPercent": 99.95,
+        "latencyBenchmarkMs": 10,
+        "reliabilityBenchmarkPercent": 99.99
       },
       {
-        "role": "secondary",
-        "resourceId": "SYD-SEC-01"
-      }
-    ],
-    "observations": [
-      {
-        "resourceId": "SYD-PRI-01",
-        "role": "primary",
-        "metrics": {
-          "latencyMs": 18,
-          "availabilityPercent": 99.992,
-          "jitterMs": 1.8,
-          "packetLossPercent": 0.006
-        }
-      },
-      {
-        "resourceId": "SYD-SEC-01",
-        "role": "secondary",
-        "metrics": {
-          "latencyMs": 12,
-          "availabilityPercent": 99.994,
-          "jitterMs": 1.8,
-          "packetLossPercent": 0.006
-        }
+        "pathId": "path-syd-hosp-backup-001",
+        "pathClass": "backup",
+        "latencyMs": 9,
+        "reliabilityPercent": 99.991,
+        "latencyBenchmarkMs": 10,
+        "reliabilityBenchmarkPercent": 99.99
       }
     ],
     "references": {
-      "correlationId": "corr-intent-assurance-002",
-      "intent": {
-        "id": "INT-HOSP-2026-001",
-        "href": "/intentManagement/v5/intent/INT-HOSP-2026-001"
-      },
-      "intentSpecification": {
-        "id": "hospital-surgical-slice-spec-v1.20",
-        "href": "/intentManagement/v5/intentSpecification/hospital-surgical-slice-spec-v1.20"
-      }
+      "intent": "/intentManagement/v5/intent/INT-HOSP-2026-001"
     }
   }
 }

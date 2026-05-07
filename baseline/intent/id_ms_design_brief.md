@@ -349,9 +349,11 @@ Common errors:
 | `constraints` | Hard rules or required non-target inputs | `priority`, `redundancyRequired`, `timeWindow` |
 | `preferences` | Soft selection guidance | `preferredAccessTechnology` |
 
-ID MS keeps `specCharacteristic` as the high-level characteristic catalogue, but the authoritative runtime request shape in `expressionSpecification.schema` must use nested `targets`, `constraints`, and `preferences` buckets.
+ID MS keeps `specCharacteristic` as the high-level characteristic catalogue and exposes only the three semantic buckets by default: `targets`, `constraints`, and `preferences`. The authoritative runtime request shape in `expressionSpecification.schema` defines the detailed nested fields inside those buckets.
 
 Flat expression schemas that place `maxLatencyMs`, `priority`, `redundancyRequired`, `timeWindow`, or `preferredAccessTechnology` directly at the top level are not the active baseline.
+
+Likewise, detailed field-level characteristics such as `maxLatencyMs`, `priority`, `redundancyRequired`, `timeWindow`, or `preferredAccessTechnology` should not be duplicated as separate top-level `specCharacteristic` entries by default. They belong under the relevant semantic bucket in `expressionSpecification.schema`.
 
 This keeps the design-time specification aligned with IC MS runtime `Intent.expression`, `IntentValidatedEvent`, II MS resolution, optimiser evaluation, and IA MS assurance interpretation.
 

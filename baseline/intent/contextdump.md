@@ -722,50 +722,97 @@ Date: 2026-05-07T02:53:16.079859+00:00
 - Confirmed IC/ID spec and design Markdown JSON blocks validate.
 
 
-## Baseline update — targets, constraints, and preferences across E2E pipeline:
+## Baseline update — IntentReport observation results and degraded-report samples:
 
-Date: 2026-05-07T18:45:00+10:00
+Date: 2026-05-07T09:50:00+00:00
 
 ### Updated files:
-- `id_ms_design_brief.md`
-- `id_ms_specification.md`
 - `ic_ms_design_brief.md`
 - `ic_ms_specification.md`
-- `intent_internal_events_specification.md`
 - `ia_ms_design_brief.md`
 - `contextdump.md`
 
 ### Baseline:
-`targets`, `constraints`, and `preferences` are canonical first-class semantic buckets across the end-to-end Intent Enabler pipeline.
+`IntentReport` is a curated external report projection owned by IC MS. It is based on IA MS assurance truth, but it is not raw assurance telemetry.
 
-### Meanings:
-- `targets` are measurable SLA/outcome objectives such as `maxLatencyMs`, `minAvailabilityPercent`, `maxJitterMs`, and `maxPacketLossPercent`.
-- `constraints` are hard rules or required non-target inputs such as `priority`, `redundancyRequired`, and `timeWindow`.
-- `preferences` are soft selection guidance such as `preferredAccessTechnology`.
+`IntentReport` must include curated observation results whenever they are needed to explain lifecycle/status and target compliance.
 
-### E2E rule:
-ID MS defines and validates the nested buckets in `IntentSpecification.expressionSpecification`. IC MS accepts and persists them under runtime `Intent.expression`. `IntentValidatedEvent` forwards the admitted expression with the same buckets. II MS preserves or refines them in `IntentResolvedEvent`. The optimiser evaluates them in `IntentOptimisedEvent`. IA MS includes `targets` by default in `IntentAssuranceEvent` so runtime observations can be interpreted against objectives; `constraints` and `preferences` are included in assurance only when an explicitly designed control-loop use case needs them.
+Observation results are especially important for `Degraded` and `Failed` reports because the external report must explain why the external lifecycle/status projection changed by showing target values beside current observed metrics.
 
-### Correction:
-Flat `IntentSpecification` expression schemas that place target, constraint, or preference fields directly at top level are no longer the active baseline. The authoritative expression schema must use nested `targets`, `constraints`, and `preferences` buckets.
+### IntentReport areas:
+- identity and linkage
+- current lifecycle/status
+- assurance summary
+- target summary
+- observation summary
+- service summary
+- resource summary
+- evaluation summary
+- optional version/history summary
+- references
+- report metadata
 
-## Baseline update — Provider attribute event-facing cleanup:
+### Observation rules:
+For `Active` / healthy reports, observations should remain lean and normally include selected/applied resources only.
 
-Date: 2026-05-07T18:00:00+10:00
+For `Degraded` or `Failed` reports, observations should include the relevant observed metrics required to explain lifecycle/status and target-compliance outcome.
 
-### Updated file:
-- `intent_internal_events_specification.md`
+`targetSummary` compares requested/resolved targets against observed values.
+
+`observationSummary` carries curated observed metrics per relevant resource.
+
+Separate `degradationSummary`, `failureSummary`, and `reoptimisationSummary` sections are not baselined. The report should use `targetSummary`, `observationSummary`, `lifecycleStatus`, `statusReason`, and `summary` to explain current state.
+
+### Exposure rule:
+`IntentReport` may expose curated observation results and target comparisons.
+
+`IntentReport` must not expose raw telemetry streams, raw optimiser decisions, raw `t7.knowledge plane` data, raw callback payloads, internal candidate scoring, internal Kafka payloads, or the full internal `IntentAssuranceEvent` body unless deliberately curated into an externally safe report shape.
+
+### Engineering samples:
+The IC MS design brief and IC MS specification now include concrete healthy and degraded report samples so engineers can understand the intended report shape and how observations should be represented.
+
+
+## Baseline update — IntentReport simplified target/current metrics model:
+
+Date: 2026-05-07T10:05:00+00:00
+
+### Updated files:
+- `ic_ms_design_brief.md`
+- `ic_ms_specification.md`
+- `ia_ms_design_brief.md`
 - `contextdump.md`
 
 ### Baseline:
-`provider` is KP/resource-inventory metadata only and is not included by default in event-facing resource entries.
+`IntentReport` does not use separate `degradationSummary` or `reoptimisationSummary` sections by default.
+
+The external report should explain degraded, failed, or re-optimisation-relevant states using:
+- `lifecycleStatus`
+- `statusReason`
+- `summary`
+- `targetSummary`
+- `observationSummary`
+
+### Rationale:
+If `targetSummary` already shows each resolved target beside the current observed value, and `observationSummary` shows the current metrics per relevant resource, separate degradation and re-optimisation sections duplicate the same evidence and create another place for inconsistent truth.
 
 ### Rule:
-- Keep `provider` in KP resource inventory only if useful for internal knowledge.
-- Do not include `provider` by default in `IntentResolvedEvent.resources[]`.
-- Do not include `provider` by default in `IntentOptimisedEvent.resources[]`.
-- Reintroduce an event-facing provider-like attribute only if provider-aware optimisation is explicitly baselined later.
-- If reintroduced, use a deliberate event-facing name such as `resourceProvider` or `providerGroup`, depending on whether the optimiser needs real provider identity or only diversity/anti-affinity grouping.
+For `Degraded` reports, include target/current metric comparisons that show which targets are violated.
 
-### Reason:
-`provider` originated from KP resource inventory. It is not part of the runtime Intent request, IntentSpecification expression, or default optimiser handoff contract. Keeping it out of event-facing resource entries avoids leaking inventory/vendor metadata into internal workflow contracts unless there is a confirmed optimiser requirement.
+For healthy `Active` reports, keep observations lean and normally include selected/applied resources only.
+
+For `Failed` reports, include only the relevant target/current metric evidence and status reason needed to explain the failure.
+
+`IntentReport` must not expose raw telemetry streams, raw optimiser decisions, raw KP data, raw callback payloads, internal candidate scoring, or full internal event bodies.
+
+
+## Baseline update — IntentReport targetSummary fact-only values:
+
+Date: 2026-05-07
+
+### Updated files:
+- `ic_ms_design_brief.md`
+- `ic_ms_specification.md`
+- `ia_ms_design_brief.md`
+
+### Baseline:
+`IntentReport.targetSummary` is fact-only by default. It should expose resolved target values and current observed values, but should not include aggregate interpretation fields such as `result: Compliant` or `result: NonCompliant`, and should not include per-target `status` labels such as `Compliant` or `Violated` by default. Consumers decide compliance from the target and observed values. Use `lifecycleStatus`, `statusReason`, and `summary` for the projected state narrative.
