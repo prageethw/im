@@ -744,3 +744,30 @@ Date: 2026-05-07
 
 ### Applied:
 The ID MS specification create example now uses bucket-level `specCharacteristic` entries for `targets`, `constraints`, and `preferences`, each with TMF-style `@type`, `name`, `valueType`, and representative `characteristicValueSpecification` examples/defaults. The detailed expression-value validation schema is documented as implementation guidance and referenced through `targetEntitySchema.@schemaLocation`.
+
+
+## Baseline update — Expression schema separation and drift prevention:
+
+Date: 2026-05-07
+
+### Updated files:
+- `id_ms_design_brief.md`
+- `id_ms_specification.md`
+- `ic_ms_design_brief.md`
+- `ic_ms_specification.md`
+
+### Baseline:
+Runtime expression payloads and validation schemas are separated. `Intent.expression.expressionValue` and `IntentReport.expression.expressionValue` carry actual runtime/request/report data. Detailed platform JSON Schema validation for `expression.expressionValue` is referenced from `IntentSpecification.targetEntitySchema.@schemaLocation`.
+
+The `IntentSpecification` and its referenced schema are treated as one governed immutable contract bundle once activated.
+
+### Drift-prevention controls:
+- Schema artefacts must be immutable and versioned.
+- Schema URLs must not point to mutable branch/latest locations.
+- Store `schemaVersion` and `schemaHash` on `targetEntitySchema` where possible.
+- ID MS must validate referenced schema existence, validity, and hash before activation.
+- IC MS validates runtime intents only against the schema referenced by the concrete active `IntentSpecification.id`.
+- Any schema change after activation requires a new versioned `IntentSpecification` and a new schema URL.
+
+### Rationale:
+Externalising the schema keeps TMF-facing `Intent.expression` and `IntentReport.expression` clean while preserving strict runtime validation. Versioning and hashing prevent design-time/runtime drift.

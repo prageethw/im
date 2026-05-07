@@ -870,7 +870,7 @@ GET /intentManagement/v5/intent/INT-HOSP-2026-001/intentReport/IR-INT-HOSP-2026-
 Accept: application/json
 ```
 
-### Success response — healthy / active report:
+### Success response:
 
 ```http
 HTTP/1.1 200 OK
@@ -891,88 +891,21 @@ Cache-Control: private, max-age=300
   },
   "version": "v2",
   "lifecycleStatus": "Active",
-  "statusReason": "Intent version v2 is active and assurance is healthy.",
   "reportTime": "2026-04-18T12:20:00+10:00",
   "summary": "Intent is active and assurance is healthy.",
   "assuranceSummary": {
-    "overallStatus": "Healthy"
+    "overallStatus": "Healthy",
+    "latencyMs": 8,
+    "availabilityPercent": 99.995,
+    "jitterMs": 1.5,
+    "packetLossPercent": 0.005
   },
   "serviceSummary": {
-    "locationId": "AU-NSW-SYD-HOSP-001",
-    "locationDisplayName": "Sydney-Main-Hospital",
-    "serviceType": "surgical-connectivity",
-    "serviceClass": "critical-gold"
-  },
-  "targetSummary": {
-    "targets": [
-      {
-        "name": "maxLatencyMs",
-        "target": 10,
-        "observedValue": 8,
-        "unit": "ms"
-      },
-      {
-        "name": "minAvailabilityPercent",
-        "target": 99.99,
-        "observedValue": 99.995,
-        "unit": "percent"
-      },
-      {
-        "name": "maxJitterMs",
-        "target": 2,
-        "observedValue": 1.5,
-        "unit": "ms"
-      },
-      {
-        "name": "maxPacketLossPercent",
-        "target": 0.01,
-        "observedValue": 0.005,
-        "unit": "percent"
-      }
-    ]
-  },
-  "resourceSummary": {
-    "resources": [
-      {
-        "resourceId": "SYD-PRI-01",
-        "role": "primary",
-        "resourceType": "networkPath",
-        "resourceClass": "critical-gold-access"
-      },
-      {
-        "resourceId": "SYD-SEC-01",
-        "role": "secondary",
-        "resourceType": "networkPath",
-        "resourceClass": "critical-gold-access"
-      }
-    ]
-  },
-  "observationSummary": {
-    "observedAt": "2026-04-18T12:20:00+10:00",
-    "resources": [
-      {
-        "resourceId": "SYD-PRI-01",
-        "role": "primary",
-        "metrics": {
-          "latencyMs": 8,
-          "availabilityPercent": 99.995,
-          "jitterMs": 1.5,
-          "packetLossPercent": 0.005
-        }
-      },
-      {
-        "resourceId": "SYD-SEC-01",
-        "role": "secondary",
-        "metrics": {
-          "latencyMs": 10,
-          "availabilityPercent": 99.994,
-          "jitterMs": 1.8,
-          "packetLossPercent": 0.006
-        }
-      }
-    ]
+    "serviceClass": "critical-gold",
+    "locationId": "sydney-hospital"
   },
   "evaluationSummary": {
+    "result": "Compliant",
     "details": [
       "Latency target satisfied",
       "Availability target satisfied",
@@ -980,127 +913,10 @@ Cache-Control: private, max-age=300
       "Packet loss target satisfied"
     ]
   },
-  "references": {
-    "intentSpecification": {
-      "id": "hospital-surgical-slice-spec-v1.20",
-      "href": "/intentManagement/v5/intentSpecification/hospital-surgical-slice-spec-v1.20"
-    }
-  },
   "@type": "IntentReport",
   "@baseType": "Entity"
 }
 ```
-
-### Success response — degraded report:
-
-```json
-{
-  "id": "IR-INT-HOSP-2026-001-004",
-  "href": "/intentManagement/v5/intent/INT-HOSP-2026-001/intentReport/IR-INT-HOSP-2026-001-004",
-  "intent": {
-    "id": "INT-HOSP-2026-001",
-    "href": "/intentManagement/v5/intent/INT-HOSP-2026-001"
-  },
-  "version": "v2",
-  "lifecycleStatus": "Degraded",
-  "statusReason": "Primary resource latency exceeded the resolved target.",
-  "reportTime": "2026-04-18T12:30:00+10:00",
-  "summary": "Intent is degraded because selected resource observations are outside resolved runtime targets.",
-  "assuranceSummary": {
-    "overallStatus": "Degraded",
-    "severity": "major"
-  },
-  "serviceSummary": {
-    "locationId": "AU-NSW-SYD-HOSP-001",
-    "locationDisplayName": "Sydney-Main-Hospital",
-    "serviceType": "surgical-connectivity",
-    "serviceClass": "critical-gold"
-  },
-  "targetSummary": {
-    "targets": [
-      {
-        "name": "maxLatencyMs",
-        "target": 10,
-        "observedValue": 18,
-        "unit": "ms"
-      },
-      {
-        "name": "minAvailabilityPercent",
-        "target": 99.99,
-        "observedValue": 99.992,
-        "unit": "percent"
-      }
-    ]
-  },
-  "resourceSummary": {
-    "resources": [
-      {
-        "resourceId": "SYD-PRI-01",
-        "role": "primary",
-        "resourceType": "networkPath",
-        "resourceClass": "critical-gold-access"
-      },
-      {
-        "resourceId": "SYD-SEC-01",
-        "role": "secondary",
-        "resourceType": "networkPath",
-        "resourceClass": "critical-gold-access"
-      }
-    ]
-  },
-  "observationSummary": {
-    "observedAt": "2026-04-18T12:30:00+10:00",
-    "resources": [
-      {
-        "resourceId": "SYD-PRI-01",
-        "role": "primary",
-        "metrics": {
-          "latencyMs": 18,
-          "availabilityPercent": 99.992,
-          "jitterMs": 1.8,
-          "packetLossPercent": 0.006
-        }
-      },
-      {
-        "resourceId": "SYD-SEC-01",
-        "role": "secondary",
-        "metrics": {
-          "latencyMs": 12,
-          "availabilityPercent": 99.994,
-          "jitterMs": 1.8,
-          "packetLossPercent": 0.006
-        }
-      }
-    ]
-  },
-  "references": {
-    "intentSpecification": {
-      "id": "hospital-surgical-slice-spec-v1.20",
-      "href": "/intentManagement/v5/intentSpecification/hospital-surgical-slice-spec-v1.20"
-    }
-  },
-  "@type": "IntentReport",
-  "@baseType": "Entity"
-}
-```
-
-### IntentReport areas and observation rules:
-
-| **Area** | **Baseline** |
-|---|---|
-| `assuranceSummary` | Curated high-level assurance state such as `Healthy`, `Degraded`, `Failed`, or severity |
-| `targetSummary` | Compares requested/resolved targets against observed values |
-| `resourceSummary` | Curated selected/applied resources, not full KP inventory |
-| `observationSummary` | Curated observed metrics per relevant resource |
-| `references` | Traceable links to related external resources |
-
-`IntentReport` must include curated observation results whenever they are needed to explain lifecycle/status and target/current metric comparison.
-
-For `Active` / healthy reports, observations should remain lean and normally include selected/applied resources only.
-
-For `Degraded` or `Failed` reports, observations should include the relevant target/current-metric evidence required to explain the lifecycle/status outcome. Do not add separate summary sections that duplicate the same target/current-metric evidence.
-
-`IntentReport` must not expose raw telemetry streams, duplicated degradation/re-optimisation interpretation sections, raw optimiser decisions, raw `t7.knowledge plane` data, raw callback payloads, internal candidate scoring, internal Kafka payloads, or the full internal `IntentAssuranceEvent` body unless deliberately curated into an externally safe report shape.
 
 ---
 
@@ -1620,6 +1436,168 @@ Current primary consumer is II MS / `intent-intelligence-ms`, but the event may 
 
 ---
 
+
+
+## HATEOAS link compliance baseline:
+
+### Rule:
+
+All successful IC MS resource representations must include a `_links` object so clients can discover the next valid actions from the returned representation.
+
+This applies to:
+
+- `Intent` create/retrieve/list-item/update/patch/terminate responses
+- `IntentReport` retrieve/list-item responses
+- `EventSubscription` create/retrieve responses for `/hub` and `/intent/hub`
+
+`204 No Content` responses do not include a response body and therefore do not include `_links`.
+
+### Common link relation rules:
+
+| **Link relation** | **Meaning** | **When included** |
+|---|---|---|
+| `self` | Canonical URL of the returned resource | Always for resource representations |
+| `list` | Collection/list endpoint for the resource type | Optional but recommended on single-resource representations |
+| `intentReport` | Nested reports for an Intent | Included on `Intent` representations |
+| `fullUpdate` | Deterministic full replacement through `PUT` | Included when the Intent can accept a runtime update |
+| `partialUpdate` | TMF-compatible partial update through `PATCH` | Included when the Intent can accept a runtime update; include warning that `PATCH` is supported but discouraged for ordinary edits |
+| `terminate` | Termination through `DELETE /intent/{id}` | Included when the Intent is not already terminal |
+| `delete` | Delete/tombstone report operation | Included on `IntentReport` when report deletion/tombstoning is allowed |
+| `subscribe` | Hub subscription creation endpoint | Recommended on collection/root examples where useful |
+| `unsubscribe` | Hub subscription delete endpoint | Included on subscription representations |
+
+### Intent lifecycle-specific links:
+
+| **Intent lifecycle status** | **HATEOAS links** |
+|---|---|
+| `Acknowledged` | `self`, `list`, `intentReport`, `fullUpdate`, `partialUpdate`, `terminate` |
+| `InProgress` | `self`, `list`, `intentReport`, `terminate`; update links only if platform policy allows concurrent version update |
+| `Active` | `self`, `list`, `intentReport`, `fullUpdate`, `partialUpdate`, `terminate` |
+| `Degraded` | `self`, `list`, `intentReport`, `fullUpdate`, `partialUpdate`, `terminate` |
+| `Paused` | `self`, `list`, `intentReport`, `terminate`; resume is not exposed as a separate action by default |
+| `Rejected` | `self`, `list`, `intentReport`; `terminate` only if retained rejected intents can be explicitly closed |
+| `Failed` | `self`, `list`, `intentReport`, `terminate` |
+| `Terminated` | `self`, `list`, `intentReport`; no update or terminate links |
+
+### Active Intent example:
+
+```json
+{
+  "id": "INT-HOSP-2026-001",
+  "href": "/intentManagement/v5/intent/INT-HOSP-2026-001",
+  "name": "Sydney Hospital Surgical Connection Intent",
+  "version": "v2",
+  "lifecycleStatus": "Active",
+  "@type": "Intent",
+  "@baseType": "Entity",
+  "_links": {
+    "self": {
+      "href": "/intentManagement/v5/intent/INT-HOSP-2026-001"
+    },
+    "list": {
+      "href": "/intentManagement/v5/intent"
+    },
+    "intentReport": {
+      "href": "/intentManagement/v5/intent/INT-HOSP-2026-001/intentReport"
+    },
+    "fullUpdate": {
+      "href": "/intentManagement/v5/intent/INT-HOSP-2026-001",
+      "method": "PUT"
+    },
+    "partialUpdate": {
+      "href": "/intentManagement/v5/intent/INT-HOSP-2026-001",
+      "method": "PATCH",
+      "warning": "PATCH is supported for TMF compatibility but PUT is preferred for deterministic full updates."
+    },
+    "terminate": {
+      "href": "/intentManagement/v5/intent/INT-HOSP-2026-001",
+      "method": "DELETE"
+    }
+  }
+}
+```
+
+### Terminated Intent example:
+
+```json
+{
+  "id": "INT-HOSP-2026-001",
+  "href": "/intentManagement/v5/intent/INT-HOSP-2026-001",
+  "name": "Sydney Hospital Surgical Connection Intent",
+  "version": "v2",
+  "lifecycleStatus": "Terminated",
+  "@type": "Intent",
+  "@baseType": "Entity",
+  "_links": {
+    "self": {
+      "href": "/intentManagement/v5/intent/INT-HOSP-2026-001"
+    },
+    "list": {
+      "href": "/intentManagement/v5/intent"
+    },
+    "intentReport": {
+      "href": "/intentManagement/v5/intent/INT-HOSP-2026-001/intentReport"
+    }
+  }
+}
+```
+
+### IntentReport example:
+
+```json
+{
+  "id": "IR-INT-HOSP-2026-001-003",
+  "href": "/intentManagement/v5/intent/INT-HOSP-2026-001/intentReport/IR-INT-HOSP-2026-001-003",
+  "name": "Sydney Hospital Surgical Connection Intent Report",
+  "@type": "IntentReport",
+  "@baseType": "Entity",
+  "_links": {
+    "self": {
+      "href": "/intentManagement/v5/intent/INT-HOSP-2026-001/intentReport/IR-INT-HOSP-2026-001-003"
+    },
+    "list": {
+      "href": "/intentManagement/v5/intent/INT-HOSP-2026-001/intentReport"
+    },
+    "intent": {
+      "href": "/intentManagement/v5/intent/INT-HOSP-2026-001"
+    },
+    "delete": {
+      "href": "/intentManagement/v5/intent/INT-HOSP-2026-001/intentReport/IR-INT-HOSP-2026-001-003",
+      "method": "DELETE"
+    }
+  }
+}
+```
+
+### EventSubscription example:
+
+```json
+{
+  "id": "sub-intent-001",
+  "callback": "https://consumer.example.com/tmf/intent/events",
+  "query": "eventType=IntentStatusChangeEvent",
+  "@type": "EventSubscription",
+  "_links": {
+    "self": {
+      "href": "/intentManagement/v5/intent/hub/sub-intent-001"
+    },
+    "unsubscribe": {
+      "href": "/intentManagement/v5/intent/hub/sub-intent-001",
+      "method": "DELETE"
+    },
+    "subscribe": {
+      "href": "/intentManagement/v5/intent/hub",
+      "method": "POST"
+    }
+  }
+}
+```
+
+### IC MS HATEOAS baseline statement:
+
+IC MS responses must expose only links for operations that are valid for the current resource state. HATEOAS links must not advertise update or terminate actions for terminal `Intent` projections. `PUT` may be exposed as the preferred deterministic full-update platform extension where supported, while `PATCH` remains available for TMF compatibility but discouraged for ordinary edits.
+
+
 ## 26. Final specification notes:
 
 - `GET /intent/{id}` returns current projected Intent state, not a full internal version aggregate.
@@ -1743,3 +1721,20 @@ IC MS accepts and projects runtime Intent resources using the shared semantic bu
 - IC MS validates syntactic shape against the active ID MS `expressionSpecification`.
 - IC MS does not perform semantic/KP validation, optimisation, orchestration, or assurance.
 
+
+
+## Expression schema consumption and drift-prevention baseline:
+
+IC MS does not discover or choose validation schemas independently.
+
+For `POST /intent`, `PUT /intent/{id}`, and runtime-content-changing `PATCH /intent/{id}`, IC MS resolves the concrete `intentSpecification.id`, confirms the referenced specification is `ACTIVE`, and validates `Intent.expression.expressionValue` only against the expression-value schema referenced by that exact specification version.
+
+Rules:
+
+- IC MS must not validate runtime intents against a schema URL inferred from family, name, service type, or latest version.
+- IC MS must not use a newer schema just because one exists.
+- The schema reference is part of the active `IntentSpecification` contract.
+- If the referenced schema is unavailable and IC MS has no valid fresh cached copy tied to the same `IntentSpecification.id` and schema hash, IC MS fails closed for create/update admission.
+- Runtime `Intent.expression.expressionValue` carries only request data; it does not embed the validation schema.
+
+This prevents design-time/runtime drift while keeping the external TMF-facing `Intent.expression` clean.

@@ -226,137 +226,9 @@ They must not expose raw telemetry, raw optimiser decisions, raw `t7.knowledge p
 
 It is based on assurance truth from IA MS, but it is not raw assurance telemetry.
 
-IntentReport may contain curated information such as current lifecycle/status, status reason, assurance summary, target/current metric summaries, curated observation results, current service/resource summary, last assurance update time, and references to the related `Intent`.
-
-Degraded or failed states are explained through `targetSummary`, `observationSummary`, `lifecycleStatus`, `statusReason`, and `summary`. The report exposes facts; consumers decide compliance or re-optimisation interpretation from those facts.
+IntentReport may contain curated information such as current lifecycle/status, status reason, assurance summary, current service/resource summary, evaluation summary, violation/degradation summary, last assurance update time, and references to the related `Intent`.
 
 IntentReport should not expose implementation-only details unless they are explicitly approved for external reporting.
-
-### IntentReport report areas:
-
-| **Area** | **Purpose** | **Typical content** |
-|---|---|---|
-| Identity and linkage | Identifies the report and links it to the parent Intent | `id`, `href`, `intent.id`, `intent.href`, `version`, `@type`, `@baseType` |
-| Current lifecycle/status | Shows the projected lifecycle view at report time | `lifecycleStatus`, `statusReason`, `statusChangeDate`, `reportTime` |
-| Assurance summary | Curated high-level runtime assurance result from IA MS | `overallStatus`, `summary`, `assuranceStatus`, `severity` |
-| Target summary | Shows requested/resolved targets beside current observed values | target name, target value, observed value, unit |
-| Observation summary | Curated observed metrics per relevant resource | `observedAt`, resource id, role, metrics such as latency, availability, jitter, packet loss |
-| Service summary | Human-readable summary of what service is being assured | `serviceType`, `serviceClass`, `locationId`, `locationDisplayName` |
-| Resource summary | Curated selected/applied resource summary, not full KP inventory | selected `resourceId`, `role`, `resourceType`, `resourceClass` |
-| Failure/status explanation | Uses lifecycle/status, statusReason, target summary, and observation summary rather than a separate failure section | `lifecycleStatus`, `statusReason`, target comparisons, observed metrics |
-| Version/history summary | Optional curated version history | active version, previous version, rollback/standby note |
-| References | Traceable links to related external resources | `intent`, `intentSpecification`, latest report links |
-| Report metadata | Report creation/update metadata | `creationDate`, `lastUpdate`, `validFor`, `reportTime` |
-
-### IntentReport observation rule:
-
-`IntentReport` must include curated observation results whenever they are needed to explain lifecycle/status and target/current metric comparison.
-
-For `Degraded` and `Failed` reports, the report explains the condition by showing resolved target values beside current observed metrics. Do not add separate summary sections that duplicate the same target/current-metric evidence.
-
-The report must not expose raw telemetry dumps. It should include only the target comparisons and observations required to explain the current report state.
-
-### Healthy report observation sample:
-
-For `Active` / healthy reports, keep observations lean and normally include selected/applied resources only.
-
-```json
-{
-  "observationSummary": {
-    "observedAt": "2026-04-18T12:20:00+10:00",
-    "resources": [
-      {
-        "resourceId": "SYD-PRI-01",
-        "role": "primary",
-        "metrics": {
-          "latencyMs": 8,
-          "availabilityPercent": 99.995,
-          "jitterMs": 1.5,
-          "packetLossPercent": 0.005
-        }
-      },
-      {
-        "resourceId": "SYD-SEC-01",
-        "role": "secondary",
-        "metrics": {
-          "latencyMs": 10,
-          "availabilityPercent": 99.994,
-          "jitterMs": 1.8,
-          "packetLossPercent": 0.006
-        }
-      }
-    ]
-  }
-}
-```
-
-### Degraded report observation sample:
-
-For `Degraded` reports, show the resolved targets beside the current observed values. Do not add aggregate compliance labels; consumers can derive compliance from the values.
-
-```json
-{
-  "targetSummary": {
-    "targets": [
-      {
-        "name": "maxLatencyMs",
-        "target": 10,
-        "observedValue": 18,
-        "unit": "ms"
-      },
-      {
-        "name": "minAvailabilityPercent",
-        "target": 99.99,
-        "observedValue": 99.992,
-        "unit": "percent"
-      },
-      {
-        "name": "maxJitterMs",
-        "target": 2,
-        "observedValue": 1.8,
-        "unit": "ms"
-      },
-      {
-        "name": "maxPacketLossPercent",
-        "target": 0.01,
-        "observedValue": 0.006,
-        "unit": "percent"
-      }
-    ]
-  },
-  "observationSummary": {
-    "observedAt": "2026-04-18T12:30:00+10:00",
-    "resources": [
-      {
-        "resourceId": "SYD-PRI-01",
-        "role": "primary",
-        "metrics": {
-          "latencyMs": 18,
-          "availabilityPercent": 99.992,
-          "jitterMs": 1.8,
-          "packetLossPercent": 0.006
-        }
-      },
-      {
-        "resourceId": "SYD-SEC-01",
-        "role": "secondary",
-        "metrics": {
-          "latencyMs": 12,
-          "availabilityPercent": 99.994,
-          "jitterMs": 1.8,
-          "packetLossPercent": 0.006
-        }
-      }
-    ]
-  }
-}
-```
-
-### IntentReport exposure rule:
-
-IntentReport may expose curated observation results and target comparisons.
-
-IntentReport must not expose raw telemetry streams, duplicated degradation/re-optimisation interpretation sections, raw optimiser decisions, raw `t7.knowledge plane` data, raw callback payloads, internal candidate scoring, internal Kafka payloads, or the full internal `IntentAssuranceEvent` body unless deliberately curated into an externally safe report shape.
 
 ## TMF compliance and platform extension rule:
 
@@ -1409,3 +1281,41 @@ Design rules:
 - IC MS does not perform semantic/KP validation.
 - IC MS does not invent optimiser categories; it preserves the bucketed expression for II MS.
 
+
+
+## HATEOAS compliance baseline:
+
+IC MS external REST resource representations must include HATEOAS `_links` so consumers can discover the valid next operations for the returned resource state.
+
+Rules:
+
+- Include `_links.self` on every `Intent`, `IntentReport`, and `EventSubscription` representation.
+- Include `_links.intentReport` on `Intent` representations.
+- Include update links only when the runtime `Intent` can accept a new version/update according to lifecycle and platform policy.
+- Include `terminate` only when the `Intent` is not already terminal.
+- For `Terminated` `Intent` projections, expose navigational links only; do not advertise update or terminate actions.
+- For `IntentReport`, expose `self`, `list`, `intent`, and `delete` only where report deletion/tombstoning is supported.
+- For subscriptions, expose `self` and `unsubscribe` links.
+- `PUT` is the preferred deterministic full-update platform extension where supported; `PATCH` is supported for TMF compatibility but discouraged for ordinary edits.
+- `204 No Content` responses do not include `_links` because there is no body.
+
+Baseline statement:
+
+**IC MS must make successful resource representations HATEOAS-compliant by including `_links` that advertise only operations valid for the current external Intent, IntentReport, or subscription state.**
+
+
+## Expression schema consumption and drift-prevention baseline:
+
+IC MS does not discover or choose validation schemas independently.
+
+For `POST /intent`, `PUT /intent/{id}`, and runtime-content-changing `PATCH /intent/{id}`, IC MS resolves the concrete `intentSpecification.id`, confirms the referenced specification is `ACTIVE`, and validates `Intent.expression.expressionValue` only against the expression-value schema referenced by that exact specification version.
+
+Rules:
+
+- IC MS must not validate runtime intents against a schema URL inferred from family, name, service type, or latest version.
+- IC MS must not use a newer schema just because one exists.
+- The schema reference is part of the active `IntentSpecification` contract.
+- If the referenced schema is unavailable and IC MS has no valid fresh cached copy tied to the same `IntentSpecification.id` and schema hash, IC MS fails closed for create/update admission.
+- Runtime `Intent.expression.expressionValue` carries only request data; it does not embed the validation schema.
+
+This prevents design-time/runtime drift while keeping the external TMF-facing `Intent.expression` clean.

@@ -1245,3 +1245,57 @@ Example bucket-level characteristic:
 Baseline statement:
 
 **Use `characteristicValueSpecification` for catalogue examples/defaults only. Runtime payload validation is owned by the expression-value schema referenced through `targetEntitySchema.@schemaLocation`.**
+
+
+## Expression schema separation and drift-prevention baseline:
+
+### Separation rule:
+
+Runtime expression payloads and validation schemas are deliberately separated.
+
+- `Intent.expression.expressionValue` carries the actual runtime request data.
+- `IntentReport.expression.expressionValue` carries the actual runtime report facts.
+- `IntentSpecification.expressionSpecification` identifies the TMF expression language and expression model IRI.
+- `IntentSpecification.targetEntitySchema.@schemaLocation` references the detailed platform JSON Schema used to validate `expression.expressionValue`.
+
+The validation schema must not be embedded inside every runtime `Intent.expression` or `IntentReport.expression`. Runtime expressions carry business/request/report data only; the rulebook belongs to the governed `IntentSpecification` contract bundle.
+
+### Drift-prevention rule:
+
+Externalising the schema is acceptable only when the schema is governed as part of the `IntentSpecification` lifecycle. The active `IntentSpecification` and its referenced schema are treated as one immutable contract bundle.
+
+Controls:
+
+| **Risk** | **Baseline control** |
+|---|---|
+| Schema URL points to mutable content | Use immutable, versioned schema URLs; do not point to branch, latest, or mutable GitHub raw URLs |
+| Schema changes after `IntentSpecification` activation | Any schema change requires a new versioned `IntentSpecification` and a new schema URL |
+| Published schema differs from reviewed schema | Store `schemaHash` / checksum on the `IntentSpecification` and verify it before activation |
+| Runtime validates with the wrong schema | IC MS validates only against the schema referenced by the concrete `IntentSpecification.id` used by that Intent version |
+| Design-time and runtime contracts drift | ID MS validates referenced schema existence, parseability, and hash before activating the specification |
+| Schema and specification are reviewed separately | Promote the `IntentSpecification` and schema artefact through one governance workflow |
+
+Recommended `targetEntitySchema` pattern:
+
+```json
+{
+  "targetEntitySchema": {
+    "@type": "TargetEntitySchema",
+    "@schemaLocation": "https://mycsp.com.au/schemas/intentManagement/v5/intentExpression/hospital-surgical-slice-spec-v1.19.expression.schema.json",
+    "schemaVersion": "1.19",
+    "schemaHash": "sha256:REPLACE_WITH_PUBLISHED_SCHEMA_HASH"
+  }
+}
+```
+
+Lifecycle rule:
+
+- A `DRAFT` `IntentSpecification` may reference a draft/staged schema artefact.
+- Before activation, ID MS must confirm the referenced schema exists, is valid, and matches the stored hash.
+- Once the `IntentSpecification` becomes `ACTIVE`, the referenced schema is frozen.
+- `ACTIVE` and `RETIRED` specifications must not be repointed to a different schema.
+- A changed expression-value schema requires a new `DRAFT` specification version, for example `hospital-surgical-slice-spec-v1.20`, and a new immutable schema URL.
+
+Baseline statement:
+
+**Externalise the expression-value JSON Schema for TMF cleanliness, but version it, hash it, and freeze it with the `IntentSpecification`. Treat the active `IntentSpecification` and its schema as one immutable governed contract bundle.**
