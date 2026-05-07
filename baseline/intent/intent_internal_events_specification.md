@@ -849,7 +849,7 @@ IC MS consumes this event and updates the external `Intent` and `IntentReport` p
     "intentId": "INT-HOSP-2026-001",
     "version": "v1",
     "lifecycleStatus": "Active",
-    "statusReason": "Observed telemetry for selected resources is within resolved targets.",
+    "statusReason": "Selected resources are operating within resolved runtime targets.",
     "location": {
       "locationId": "AU-NSW-SYD-HOSP-001",
       "displayName": "Sydney-Main-Hospital"
@@ -875,37 +875,7 @@ IC MS consumes this event and updates the external `Intent` and `IntentReport` p
           "availabilityPercent": 99.995,
           "jitterMs": 1.5,
           "packetLossPercent": 0.005
-        },
-        "evaluations": [
-          {
-            "name": "latency",
-            "status": "COMPLETED",
-            "target": 10,
-            "observedValue": 8,
-            "unit": "ms"
-          },
-          {
-            "name": "availability",
-            "status": "COMPLETED",
-            "target": 99.99,
-            "observedValue": 99.995,
-            "unit": "percent"
-          },
-          {
-            "name": "jitter",
-            "status": "COMPLETED",
-            "target": 2,
-            "observedValue": 1.5,
-            "unit": "ms"
-          },
-          {
-            "name": "packetLoss",
-            "status": "COMPLETED",
-            "target": 0.01,
-            "observedValue": 0.005,
-            "unit": "percent"
-          }
-        ]
+        }
       },
       {
         "resourceId": "SYD-SEC-01",
@@ -915,37 +885,7 @@ IC MS consumes this event and updates the external `Intent` and `IntentReport` p
           "availabilityPercent": 99.994,
           "jitterMs": 1.8,
           "packetLossPercent": 0.006
-        },
-        "evaluations": [
-          {
-            "name": "latency",
-            "status": "COMPLETED",
-            "target": 10,
-            "observedValue": 10,
-            "unit": "ms"
-          },
-          {
-            "name": "availability",
-            "status": "COMPLETED",
-            "target": 99.99,
-            "observedValue": 99.994,
-            "unit": "percent"
-          },
-          {
-            "name": "jitter",
-            "status": "COMPLETED",
-            "target": 2,
-            "observedValue": 1.8,
-            "unit": "ms"
-          },
-          {
-            "name": "packetLoss",
-            "status": "COMPLETED",
-            "target": 0.01,
-            "observedValue": 0.006,
-            "unit": "percent"
-          }
-        ]
+        }
       }
     ],
     "references": {
@@ -971,7 +911,7 @@ IC MS consumes this event and updates the external `Intent` and `IntentReport` p
     "intentId": "INT-HOSP-2026-001",
     "version": "v1",
     "lifecycleStatus": "Degraded",
-    "statusReason": "Observed latency is outside the resolved target.",
+    "statusReason": "Selected resources are outside resolved runtime targets.",
     "location": {
       "locationId": "AU-NSW-SYD-HOSP-001",
       "displayName": "Sydney-Main-Hospital"
@@ -997,43 +937,17 @@ IC MS consumes this event and updates the external `Intent` and `IntentReport` p
           "availabilityPercent": 99.992,
           "jitterMs": 1.8,
           "packetLossPercent": 0.006
-        },
-        "evaluations": [
-          {
-            "name": "latency",
-            "status": "INFEASIBLE",
-            "target": 10,
-            "observedValue": 18,
-            "unit": "ms",
-            "statusReason": "Observed latency is above the resolved maximum latency target."
-          },
-          {
-            "name": "availability",
-            "status": "COMPLETED",
-            "target": 99.99,
-            "observedValue": 99.992,
-            "unit": "percent"
-          }
-        ]
+        }
       },
       {
         "resourceId": "SYD-PRI-02",
-        "role": "observedAlternative",
+        "role": "primary",
         "metrics": {
           "latencyMs": 9,
           "availabilityPercent": 99.996,
           "jitterMs": 1.4,
           "packetLossPercent": 0.004
-        },
-        "evaluations": [
-          {
-            "name": "latency",
-            "status": "COMPLETED",
-            "target": 10,
-            "observedValue": 9,
-            "unit": "ms"
-          }
-        ]
+        }
       },
       {
         "resourceId": "SYD-SEC-01",
@@ -1043,36 +957,17 @@ IC MS consumes this event and updates the external `Intent` and `IntentReport` p
           "availabilityPercent": 99.994,
           "jitterMs": 1.8,
           "packetLossPercent": 0.006
-        },
-        "evaluations": [
-          {
-            "name": "latency",
-            "status": "INFEASIBLE",
-            "target": 10,
-            "observedValue": 12,
-            "unit": "ms",
-            "statusReason": "Observed latency is above the resolved maximum latency target."
-          }
-        ]
+        }
       },
       {
         "resourceId": "SYD-SEC-02",
-        "role": "observedAlternative",
+        "role": "secondary",
         "metrics": {
           "latencyMs": 9,
           "availabilityPercent": 99.997,
           "jitterMs": 1.2,
           "packetLossPercent": 0.003
-        },
-        "evaluations": [
-          {
-            "name": "latency",
-            "status": "COMPLETED",
-            "target": 10,
-            "observedValue": 9,
-            "unit": "ms"
-          }
-        ]
+        }
       }
     ],
     "references": {
@@ -1096,9 +991,13 @@ IC MS consumes this event and updates the external `Intent` and `IntentReport` p
 - Do not include `assuranceStatus` by default; `lifecycleStatus` carries the assurance outcome.
 - Use `resources` for selected/applied resources.
 - Use `observations[].metrics` for telemetry observed for each monitored resource.
+- Do not include `evaluations` in `IntentAssuranceEvent` by default, including degraded state.
+- IA MS reports lifecycle state and observed metrics; II MS uses those metrics to trigger a new `IntentResolvedEvent`, and the optimiser evaluates feasibility/selection.
 - Keep healthy/active assurance events lean and include observations for selected/applied resources only.
-- When `lifecycleStatus` is `Degraded`, `Failed`, or the event supports re-optimisation, IA MS may include observations for all monitored paths from `observerConfiguration.resourceIds`.
-- Do not include top-level `targets` and `observedMetrics` when the same values are already carried in `observations[].evaluations`.
+- When `lifecycleStatus` is `Degraded`, `Failed`, or the event supports re-optimisation, IA MS may include observations for all monitored resources from the observer scope.
+- In `observations`, always use the actual resource role, such as `primary` or `secondary`; do not use `observedAlternative`.
+- Selected/applied resources are identified separately by `IntentAssuranceEvent.resources`.
+- Do not include top-level `targets` or `observedMetrics`; runtime telemetry belongs in `observations[].metrics`.
 - Do not include `controlLoop` by default; downstream control-loop consumers derive the next action from the assurance event.
 - Do not include a `knowledgePlane` reference by default; IA MS works from applied service configuration, observer scope, and resolved targets.
 - No separate `IntentDriftOccurredEvent` is needed by default; drift/degradation is represented by `IntentAssuranceEvent`.
