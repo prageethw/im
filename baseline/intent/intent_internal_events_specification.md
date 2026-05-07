@@ -70,19 +70,33 @@ Do not add a separate `result` field by default.
 
 `FAILED` means technical/runtime/model/data failure.
 
+### Service configuration structure rule
+
+In `IntentNetworkReadyEvent.serviceConfiguration`, use:
+
+- `orchestratorConfiguration.target`
+- `orchestratorConfiguration.profile`
+- `orchestratorConfiguration.resources`
+- `observerConfiguration.target`
+- `observerConfiguration.profile`
+- `observerConfiguration.resourceIds`
+
+Do not repeat `orchestrator` or `observer` prefixes inside their own configuration blocks.
+
 ### Service-ready configuration rule
 
 `IntentNetworkReadyEvent` means the service configuration has been prepared for orchestration/apply.
 
 It does not mean the service has already been applied.
 
-Use `serviceConfiguration` to carry the service apply plan derived from selected optimiser resources and KP logical target/profile references.
+Use `serviceConfiguration` to carry the service apply and observation plan.
 
-`serviceConfiguration.resources` contains the selected resources to apply.
+`serviceConfiguration.orchestratorConfiguration.resources` contains the selected resources ready for apply.
 
-`serviceConfiguration.observerResourceIds` contains all KP resource IDs for the location-based service that IA/observer should monitor.
+`serviceConfiguration.observerConfiguration.resourceIds` contains all KP resource IDs for the location/service that IA/observer should monitor.
 
 Apply success/failure is confirmed later through callback and assurance processing, then projected through `IntentAssuranceEvent`.
+
 
 ---
 
@@ -749,26 +763,30 @@ content-type: application/json
     "serviceType": "surgical-connectivity",
     "serviceClass": "critical-gold",
     "serviceConfiguration": {
-      "orchestratorTarget": "t7-network-orchestrator",
-      "orchestratorProfile": "hospital-surgical-slice-apply-v1",
-      "observerTarget": "t7-observability-platform",
-      "observerProfile": "critical-gold-assurance-observation-v1",
-      "observerResourceIds": [
-        "SYD-PRI-01",
-        "SYD-PRI-02",
-        "SYD-SEC-01",
-        "SYD-SEC-02"
-      ],
-      "resources": [
-        {
-          "role": "primary",
-          "resourceId": "SYD-PRI-01"
-        },
-        {
-          "role": "secondary",
-          "resourceId": "SYD-SEC-01"
-        }
-      ]
+      "orchestratorConfiguration": {
+        "target": "t7-network-orchestrator",
+        "profile": "hospital-surgical-slice-apply-v1",
+        "resources": [
+          {
+            "role": "primary",
+            "resourceId": "SYD-PRI-01"
+          },
+          {
+            "role": "secondary",
+            "resourceId": "SYD-SEC-01"
+          }
+        ]
+      },
+      "observerConfiguration": {
+        "target": "t7-observability-platform",
+        "profile": "critical-gold-assurance-observation-v1",
+        "resourceIds": [
+          "SYD-PRI-01",
+          "SYD-PRI-02",
+          "SYD-SEC-01",
+          "SYD-SEC-02"
+        ]
+      }
     },
     "references": {
       "correlationId": "corr-intent-create-001",
@@ -793,10 +811,13 @@ content-type: application/json
 
 - `IntentNetworkReadyEvent` means service configuration is ready for orchestration/apply, not that apply has succeeded.
 - Use direct `location`, `serviceType`, and `serviceClass` fields; do not wrap them in `context` or `serviceContext`.
-- Use `serviceConfiguration` because the event carries the service apply plan rather than low-level network configuration.
-- `serviceConfiguration.resources` contains the selected resources ready for apply.
-- `serviceConfiguration.observerResourceIds` contains all KP resource IDs for the location/service that IA/observer should monitor, including selected and non-selected paths.
-- Include logical `orchestratorTarget`, `orchestratorProfile`, `observerTarget`, and `observerProfile` from KP.
+- Use `serviceConfiguration` because the event carries the service apply and observation plan rather than low-level network configuration.
+- Use `serviceConfiguration.orchestratorConfiguration` for apply/orchestration details.
+- Use `serviceConfiguration.observerConfiguration` for assurance/monitoring details.
+- Use `orchestratorConfiguration.target`, `orchestratorConfiguration.profile`, and `orchestratorConfiguration.resources`; do not repeat the `orchestrator` prefix inside the block.
+- Use `observerConfiguration.target`, `observerConfiguration.profile`, and `observerConfiguration.resourceIds`; do not repeat the `observer` prefix inside the block.
+- `orchestratorConfiguration.resources` contains the selected resources ready for apply.
+- `observerConfiguration.resourceIds` contains all KP resource IDs for the location/service that IA/observer should monitor, including selected and non-selected paths.
 - Do not include `applyOutcome`.
 - Do not include QoS, bandwidth, routing policy, hops, or service attributes by default.
 
@@ -1076,7 +1097,7 @@ IC MS consumes this event and updates the external `Intent` and `IntentReport` p
 - Use `resources` for selected/applied resources.
 - Use `observations[].metrics` for telemetry observed for each monitored resource.
 - Keep healthy/active assurance events lean and include observations for selected/applied resources only.
-- When `lifecycleStatus` is `Degraded`, `Failed`, or the event supports re-optimisation, IA MS may include observations for all monitored paths from `observerResourceIds`.
+- When `lifecycleStatus` is `Degraded`, `Failed`, or the event supports re-optimisation, IA MS may include observations for all monitored paths from `observerConfiguration.resourceIds`.
 - Do not include top-level `targets` and `observedMetrics` when the same values are already carried in `observations[].evaluations`.
 - Do not include `controlLoop` by default; downstream control-loop consumers derive the next action from the assurance event.
 - Do not include a `knowledgePlane` reference by default; IA MS works from applied service configuration, observer scope, and resolved targets.
@@ -1218,7 +1239,7 @@ The event type defines what those resources mean:
 |---|---|
 | `IntentResolvedEvent` | Available resources for optimiser consideration |
 | `IntentOptimisedEvent` | Optimiser-selected resources |
-| `IntentNetworkReadyEvent` | Selected resources ready for apply |
+| `IntentNetworkReadyEvent` | Selected resources ready for apply under `serviceConfiguration.orchestratorConfiguration.resources` |
 | `IntentAssuranceEvent` | Applied/assured selected resources |
 
 Avoid stage-specific field names such as `candidates` and `resourcePlan` unless a future event genuinely needs multiple resource sets in the same payload.

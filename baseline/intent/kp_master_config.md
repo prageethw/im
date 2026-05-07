@@ -1,28 +1,6 @@
 # kp_master_config.md
 
-## Purpose:
-
-This file is the baseline lightweight II MS KP / Master Knowledge Config.
-
-II MS uses this lightweight KP for local semantic resolution, mappings, policy hints, and service-specific interpretation.
-
-II MS also uses external `t7.knowledge plane` for network-related topology/resource context and broader network intelligence.
-
-Neither this lightweight KP nor `t7.knowledge plane` is exposed as the external `Intent` or `IntentSpecification`.
-
-## Baseline rules:
-
-- `applicableResourceIds` is optional.
-- Include `applicableResourceIds` only when the location has known applicable resources in the lightweight II MS KP.
-- Omit `applicableResourceIds` when none are currently defined.
-- Do not use empty arrays such as `"applicableResourceIds": []` by default.
-- `roles` is optional.
-- Include `roles` only when the resource plays a meaningful role in the current intent context.
-- Do not use empty arrays such as `"roles": []`.
-- Current controlled `roles` values are `primary` and `secondary`.
-- `humanExpressionMapping` is explicit under `expressionMapping`.
-
-## Master Knowledge Config:
+## KP master config baseline
 
 ```json
 {
@@ -30,310 +8,280 @@ Neither this lightweight KP nor `t7.knowledge plane` is exposed as the external 
     "configId": "hospital-surgical-slice-kp-v1",
     "version": "1.0",
     "domain": "intent-enabler",
-    "description": "Lightweight II MS KP / Master Knowledge Config for surgical hospital slice intent interpretation.",
-    "locations": {
+    "description": "Compact KP master config containing source-of-truth knowledge for service availability, design-time service benchmarks, resource inventory, logical optimiser/orchestrator/observer references, and human expression mapping.",
+    "locationBasedServices": {
       "AU-NSW-SYD-HOSP-001": {
-        "locationId": "AU-NSW-SYD-HOSP-001",
-        "name": "Sydney Hospital",
-        "locationType": "HOSPITAL",
-        "geographicScope": "AU-NSW-SYD",
-        "resourceAttributes": {
-          "surgicalCapable": true
+        "displayName": "Sydney-Main-Hospital",
+        "locationType": "hospital",
+        "geographicScope": "campus",
+        "serviceType": "surgical-connectivity",
+        "serviceClass": "critical-gold",
+        "capabilityStatus": "available",
+        "redundancyAvailable": true,
+        "optimiserTarget": "t7-gurobi-optimiser",
+        "optimiserModel": "gurobi-surgical-slice-resource-selection-v1",
+        "orchestratorTarget": "t7-network-orchestrator",
+        "orchestratorProfile": "hospital-surgical-slice-apply-v1",
+        "observerTarget": "t7-observability-platform",
+        "observerProfile": "critical-gold-assurance-observation-v1",
+        "benchmarks": {
+          "maxLatencyMs": 10,
+          "minAvailabilityPercent": 99.99,
+          "maxJitterMs": 2,
+          "maxPacketLossPercent": 0.01
         },
-        "applicableResourceIds": [
+        "resourceRoles": [
+          "primary",
+          "secondary"
+        ],
+        "accessTechnologies": [
+          "5G",
+          "fibre"
+        ],
+        "resourceIds": [
           "SYD-PRI-01",
           "SYD-PRI-02",
-          "SYD-BAK-01",
-          "SYD-BAK-02",
-          "SYD-CMP-01",
-          "SYD-SEC-01"
-        ],
-        "observabilityProfileId": "URLLC_SURGICAL_HIGH_FIDELITY",
-        "optimisationProfileIds": [
-          "SURGICAL_JOINT",
-          "LOWEST_LATENCY"
+          "SYD-SEC-01",
+          "SYD-SEC-02"
         ]
       },
       "AU-VIC-MEL-HOSP-101": {
-        "locationId": "AU-VIC-MEL-HOSP-101",
-        "name": "Alpha Hospital",
-        "locationType": "HOSPITAL",
-        "geographicScope": "AU-VIC-MEL",
-        "resourceAttributes": {
-          "surgicalCapable": true
+        "displayName": "Melbourne-Main-Hospital",
+        "locationType": "hospital",
+        "geographicScope": "campus",
+        "serviceType": "surgical-connectivity",
+        "serviceClass": "critical-gold",
+        "capabilityStatus": "available",
+        "redundancyAvailable": true,
+        "optimiserTarget": "t7-gurobi-optimiser",
+        "optimiserModel": "gurobi-surgical-slice-resource-selection-v1",
+        "orchestratorTarget": "t7-network-orchestrator",
+        "orchestratorProfile": "hospital-surgical-slice-apply-v1",
+        "observerTarget": "t7-observability-platform",
+        "observerProfile": "critical-gold-assurance-observation-v1",
+        "benchmarks": {
+          "maxLatencyMs": 12,
+          "minAvailabilityPercent": 99.99,
+          "maxJitterMs": 2,
+          "maxPacketLossPercent": 0.01
         },
-        "observabilityProfileId": "URLLC_SURGICAL_HIGH_FIDELITY",
-        "optimisationProfileIds": [
-          "SURGICAL_JOINT",
-          "LOWEST_LATENCY"
+        "resourceRoles": [
+          "primary",
+          "secondary"
+        ],
+        "accessTechnologies": [
+          "5G",
+          "fibre"
+        ],
+        "resourceIds": [
+          "MEL-PRI-01",
+          "MEL-PRI-02",
+          "MEL-SEC-01",
+          "MEL-SEC-02"
         ]
       },
       "AU-QLD-BNE-HOSP-201": {
-        "locationId": "AU-QLD-BNE-HOSP-201",
-        "name": "Gamma Hospital",
-        "locationType": "HOSPITAL",
-        "geographicScope": "AU-QLD-BNE",
-        "resourceAttributes": {
-          "surgicalCapable": true
-        },
-        "observabilityProfileId": "URLLC_SURGICAL_HIGH_FIDELITY",
-        "optimisationProfileIds": [
-          "SURGICAL_JOINT",
-          "LOWEST_LATENCY"
-        ]
-      },
-      "AU-NSW-NEW-HOSP-301": {
-        "locationId": "AU-NSW-NEW-HOSP-301",
-        "name": "Beta Hospital",
-        "locationType": "HOSPITAL",
-        "geographicScope": "AU-NSW-NEW",
-        "resourceAttributes": {
-          "surgicalCapable": false
-        }
-      }
-    },
-    "services": {
-      "surgical-connectivity": {
-        "serviceId": "surgical-connectivity",
-        "name": "Surgical Connectivity Service",
+        "displayName": "Brisbane-Main-Hospital",
+        "locationType": "hospital",
+        "geographicScope": "campus",
+        "serviceType": "surgical-connectivity",
         "serviceClass": "critical-gold",
-        "locationTypes": [
-          "HOSPITAL"
-        ],
-        "constraints": {
-          "sliceType": "URLLC",
-          "semanticTag": "medical_urllc_critical",
-          "latencyMs": {
-            "operator": "<=",
-            "value": 10
-          },
-          "availabilityPercent": {
-            "operator": ">=",
-            "value": 99.99
-          }
-        },
-        "policyInputs": {
-          "priority": [
-            "CRITICAL",
-            "HIGH"
-          ]
-        }
+        "capabilityStatus": "unknown",
+        "redundancyAvailable": false,
+        "statusReason": "Surgical critical-gold connectivity is not currently confirmed as available at this location.",
+        "resourceIds": []
       }
     },
-    "policyRules": {
-      "surgical-urllc-location-policy": {
-        "ruleId": "surgical-urllc-location-policy",
-        "appliesTo": {
-          "sliceType": "URLLC",
-          "semanticTag": "medical_urllc_critical"
-        },
-        "conditions": [
-          {
-            "field": "locationType",
-            "operator": "equals",
-            "value": "HOSPITAL"
-          },
-          {
-            "field": "surgicalCapable",
-            "operator": "equals",
-            "value": true
-          }
-        ],
-        "onFailure": {
-          "reasonCode": "POLICY_LOCATION_NOT_ALLOWED",
-          "statusReason": "Requested location is not allowed for the surgical URLLC profile."
-        }
-      },
-      "surgical-priority-policy": {
-        "ruleId": "surgical-priority-policy",
-        "appliesTo": {
-          "sliceType": "URLLC",
-          "semanticTag": "medical_urllc_critical"
-        },
-        "conditions": [
-          {
-            "field": "priority",
-            "operator": "in",
-            "value": [
-              "CRITICAL",
-              "HIGH"
-            ]
-          }
-        ],
-        "onFailure": {
-          "reasonCode": "POLICY_PRIORITY_NOT_ALLOWED",
-          "statusReason": "Requested priority is not allowed for the surgical URLLC profile."
-        }
-      }
-    },
-    "resourceCatalogue": {
+    "resources": {
       "SYD-PRI-01": {
         "resourceId": "SYD-PRI-01",
-        "resourceType": "deliveryResource",
-        "resourceClass": "critical-gold",
-        "roles": [
+        "resourceType": "networkPath",
+        "resourceClass": "critical-gold-access",
+        "resourceRoles": [
           "primary"
         ],
-        "locationId": "AU-NSW-SYD-HOSP-001",
-        "resourceAttributes": {
-          "hops": [
-            "fc00:2:2:101",
-            "fc00:2:2:210"
-          ],
-          "surgicalCapable": true,
-          "status": "Baseline",
-          "orchestrator": "ORCHESTRATOR_SYDNEY_ZONE"
+        "accessTechnology": "fibre",
+        "provider": "fixed-access-b",
+        "metrics": {
+          "benchmark": {
+            "latencyMs": 7,
+            "availabilityPercent": 99.996,
+            "jitterMs": 1.1,
+            "packetLossPercent": 0.004
+          }
         },
         "relationships": [
           {
-            "type": "disjointFrom",
-            "targetResourceId": "SYD-BAK-01"
-          }
-        ],
-        "metrics": [
-          {
-            "name": "latencyBenchmarkMs",
-            "value": 6.1
-          },
-          {
-            "name": "reliabilityBenchmarkPercent",
-            "value": 99.995
+            "type": "pairedSecondary",
+            "resourceId": "SYD-SEC-01"
           }
         ]
       },
       "SYD-PRI-02": {
         "resourceId": "SYD-PRI-02",
-        "resourceType": "deliveryResource",
-        "resourceClass": "critical-gold",
-        "roles": [
+        "resourceType": "networkPath",
+        "resourceClass": "critical-gold-access",
+        "resourceRoles": [
           "primary"
         ],
-        "locationId": "AU-NSW-SYD-HOSP-001",
-        "resourceAttributes": {
-          "hops": [
-            "fc00:2:2:105",
-            "fc00:2:2:220"
-          ],
-          "surgicalCapable": true,
-          "status": "Baseline",
-          "orchestrator": "ORCHESTRATOR_SYDNEY_ZONE"
+        "accessTechnology": "5G",
+        "provider": "mobile-access-a",
+        "metrics": {
+          "benchmark": {
+            "latencyMs": 8,
+            "availabilityPercent": 99.995,
+            "jitterMs": 1.5,
+            "packetLossPercent": 0.005
+          }
         },
         "relationships": [
           {
-            "type": "disjointFrom",
-            "targetResourceId": "SYD-BAK-02"
-          }
-        ],
-        "metrics": [
-          {
-            "name": "latencyBenchmarkMs",
-            "value": 8.9
-          },
-          {
-            "name": "reliabilityBenchmarkPercent",
-            "value": 99.992
-          }
-        ]
-      },
-      "SYD-BAK-01": {
-        "resourceId": "SYD-BAK-01",
-        "resourceType": "deliveryResource",
-        "resourceClass": "critical-gold",
-        "roles": [
-          "secondary"
-        ],
-        "locationId": "AU-NSW-SYD-HOSP-001",
-        "resourceAttributes": {
-          "hops": [
-            "fc00:2:2:102",
-            "fc00:2:2:211"
-          ],
-          "surgicalCapable": true,
-          "status": "Baseline",
-          "orchestrator": "ORCHESTRATOR_SYDNEY_ZONE"
-        },
-        "relationships": [
-          {
-            "type": "disjointFrom",
-            "targetResourceId": "SYD-PRI-01"
-          }
-        ],
-        "metrics": [
-          {
-            "name": "latencyBenchmarkMs",
-            "value": 7.0
-          },
-          {
-            "name": "reliabilityBenchmarkPercent",
-            "value": 99.994
-          }
-        ]
-      },
-      "SYD-BAK-02": {
-        "resourceId": "SYD-BAK-02",
-        "resourceType": "deliveryResource",
-        "resourceClass": "critical-gold",
-        "roles": [
-          "secondary"
-        ],
-        "locationId": "AU-NSW-SYD-HOSP-001",
-        "resourceAttributes": {
-          "hops": [
-            "fc00:2:2:106",
-            "fc00:2:2:221"
-          ],
-          "surgicalCapable": true,
-          "status": "Baseline",
-          "orchestrator": "ORCHESTRATOR_SYDNEY_ZONE"
-        },
-        "relationships": [
-          {
-            "type": "disjointFrom",
-            "targetResourceId": "SYD-PRI-02"
-          }
-        ],
-        "metrics": [
-          {
-            "name": "latencyBenchmarkMs",
-            "value": 9.5
-          },
-          {
-            "name": "reliabilityBenchmarkPercent",
-            "value": 99.991
-          }
-        ]
-      },
-      "SYD-CMP-01": {
-        "resourceId": "SYD-CMP-01",
-        "resourceType": "computeResource",
-        "resourceClass": "critical-gold",
-        "locationId": "AU-NSW-SYD-HOSP-001",
-        "resourceAttributes": {
-          "surgicalCapable": true,
-          "status": "Baseline",
-          "zone": "SYD-COMPUTE-A"
-        },
-        "metrics": [
-          {
-            "name": "capacityBenchmarkUnits",
-            "value": 120
+            "type": "pairedSecondary",
+            "resourceId": "SYD-SEC-02"
           }
         ]
       },
       "SYD-SEC-01": {
         "resourceId": "SYD-SEC-01",
-        "resourceType": "securityResource",
-        "resourceClass": "critical-silver",
-        "locationId": "AU-NSW-SYD-HOSP-001",
-        "resourceAttributes": {
-          "surgicalCapable": true,
-          "status": "Baseline",
-          "inspectionMode": "deep-packet"
+        "resourceType": "networkPath",
+        "resourceClass": "critical-gold-access",
+        "resourceRoles": [
+          "secondary"
+        ],
+        "accessTechnology": "5G",
+        "provider": "mobile-access-b",
+        "metrics": {
+          "benchmark": {
+            "latencyMs": 10,
+            "availabilityPercent": 99.994,
+            "jitterMs": 1.8,
+            "packetLossPercent": 0.006
+          }
         },
-        "metrics": [
+        "relationships": [
           {
-            "name": "inspectionCapacityBenchmarkGbps",
-            "value": 40
+            "type": "protects",
+            "resourceId": "SYD-PRI-01"
+          }
+        ]
+      },
+      "SYD-SEC-02": {
+        "resourceId": "SYD-SEC-02",
+        "resourceType": "networkPath",
+        "resourceClass": "critical-gold-access",
+        "resourceRoles": [
+          "secondary"
+        ],
+        "accessTechnology": "fibre",
+        "provider": "fixed-access-a",
+        "metrics": {
+          "benchmark": {
+            "latencyMs": 9,
+            "availabilityPercent": 99.997,
+            "jitterMs": 1.2,
+            "packetLossPercent": 0.003
+          }
+        },
+        "relationships": [
+          {
+            "type": "protects",
+            "resourceId": "SYD-PRI-02"
+          }
+        ]
+      },
+      "MEL-PRI-01": {
+        "resourceId": "MEL-PRI-01",
+        "resourceType": "networkPath",
+        "resourceClass": "critical-gold-access",
+        "resourceRoles": [
+          "primary"
+        ],
+        "accessTechnology": "fibre",
+        "provider": "fixed-access-mel-a",
+        "metrics": {
+          "benchmark": {
+            "latencyMs": 9,
+            "availabilityPercent": 99.995,
+            "jitterMs": 1.4,
+            "packetLossPercent": 0.005
+          }
+        },
+        "relationships": [
+          {
+            "type": "pairedSecondary",
+            "resourceId": "MEL-SEC-01"
+          }
+        ]
+      },
+      "MEL-PRI-02": {
+        "resourceId": "MEL-PRI-02",
+        "resourceType": "networkPath",
+        "resourceClass": "critical-gold-access",
+        "resourceRoles": [
+          "primary"
+        ],
+        "accessTechnology": "5G",
+        "provider": "mobile-access-mel-a",
+        "metrics": {
+          "benchmark": {
+            "latencyMs": 10,
+            "availabilityPercent": 99.994,
+            "jitterMs": 1.6,
+            "packetLossPercent": 0.006
+          }
+        },
+        "relationships": [
+          {
+            "type": "pairedSecondary",
+            "resourceId": "MEL-SEC-02"
+          }
+        ]
+      },
+      "MEL-SEC-01": {
+        "resourceId": "MEL-SEC-01",
+        "resourceType": "networkPath",
+        "resourceClass": "critical-gold-access",
+        "resourceRoles": [
+          "secondary"
+        ],
+        "accessTechnology": "5G",
+        "provider": "mobile-access-mel-b",
+        "metrics": {
+          "benchmark": {
+            "latencyMs": 12,
+            "availabilityPercent": 99.993,
+            "jitterMs": 1.9,
+            "packetLossPercent": 0.007
+          }
+        },
+        "relationships": [
+          {
+            "type": "protects",
+            "resourceId": "MEL-PRI-01"
+          }
+        ]
+      },
+      "MEL-SEC-02": {
+        "resourceId": "MEL-SEC-02",
+        "resourceType": "networkPath",
+        "resourceClass": "critical-gold-access",
+        "resourceRoles": [
+          "secondary"
+        ],
+        "accessTechnology": "fibre",
+        "provider": "fixed-access-mel-b",
+        "metrics": {
+          "benchmark": {
+            "latencyMs": 11,
+            "availabilityPercent": 99.996,
+            "jitterMs": 1.3,
+            "packetLossPercent": 0.004
+          }
+        },
+        "relationships": [
+          {
+            "type": "protects",
+            "resourceId": "MEL-PRI-02"
           }
         ]
       }
@@ -343,20 +291,25 @@ Neither this lightweight KP nor `t7.knowledge plane` is exposed as the external 
         "enabled": true,
         "entityAliases": {
           "Sydney Hospital": "AU-NSW-SYD-HOSP-001",
-          "Alpha Hospital": "AU-VIC-MEL-HOSP-101",
-          "Gamma Hospital": "AU-QLD-BNE-HOSP-201",
-          "Beta Hospital": "AU-NSW-NEW-HOSP-301"
+          "sydney-hospital": "AU-NSW-SYD-HOSP-001",
+          "Sydney-Main-Hospital": "AU-NSW-SYD-HOSP-001",
+          "Melbourne Hospital": "AU-VIC-MEL-HOSP-101",
+          "melbourne-hospital": "AU-VIC-MEL-HOSP-101",
+          "Melbourne-Main-Hospital": "AU-VIC-MEL-HOSP-101",
+          "Brisbane Hospital": "AU-QLD-BNE-HOSP-201",
+          "brisbane-hospital": "AU-QLD-BNE-HOSP-201",
+          "Brisbane-Main-Hospital": "AU-QLD-BNE-HOSP-201"
         },
         "fieldPatterns": [
           {
-            "field": "locationId",
+            "field": "location.locationId",
             "matchType": "entityAlias"
           },
           {
-            "field": "latency",
+            "field": "maxLatencyMs",
             "patterns": [
               {
-                "regex": "(?i)latency\\\\s*(<=|less than or equal to|at most|max(?:imum)? of)\\\\s*(\\\\d+)\\\\s*ms",
+                "regex": "(?i)latency\\s*(<=|less than or equal to|at most|max(?:imum)? of)\\s*(\\d+)\\s*ms",
                 "operator": "<=",
                 "valueGroup": 2,
                 "unit": "ms"
@@ -364,10 +317,10 @@ Neither this lightweight KP nor `t7.knowledge plane` is exposed as the external 
             ]
           },
           {
-            "field": "availability",
+            "field": "minAvailabilityPercent",
             "patterns": [
               {
-                "regex": "(?i)availability\\\\s*(>=|greater than or equal to|at least|min(?:imum)? of)\\\\s*(\\\\d+(?:\\\\.\\\\d+)?)",
+                "regex": "(?i)availability\\s*(>=|greater than or equal to|at least|min(?:imum)? of)\\s*(\\d+(?:\\.\\d+)?)",
                 "operator": ">=",
                 "valueGroup": 2,
                 "unit": "percent"
@@ -375,11 +328,42 @@ Neither this lightweight KP nor `t7.knowledge plane` is exposed as the external 
             ]
           },
           {
-            "field": "sliceType",
+            "field": "maxJitterMs",
             "patterns": [
               {
-                "regex": "(?i)surgical connection|surgical slice|surgical urllc",
-                "value": "URLLC"
+                "regex": "(?i)jitter\\s*(<=|less than or equal to|at most|max(?:imum)? of)\\s*(\\d+(?:\\.\\d+)?)\\s*ms",
+                "operator": "<=",
+                "valueGroup": 2,
+                "unit": "ms"
+              }
+            ]
+          },
+          {
+            "field": "maxPacketLossPercent",
+            "patterns": [
+              {
+                "regex": "(?i)(packet loss|packetloss)\\s*(<=|less than or equal to|at most|max(?:imum)? of)\\s*(\\d+(?:\\.\\d+)?)\\s*%?",
+                "operator": "<=",
+                "valueGroup": 3,
+                "unit": "percent"
+              }
+            ]
+          },
+          {
+            "field": "serviceType",
+            "patterns": [
+              {
+                "regex": "(?i)surgical connection|surgical slice|surgical connectivity",
+                "value": "surgical-connectivity"
+              }
+            ]
+          },
+          {
+            "field": "serviceClass",
+            "patterns": [
+              {
+                "regex": "(?i)critical gold|critical-gold",
+                "value": "critical-gold"
               }
             ]
           },
@@ -388,28 +372,46 @@ Neither this lightweight KP nor `t7.knowledge plane` is exposed as the external 
             "patterns": [
               {
                 "regex": "(?i)critical|emergency",
-                "value": "CRITICAL"
+                "value": "critical"
               },
               {
                 "regex": "(?i)high priority|high",
-                "value": "HIGH"
+                "value": "high"
+              },
+              {
+                "regex": "(?i)standard|normal",
+                "value": "standard"
               }
             ]
           },
           {
-            "field": "semanticTag",
+            "field": "redundancyRequired",
             "patterns": [
               {
-                "regex": "(?i)surgical|medical",
-                "value": "medical_urllc_critical"
+                "regex": "(?i)redundant|redundancy|required backup|backup path|secondary path",
+                "value": true
+              }
+            ]
+          },
+          {
+            "field": "preferredAccessTechnology",
+            "patterns": [
+              {
+                "regex": "(?i)5g|mobile",
+                "value": "5G"
+              },
+              {
+                "regex": "(?i)fibre|fiber|fixed",
+                "value": "fibre"
               }
             ]
           }
         ],
         "defaults": {
-          "sliceType": "URLLC",
-          "priority": "CRITICAL",
-          "semanticTag": "medical_urllc_critical"
+          "serviceType": "surgical-connectivity",
+          "serviceClass": "critical-gold",
+          "priority": "critical",
+          "redundancyRequired": true
         },
         "conflictPolicy": {
           "precedence": [
@@ -420,23 +422,24 @@ Neither this lightweight KP nor `t7.knowledge plane` is exposed as the external 
           "onConflict": "reject"
         }
       }
-    },
-    "resolutionOutput": {
-      "onSuccess": {
-        "semanticStatus": "RESOLVED",
-        "includeResolvedLocation": true,
-        "includeExecution": true,
-        "includeObservability": true,
-        "includeOptimisation": true,
-        "includeResources": true
-      },
-      "onFailure": {
-        "semanticStatus": "REJECTED",
-        "includeRejectionMessage": true
-      }
     }
   }
 }
 ```
 
+## Baseline notes
+
+- KP contains current available knowledge, not optimiser/orchestrator execution logic.
+- `locationBasedServices` entries are keyed by canonical `locationId` for direct lookup.
+- `displayName` holds the friendly location/service label.
+- `expressionMapping.humanExpressionMapping.entityAliases` maps human names directly to canonical `locationId`.
+- Location/service `benchmarks` are design-time known service capability values.
 - Resource performance values use `metrics.benchmark` for KP/design-time values.
+- `targets` remain runtime/request/event terminology, not KP terminology.
+- `resourceIds` identify resources currently known for a location-based service.
+- Resource entries do not repeat `locationId`; location-resource association is derived from `locationBasedServices[locationId].resourceIds`.
+- `capabilityStatus` uses `available` or `unknown`.
+- KP uses `redundancyAvailable` to describe current redundant resource capability. Human/NLP input may map `redundancyRequired`, but II MS validates it against `redundancyAvailable` and `resourceRoles`.
+- Logical references such as `optimiserTarget`, `optimiserModel`, `orchestratorTarget`, `orchestratorProfile`, `observerTarget`, and `observerProfile` are names only, not endpoint/payload/credential details.
+- Events may map these logical references into nested event-specific configuration structures such as `serviceConfiguration.orchestratorConfiguration.target/profile` and `serviceConfiguration.observerConfiguration.target/profile`.
+- KP does not include `semanticProfile`, `assuranceProfiles`, optimiser objective rules, hops, or service attributes by default.

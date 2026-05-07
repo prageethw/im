@@ -751,3 +751,42 @@ Use `resources` consistently across internal event bodies. The event type define
 - Replaced `IntentNetworkReadyEvent.serviceConfiguration.resourcePlan` with `serviceConfiguration.resources`.
 - Updated common rules, event-specific rules, and examples.
 - Kept `observerResourceIds` because that is a different wider monitoring set, not the selected resource set.
+
+## Baseline update — nested orchestrator and observer configuration:
+
+Date: 2026-05-06T23:30:13.199072+00:00
+
+### Updated file:
+- `intent_internal_events_specification.md`
+
+### Baseline:
+In `IntentNetworkReadyEvent.serviceConfiguration`, use nested configuration blocks:
+- `orchestratorConfiguration.target`
+- `orchestratorConfiguration.profile`
+- `orchestratorConfiguration.resources`
+- `observerConfiguration.target`
+- `observerConfiguration.profile`
+- `observerConfiguration.resourceIds`
+
+### Applied:
+- Replaced flat orchestrator fields with `orchestratorConfiguration`.
+- Replaced flat observer fields with `observerConfiguration`.
+- Replaced `observerResourceIds` with `observerConfiguration.resourceIds`.
+- Dropped repeated `orchestrator` / `observer` prefixes inside their own blocks.
+
+## Correction — KP master config aligned to latest baseline:
+
+Date: 2026-05-06T23:47:18.023588+00:00
+
+### Updated file:
+- `kp_master_config.md`
+
+### Applied:
+- `locationBasedServices` keys are canonical `locationId` values.
+- Friendly names are stored in `displayName`.
+- Human aliases map directly to canonical `locationId`.
+- Resource entries no longer repeat `locationId`.
+- Resource performance values use `metrics.benchmark`.
+- Location/service-level `benchmarks` remain for service capability values.
+- `redundancyAvailable` remains in KP; `redundancyRequired` remains supported through human expression mapping/defaults.
+- KP keeps logical optimiser/orchestrator/observer references, while events map those into event-specific structures.
