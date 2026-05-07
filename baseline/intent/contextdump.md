@@ -720,3 +720,25 @@ Date: 2026-05-07T02:53:16.079859+00:00
 - Replaced invalid placeholder JSON snippets with complete valid JSON examples.
 - Replaced abbreviated Intent response payloads with complete payloads using `expression.targets`, `expression.constraints`, and `expression.preferences`.
 - Confirmed IC/ID spec and design Markdown JSON blocks validate.
+
+
+## Baseline update — external schema separated in Markdown:
+
+Date: 2026-05-08
+
+### Updated files:
+- `id_ms_design_brief.md`
+- `id_ms_specification.md`
+
+### Baseline:
+The full JSON Schema for `Intent.expression.expressionValue` must remain visibly separated from the TMF-facing API payload examples in Markdown.
+
+The main `IntentSpecification` request/response examples show only:
+- `expressionSpecification` as the TMF expression contract reference
+- `targetEntitySchema.@schemaLocation` as the external validation schema reference
+- `schemaVersion` and `schemaHash` as drift-prevention metadata
+
+The full JSON Schema body may be documented in a separate appendix or separate schema file, but it must not appear inline as if it is part of the `IntentSpecification` resource body or runtime `Intent.expression.expressionValue`.
+
+### Reason:
+The validation schema is an external governed artefact. Keeping it separated in the Markdown prevents engineers from accidentally embedding schema definitions inside runtime API examples and reinforces the active baseline that runtime expressions carry actual data only.

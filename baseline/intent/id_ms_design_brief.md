@@ -16,6 +16,32 @@ Base path:
 /intentManagement/v5
 ```
 
+
+
+## TMF expression and external schema separation baseline:
+
+ID MS keeps the TMF-facing `IntentSpecification` payload and the detailed platform JSON Schema visibly separated in the Markdown specification.
+
+The `IntentSpecification` resource body includes only the TMF expression contract reference and the external schema reference:
+
+```json
+{
+  "expressionSpecification": {
+    "@type": "ExpressionSpecification",
+    "expressionLanguage": "JsonLdExpression",
+    "iri": "https://mycsp.com.au/tio/hospital-surgical-slice/v1.0"
+  },
+  "targetEntitySchema": {
+    "@type": "TargetEntitySchema",
+    "@schemaLocation": "https://mycsp.com.au/schemas/intentManagement/v5/intentExpression/hospital-surgical-slice-spec-v1.19.expression.schema.json",
+    "schemaVersion": "1.19",
+    "schemaHash": "sha256:REPLACE_WITH_PUBLISHED_SCHEMA_HASH"
+  }
+}
+```
+
+The full JSON Schema body is documented separately as an external schema artefact, not inline as part of the API payload example. This prevents engineers and consumers from mistaking the schema definition for runtime `Intent.expression.expressionValue` content.
+
 ## IntentSpecification resource APIs:
 
 | **Purpose** | **Method** | **Endpoint** |
@@ -87,13 +113,6 @@ Important:
 - Meaningful change after activation requires a new versioned `IntentSpecification`.
 - `PATCH` is supported for compatibility but discouraged.
 - `PUT` is preferred for deterministic full updates.
-
-
-## GET cache and ETag baseline:
-
-All successful ID MS GET responses, including IntentSpecification list/retrieve and hub subscription retrieve responses, return `ETag` and `Cache-Control`. Clients may request a fresh read using request header `Cache-Control: no-cache`.
-
-Unsafe ID MS operations use `If-Match` for ETag concurrency validation, including `PUT`, `PATCH`, `DELETE /intentSpecification/{id}`, and hub subscription delete operations.
 
 ## ETag / If-Match rules:
 
