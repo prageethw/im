@@ -121,19 +121,6 @@ It represents:
 
 `IntentDriftOccurredEvent` is retired from the active baseline. Do not use it by default.
 
-
-### IntentReport projection support rule:
-
-IA MS remains the runtime assurance truth and reports lifecycle state, runtime targets, selected/applied resources, and observed metrics through `IntentAssuranceEvent`.
-
-IC MS owns the external `IntentReport` projection and curates IA-provided assurance observations into report-safe sections such as `targetSummary` and `observationSummary`. Degraded or re-optimisation-relevant rationale should be visible through target values and current observed metrics, without separate duplicated interpretation sections.
-
-For healthy/active assurance, IA events should remain lean and normally include observations for selected/applied resources only.
-
-For degraded or failed assurance, IA events may include the relevant monitored-resource observations needed by IC MS to show target/current-metric comparisons in the report. IC MS must still curate those observations before exposing them externally in `IntentReport`.
-
-IA MS must not expect IC MS to expose raw telemetry streams or the full internal `IntentAssuranceEvent` body in `IntentReport`.
-
 ### Indicative IntentAssuranceEvent Shape:
 
 ```json
@@ -187,6 +174,22 @@ IA MS must not expect IC MS to expose raw telemetry streams or the full internal
   }
 }
 ```
+
+
+### TMF-facing IntentReport projection rule:
+
+IA MS does not own the external TMF `IntentReport` API shape. IA MS emits assurance truth internally. IC MS curates that truth into TMF921-facing `IntentReport.expression.expressionValue`.
+
+Default external report facts are:
+
+```text
+expression.expressionValue.lifecycleStatus
+expression.expressionValue.statusReason / summary
+expression.expressionValue.targetSummary
+expression.expressionValue.observationSummary
+```
+
+`targetSummary` is fact-only by default and does not include aggregate `result` or per-target `status` labels.
 
 ### Consumer Behaviour:
 

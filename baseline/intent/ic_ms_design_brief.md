@@ -82,6 +82,55 @@ Accepted domain-scoped platform extension:
 | Retrieve intent event subscription | `GET` | `/intentManagement/v5/intent/hub/{id}` |
 | Delete intent event subscription | `DELETE` | `/intentManagement/v5/intent/hub/{id}` |
 
+
+## TMF921 external expression wrapper baseline:
+
+IC MS external REST resources remain TMF921-facing.
+
+### External Intent expression rule:
+
+External `Intent.expression` uses the TMF921 `IntentExpression` wrapper. The domain request payload is carried inside `expression.expressionValue`.
+
+Required expression wrapper fields:
+
+```text
+expression.@type
+expression.iri
+expression.expressionValue
+```
+
+Use `@type: JsonLdExpression` by default in TMF-facing examples.
+
+The shared semantic buckets remain canonical, but on the external REST resource they appear under:
+
+```text
+Intent.expression.expressionValue.targets
+Intent.expression.expressionValue.constraints
+Intent.expression.expressionValue.preferences
+```
+
+### External IntentReport expression rule:
+
+External `IntentReport.expression` also uses the TMF921 expression wrapper. Curated report facts such as `targetSummary` and `observationSummary` are carried inside:
+
+```text
+IntentReport.expression.expressionValue.targetSummary
+IntentReport.expression.expressionValue.observationSummary
+```
+
+`targetSummary` remains fact-only by default: target value, observed value, and unit. Consumers decide compliance from those facts.
+
+### Internal event split:
+
+Internal events and service handoffs do not use the TMF wrapper. They keep native JSON buckets directly:
+
+```text
+IntentValidatedEvent.body.expression.targets
+IntentResolvedEvent.body.targets
+IntentOptimisedEvent.body.targets
+IntentAssuranceEvent.body.targets
+```
+
 ## IC MS validation responsibility:
 
 On `POST /intentManagement/v5/intent`, IC MS:
@@ -226,137 +275,9 @@ They must not expose raw telemetry, raw optimiser decisions, raw `t7.knowledge p
 
 It is based on assurance truth from IA MS, but it is not raw assurance telemetry.
 
-IntentReport may contain curated information such as current lifecycle/status, status reason, assurance summary, target/current metric summaries, curated observation results, current service/resource summary, last assurance update time, and references to the related `Intent`.
-
-Degraded or failed states are explained through `targetSummary`, `observationSummary`, `lifecycleStatus`, `statusReason`, and `summary`. The report exposes facts; consumers decide compliance or re-optimisation interpretation from those facts.
+IntentReport may contain curated information such as current lifecycle/status, status reason, assurance summary, current service/resource summary, evaluation summary, violation/degradation summary, last assurance update time, and references to the related `Intent`.
 
 IntentReport should not expose implementation-only details unless they are explicitly approved for external reporting.
-
-### IntentReport report areas:
-
-| **Area** | **Purpose** | **Typical content** |
-|---|---|---|
-| Identity and linkage | Identifies the report and links it to the parent Intent | `id`, `href`, `intent.id`, `intent.href`, `version`, `@type`, `@baseType` |
-| Current lifecycle/status | Shows the projected lifecycle view at report time | `lifecycleStatus`, `statusReason`, `statusChangeDate`, `reportTime` |
-| Assurance summary | Curated high-level runtime assurance result from IA MS | `overallStatus`, `summary`, `assuranceStatus`, `severity` |
-| Target summary | Shows requested/resolved targets beside current observed values | target name, target value, observed value, unit |
-| Observation summary | Curated observed metrics per relevant resource | `observedAt`, resource id, role, metrics such as latency, availability, jitter, packet loss |
-| Service summary | Human-readable summary of what service is being assured | `serviceType`, `serviceClass`, `locationId`, `locationDisplayName` |
-| Resource summary | Curated selected/applied resource summary, not full KP inventory | selected `resourceId`, `role`, `resourceType`, `resourceClass` |
-| Failure/status explanation | Uses lifecycle/status, statusReason, target summary, and observation summary rather than a separate failure section | `lifecycleStatus`, `statusReason`, target comparisons, observed metrics |
-| Version/history summary | Optional curated version history | active version, previous version, rollback/standby note |
-| References | Traceable links to related external resources | `intent`, `intentSpecification`, latest report links |
-| Report metadata | Report creation/update metadata | `creationDate`, `lastUpdate`, `validFor`, `reportTime` |
-
-### IntentReport observation rule:
-
-`IntentReport` must include curated observation results whenever they are needed to explain lifecycle/status and target/current metric comparison.
-
-For `Degraded` and `Failed` reports, the report explains the condition by showing resolved target values beside current observed metrics. Do not add separate summary sections that duplicate the same target/current-metric evidence.
-
-The report must not expose raw telemetry dumps. It should include only the target comparisons and observations required to explain the current report state.
-
-### Healthy report observation sample:
-
-For `Active` / healthy reports, keep observations lean and normally include selected/applied resources only.
-
-```json
-{
-  "observationSummary": {
-    "observedAt": "2026-04-18T12:20:00+10:00",
-    "resources": [
-      {
-        "resourceId": "SYD-PRI-01",
-        "role": "primary",
-        "metrics": {
-          "latencyMs": 8,
-          "availabilityPercent": 99.995,
-          "jitterMs": 1.5,
-          "packetLossPercent": 0.005
-        }
-      },
-      {
-        "resourceId": "SYD-SEC-01",
-        "role": "secondary",
-        "metrics": {
-          "latencyMs": 10,
-          "availabilityPercent": 99.994,
-          "jitterMs": 1.8,
-          "packetLossPercent": 0.006
-        }
-      }
-    ]
-  }
-}
-```
-
-### Degraded report observation sample:
-
-For `Degraded` reports, show the resolved targets beside the current observed values. Do not add aggregate compliance labels; consumers can derive compliance from the values.
-
-```json
-{
-  "targetSummary": {
-    "targets": [
-      {
-        "name": "maxLatencyMs",
-        "target": 10,
-        "observedValue": 18,
-        "unit": "ms"
-      },
-      {
-        "name": "minAvailabilityPercent",
-        "target": 99.99,
-        "observedValue": 99.992,
-        "unit": "percent"
-      },
-      {
-        "name": "maxJitterMs",
-        "target": 2,
-        "observedValue": 1.8,
-        "unit": "ms"
-      },
-      {
-        "name": "maxPacketLossPercent",
-        "target": 0.01,
-        "observedValue": 0.006,
-        "unit": "percent"
-      }
-    ]
-  },
-  "observationSummary": {
-    "observedAt": "2026-04-18T12:30:00+10:00",
-    "resources": [
-      {
-        "resourceId": "SYD-PRI-01",
-        "role": "primary",
-        "metrics": {
-          "latencyMs": 18,
-          "availabilityPercent": 99.992,
-          "jitterMs": 1.8,
-          "packetLossPercent": 0.006
-        }
-      },
-      {
-        "resourceId": "SYD-SEC-01",
-        "role": "secondary",
-        "metrics": {
-          "latencyMs": 12,
-          "availabilityPercent": 99.994,
-          "jitterMs": 1.8,
-          "packetLossPercent": 0.006
-        }
-      }
-    ]
-  }
-}
-```
-
-### IntentReport exposure rule:
-
-IntentReport may expose curated observation results and target comparisons.
-
-IntentReport must not expose raw telemetry streams, duplicated degradation/re-optimisation interpretation sections, raw optimiser decisions, raw `t7.knowledge plane` data, raw callback payloads, internal candidate scoring, internal Kafka payloads, or the full internal `IntentAssuranceEvent` body unless deliberately curated into an externally safe report shape.
 
 ## TMF compliance and platform extension rule:
 

@@ -50,6 +50,23 @@ ID MS does not own runtime `Intent`, `IntentReport`, semantic validation, policy
 
 ## 2. Common conventions:
 
+
+### TMF921 IntentSpecification expression contract rule:
+
+`specCharacteristic` is the high-level catalogue/discovery view and uses TMF `CharacteristicSpecification` entries. When present, each entry includes at least `@type`, `name`, and `valueType`.
+
+`expressionSpecification` is the TMF expression contract reference and uses:
+
+```json
+{
+  "@type": "ExpressionSpecification",
+  "expressionLanguage": "JsonLdExpression",
+  "iri": "https://mycsp.com.au/tio/hospital-surgical-slice/v1.0"
+}
+```
+
+The detailed platform JSON schema for `expression.expressionValue` may be documented through `targetEntitySchema.@schemaLocation` and implementation guidance, but it is not a replacement for the TMF `ExpressionSpecification` shape.
+
 ### Lifecycle values:
 
 ```text
@@ -133,29 +150,51 @@ Accept: application/json
   "@schemaLocation": "https://mycsp.com.au/schemas/intentManagement/v5/intentSpecification/hospital-surgical-slice-spec-v1.19.schema.json",
   "specCharacteristic": [
     {
+      "@type": "CharacteristicSpecification",
       "id": "targets",
       "name": "targets",
-      "description": "Measurable runtime objectives supported by this IntentSpecification."
+      "description": "Measurable runtime objectives supported by this IntentSpecification. Detailed target fields and validation rules are defined in the target entity schema for expression.expressionValue.targets.",
+      "valueType": "object",
+      "configurable": true,
+      "minCardinality": 1,
+      "maxCardinality": 1
     },
     {
+      "@type": "CharacteristicSpecification",
       "id": "constraints",
       "name": "constraints",
-      "description": "Hard runtime requirements supported by this IntentSpecification."
+      "description": "Hard runtime requirements supported by this IntentSpecification. Detailed constraint fields and validation rules are defined in the target entity schema for expression.expressionValue.constraints.",
+      "valueType": "object",
+      "configurable": true,
+      "minCardinality": 1,
+      "maxCardinality": 1
     },
     {
+      "@type": "CharacteristicSpecification",
       "id": "preferences",
       "name": "preferences",
-      "description": "Soft runtime selection preferences supported by this IntentSpecification."
+      "description": "Soft runtime selection preferences supported by this IntentSpecification. Detailed preference fields and validation rules are defined in the target entity schema for expression.expressionValue.preferences.",
+      "valueType": "object",
+      "configurable": true,
+      "minCardinality": 0,
+      "maxCardinality": 1
     }
   ],
   "expressionSpecification": {
-    "name": "Hospital Surgical Slice Intent Expression Schema",
-    "description": "Authoritative request-shape schema for hospital surgical slice intents. This schema is syntax-first and defines the canonical targets, constraints, and preferences buckets. It does not perform semantic, policy, or fulfilment validation.",
-    "expressionLanguage": "JSON_SCHEMA",
+    "@type": "ExpressionSpecification",
+    "expressionLanguage": "JsonLdExpression",
+    "iri": "https://mycsp.com.au/tio/hospital-surgical-slice/v1.0"
+  },
+  "targetEntitySchema": {
+    "@type": "TargetEntitySchema",
+    "@schemaLocation": "https://mycsp.com.au/schemas/intentManagement/v5/intentExpression/hospital-surgical-slice-spec-v1.19.expression.schema.json"
+  },
+  "x-platformExpressionValueSchema": {
+    "description": "Platform validation schema for expression.expressionValue. This is implementation guidance; the TMF-facing expression contract is ExpressionSpecification + JsonLdExpression.",
     "schema": {
       "$schema": "https://json-schema.org/draft/2020-12/schema",
       "$id": "https://mycsp.com.au/schemas/intentManagement/v5/intentExpression/hospital-surgical-slice-spec-v1.19.expression.schema.json",
-      "title": "Hospital Surgical Slice Intent Expression",
+      "title": "Hospital Surgical Slice Intent Expression Value",
       "type": "object",
       "additionalProperties": false,
       "required": ["location", "serviceType", "serviceClass", "targets", "constraints"],
@@ -163,7 +202,6 @@ Accept: application/json
         "location": {
           "type": "object",
           "additionalProperties": false,
-          "description": "Only locationId, locationType, and geographicScope are permitted. geographicScope is intentionally open for platform-controlled extension.",
           "required": ["locationId"],
           "properties": {
             "locationId": { "type": "string", "minLength": 1 },
@@ -176,7 +214,6 @@ Accept: application/json
         "targets": {
           "type": "object",
           "additionalProperties": false,
-          "description": "Measurable runtime objectives requested by the intent.",
           "properties": {
             "maxLatencyMs": { "type": "number", "minimum": 0 },
             "minAvailabilityPercent": { "type": "number", "minimum": 0, "maximum": 100 },
@@ -187,7 +224,6 @@ Accept: application/json
         "constraints": {
           "type": "object",
           "additionalProperties": false,
-          "description": "Hard runtime requirements and required non-target inputs.",
           "required": ["priority"],
           "properties": {
             "priority": { "type": "string", "enum": ["critical", "high", "standard"] },
@@ -206,7 +242,6 @@ Accept: application/json
         "preferences": {
           "type": "object",
           "additionalProperties": false,
-          "description": "Soft runtime selection guidance.",
           "properties": {
             "preferredAccessTechnology": { "type": "string", "minLength": 1 }
           }
@@ -244,6 +279,7 @@ Last-Modified: Sat, 18 Apr 2026 02:00:00 GMT
   "@baseType": "EntitySpecification",
   "specCharacteristic": "...same as request...",
   "expressionSpecification": "...same as request...",
+  "targetEntitySchema": "...same as request...",
   "_links": {
     "self": { "href": "/intentManagement/v5/intentSpecification/hospital-surgical-slice-spec-v1.19" },
     "fullUpdate": { "href": "/intentManagement/v5/intentSpecification/hospital-surgical-slice-spec-v1.19", "method": "PUT" },
@@ -343,8 +379,8 @@ Cache-Control: private, max-age=300
   "lifecycleStatus": "ACTIVE",
   "@type": "IntentSpecification",
   "@baseType": "EntitySpecification",
-  "specCharacteristic": "...full characteristic catalogue...",
-  "expressionSpecification": "...full expression schema...",
+  "specCharacteristic": "...same three bucket CharacteristicSpecification entries...",
+  "expressionSpecification": "...ExpressionSpecification reference; detailed schema via targetEntitySchema...",
   "_links": {
     "self": { "href": "/intentManagement/v5/intentSpecification/hospital-surgical-slice-spec-v1.19" },
     "partialUpdate": {
@@ -397,8 +433,8 @@ If-Match: "intent-spec-hospital-surgical-slice-spec-v1.19-v1"
   "lifecycleStatus": "DRAFT",
   "@type": "IntentSpecification",
   "@baseType": "EntitySpecification",
-  "specCharacteristic": ["...same high-level bucket catalogue as create request..."],
-  "expressionSpecification": { "...": "same authoritative nested bucket schema as create request" }
+  "specCharacteristic": [],
+  "expressionSpecification": {}
 }
 ```
 
@@ -928,10 +964,6 @@ They are not internal fulfilment events and must not expose II MS semantic valid
 - `@baseType` is `EntitySpecification`, not `ResourceSpecification`.
 - `specCharacteristic` is the high-level characteristic catalogue.
 - `expressionSpecification` is the authoritative request-shape schema.
-
-- `specCharacteristic` exposes only the high-level semantic buckets: `targets`, `constraints`, and `preferences`.
-- Detailed field-level rules for `maxLatencyMs`, `priority`, `redundancyRequired`, `timeWindow`, and `preferredAccessTechnology` belong in `expressionSpecification.schema`, not as separate top-level `specCharacteristic` entries.
-- `expressionSpecification.schema` defines `targets`, `constraints`, and `preferences` as nested first-class objects.
 - `characteristicValueSpecification` is used only for defaults, examples, or constrained allowed values where useful.
 - Numeric SLA values in `characteristicValueSpecification` are illustrative/default guidance only, not semantic enforcement.
 - ID MS validates resource shape and syntax.

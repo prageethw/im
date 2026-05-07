@@ -119,6 +119,47 @@ Content-Type: application/json
 }
 ```
 
+
+## TMF921 IntentSpecification expression contract baseline:
+
+ID MS remains TMF921-facing for `IntentSpecification` resources.
+
+### specCharacteristic rule:
+
+`specCharacteristic` is the high-level catalogue/discovery view only. It advertises the supported semantic buckets using TMF `CharacteristicSpecification` entries.
+
+Each `specCharacteristic` entry must include at least:
+
+```text
+@type
+name
+valueType
+```
+
+The current bucket characteristics are:
+
+```text
+targets
+constraints
+preferences
+```
+
+Detailed field-level rules such as `maxLatencyMs`, `priority`, `timeWindow`, and `preferredAccessTechnology` are not duplicated as separate top-level `specCharacteristic` entries by default. They are defined in the platform expression-value schema.
+
+### expressionSpecification rule:
+
+`expressionSpecification` is the TMF expression contract reference. It uses:
+
+```json
+{
+  "@type": "ExpressionSpecification",
+  "expressionLanguage": "JsonLdExpression",
+  "iri": "https://mycsp.com.au/tio/hospital-surgical-slice/v1.0"
+}
+```
+
+The detailed platform validation schema for `Intent.expression.expressionValue` may be referenced through `targetEntitySchema.@schemaLocation` and described as implementation guidance. It must not replace the TMF `ExpressionSpecification` shape.
+
 ## Create IntentSpecification:
 
 ```http
@@ -1174,57 +1215,3 @@ The ID MS design brief is internally consistent for the current baseline.
 The design keeps ID MS focused on design-time `IntentSpecification` resource ownership, lifecycle/version governance, syntax/resource-shape validation, ETag/If-Match concurrency, GET-only caching, external `IntentSpecification*Event` publication, PostgreSQL-compatible persistence, and technical observability/audit.
 
 ID MS does not own semantic validation, policy validation, candidate/resource feasibility, optimisation, runtime assurance, telemetry, or callback ingestion.
-
-## IntentSpecification semantic bucket baseline — targets, constraints, and preferences:
-
-### Purpose:
-
-`IntentSpecification.specCharacteristic` is the high-level catalogue/discovery view only.
-
-It should advertise the three semantic buckets supported by the specification:
-
-```json
-"specCharacteristic": [
-  {
-    "id": "targets",
-    "name": "targets",
-    "description": "Measurable runtime objectives supported by this IntentSpecification."
-  },
-  {
-    "id": "constraints",
-    "name": "constraints",
-    "description": "Hard runtime requirements supported by this IntentSpecification."
-  },
-  {
-    "id": "preferences",
-    "name": "preferences",
-    "description": "Soft runtime selection preferences supported by this IntentSpecification."
-  }
-]
-```
-
-### Detailed schema rule:
-
-`IntentSpecification.expressionSpecification` remains the authoritative syntax/schema definition.
-
-Detailed field-level rules belong under `expressionSpecification.schema`, not as separate top-level `specCharacteristic` entries.
-
-The expression schema must define these first-class nested buckets:
-
-```text
-targets
-constraints
-preferences
-```
-
-### Bucket meanings:
-
-| **Bucket** | **Meaning** | **Examples** |
-|---|---|---|
-| `targets` | Measurable runtime objectives | `maxLatencyMs`, `minAvailabilityPercent`, `maxJitterMs`, `maxPacketLossPercent` |
-| `constraints` | Hard runtime requirements or required non-target inputs | `priority`, `redundancyRequired`, `timeWindow` |
-| `preferences` | Soft runtime selection guidance | `preferredAccessTechnology` |
-
-### Baseline statement:
-
-**Do not duplicate nested target, constraint, or preference fields as separate top-level `specCharacteristic` entries. `specCharacteristic` exposes only the high-level buckets. `expressionSpecification.schema` defines the detailed nested request shape for `targets`, `constraints`, and `preferences`.**
