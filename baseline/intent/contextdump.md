@@ -816,3 +816,51 @@ Date: 2026-05-07
 
 ### Baseline:
 `IntentReport.targetSummary` is fact-only by default. It should expose resolved target values and current observed values, but should not include aggregate interpretation fields such as `result: Compliant` or `result: NonCompliant`, and should not include per-target `status` labels such as `Compliant` or `Violated` by default. Consumers decide compliance from the target and observed values. Use `lifecycleStatus`, `statusReason`, and `summary` for the projected state narrative.
+
+## Baseline correction — restore full IntentSpecification and bucket-only specCharacteristic:
+
+Date: 2026-05-07
+
+### Updated files:
+- `id_ms_design_brief.md`
+- `id_ms_specification.md`
+- `contextdump.md`
+
+### Baseline:
+The `IntentSpecification` must not be reduced to only the short `specCharacteristic` bucket list. The full create request must retain the complete `IntentSpecification` body, including `expressionSpecification` with the authoritative JSON Schema.
+
+`specCharacteristic` is simplified to the high-level catalogue/discovery buckets only:
+- `targets`
+- `constraints`
+- `preferences`
+
+Detailed field-level rules for `maxLatencyMs`, `minAvailabilityPercent`, `maxJitterMs`, `maxPacketLossPercent`, `priority`, `redundancyRequired`, `timeWindow`, and `preferredAccessTechnology` belong under `expressionSpecification.schema`.
+
+### Correct rule:
+`specCharacteristic` advertises the semantic buckets. `expressionSpecification.schema` defines the full nested request shape. Do not wipe out or replace the full `IntentSpecification` with only the bucket catalogue.
+
+
+## Baseline validation — file integrity and IntentReport simplification check:
+
+Date: 2026-05-07T09:58:00+10:00
+
+### Checked files:
+- `id_ms_design_brief.md`
+- `id_ms_specification.md`
+- `ic_ms_design_brief.md`
+- `ic_ms_specification.md`
+- `intent_internal_events_specification.md`
+- `ia_ms_design_brief.md`
+- `kp_master_config.md`
+
+### Result:
+No complete file wipe/replacement was found in the active baseline files. The major expected sections remain present across the ID MS, IC MS, IA MS, internal events, and KP files.
+
+### Corrected during validation:
+- Removed remaining confusing active-baseline wording that referenced separate degradation/re-optimisation report sections.
+- Removed `Evaluation summary` wording from the IC MS IntentReport areas table because it implied aggregate interpretation fields such as `result` or per-target status.
+- Kept `IntentReport.targetSummary` fact-only: target name, target value, observed value, and unit.
+- Kept `IntentReport.observationSummary` as curated observed metrics per relevant resource.
+
+### Active IntentReport rule:
+`IntentReport` explains current state through `lifecycleStatus`, `statusReason`, `summary`, `targetSummary`, and `observationSummary`. It does not include aggregate compliance interpretation or separate degradation/re-optimisation interpretation sections by default.

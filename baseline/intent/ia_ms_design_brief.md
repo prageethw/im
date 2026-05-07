@@ -126,7 +126,7 @@ It represents:
 
 IA MS remains the runtime assurance truth and reports lifecycle state, runtime targets, selected/applied resources, and observed metrics through `IntentAssuranceEvent`.
 
-IC MS owns the external `IntentReport` projection and curates IA-provided assurance observations into report-safe sections such as `targetSummary` and `observationSummary`. Separate `degradationSummary` and `reoptimisationSummary` sections are not baselined because degraded/re-optimisation rationale should be visible through target values and current observed metrics.
+IC MS owns the external `IntentReport` projection and curates IA-provided assurance observations into report-safe sections such as `targetSummary` and `observationSummary`. Degraded or re-optimisation-relevant rationale should be visible through target values and current observed metrics, without separate duplicated interpretation sections.
 
 For healthy/active assurance, IA events should remain lean and normally include observations for selected/applied resources only.
 

@@ -1094,13 +1094,13 @@ Cache-Control: private, max-age=300
 | `observationSummary` | Curated observed metrics per relevant resource |
 | `references` | Traceable links to related external resources |
 
-`IntentReport` must include curated observation results whenever they are needed to explain lifecycle/status and target compliance.
+`IntentReport` must include curated observation results whenever they are needed to explain lifecycle/status and target/current metric comparison.
 
 For `Active` / healthy reports, observations should remain lean and normally include selected/applied resources only.
 
-For `Degraded` or `Failed` reports, observations should include the relevant target/current-metric evidence required to explain the lifecycle/status and target-compliance outcome. Separate `degradationSummary` and `reoptimisationSummary` sections are not baselined.
+For `Degraded` or `Failed` reports, observations should include the relevant target/current-metric evidence required to explain the lifecycle/status outcome. Do not add separate summary sections that duplicate the same target/current-metric evidence.
 
-`IntentReport` must not expose raw telemetry streams, separate duplicated degradation summaries, separate re-optimisation summaries, raw optimiser decisions, raw `t7.knowledge plane` data, raw callback payloads, internal candidate scoring, internal Kafka payloads, or the full internal `IntentAssuranceEvent` body unless deliberately curated into an externally safe report shape.
+`IntentReport` must not expose raw telemetry streams, duplicated degradation/re-optimisation interpretation sections, raw optimiser decisions, raw `t7.knowledge plane` data, raw callback payloads, internal candidate scoring, internal Kafka payloads, or the full internal `IntentAssuranceEvent` body unless deliberately curated into an externally safe report shape.
 
 ---
 

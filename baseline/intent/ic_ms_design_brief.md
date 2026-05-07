@@ -226,7 +226,9 @@ They must not expose raw telemetry, raw optimiser decisions, raw `t7.knowledge p
 
 It is based on assurance truth from IA MS, but it is not raw assurance telemetry.
 
-IntentReport may contain curated information such as current lifecycle/status, status reason, assurance summary, target compliance, curated observation results, current service/resource summary, evaluation summary, last assurance update time, and references to the related `Intent`. Degraded or failed states are explained through `targetSummary`, `observationSummary`, `lifecycleStatus`, `statusReason`, and `summary`, not through separate duplicated degradation or re-optimisation sections.
+IntentReport may contain curated information such as current lifecycle/status, status reason, assurance summary, target/current metric summaries, curated observation results, current service/resource summary, last assurance update time, and references to the related `Intent`.
+
+Degraded or failed states are explained through `targetSummary`, `observationSummary`, `lifecycleStatus`, `statusReason`, and `summary`. The report exposes facts; consumers decide compliance or re-optimisation interpretation from those facts.
 
 IntentReport should not expose implementation-only details unless they are explicitly approved for external reporting.
 
@@ -237,11 +239,10 @@ IntentReport should not expose implementation-only details unless they are expli
 | Identity and linkage | Identifies the report and links it to the parent Intent | `id`, `href`, `intent.id`, `intent.href`, `version`, `@type`, `@baseType` |
 | Current lifecycle/status | Shows the projected lifecycle view at report time | `lifecycleStatus`, `statusReason`, `statusChangeDate`, `reportTime` |
 | Assurance summary | Curated high-level runtime assurance result from IA MS | `overallStatus`, `summary`, `assuranceStatus`, `severity` |
-| Target summary | Compares requested/resolved targets against observed values | target name, target value, observed value, unit, compliance status |
+| Target summary | Shows requested/resolved targets beside current observed values | target name, target value, observed value, unit |
 | Observation summary | Curated observed metrics per relevant resource | `observedAt`, resource id, role, metrics such as latency, availability, jitter, packet loss |
 | Service summary | Human-readable summary of what service is being assured | `serviceType`, `serviceClass`, `locationId`, `locationDisplayName` |
 | Resource summary | Curated selected/applied resource summary, not full KP inventory | selected `resourceId`, `role`, `resourceType`, `resourceClass` |
-| Evaluation summary | Explains which targets passed or failed | `result`, `details`, per-target status |
 | Failure/status explanation | Uses lifecycle/status, statusReason, target summary, and observation summary rather than a separate failure section | `lifecycleStatus`, `statusReason`, target comparisons, observed metrics |
 | Version/history summary | Optional curated version history | active version, previous version, rollback/standby note |
 | References | Traceable links to related external resources | `intent`, `intentSpecification`, latest report links |
@@ -249,9 +250,9 @@ IntentReport should not expose implementation-only details unless they are expli
 
 ### IntentReport observation rule:
 
-`IntentReport` must include curated observation results whenever they are needed to explain lifecycle/status and target compliance.
+`IntentReport` must include curated observation results whenever they are needed to explain lifecycle/status and target/current metric comparison.
 
-For `Degraded` and `Failed` reports, the report explains the condition by showing resolved target values beside current observed metrics. Separate `degradationSummary` and `reoptimisationSummary` sections are not baselined because they duplicate the same target/current-metric evidence.
+For `Degraded` and `Failed` reports, the report explains the condition by showing resolved target values beside current observed metrics. Do not add separate summary sections that duplicate the same target/current-metric evidence.
 
 The report must not expose raw telemetry dumps. It should include only the target comparisons and observations required to explain the current report state.
 
@@ -291,7 +292,7 @@ For `Active` / healthy reports, keep observations lean and normally include sele
 
 ### Degraded report observation sample:
 
-For `Degraded` reports, show the resolved targets beside the current observed values. Do not add a separate `degradationSummary` or aggregate compliance `result`; consumers can derive compliance from the values.
+For `Degraded` reports, show the resolved targets beside the current observed values. Do not add aggregate compliance labels; consumers can derive compliance from the values.
 
 ```json
 {
@@ -355,7 +356,7 @@ For `Degraded` reports, show the resolved targets beside the current observed va
 
 IntentReport may expose curated observation results and target comparisons.
 
-IntentReport must not expose raw telemetry streams, separate duplicated degradation summaries, separate re-optimisation summaries, raw optimiser decisions, raw `t7.knowledge plane` data, raw callback payloads, internal candidate scoring, internal Kafka payloads, or the full internal `IntentAssuranceEvent` body unless deliberately curated into an externally safe report shape.
+IntentReport must not expose raw telemetry streams, duplicated degradation/re-optimisation interpretation sections, raw optimiser decisions, raw `t7.knowledge plane` data, raw callback payloads, internal candidate scoring, internal Kafka payloads, or the full internal `IntentAssuranceEvent` body unless deliberately curated into an externally safe report shape.
 
 ## TMF compliance and platform extension rule:
 
