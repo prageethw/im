@@ -13,8 +13,13 @@ intent-definition-ms
 Base path:
 
 ```http
-/intentManagement/v5
+/tmf-api/intentManagement/v5
 ```
+
+### TMF921 public base path rule:
+
+The strict TMF921 public route exposed through NGW is `/tmf-api/intentManagement/v5`. Any shorter `/intentManagement/v5` route is treated as an internal/documentation shorthand only and must not be the strict external conformance route.
+
 
 ## IntentSpecification resource APIs:
 
@@ -29,18 +34,27 @@ Base path:
 
 ## Hub subscription APIs:
 
+Strict TMF route form:
+
 | **Purpose** | **Method** | **Endpoint** |
 |---|---:|---|
-| Create event subscription | `POST` | `/intentSpecification/hub` |
-| Delete event subscription | `DELETE` | `/intentSpecification/hub/{id}` |
-| Retrieve subscription by ID | `GET` | `/intentSpecification/hub/{id}` |
+| Create event subscription | `POST` | `/hub` |
+| Delete event subscription | `DELETE` | `/hub/{id}` |
+
+Accepted domain-scoped platform extension:
+
+| **Purpose** | **Method** | **Endpoint** |
+|---|---:|---|
+| Create specification event subscription | `POST` | `/intentSpecification/hub` |
+| Retrieve specification event subscription | `GET` | `/intentSpecification/hub/{id}` |
+| Delete specification event subscription | `DELETE` | `/intentSpecification/hub/{id}` |
 
 ## Query conventions:
 
 List endpoint:
 
 ```http
-GET /intentManagement/v5/intentSpecification?offset=0&limit=20&lifecycleStatus=ACTIVE&name=Hospital%20Surgical%20Slice&version=1.19
+GET /tmf-api/intentManagement/v5/intentSpecification?offset=0&limit=20&lifecycleStatus=ACTIVE&name=Hospital%20Surgical%20Slice&version=1.19
 ```
 
 Supported query params:
@@ -158,12 +172,12 @@ Detailed field-level rules such as `maxLatencyMs`, `priority`, `timeWindow`, and
 }
 ```
 
-The detailed platform validation schema for `Intent.expression.expressionValue` may be referenced through `targetEntitySchema.@schemaLocation` and described as implementation guidance. It must not replace the TMF `ExpressionSpecification` shape.
+The detailed platform validation schema for `Intent.expression.expressionValue` is referenced through `targetEntitySchema.@schemaLocation` and described as implementation guidance. It must not replace the TMF `ExpressionSpecification` shape. Do not embed vendor-extension fields such as `x-platformExpressionValueSchema` in external TMF-facing resource examples.
 
 ## Create IntentSpecification:
 
 ```http
-POST /intentManagement/v5/intentSpecification
+POST /tmf-api/intentManagement/v5/intentSpecification
 Content-Type: application/json
 Accept: application/json
 ```
@@ -172,7 +186,7 @@ Success:
 
 ```http
 HTTP/1.1 201 Created
-Location: /intentManagement/v5/intentSpecification/hospital-surgical-slice-spec-v1.19
+Location: /tmf-api/intentManagement/v5/intentSpecification/hospital-surgical-slice-spec-v1.19
 Content-Type: application/json
 Content-Language: en-AU
 ETag: "intent-spec-hospital-surgical-slice-spec-v1.19-v1"
@@ -189,7 +203,7 @@ Notes:
 ## Retrieve IntentSpecification:
 
 ```http
-GET /intentManagement/v5/intentSpecification/hospital-surgical-slice-spec-v1.19
+GET /tmf-api/intentManagement/v5/intentSpecification/hospital-surgical-slice-spec-v1.19
 Accept: application/json
 ```
 
@@ -199,7 +213,7 @@ Success:
 HTTP/1.1 200 OK
 Content-Type: application/json
 Content-Language: en-AU
-Content-Location: /intentManagement/v5/intentSpecification/hospital-surgical-slice-spec-v1.19
+Content-Location: /tmf-api/intentManagement/v5/intentSpecification/hospital-surgical-slice-spec-v1.19
 ETag: "intent-spec-hospital-surgical-slice-spec-v1.19-v1"
 Last-Modified: Sat, 18 Apr 2026 02:00:00 GMT
 Cache-Control: private, max-age=300
@@ -214,7 +228,7 @@ Notes:
 ## Full update IntentSpecification:
 
 ```http
-PUT /intentManagement/v5/intentSpecification/hospital-surgical-slice-spec-v1.19
+PUT /tmf-api/intentManagement/v5/intentSpecification/hospital-surgical-slice-spec-v1.19
 Content-Type: application/json
 Accept: application/json
 If-Match: "intent-spec-hospital-surgical-slice-spec-v1.19-v1"
@@ -225,7 +239,7 @@ Success:
 ```http
 HTTP/1.1 200 OK
 Content-Type: application/json
-Content-Location: /intentManagement/v5/intentSpecification/hospital-surgical-slice-spec-v1.19
+Content-Location: /tmf-api/intentManagement/v5/intentSpecification/hospital-surgical-slice-spec-v1.19
 ETag: "intent-spec-hospital-surgical-slice-spec-v1.19-v2"
 ```
 
@@ -257,7 +271,7 @@ Content-Type: application/json
 ## Partial update IntentSpecification:
 
 ```http
-PATCH /intentManagement/v5/intentSpecification/hospital-surgical-slice-spec-v1.19
+PATCH /tmf-api/intentManagement/v5/intentSpecification/hospital-surgical-slice-spec-v1.19
 Content-Type: application/json
 Accept: application/json
 If-Match: "intent-spec-hospital-surgical-slice-spec-v1.19-v1"
@@ -275,7 +289,7 @@ Rules:
 ## Delete IntentSpecification:
 
 ```http
-DELETE /intentManagement/v5/intentSpecification/hospital-surgical-slice-spec-v1.19
+DELETE /tmf-api/intentManagement/v5/intentSpecification/hospital-surgical-slice-spec-v1.19
 If-Match: "intent-spec-hospital-surgical-slice-spec-v1.19-v1"
 ```
 
@@ -294,7 +308,7 @@ Rules:
 ## Hub create subscription:
 
 ```http
-POST /intentManagement/v5/intentSpecification/hub
+POST /tmf-api/intentManagement/v5/intentSpecification/hub
 Content-Type: application/json
 Accept: application/json
 ```
@@ -311,7 +325,7 @@ Success:
 
 ```http
 HTTP/1.1 201 Created
-Location: /intentManagement/v5/intentSpecification/hub/sub-001
+Location: /tmf-api/intentManagement/v5/intentSpecification/hub/sub-001
 Content-Type: application/json
 ETag: "subscription-sub-001-v1"
 ```
@@ -324,7 +338,7 @@ ETag: "subscription-sub-001-v1"
   "@type": "EventSubscription",
   "_links": {
     "self": {
-      "href": "/intentManagement/v5/intentSpecification/hub/sub-001"
+      "href": "/tmf-api/intentManagement/v5/intentSpecification/hub/sub-001"
     }
   }
 }
@@ -342,7 +356,7 @@ IntentSpecificationDeleteEvent
 ## Hub delete subscription:
 
 ```http
-DELETE /intentManagement/v5/intentSpecification/hub/sub-001
+DELETE /tmf-api/intentManagement/v5/intentSpecification/hub/sub-001
 If-Match: "subscription-sub-001-v1"
 ```
 
@@ -488,8 +502,8 @@ ID MS caching applies only to GET responses.
 Caching is baselined for:
 
 ```http
-GET /intentManagement/v5/intentSpecification/{id}
-GET /intentManagement/v5/intentSpecification
+GET /tmf-api/intentManagement/v5/intentSpecification/{id}
+GET /tmf-api/intentManagement/v5/intentSpecification
 ```
 
 No caching strategy is baselined for non-GET operations.
@@ -499,7 +513,7 @@ No caching strategy is baselined for non-GET operations.
 For a single `IntentSpecification`:
 
 ```http
-GET /intentManagement/v5/intentSpecification/hospital-surgical-slice-spec-v1.19
+GET /tmf-api/intentManagement/v5/intentSpecification/hospital-surgical-slice-spec-v1.19
 ```
 
 ID MS may return:
@@ -523,7 +537,7 @@ Meaning:
 For list reads:
 
 ```http
-GET /intentManagement/v5/intentSpecification?offset=0&limit=20&lifecycleStatus=ACTIVE
+GET /tmf-api/intentManagement/v5/intentSpecification?offset=0&limit=20&lifecycleStatus=ACTIVE
 ```
 
 ID MS may return:
@@ -554,7 +568,7 @@ Cache-Control: no-cache
 Example:
 
 ```http
-GET /intentManagement/v5/intentSpecification/hospital-surgical-slice-spec-v1.19
+GET /tmf-api/intentManagement/v5/intentSpecification/hospital-surgical-slice-spec-v1.19
 Cache-Control: no-cache
 ```
 
@@ -590,9 +604,9 @@ If-Match
 Applies to:
 
 ```http
-PUT /intentManagement/v5/intentSpecification/{id}
-PATCH /intentManagement/v5/intentSpecification/{id}
-DELETE /intentManagement/v5/intentSpecification/{id}
+PUT /tmf-api/intentManagement/v5/intentSpecification/{id}
+PATCH /tmf-api/intentManagement/v5/intentSpecification/{id}
+DELETE /tmf-api/intentManagement/v5/intentSpecification/{id}
 ```
 
 and any activation/state-changing operation where stale updates could overwrite newer resource state.

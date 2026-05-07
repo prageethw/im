@@ -47,23 +47,29 @@ It is responsible for:
 
 ## IC MS API surface:
 
+### TMF921 public base path rule:
+
+The strict TMF921 public route exposed through NGW is `/tmf-api/intentManagement/v5`. Any shorter `/intentManagement/v5` route is treated as an internal/documentation shorthand only and must not be the strict external conformance route.
+
+
 ### Intent resource APIs:
 
 | **Purpose** | **Method** | **Endpoint** |
 |---|---:|---|
-| Create runtime intent | `POST` | `/intentManagement/v5/intent` |
-| List runtime intents | `GET` | `/intentManagement/v5/intent` |
-| Retrieve runtime intent by ID | `GET` | `/intentManagement/v5/intent/{id}` |
-| Full replace runtime intent | `PUT` | `/intentManagement/v5/intent/{id}` |
-| Partial update runtime intent | `PATCH` | `/intentManagement/v5/intent/{id}` |
-| Delete / terminate runtime intent | `DELETE` | `/intentManagement/v5/intent/{id}` |
+| Create runtime intent | `POST` | `/tmf-api/intentManagement/v5/intent` |
+| List runtime intents | `GET` | `/tmf-api/intentManagement/v5/intent` |
+| Retrieve runtime intent by ID | `GET` | `/tmf-api/intentManagement/v5/intent/{id}` |
+| Full replace runtime intent | `PUT` | `/tmf-api/intentManagement/v5/intent/{id}` |
+| Partial update runtime intent | `PATCH` | `/tmf-api/intentManagement/v5/intent/{id}` |
+| Delete / terminate runtime intent | `DELETE` | `/tmf-api/intentManagement/v5/intent/{id}` |
 
 ### IntentReport APIs:
 
 | **Purpose** | **Method** | **Endpoint** |
 |---|---:|---|
-| List reports for intent | `GET` | `/intentManagement/v5/intent/{intentId}/intentReport` |
-| Retrieve report by ID | `GET` | `/intentManagement/v5/intent/{intentId}/intentReport/{id}` |
+| List reports for intent | `GET` | `/tmf-api/intentManagement/v5/intent/{intentId}/intentReport` |
+| Retrieve report by ID | `GET` | `/tmf-api/intentManagement/v5/intent/{intentId}/intentReport/{id}` |
+| Delete report by ID | `DELETE` | `/tmf-api/intentManagement/v5/intent/{intentId}/intentReport/{id}` |
 
 ### Hub subscription APIs:
 
@@ -71,16 +77,16 @@ Strict TMF route form:
 
 | **Purpose** | **Method** | **Endpoint** |
 |---|---:|---|
-| Create event subscription | `POST` | `/intentManagement/v5/hub` |
-| Delete event subscription | `DELETE` | `/intentManagement/v5/hub/{id}` |
+| Create event subscription | `POST` | `/tmf-api/intentManagement/v5/hub` |
+| Delete event subscription | `DELETE` | `/tmf-api/intentManagement/v5/hub/{id}` |
 
 Accepted domain-scoped platform extension:
 
 | **Purpose** | **Method** | **Endpoint** |
 |---|---:|---|
-| Create intent event subscription | `POST` | `/intentManagement/v5/intent/hub` |
-| Retrieve intent event subscription | `GET` | `/intentManagement/v5/intent/hub/{id}` |
-| Delete intent event subscription | `DELETE` | `/intentManagement/v5/intent/hub/{id}` |
+| Create intent event subscription | `POST` | `/tmf-api/intentManagement/v5/intent/hub` |
+| Retrieve intent event subscription | `GET` | `/tmf-api/intentManagement/v5/intent/hub/{id}` |
+| Delete intent event subscription | `DELETE` | `/tmf-api/intentManagement/v5/intent/hub/{id}` |
 
 
 ## TMF921 external expression wrapper baseline:
@@ -133,7 +139,7 @@ IntentAssuranceEvent.body.targets
 
 ## IC MS validation responsibility:
 
-On `POST /intentManagement/v5/intent`, IC MS:
+On `POST /tmf-api/intentManagement/v5/intent`, IC MS:
 
 1. receives the external runtime intent request
 2. validates basic TMF/resource shape
@@ -286,13 +292,13 @@ IC MS remains TMF-aligned at the external contract level, but controlled platfor
 Strict TMF-compatible update operation:
 
 ```http
-PATCH /intentManagement/v5/intent/{id}
+PATCH /tmf-api/intentManagement/v5/intent/{id}
 ```
 
 Accepted platform extension:
 
 ```http
-PUT /intentManagement/v5/intent/{id}
+PUT /tmf-api/intentManagement/v5/intent/{id}
 ```
 
 Platform preference:
@@ -541,7 +547,7 @@ Runtime truth comes from:
 
 IC MS does not physically delete runtime `Intent` records by default.
 
-`DELETE /intentManagement/v5/intent/{id}` or equivalent terminate flow is treated as a termination request.
+`DELETE /tmf-api/intentManagement/v5/intent/{id}` or equivalent terminate flow is treated as a termination request.
 
 The retained `Intent` record remains available for:
 
@@ -802,14 +808,14 @@ This means:
 ### GET /intent/{id} example:
 
 ```http
-GET /intentManagement/v5/intent/INT-HOSP-2026-001
+GET /tmf-api/intentManagement/v5/intent/INT-HOSP-2026-001
 Accept: application/json
 ```
 
 ```json
 {
   "id": "INT-HOSP-2026-001",
-  "href": "/intentManagement/v5/intent/INT-HOSP-2026-001",
+  "href": "/tmf-api/intentManagement/v5/intent/INT-HOSP-2026-001",
   "name": "Sydney Hospital Surgical Connection Intent",
   "version": "v2",
   "lifecycleStatus": "Active",
@@ -817,7 +823,7 @@ Accept: application/json
   "statusChangeDate": "2026-04-18T12:20:00+10:00",
   "intentSpecification": {
     "id": "hospital-surgical-slice-spec-v1.20",
-    "href": "/intentManagement/v5/intentSpecification/hospital-surgical-slice-spec-v1.20"
+    "href": "/tmf-api/intentManagement/v5/intentSpecification/hospital-surgical-slice-spec-v1.20"
   },
   "@type": "Intent",
   "@baseType": "Entity"
@@ -1014,10 +1020,10 @@ IC MS caching applies only to GET responses.
 Caching is baselined for:
 
 ```http
-GET /intentManagement/v5/intent
-GET /intentManagement/v5/intent/{id}
-GET /intentManagement/v5/intent/{intentId}/intentReport
-GET /intentManagement/v5/intent/{intentId}/intentReport/{reportId}
+GET /tmf-api/intentManagement/v5/intent
+GET /tmf-api/intentManagement/v5/intent/{id}
+GET /tmf-api/intentManagement/v5/intent/{intentId}/intentReport
+GET /tmf-api/intentManagement/v5/intent/{intentId}/intentReport/{reportId}
 ```
 
 No caching strategy is baselined for non-GET operations.
@@ -1050,9 +1056,9 @@ If-Match
 Applies to:
 
 ```http
-PUT /intentManagement/v5/intent/{id}
-PATCH /intentManagement/v5/intent/{id}
-DELETE /intentManagement/v5/intent/{id}
+PUT /tmf-api/intentManagement/v5/intent/{id}
+PATCH /tmf-api/intentManagement/v5/intent/{id}
+DELETE /tmf-api/intentManagement/v5/intent/{id}
 ```
 
 `DELETE` is treated as termination, not physical deletion.

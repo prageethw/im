@@ -774,7 +774,7 @@ Internal events and service handoffs keep native JSON buckets directly and do no
 }
 ```
 
-Detailed platform validation schema for `expression.expressionValue` may be documented through `targetEntitySchema.@schemaLocation` and implementation guidance such as `x-platformExpressionValueSchema`, but it must not replace the TMF `ExpressionSpecification` shape.
+Detailed platform validation schema for `expression.expressionValue` is referenced through `targetEntitySchema.@schemaLocation` and documented as implementation guidance. Do not expose `x-platformExpressionValueSchema` in external TMF-facing resource examples; it must not replace the TMF `ExpressionSpecification` shape.
 
 ### IntentReport baseline:
 External `IntentReport` carries curated report facts inside `IntentReport.expression.expressionValue`.
@@ -789,3 +789,22 @@ expression.expressionValue.observationSummary
 ```
 
 `targetSummary` remains fact-only by default and does not include aggregate `result` or per-target `status` labels.
+## Baseline update — TMF921 strict interface cleanup for IC MS and ID MS:
+
+Date: 2026-05-07
+
+### Updated files:
+- `id_ms_design_brief.md`
+- `id_ms_specification.md`
+- `ic_ms_design_brief.md`
+- `ic_ms_specification.md`
+
+### Baseline:
+IC MS and ID MS external interfaces use the strict TMF921 public base path `/tmf-api/intentManagement/v5`. Shorter `/intentManagement/v5` paths are internal/documentation shorthand only.
+
+External `Intent.expression` and `IntentReport.expression` use the TMF921 expression wrapper with `@type`, `iri`, and `expressionValue`; `JsonLdExpression` is the default external expression type. Domain buckets such as `targets`, `constraints`, and `preferences` remain inside `expression.expressionValue` externally and remain direct native JSON buckets in internal events.
+
+`IntentSpecification.specCharacteristic` remains the high-level TMF `CharacteristicSpecification` catalogue using `@type`, `name`, and `valueType`. Detailed validation for `expression.expressionValue` is referenced through `targetEntitySchema.@schemaLocation` and documented as implementation guidance. Do not expose `x-platformExpressionValueSchema` in external TMF-facing resource examples.
+
+`IntentReport` external examples include TMF mandatory fields such as `creationDate`, `name`, and `expression`. Curated report facts such as `targetSummary` and `observationSummary` sit inside `expression.expressionValue`. `DELETE /intent/{intentId}/intentReport/{id}` is supported for TMF921 operation compliance with retained/tombstoned report projection behaviour by default, not hard physical deletion unless retention policy explicitly allows it.
+

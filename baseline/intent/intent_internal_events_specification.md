@@ -388,7 +388,6 @@ content-type: application/json
           "primary"
         ],
         "accessTechnology": "fibre",
-        "provider": "fixed-access-b",
         "metrics": {
           "benchmark": {
             "latencyMs": 7,
@@ -412,7 +411,6 @@ content-type: application/json
           "primary"
         ],
         "accessTechnology": "5G",
-        "provider": "mobile-access-a",
         "metrics": {
           "benchmark": {
             "latencyMs": 8,
@@ -436,7 +434,6 @@ content-type: application/json
           "secondary"
         ],
         "accessTechnology": "5G",
-        "provider": "mobile-access-b",
         "metrics": {
           "benchmark": {
             "latencyMs": 10,
@@ -460,7 +457,6 @@ content-type: application/json
           "secondary"
         ],
         "accessTechnology": "fibre",
-        "provider": "fixed-access-a",
         "metrics": {
           "benchmark": {
             "latencyMs": 9,
@@ -546,7 +542,6 @@ content-type: application/json
         "resourceType": "networkPath",
         "resourceClass": "critical-gold-access",
         "accessTechnology": "fibre",
-        "provider": "fixed-access-b",
         "metrics": {
           "benchmark": {
             "latencyMs": 7,
@@ -564,7 +559,6 @@ content-type: application/json
         "resourceType": "networkPath",
         "resourceClass": "critical-gold-access",
         "accessTechnology": "5G",
-        "provider": "mobile-access-b",
         "metrics": {
           "benchmark": {
             "latencyMs": 10,
