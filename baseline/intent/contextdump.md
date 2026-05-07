@@ -748,3 +748,24 @@ ID MS defines and validates the nested buckets in `IntentSpecification.expressio
 
 ### Correction:
 Flat `IntentSpecification` expression schemas that place target, constraint, or preference fields directly at top level are no longer the active baseline. The authoritative expression schema must use nested `targets`, `constraints`, and `preferences` buckets.
+
+## Baseline update — Provider attribute event-facing cleanup:
+
+Date: 2026-05-07T18:00:00+10:00
+
+### Updated file:
+- `intent_internal_events_specification.md`
+- `contextdump.md`
+
+### Baseline:
+`provider` is KP/resource-inventory metadata only and is not included by default in event-facing resource entries.
+
+### Rule:
+- Keep `provider` in KP resource inventory only if useful for internal knowledge.
+- Do not include `provider` by default in `IntentResolvedEvent.resources[]`.
+- Do not include `provider` by default in `IntentOptimisedEvent.resources[]`.
+- Reintroduce an event-facing provider-like attribute only if provider-aware optimisation is explicitly baselined later.
+- If reintroduced, use a deliberate event-facing name such as `resourceProvider` or `providerGroup`, depending on whether the optimiser needs real provider identity or only diversity/anti-affinity grouping.
+
+### Reason:
+`provider` originated from KP resource inventory. It is not part of the runtime Intent request, IntentSpecification expression, or default optimiser handoff contract. Keeping it out of event-facing resource entries avoids leaking inventory/vendor metadata into internal workflow contracts unless there is a confirmed optimiser requirement.

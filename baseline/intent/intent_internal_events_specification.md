@@ -392,7 +392,6 @@ content-type: application/json
           "primary"
         ],
         "accessTechnology": "fibre",
-        "provider": "fixed-access-b",
         "metrics": {
           "benchmark": {
             "latencyMs": 7,
@@ -416,7 +415,6 @@ content-type: application/json
           "primary"
         ],
         "accessTechnology": "5G",
-        "provider": "mobile-access-a",
         "metrics": {
           "benchmark": {
             "latencyMs": 8,
@@ -440,7 +438,6 @@ content-type: application/json
           "secondary"
         ],
         "accessTechnology": "5G",
-        "provider": "mobile-access-b",
         "metrics": {
           "benchmark": {
             "latencyMs": 10,
@@ -464,7 +461,6 @@ content-type: application/json
           "secondary"
         ],
         "accessTechnology": "fibre",
-        "provider": "fixed-access-a",
         "metrics": {
           "benchmark": {
             "latencyMs": 9,
@@ -497,6 +493,7 @@ content-type: application/json
 - Do not include `capabilityStatus`; successful `IntentResolvedEvent` emission implies semantic/capability resolution succeeded.
 - `IntentResolvedEvent.resources` contains all available resources for the resolved location/service that the optimiser may consider, not a shortened selected list.
 - For first-pass optimisation resources use `metrics.benchmark`; for degradation/control-loop re-optimisation resources use `metrics.telemetry` and omit `metrics.benchmark` by default.
+- Do not include `provider` by default in `IntentResolvedEvent.resources`; provider is KP/resource-inventory metadata unless provider-aware optimisation is explicitly baselined.
 
 ## IntentOptimisedEvent
 
@@ -550,7 +547,6 @@ content-type: application/json
         "resourceType": "networkPath",
         "resourceClass": "critical-gold-access",
         "accessTechnology": "fibre",
-        "provider": "fixed-access-b",
         "metrics": {
           "benchmark": {
             "latencyMs": 7,
@@ -568,7 +564,6 @@ content-type: application/json
         "resourceType": "networkPath",
         "resourceClass": "critical-gold-access",
         "accessTechnology": "5G",
-        "provider": "mobile-access-b",
         "metrics": {
           "benchmark": {
             "latencyMs": 10,
@@ -733,6 +728,7 @@ content-type: application/json
 - Use value comparison fields such as `target`, `benchmarkValue`, and `observedValue` for measurable target evaluations.
 - For boolean/string constraints and preferences, use `name`, `status`, and `statusReason` unless the actual comparison value adds meaningful diagnostic value.
 - Do not use `targetEvaluations`, `constraintEvaluations`, `preferenceEvaluations`, or `contextEvaluations` by default.
+- Do not include `provider` by default in `IntentOptimisedEvent.resources`; provider is KP/resource-inventory metadata unless provider-aware optimisation is explicitly baselined.
 - Do not include optimiser objective/rule configuration in the event; optimiser owns that internally.
 
 ## IntentNetworkReadyEvent
