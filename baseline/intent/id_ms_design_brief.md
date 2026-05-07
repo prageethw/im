@@ -338,25 +338,6 @@ Common errors:
 | `422` | `VALIDATION_FAILED` | Fails expression/spec schema constraints |
 | `500` | `INTERNAL_ERROR` | Unexpected server error |
 
-
-## Targets, constraints, and preferences baseline:
-
-`targets`, `constraints`, and `preferences` are canonical first-class semantic buckets in the runtime expression shape that ID MS defines through `IntentSpecification.expressionSpecification`.
-
-| **Bucket** | **Meaning** | **Examples** |
-|---|---|---|
-| `targets` | Measurable SLA / outcome objectives | `maxLatencyMs`, `minAvailabilityPercent`, `maxJitterMs`, `maxPacketLossPercent` |
-| `constraints` | Hard rules or required non-target inputs | `priority`, `redundancyRequired`, `timeWindow` |
-| `preferences` | Soft selection guidance | `preferredAccessTechnology` |
-
-ID MS keeps `specCharacteristic` as the high-level characteristic catalogue and exposes only the three semantic buckets by default: `targets`, `constraints`, and `preferences`. The authoritative runtime request shape in `expressionSpecification.schema` defines the detailed nested fields inside those buckets.
-
-Flat expression schemas that place `maxLatencyMs`, `priority`, `redundancyRequired`, `timeWindow`, or `preferredAccessTechnology` directly at the top level are not the active baseline.
-
-Likewise, detailed field-level characteristics such as `maxLatencyMs`, `priority`, `redundancyRequired`, `timeWindow`, or `preferredAccessTechnology` should not be duplicated as separate top-level `specCharacteristic` entries by default. They belong under the relevant semantic bucket in `expressionSpecification.schema`.
-
-This keeps the design-time specification aligned with IC MS runtime `Intent.expression`, `IntentValidatedEvent`, II MS resolution, optimiser evaluation, and IA MS assurance interpretation.
-
 ## ID MS API boundary statement:
 
 **ID MS owns design-time `IntentSpecification` contracts and subscription management for specification events. It validates syntax and resource shape, enforces specification lifecycle/version governance, and publishes external specification lifecycle events. It does not validate runtime semantic feasibility, policy fulfilment, network topology, optimisation, assurance, telemetry, or callbacks.**
@@ -1193,3 +1174,23 @@ The ID MS design brief is internally consistent for the current baseline.
 The design keeps ID MS focused on design-time `IntentSpecification` resource ownership, lifecycle/version governance, syntax/resource-shape validation, ETag/If-Match concurrency, GET-only caching, external `IntentSpecification*Event` publication, PostgreSQL-compatible persistence, and technical observability/audit.
 
 ID MS does not own semantic validation, policy validation, candidate/resource feasibility, optimisation, runtime assurance, telemetry, or callback ingestion.
+
+
+## HATEOAS compliance baseline:
+
+ID MS external REST resource representations must include HATEOAS `_links` so consumers can discover the valid next operations for the returned resource state.
+
+Rules:
+
+- Include `_links.self` on every `IntentSpecification` and `EventSubscription` representation.
+- Include only valid state-specific operations.
+- For `DRAFT` `IntentSpecification`, expose `fullUpdate`, `partialUpdate`, and `delete` links where allowed.
+- For `ACTIVE` and `RETIRED` `IntentSpecification`, expose `self` and navigational links only; do not advertise update/delete links because these resources are immutable.
+- Activation/retirement remains a lifecycle update on the same resource URL. Do not expose a custom `/activate` HATEOAS action.
+- For subscriptions, expose `self` and `unsubscribe` links.
+- `PUT` is the preferred deterministic full-update platform extension where supported; `PATCH` is supported for TMF compatibility but discouraged for ordinary edits.
+- `204 No Content` responses do not include `_links` because there is no body.
+
+Baseline statement:
+
+**ID MS must make successful resource representations HATEOAS-compliant by including `_links` that advertise only operations valid for the resource's current lifecycle and governance state.**

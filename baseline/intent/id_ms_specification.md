@@ -71,28 +71,6 @@ There is no `DELETED` lifecycle status. Delete is an operation/outcome, not a no
 - Retired specifications must not be used for new runtime `Intent` creation.
 - Existing runtime intents that reference a retired specification may continue temporarily where safe.
 
-
-### Targets, constraints, and preferences baseline:
-
-`targets`, `constraints`, and `preferences` are canonical first-class semantic buckets across the Intent Enabler pipeline.
-
-| **Bucket** | **Meaning** | **Examples** |
-|---|---|---|
-| `targets` | Measurable SLA / outcome objectives that the platform should satisfy or evaluate | `maxLatencyMs`, `minAvailabilityPercent`, `maxJitterMs`, `maxPacketLossPercent` |
-| `constraints` | Hard rules or required non-target inputs that must be honoured | `priority`, `redundancyRequired`, `timeWindow` |
-| `preferences` | Soft selection guidance that can influence selection but is not mandatory unless promoted to a constraint | `preferredAccessTechnology` |
-
-Rules:
-
-- ID MS defines and validates these buckets in `IntentSpecification.expressionSpecification`.
-- IC MS accepts and persists these buckets under runtime `Intent.expression`.
-- `IntentValidatedEvent` forwards the admitted expression with the same buckets.
-- II MS preserves or refines these buckets in `IntentResolvedEvent`.
-- The optimiser evaluates these buckets in `IntentOptimisedEvent`.
-- IA MS includes `targets` by default in `IntentAssuranceEvent` so runtime observations can be interpreted against objectives.
-- IA MS includes `constraints` and `preferences` only when a control-loop use case explicitly needs them.
-- Flat expression schemas that place target, constraint, or preference fields directly at top level are not the active baseline.
-
 ### Caching and ETag rules:
 
 - Caching applies only to GET responses.
@@ -155,27 +133,119 @@ Accept: application/json
   "@schemaLocation": "https://mycsp.com.au/schemas/intentManagement/v5/intentSpecification/hospital-surgical-slice-spec-v1.19.schema.json",
   "specCharacteristic": [
     {
-      "id": "targets",
-      "name": "targets",
-      "description": "Measurable runtime objectives supported by this IntentSpecification.",
+      "id": "SC-LOCATION-001",
+      "name": "location",
+      "description": "Requested location for the surgical connectivity intent. The expression schema permits only locationId, locationType, and geographicScope. geographicScope remains intentionally open for platform-controlled extension.",
       "valueType": "object",
       "configurable": true,
       "minCardinality": 1,
       "maxCardinality": 1
     },
     {
-      "id": "constraints",
-      "name": "constraints",
-      "description": "Hard runtime requirements supported by this IntentSpecification.",
-      "valueType": "object",
+      "id": "SC-SERVICE-CLASS-001",
+      "name": "serviceClass",
+      "description": "Requested service class for the surgical connectivity intent.",
+      "valueType": "string",
       "configurable": true,
       "minCardinality": 1,
-      "maxCardinality": 1
+      "maxCardinality": 1,
+      "characteristicValueSpecification": [
+        { "valueType": "string", "value": "critical-gold", "isDefault": true },
+        { "valueType": "string", "value": "critical-silver" }
+      ]
     },
     {
-      "id": "preferences",
-      "name": "preferences",
-      "description": "Soft runtime selection preferences supported by this IntentSpecification.",
+      "id": "SC-POLICY-PRIORITY-001",
+      "name": "priority",
+      "description": "Requested business or clinical priority. This is used as policy input by II MS and the knowledge plane, not as a syntax-only enforcement rule.",
+      "valueType": "string",
+      "configurable": true,
+      "minCardinality": 1,
+      "maxCardinality": 1,
+      "characteristicValueSpecification": [
+        { "valueType": "string", "value": "critical", "isDefault": true },
+        { "valueType": "string", "value": "high" },
+        { "valueType": "string", "value": "standard" }
+      ]
+    },
+    {
+      "id": "SC-ASSURANCE-LATENCY-001",
+      "name": "maxLatencyMs",
+      "description": "Requested maximum latency in milliseconds. Values are illustrative/default guidance only. Semantic and policy enforcement is owned by II MS and the knowledge plane.",
+      "valueType": "number",
+      "configurable": true,
+      "minCardinality": 0,
+      "maxCardinality": 1,
+      "characteristicValueSpecification": [
+        { "valueType": "number", "value": 10, "isDefault": true }
+      ]
+    },
+    {
+      "id": "SC-ASSURANCE-AVAILABILITY-001",
+      "name": "minAvailabilityPercent",
+      "description": "Requested minimum availability percentage. Values are illustrative/default guidance only. Semantic and policy enforcement is owned by II MS and the knowledge plane.",
+      "valueType": "number",
+      "configurable": true,
+      "minCardinality": 0,
+      "maxCardinality": 1,
+      "characteristicValueSpecification": [
+        { "valueType": "number", "value": 99.99, "isDefault": true }
+      ]
+    },
+    {
+      "id": "SC-ASSURANCE-JITTER-001",
+      "name": "maxJitterMs",
+      "description": "Requested maximum jitter in milliseconds. Values are illustrative/default guidance only.",
+      "valueType": "number",
+      "configurable": true,
+      "minCardinality": 0,
+      "maxCardinality": 1,
+      "characteristicValueSpecification": [
+        { "valueType": "number", "value": 2, "isDefault": true }
+      ]
+    },
+    {
+      "id": "SC-ASSURANCE-PACKET-LOSS-001",
+      "name": "maxPacketLossPercent",
+      "description": "Requested maximum packet loss percentage. Values are illustrative/default guidance only.",
+      "valueType": "number",
+      "configurable": true,
+      "minCardinality": 0,
+      "maxCardinality": 1,
+      "characteristicValueSpecification": [
+        { "valueType": "number", "value": 0.01, "isDefault": true }
+      ]
+    },
+    {
+      "id": "SC-RESILIENCE-REDUNDANCY-001",
+      "name": "redundancyRequired",
+      "description": "Whether resilient/redundant delivery is requested.",
+      "valueType": "boolean",
+      "configurable": true,
+      "minCardinality": 0,
+      "maxCardinality": 1,
+      "characteristicValueSpecification": [
+        { "valueType": "boolean", "value": true, "isDefault": true }
+      ]
+    },
+    {
+      "id": "SC-ACCESS-TECHNOLOGY-001",
+      "name": "preferredAccessTechnology",
+      "description": "Preferred access technology where supplied by the requester.",
+      "valueType": "string",
+      "configurable": true,
+      "minCardinality": 0,
+      "maxCardinality": 1,
+      "characteristicValueSpecification": [
+        { "valueType": "string", "value": "5G" },
+        { "valueType": "string", "value": "fibre" },
+        { "valueType": "string", "value": "private-wireless" }
+      ]
+    },
+    {
+      "id": "SC-DELIVERY-TIME-WINDOW-001",
+      "name": "timeWindow",
+      "description": "Optional requested delivery or validity time window. When timeWindow is present, startDateTime is required by expressionSpecification.",
       "valueType": "object",
       "configurable": true,
       "minCardinality": 0,
@@ -184,15 +254,15 @@ Accept: application/json
   ],
   "expressionSpecification": {
     "name": "Hospital Surgical Slice Intent Expression Schema",
-    "description": "Authoritative request-shape schema for hospital surgical slice intents. This schema is syntax-first and validates the canonical targets, constraints, and preferences buckets. It does not perform semantic, policy, or fulfilment validation.",
-    "expressionLanguage": "JsonLdExpression",
+    "description": "Authoritative request-shape schema for hospital surgical slice intents. This schema is syntax-first and does not perform semantic, policy, or fulfilment validation.",
+    "expressionLanguage": "JSON_SCHEMA",
     "schema": {
       "$schema": "https://json-schema.org/draft/2020-12/schema",
       "$id": "https://mycsp.com.au/schemas/intentManagement/v5/intentExpression/hospital-surgical-slice-spec-v1.19.expression.schema.json",
       "title": "Hospital Surgical Slice Intent Expression",
       "type": "object",
       "additionalProperties": false,
-      "required": ["location", "serviceType", "serviceClass", "targets", "constraints"],
+      "required": ["location", "serviceClass", "priority"],
       "properties": {
         "location": {
           "type": "object",
@@ -205,44 +275,21 @@ Accept: application/json
             "geographicScope": { "type": "string", "minLength": 1 }
           }
         },
-        "serviceType": { "type": "string", "const": "surgical-connectivity" },
         "serviceClass": { "type": "string", "enum": ["critical-gold", "critical-silver"] },
-        "targets": {
+        "priority": { "type": "string", "enum": ["critical", "high", "standard"] },
+        "maxLatencyMs": { "type": "number", "minimum": 0 },
+        "minAvailabilityPercent": { "type": "number", "minimum": 0, "maximum": 100 },
+        "maxJitterMs": { "type": "number", "minimum": 0 },
+        "maxPacketLossPercent": { "type": "number", "minimum": 0, "maximum": 100 },
+        "redundancyRequired": { "type": "boolean" },
+        "preferredAccessTechnology": { "type": "string", "minLength": 1 },
+        "timeWindow": {
           "type": "object",
           "additionalProperties": false,
-          "description": "Measurable SLA/outcome objectives for the intent.",
+          "required": ["startDateTime"],
           "properties": {
-            "maxLatencyMs": { "type": "number", "minimum": 0 },
-            "minAvailabilityPercent": { "type": "number", "minimum": 0, "maximum": 100 },
-            "maxJitterMs": { "type": "number", "minimum": 0 },
-            "maxPacketLossPercent": { "type": "number", "minimum": 0, "maximum": 100 }
-          }
-        },
-        "constraints": {
-          "type": "object",
-          "additionalProperties": false,
-          "description": "Hard rules or required non-target inputs that must be honoured.",
-          "required": ["priority"],
-          "properties": {
-            "priority": { "type": "string", "enum": ["critical", "high", "standard"] },
-            "redundancyRequired": { "type": "boolean" },
-            "timeWindow": {
-              "type": "object",
-              "additionalProperties": false,
-              "required": ["startDateTime"],
-              "properties": {
-                "startDateTime": { "type": "string", "format": "date-time" },
-                "endDateTime": { "type": "string", "format": "date-time" }
-              }
-            }
-          }
-        },
-        "preferences": {
-          "type": "object",
-          "additionalProperties": false,
-          "description": "Soft selection guidance that can influence optimisation but is not mandatory unless promoted to a constraint.",
-          "properties": {
-            "preferredAccessTechnology": { "type": "string", "minLength": 1 }
+            "startDateTime": { "type": "string", "format": "date-time" },
+            "endDateTime": { "type": "string", "format": "date-time" }
           }
         }
       }
@@ -957,6 +1004,134 @@ They are not internal fulfilment events and must not expose II MS semantic valid
 
 ---
 
+
+
+## HATEOAS link compliance baseline:
+
+### Rule:
+
+All successful ID MS resource representations must include a `_links` object so clients can discover the next valid actions from the returned representation.
+
+This applies to:
+
+- `IntentSpecification` create/retrieve/list-item/update/patch/lifecycle-update responses
+- `EventSubscription` create/retrieve responses for `/hub` and `/intentSpecification/hub`
+- collection responses, where each item includes its own `_links.self`
+
+`204 No Content` responses do not include a response body and therefore do not include `_links`.
+
+### Common link relation rules:
+
+| **Link relation** | **Meaning** | **When included** |
+|---|---|---|
+| `self` | Canonical URL of the returned resource | Always for resource representations |
+| `list` | Collection/list endpoint for the resource type | Optional but recommended on single-resource representations |
+| `fullUpdate` | Deterministic full replacement through `PUT` | Only when the resource is mutable and `PUT` is allowed |
+| `partialUpdate` | TMF-compatible partial update through `PATCH` | Only when the resource is mutable; include warning that `PATCH` is supported but discouraged for ordinary edits |
+| `delete` | Delete/remove operation | Only when delete is allowed for the current lifecycle/reference state |
+| `subscribe` | Hub subscription creation endpoint | Recommended on collection/root examples where useful |
+| `unsubscribe` | Hub subscription delete endpoint | Included on subscription representations |
+
+### IntentSpecification lifecycle-specific links:
+
+| **Lifecycle status** | **HATEOAS links** |
+|---|---|
+| `DRAFT` | `self`, `list`, `fullUpdate`, `partialUpdate`, `delete` |
+| `ACTIVE` | `self`, `list`; no update/delete links because active specs are immutable |
+| `RETIRED` | `self`, `list`; no update/delete links because retired specs are immutable |
+
+Activation is represented as a lifecycle update through `PUT` or `PATCH` on the same resource URL. Do not expose a custom `/activate` action link.
+
+### DRAFT IntentSpecification example:
+
+```json
+{
+  "id": "hospital-surgical-slice-spec-v1.20",
+  "href": "/intentManagement/v5/intentSpecification/hospital-surgical-slice-spec-v1.20",
+  "name": "Hospital Surgical Slice Intent Specification",
+  "version": "1.20",
+  "lifecycleStatus": "DRAFT",
+  "@type": "IntentSpecification",
+  "@baseType": "EntitySpecification",
+  "_links": {
+    "self": {
+      "href": "/intentManagement/v5/intentSpecification/hospital-surgical-slice-spec-v1.20"
+    },
+    "list": {
+      "href": "/intentManagement/v5/intentSpecification"
+    },
+    "fullUpdate": {
+      "href": "/intentManagement/v5/intentSpecification/hospital-surgical-slice-spec-v1.20",
+      "method": "PUT"
+    },
+    "partialUpdate": {
+      "href": "/intentManagement/v5/intentSpecification/hospital-surgical-slice-spec-v1.20",
+      "method": "PATCH",
+      "warning": "PATCH is supported for TMF compatibility but PUT is preferred for deterministic full updates."
+    },
+    "delete": {
+      "href": "/intentManagement/v5/intentSpecification/hospital-surgical-slice-spec-v1.20",
+      "method": "DELETE"
+    }
+  }
+}
+```
+
+### ACTIVE IntentSpecification example:
+
+```json
+{
+  "id": "hospital-surgical-slice-spec-v1.20",
+  "href": "/intentManagement/v5/intentSpecification/hospital-surgical-slice-spec-v1.20",
+  "name": "Hospital Surgical Slice Intent Specification",
+  "version": "1.20",
+  "lifecycleStatus": "ACTIVE",
+  "@type": "IntentSpecification",
+  "@baseType": "EntitySpecification",
+  "_links": {
+    "self": {
+      "href": "/intentManagement/v5/intentSpecification/hospital-surgical-slice-spec-v1.20"
+    },
+    "list": {
+      "href": "/intentManagement/v5/intentSpecification"
+    },
+    "subscribe": {
+      "href": "/intentManagement/v5/intentSpecification/hub",
+      "method": "POST"
+    }
+  }
+}
+```
+
+### EventSubscription example:
+
+```json
+{
+  "id": "sub-001",
+  "callback": "https://consumer.example.com/tmf/intentSpecification/events",
+  "query": "eventType=IntentSpecificationStatusChangeEvent",
+  "@type": "EventSubscription",
+  "_links": {
+    "self": {
+      "href": "/intentManagement/v5/intentSpecification/hub/sub-001"
+    },
+    "unsubscribe": {
+      "href": "/intentManagement/v5/intentSpecification/hub/sub-001",
+      "method": "DELETE"
+    },
+    "subscribe": {
+      "href": "/intentManagement/v5/intentSpecification/hub",
+      "method": "POST"
+    }
+  }
+}
+```
+
+### ID MS HATEOAS baseline statement:
+
+ID MS responses must expose only links for operations that are valid for the current resource state. HATEOAS links must not advertise update/delete actions for immutable `ACTIVE` or `RETIRED` specifications. `PUT` may be exposed as the preferred deterministic full-update platform extension where supported, while `PATCH` remains available for TMF compatibility but discouraged for ordinary edits.
+
+
 ## 21. Final specification notes:
 
 - `@baseType` is `EntitySpecification`, not `ResourceSpecification`.
@@ -1060,11 +1235,3 @@ The domain-scoped route is acceptable only as a documented platform extension an
 ### Baseline statement:
 
 ID MS and IC MS remain TMF-aligned at the external contract level. Controlled platform extensions are allowed when documented, non-breaking, and semantically compatible with TMF. For ID MS, `PATCH /intentSpecification/{id}` is the strict TMF update operation, while `PUT /intentSpecification/{id}` is an accepted platform extension for deterministic full replacement. TMF `/hub` routing is the strict subscription route form, while `/intentSpecification/hub` is an accepted domain-scoped platform extension when deliberately used.
-
-
-### SpecCharacteristic and expressionSpecification rule:
-
-- `specCharacteristic` is the high-level characteristic catalogue and should expose only the semantic buckets: `targets`, `constraints`, and `preferences`.
-- Do not duplicate individual nested fields such as `maxLatencyMs`, `priority`, `redundancyRequired`, `timeWindow`, or `preferredAccessTechnology` as separate top-level `specCharacteristic` entries by default.
-- `expressionSpecification` is the authoritative request-shape schema and defines the detailed nested structure under `targets`, `constraints`, and `preferences`.
-- `targets`, `constraints`, and `preferences` are first-class semantic buckets across the end-to-end pipeline.
