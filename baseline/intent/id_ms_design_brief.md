@@ -338,6 +338,25 @@ Common errors:
 | `422` | `VALIDATION_FAILED` | Fails expression/spec schema constraints |
 | `500` | `INTERNAL_ERROR` | Unexpected server error |
 
+
+## Targets, constraints, and preferences baseline:
+
+`targets`, `constraints`, and `preferences` are canonical first-class semantic buckets in the runtime expression shape that ID MS defines through `IntentSpecification.expressionSpecification`.
+
+| **Bucket** | **Meaning** | **Examples** |
+|---|---|---|
+| `targets` | Measurable SLA / outcome objectives | `maxLatencyMs`, `minAvailabilityPercent`, `maxJitterMs`, `maxPacketLossPercent` |
+| `constraints` | Hard rules or required non-target inputs | `priority`, `redundancyRequired`, `timeWindow` |
+| `preferences` | Soft selection guidance | `preferredAccessTechnology` |
+
+ID MS keeps `specCharacteristic` as the high-level characteristic catalogue and exposes only the three semantic buckets by default: `targets`, `constraints`, and `preferences`. The authoritative runtime request shape in `expressionSpecification.schema` defines the detailed nested fields inside those buckets.
+
+Flat expression schemas that place `maxLatencyMs`, `priority`, `redundancyRequired`, `timeWindow`, or `preferredAccessTechnology` directly at the top level are not the active baseline.
+
+Likewise, detailed field-level characteristics such as `maxLatencyMs`, `priority`, `redundancyRequired`, `timeWindow`, or `preferredAccessTechnology` should not be duplicated as separate top-level `specCharacteristic` entries by default. They belong under the relevant semantic bucket in `expressionSpecification.schema`.
+
+This keeps the design-time specification aligned with IC MS runtime `Intent.expression`, `IntentValidatedEvent`, II MS resolution, optimiser evaluation, and IA MS assurance interpretation.
+
 ## ID MS API boundary statement:
 
 **ID MS owns design-time `IntentSpecification` contracts and subscription management for specification events. It validates syntax and resource shape, enforces specification lifecycle/version governance, and publishes external specification lifecycle events. It does not validate runtime semantic feasibility, policy fulfilment, network topology, optimisation, assurance, telemetry, or callbacks.**
@@ -1174,69 +1193,3 @@ The ID MS design brief is internally consistent for the current baseline.
 The design keeps ID MS focused on design-time `IntentSpecification` resource ownership, lifecycle/version governance, syntax/resource-shape validation, ETag/If-Match concurrency, GET-only caching, external `IntentSpecification*Event` publication, PostgreSQL-compatible persistence, and technical observability/audit.
 
 ID MS does not own semantic validation, policy validation, candidate/resource feasibility, optimisation, runtime assurance, telemetry, or callback ingestion.
-
-## IntentSpecification semantic bucket baseline — targets, constraints, and preferences:
-
-### Purpose:
-
-`IntentSpecification.specCharacteristic` is the high-level catalogue/discovery view only.
-
-It should advertise the three semantic buckets supported by the specification:
-
-```json
-"specCharacteristic": [
-  {
-    "id": "targets",
-    "name": "targets",
-    "description": "Measurable runtime objectives supported by this IntentSpecification. Detailed target fields and validation rules are defined in expressionSpecification.schema.properties.targets.",
-    "valueType": "object",
-    "configurable": true,
-    "minCardinality": 1,
-    "maxCardinality": 1
-  },
-  {
-    "id": "constraints",
-    "name": "constraints",
-    "description": "Hard runtime requirements supported by this IntentSpecification. Detailed constraint fields and validation rules are defined in expressionSpecification.schema.properties.constraints.",
-    "valueType": "object",
-    "configurable": true,
-    "minCardinality": 1,
-    "maxCardinality": 1
-  },
-  {
-    "id": "preferences",
-    "name": "preferences",
-    "description": "Soft runtime selection preferences supported by this IntentSpecification. Detailed preference fields and validation rules are defined in expressionSpecification.schema.properties.preferences.",
-    "valueType": "object",
-    "configurable": true,
-    "minCardinality": 0,
-    "maxCardinality": 1
-  }
-]
-```
-
-### Detailed schema rule:
-
-`IntentSpecification.expressionSpecification` remains the authoritative syntax/schema definition.
-
-Detailed field-level rules belong under `expressionSpecification.schema`, not as separate top-level `specCharacteristic` entries.
-
-The expression schema must define these first-class nested buckets:
-
-```text
-targets
-constraints
-preferences
-```
-
-### Bucket meanings:
-
-| **Bucket** | **Meaning** | **Examples** |
-|---|---|---|
-| `targets` | Measurable runtime objectives | `maxLatencyMs`, `minAvailabilityPercent`, `maxJitterMs`, `maxPacketLossPercent` |
-| `constraints` | Hard runtime requirements or required non-target inputs | `priority`, `redundancyRequired`, `timeWindow` |
-| `preferences` | Soft runtime selection guidance | `preferredAccessTechnology` |
-
-### Baseline statement:
-
-**Do not duplicate nested target, constraint, or preference fields as separate top-level `specCharacteristic` entries. `specCharacteristic` exposes only the high-level buckets, but each bucket characteristic still carries normal characteristic metadata such as `valueType`, `configurable`, `minCardinality`, and `maxCardinality`. `expressionSpecification.schema` defines the detailed nested request shape for `targets`, `constraints`, and `preferences`.**

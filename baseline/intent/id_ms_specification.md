@@ -71,6 +71,28 @@ There is no `DELETED` lifecycle status. Delete is an operation/outcome, not a no
 - Retired specifications must not be used for new runtime `Intent` creation.
 - Existing runtime intents that reference a retired specification may continue temporarily where safe.
 
+
+### Targets, constraints, and preferences baseline:
+
+`targets`, `constraints`, and `preferences` are canonical first-class semantic buckets across the Intent Enabler pipeline.
+
+| **Bucket** | **Meaning** | **Examples** |
+|---|---|---|
+| `targets` | Measurable SLA / outcome objectives that the platform should satisfy or evaluate | `maxLatencyMs`, `minAvailabilityPercent`, `maxJitterMs`, `maxPacketLossPercent` |
+| `constraints` | Hard rules or required non-target inputs that must be honoured | `priority`, `redundancyRequired`, `timeWindow` |
+| `preferences` | Soft selection guidance that can influence selection but is not mandatory unless promoted to a constraint | `preferredAccessTechnology` |
+
+Rules:
+
+- ID MS defines and validates these buckets in `IntentSpecification.expressionSpecification`.
+- IC MS accepts and persists these buckets under runtime `Intent.expression`.
+- `IntentValidatedEvent` forwards the admitted expression with the same buckets.
+- II MS preserves or refines these buckets in `IntentResolvedEvent`.
+- The optimiser evaluates these buckets in `IntentOptimisedEvent`.
+- IA MS includes `targets` by default in `IntentAssuranceEvent` so runtime observations can be interpreted against objectives.
+- IA MS includes `constraints` and `preferences` only when a control-loop use case explicitly needs them.
+- Flat expression schemas that place target, constraint, or preference fields directly at top level are not the active baseline.
+
 ### Caching and ETag rules:
 
 - Caching applies only to GET responses.
@@ -135,7 +157,7 @@ Accept: application/json
     {
       "id": "targets",
       "name": "targets",
-      "description": "Measurable runtime objectives supported by this IntentSpecification. Detailed target fields and validation rules are defined in expressionSpecification.schema.properties.targets.",
+      "description": "Measurable runtime objectives supported by this IntentSpecification.",
       "valueType": "object",
       "configurable": true,
       "minCardinality": 1,
@@ -144,7 +166,7 @@ Accept: application/json
     {
       "id": "constraints",
       "name": "constraints",
-      "description": "Hard runtime requirements supported by this IntentSpecification. Detailed constraint fields and validation rules are defined in expressionSpecification.schema.properties.constraints.",
+      "description": "Hard runtime requirements supported by this IntentSpecification.",
       "valueType": "object",
       "configurable": true,
       "minCardinality": 1,
@@ -153,7 +175,7 @@ Accept: application/json
     {
       "id": "preferences",
       "name": "preferences",
-      "description": "Soft runtime selection preferences supported by this IntentSpecification. Detailed preference fields and validation rules are defined in expressionSpecification.schema.properties.preferences.",
+      "description": "Soft runtime selection preferences supported by this IntentSpecification.",
       "valueType": "object",
       "configurable": true,
       "minCardinality": 0,
@@ -162,8 +184,8 @@ Accept: application/json
   ],
   "expressionSpecification": {
     "name": "Hospital Surgical Slice Intent Expression Schema",
-    "description": "Authoritative request-shape schema for hospital surgical slice intents. This schema is syntax-first and defines the canonical targets, constraints, and preferences buckets. It does not perform semantic, policy, or fulfilment validation.",
-    "expressionLanguage": "JSON_SCHEMA",
+    "description": "Authoritative request-shape schema for hospital surgical slice intents. This schema is syntax-first and validates the canonical targets, constraints, and preferences buckets. It does not perform semantic, policy, or fulfilment validation.",
+    "expressionLanguage": "JsonLdExpression",
     "schema": {
       "$schema": "https://json-schema.org/draft/2020-12/schema",
       "$id": "https://mycsp.com.au/schemas/intentManagement/v5/intentExpression/hospital-surgical-slice-spec-v1.19.expression.schema.json",
@@ -183,12 +205,12 @@ Accept: application/json
             "geographicScope": { "type": "string", "minLength": 1 }
           }
         },
-        "serviceType": { "type": "string", "enum": ["surgical-connectivity"] },
+        "serviceType": { "type": "string", "const": "surgical-connectivity" },
         "serviceClass": { "type": "string", "enum": ["critical-gold", "critical-silver"] },
         "targets": {
           "type": "object",
           "additionalProperties": false,
-          "description": "Measurable runtime objectives requested by the intent.",
+          "description": "Measurable SLA/outcome objectives for the intent.",
           "properties": {
             "maxLatencyMs": { "type": "number", "minimum": 0 },
             "minAvailabilityPercent": { "type": "number", "minimum": 0, "maximum": 100 },
@@ -199,7 +221,7 @@ Accept: application/json
         "constraints": {
           "type": "object",
           "additionalProperties": false,
-          "description": "Hard runtime requirements and required non-target inputs.",
+          "description": "Hard rules or required non-target inputs that must be honoured.",
           "required": ["priority"],
           "properties": {
             "priority": { "type": "string", "enum": ["critical", "high", "standard"] },
@@ -218,7 +240,7 @@ Accept: application/json
         "preferences": {
           "type": "object",
           "additionalProperties": false,
-          "description": "Soft runtime selection guidance.",
+          "description": "Soft selection guidance that can influence optimisation but is not mandatory unless promoted to a constraint.",
           "properties": {
             "preferredAccessTechnology": { "type": "string", "minLength": 1 }
           }
@@ -409,8 +431,8 @@ If-Match: "intent-spec-hospital-surgical-slice-spec-v1.19-v1"
   "lifecycleStatus": "DRAFT",
   "@type": "IntentSpecification",
   "@baseType": "EntitySpecification",
-  "specCharacteristic": ["...same high-level bucket catalogue as create request..."],
-  "expressionSpecification": { "...": "same authoritative nested bucket schema as create request" }
+  "specCharacteristic": [],
+  "expressionSpecification": {}
 }
 ```
 
@@ -940,10 +962,6 @@ They are not internal fulfilment events and must not expose II MS semantic valid
 - `@baseType` is `EntitySpecification`, not `ResourceSpecification`.
 - `specCharacteristic` is the high-level characteristic catalogue.
 - `expressionSpecification` is the authoritative request-shape schema.
-
-- `specCharacteristic` exposes only the high-level semantic buckets: `targets`, `constraints`, and `preferences`, with normal characteristic metadata such as `valueType`, `configurable`, `minCardinality`, and `maxCardinality`.
-- Detailed field-level rules for `maxLatencyMs`, `priority`, `redundancyRequired`, `timeWindow`, and `preferredAccessTechnology` belong in `expressionSpecification.schema`, not as separate top-level `specCharacteristic` entries.
-- `expressionSpecification.schema` defines `targets`, `constraints`, and `preferences` as nested first-class objects.
 - `characteristicValueSpecification` is used only for defaults, examples, or constrained allowed values where useful.
 - Numeric SLA values in `characteristicValueSpecification` are illustrative/default guidance only, not semantic enforcement.
 - ID MS validates resource shape and syntax.
@@ -1042,3 +1060,11 @@ The domain-scoped route is acceptable only as a documented platform extension an
 ### Baseline statement:
 
 ID MS and IC MS remain TMF-aligned at the external contract level. Controlled platform extensions are allowed when documented, non-breaking, and semantically compatible with TMF. For ID MS, `PATCH /intentSpecification/{id}` is the strict TMF update operation, while `PUT /intentSpecification/{id}` is an accepted platform extension for deterministic full replacement. TMF `/hub` routing is the strict subscription route form, while `/intentSpecification/hub` is an accepted domain-scoped platform extension when deliberately used.
+
+
+### SpecCharacteristic and expressionSpecification rule:
+
+- `specCharacteristic` is the high-level characteristic catalogue and should expose only the semantic buckets: `targets`, `constraints`, and `preferences`.
+- Do not duplicate individual nested fields such as `maxLatencyMs`, `priority`, `redundancyRequired`, `timeWindow`, or `preferredAccessTechnology` as separate top-level `specCharacteristic` entries by default.
+- `expressionSpecification` is the authoritative request-shape schema and defines the detailed nested structure under `targets`, `constraints`, and `preferences`.
+- `targets`, `constraints`, and `preferences` are first-class semantic buckets across the end-to-end pipeline.

@@ -840,46 +840,30 @@ Detailed field-level rules for `maxLatencyMs`, `minAvailabilityPercent`, `maxJit
 `specCharacteristic` advertises the semantic buckets. `expressionSpecification.schema` defines the full nested request shape. Do not wipe out or replace the full `IntentSpecification` with only the bucket catalogue.
 
 
-## Baseline validation — file integrity and IntentReport simplification check:
+## Baseline update — TMF expressionLanguage must be JsonLdExpression:
 
-Date: 2026-05-07T09:58:00+10:00
-
-### Checked files:
-- `id_ms_design_brief.md`
-- `id_ms_specification.md`
-- `ic_ms_design_brief.md`
-- `ic_ms_specification.md`
-- `intent_internal_events_specification.md`
-- `ia_ms_design_brief.md`
-- `kp_master_config.md`
-
-### Result:
-No complete file wipe/replacement was found in the active baseline files. The major expected sections remain present across the ID MS, IC MS, IA MS, internal events, and KP files.
-
-### Corrected during validation:
-- Removed remaining confusing active-baseline wording that referenced separate degradation/re-optimisation report sections.
-- Removed `Evaluation summary` wording from the IC MS IntentReport areas table because it implied aggregate interpretation fields such as `result` or per-target status.
-- Kept `IntentReport.targetSummary` fact-only: target name, target value, observed value, and unit.
-- Kept `IntentReport.observationSummary` as curated observed metrics per relevant resource.
-
-### Active IntentReport rule:
-`IntentReport` explains current state through `lifecycleStatus`, `statusReason`, `summary`, `targetSummary`, and `observationSummary`. It does not include aggregate compliance interpretation or separate degradation/re-optimisation interpretation sections by default.
-
-
-## Baseline refinement — IntentSpecification specCharacteristic bucket metadata:
-
-Date: 2026-05-07T10:04:34.046733+00:00
+Date: 2026-05-07
 
 ### Updated files:
-- `id_ms_design_brief.md`
 - `id_ms_specification.md`
+- `id_ms_design_brief.md`
+- `contextdump.md`
 
 ### Baseline:
-`IntentSpecification.specCharacteristic` must not be reduced to bare `id`, `name`, and `description` entries only. The field-level characteristics such as `maxLatencyMs`, `priority`, `timeWindow`, and `preferredAccessTechnology` should not be duplicated as separate top-level `specCharacteristic` entries, but the three bucket characteristics still carry normal characteristic metadata.
+External TMF-facing `IntentSpecification.expressionSpecification.expressionLanguage` must use `JsonLdExpression`, not `JSON_SCHEMA`.
 
-The active `specCharacteristic` catalogue is:
-- `targets` with `valueType: object`, `configurable: true`, `minCardinality: 1`, `maxCardinality: 1`
-- `constraints` with `valueType: object`, `configurable: true`, `minCardinality: 1`, `maxCardinality: 1`
-- `preferences` with `valueType: object`, `configurable: true`, `minCardinality: 0`, `maxCardinality: 1`
+JSON Schema is only a platform validation aid for the structure inside `expression.expressionValue`. It should be referenced through `targetEntitySchema.@schemaLocation` or documented as implementation guidance, but it must not be represented as the TMF expression language.
 
-Detailed nested field rules remain authoritative under `expressionSpecification.schema.properties.targets`, `expressionSpecification.schema.properties.constraints`, and `expressionSpecification.schema.properties.preferences`.
+### Rule:
+Use:
+
+```json
+"expressionLanguage": "JsonLdExpression"
+```
+
+Do not use:
+
+```json
+"expressionLanguage": "JSON_SCHEMA"
+```
+
