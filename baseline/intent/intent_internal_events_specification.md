@@ -39,6 +39,26 @@ Internal events use stable shared intent-domain terms. Domain-specific KP struct
 
 Use direct `location`, `serviceType`, and `serviceClass` fields outside KP. Do not wrap them in `context`, `location`, `serviceType`, and `serviceClass`, or `locationBasedService` in internal event JSON examples.
 
+
+### Targets, constraints, and preferences pipeline rule
+
+`targets`, `constraints`, and `preferences` are canonical first-class semantic buckets across the internal event pipeline.
+
+| **Bucket** | **Meaning** | **Examples** |
+|---|---|---|
+| `targets` | Measurable SLA / outcome objectives that the platform should satisfy or evaluate | `maxLatencyMs`, `minAvailabilityPercent`, `maxJitterMs`, `maxPacketLossPercent` |
+| `constraints` | Hard rules or required non-target inputs that must be honoured | `priority`, `redundancyRequired`, `timeWindow` |
+| `preferences` | Soft selection guidance | `preferredAccessTechnology` |
+
+Event-specific treatment:
+
+- `IntentValidatedEvent` carries the admitted runtime `expression` with the same three buckets.
+- `IntentResolvedEvent` preserves or refines the same buckets after semantic interpretation and KP resolution.
+- `IntentOptimisedEvent` uses the same bucket names as evaluated outcome buckets. The event name and `optimisationRun.status` make clear that they are optimisation results, not raw input.
+- `IntentAssuranceEvent` includes `targets` by default so runtime observations can be interpreted against objectives. It includes `constraints` and `preferences` only when a control-loop use case explicitly requires them.
+
+Do not reintroduce flat top-level `priority`, `redundancyRequired`, `preferredAccessTechnology`, `maxLatencyMs`, `minAvailabilityPercent`, `maxJitterMs`, or `maxPacketLossPercent` fields in internal event payloads when those values semantically belong in one of the canonical buckets.
+
 ### Common references shape
 
 Internal event `references` should use named resource reference objects with `id` and `href` where available.

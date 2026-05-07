@@ -104,6 +104,18 @@ IA MS is the runtime assurance truth for IME. IC MS remains the owner of the ext
 | 9 | IA MS writes IA outbox record for `IntentAssuranceEvent` |
 | 10 | IA relay publishes `IntentAssuranceEvent` to `t7.intent.management.events` |
 
+
+### Targets, constraints, and preferences assurance rule:
+
+`targets`, `constraints`, and `preferences` are canonical first-class semantic buckets across the full Intent Enabler pipeline.
+
+For IA MS:
+
+- `targets` are included by default in `IntentAssuranceEvent` so runtime observations can be interpreted against the active objectives.
+- `constraints` and `preferences` are not included in `IntentAssuranceEvent` by default.
+- `constraints` and `preferences` may be included only when an explicitly designed control-loop use case needs them.
+- IA MS must not flatten target, constraint, or preference values into unrelated top-level fields when those values belong in the canonical buckets.
+
 ### IntentAssuranceEvent Baseline:
 
 `IntentAssuranceEvent` is the single IA-owned runtime assurance event.
@@ -126,50 +138,64 @@ It represents:
 ```json
 {
   "body": {
-    "eventType": "IntentAssuranceEvent",
-    "eventVersion": "1.0",
-    "source": "intent-assurance-ms",
-    "eventTime": "2026-05-04T12:20:00+10:00",
-    "correlationId": "corr-ia-20260504-002",
     "intentId": "INT-HOSP-2026-001",
+    "version": "v1",
+    "lifecycleStatus": "Degraded",
+    "statusReason": "Selected resources are outside resolved runtime targets.",
     "location": {
-      "locationId": "sydney-hospital"
+      "locationId": "AU-NSW-SYD-HOSP-001",
+      "displayName": "Sydney-Main-Hospital"
     },
-    "service": {
-      "serviceClass": "surgical-slice"
+    "serviceType": "surgical-connectivity",
+    "serviceClass": "critical-gold",
+    "targets": {
+      "maxLatencyMs": 10,
+      "minAvailabilityPercent": 99.99,
+      "maxJitterMs": 2,
+      "maxPacketLossPercent": 0.01
     },
-    "assuranceOutcome": {
-      "lifecycleStatus": "Degraded",
-      "assuranceStatus": "driftDetected",
-      "severity": "major",
-      "reason": "Primary path latency exceeded configured benchmark.",
-      "requiresReoptimisation": true
-    },
-    "runtimeState": {
-      "affectedPathId": "path-syd-hosp-primary-001",
-      "latencyMs": 18,
-      "reliabilityPercent": 99.95
-    },
-    "candidates": [
+    "resources": [
       {
-        "pathId": "path-syd-hosp-primary-001",
-        "pathClass": "primary",
-        "latencyMs": 18,
-        "reliabilityPercent": 99.95,
-        "latencyBenchmarkMs": 10,
-        "reliabilityBenchmarkPercent": 99.99
+        "role": "primary",
+        "resourceId": "SYD-PRI-01"
       },
       {
-        "pathId": "path-syd-hosp-backup-001",
-        "pathClass": "backup",
-        "latencyMs": 9,
-        "reliabilityPercent": 99.991,
-        "latencyBenchmarkMs": 10,
-        "reliabilityBenchmarkPercent": 99.99
+        "role": "secondary",
+        "resourceId": "SYD-SEC-01"
+      }
+    ],
+    "observations": [
+      {
+        "resourceId": "SYD-PRI-01",
+        "role": "primary",
+        "metrics": {
+          "latencyMs": 18,
+          "availabilityPercent": 99.992,
+          "jitterMs": 1.8,
+          "packetLossPercent": 0.006
+        }
+      },
+      {
+        "resourceId": "SYD-SEC-01",
+        "role": "secondary",
+        "metrics": {
+          "latencyMs": 12,
+          "availabilityPercent": 99.994,
+          "jitterMs": 1.8,
+          "packetLossPercent": 0.006
+        }
       }
     ],
     "references": {
-      "intent": "/intentManagement/v5/intent/INT-HOSP-2026-001"
+      "correlationId": "corr-intent-assurance-002",
+      "intent": {
+        "id": "INT-HOSP-2026-001",
+        "href": "/intentManagement/v5/intent/INT-HOSP-2026-001"
+      },
+      "intentSpecification": {
+        "id": "hospital-surgical-slice-spec-v1.20",
+        "href": "/intentManagement/v5/intentSpecification/hospital-surgical-slice-spec-v1.20"
+      }
     }
   }
 }

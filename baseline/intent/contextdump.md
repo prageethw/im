@@ -720,3 +720,31 @@ Date: 2026-05-07T02:53:16.079859+00:00
 - Replaced invalid placeholder JSON snippets with complete valid JSON examples.
 - Replaced abbreviated Intent response payloads with complete payloads using `expression.targets`, `expression.constraints`, and `expression.preferences`.
 - Confirmed IC/ID spec and design Markdown JSON blocks validate.
+
+
+## Baseline update — targets, constraints, and preferences across E2E pipeline:
+
+Date: 2026-05-07T18:45:00+10:00
+
+### Updated files:
+- `id_ms_design_brief.md`
+- `id_ms_specification.md`
+- `ic_ms_design_brief.md`
+- `ic_ms_specification.md`
+- `intent_internal_events_specification.md`
+- `ia_ms_design_brief.md`
+- `contextdump.md`
+
+### Baseline:
+`targets`, `constraints`, and `preferences` are canonical first-class semantic buckets across the end-to-end Intent Enabler pipeline.
+
+### Meanings:
+- `targets` are measurable SLA/outcome objectives such as `maxLatencyMs`, `minAvailabilityPercent`, `maxJitterMs`, and `maxPacketLossPercent`.
+- `constraints` are hard rules or required non-target inputs such as `priority`, `redundancyRequired`, and `timeWindow`.
+- `preferences` are soft selection guidance such as `preferredAccessTechnology`.
+
+### E2E rule:
+ID MS defines and validates the nested buckets in `IntentSpecification.expressionSpecification`. IC MS accepts and persists them under runtime `Intent.expression`. `IntentValidatedEvent` forwards the admitted expression with the same buckets. II MS preserves or refines them in `IntentResolvedEvent`. The optimiser evaluates them in `IntentOptimisedEvent`. IA MS includes `targets` by default in `IntentAssuranceEvent` so runtime observations can be interpreted against objectives; `constraints` and `preferences` are included in assurance only when an explicitly designed control-loop use case needs them.
+
+### Correction:
+Flat `IntentSpecification` expression schemas that place target, constraint, or preference fields directly at top level are no longer the active baseline. The authoritative expression schema must use nested `targets`, `constraints`, and `preferences` buckets.

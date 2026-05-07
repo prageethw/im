@@ -82,6 +82,21 @@ Accepted domain-scoped platform extension:
 | Retrieve intent event subscription | `GET` | `/intentManagement/v5/intent/hub/{id}` |
 | Delete intent event subscription | `DELETE` | `/intentManagement/v5/intent/hub/{id}` |
 
+
+## Targets, constraints, and preferences baseline:
+
+Runtime `Intent.expression` uses the canonical first-class semantic buckets `targets`, `constraints`, and `preferences`.
+
+| **Bucket** | **Meaning** | **Examples** |
+|---|---|---|
+| `targets` | Measurable SLA / outcome objectives | `maxLatencyMs`, `minAvailabilityPercent`, `maxJitterMs`, `maxPacketLossPercent` |
+| `constraints` | Hard rules or required non-target inputs | `priority`, `redundancyRequired`, `timeWindow` |
+| `preferences` | Soft selection guidance | `preferredAccessTechnology` |
+
+IC MS accepts and persists these buckets under runtime `Intent.expression` after validating the request against the concrete active `IntentSpecification.id`.
+
+IC MS forwards the admitted expression with the same bucket structure in `IntentValidatedEvent`. It must not flatten these values into unrelated top-level fields in the runtime `Intent` expression or the admission event.
+
 ## IC MS validation responsibility:
 
 On `POST /intentManagement/v5/intent`, IC MS:

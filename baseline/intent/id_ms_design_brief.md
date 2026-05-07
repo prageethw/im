@@ -338,6 +338,23 @@ Common errors:
 | `422` | `VALIDATION_FAILED` | Fails expression/spec schema constraints |
 | `500` | `INTERNAL_ERROR` | Unexpected server error |
 
+
+## Targets, constraints, and preferences baseline:
+
+`targets`, `constraints`, and `preferences` are canonical first-class semantic buckets in the runtime expression shape that ID MS defines through `IntentSpecification.expressionSpecification`.
+
+| **Bucket** | **Meaning** | **Examples** |
+|---|---|---|
+| `targets` | Measurable SLA / outcome objectives | `maxLatencyMs`, `minAvailabilityPercent`, `maxJitterMs`, `maxPacketLossPercent` |
+| `constraints` | Hard rules or required non-target inputs | `priority`, `redundancyRequired`, `timeWindow` |
+| `preferences` | Soft selection guidance | `preferredAccessTechnology` |
+
+ID MS keeps `specCharacteristic` as the high-level characteristic catalogue, but the authoritative runtime request shape in `expressionSpecification.schema` must use nested `targets`, `constraints`, and `preferences` buckets.
+
+Flat expression schemas that place `maxLatencyMs`, `priority`, `redundancyRequired`, `timeWindow`, or `preferredAccessTechnology` directly at the top level are not the active baseline.
+
+This keeps the design-time specification aligned with IC MS runtime `Intent.expression`, `IntentValidatedEvent`, II MS resolution, optimiser evaluation, and IA MS assurance interpretation.
+
 ## ID MS API boundary statement:
 
 **ID MS owns design-time `IntentSpecification` contracts and subscription management for specification events. It validates syntax and resource shape, enforces specification lifecycle/version governance, and publishes external specification lifecycle events. It does not validate runtime semantic feasibility, policy fulfilment, network topology, optimisation, assurance, telemetry, or callbacks.**

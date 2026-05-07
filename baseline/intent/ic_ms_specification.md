@@ -140,6 +140,28 @@ Terminated
 Retired
 ```
 
+
+### Targets, constraints, and preferences baseline:
+
+`targets`, `constraints`, and `preferences` are canonical first-class semantic buckets across the Intent Enabler pipeline.
+
+| **Bucket** | **Meaning** | **Examples** |
+|---|---|---|
+| `targets` | Measurable SLA / outcome objectives that the platform should satisfy or evaluate | `maxLatencyMs`, `minAvailabilityPercent`, `maxJitterMs`, `maxPacketLossPercent` |
+| `constraints` | Hard rules or required non-target inputs that must be honoured | `priority`, `redundancyRequired`, `timeWindow` |
+| `preferences` | Soft selection guidance that can influence selection but is not mandatory unless promoted to a constraint | `preferredAccessTechnology` |
+
+Rules:
+
+- ID MS defines and validates these buckets in `IntentSpecification.expressionSpecification`.
+- IC MS accepts and persists these buckets under runtime `Intent.expression`.
+- `IntentValidatedEvent` forwards the admitted expression with the same buckets.
+- II MS preserves or refines these buckets in `IntentResolvedEvent`.
+- The optimiser evaluates these buckets in `IntentOptimisedEvent`.
+- IA MS includes `targets` by default in `IntentAssuranceEvent` so runtime observations can be interpreted against objectives.
+- IA MS includes `constraints` and `preferences` only when a control-loop use case explicitly needs them.
+- Flat expression schemas that place target, constraint, or preference fields directly at top level are not the active baseline.
+
 ### External projection rule:
 
 `GET /intent/{id}` returns the current projected `Intent` state for that Intent ID.

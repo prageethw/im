@@ -71,6 +71,28 @@ There is no `DELETED` lifecycle status. Delete is an operation/outcome, not a no
 - Retired specifications must not be used for new runtime `Intent` creation.
 - Existing runtime intents that reference a retired specification may continue temporarily where safe.
 
+
+### Targets, constraints, and preferences baseline:
+
+`targets`, `constraints`, and `preferences` are canonical first-class semantic buckets across the Intent Enabler pipeline.
+
+| **Bucket** | **Meaning** | **Examples** |
+|---|---|---|
+| `targets` | Measurable SLA / outcome objectives that the platform should satisfy or evaluate | `maxLatencyMs`, `minAvailabilityPercent`, `maxJitterMs`, `maxPacketLossPercent` |
+| `constraints` | Hard rules or required non-target inputs that must be honoured | `priority`, `redundancyRequired`, `timeWindow` |
+| `preferences` | Soft selection guidance that can influence selection but is not mandatory unless promoted to a constraint | `preferredAccessTechnology` |
+
+Rules:
+
+- ID MS defines and validates these buckets in `IntentSpecification.expressionSpecification`.
+- IC MS accepts and persists these buckets under runtime `Intent.expression`.
+- `IntentValidatedEvent` forwards the admitted expression with the same buckets.
+- II MS preserves or refines these buckets in `IntentResolvedEvent`.
+- The optimiser evaluates these buckets in `IntentOptimisedEvent`.
+- IA MS includes `targets` by default in `IntentAssuranceEvent` so runtime observations can be interpreted against objectives.
+- IA MS includes `constraints` and `preferences` only when a control-loop use case explicitly needs them.
+- Flat expression schemas that place target, constraint, or preference fields directly at top level are not the active baseline.
+
 ### Caching and ETag rules:
 
 - Caching applies only to GET responses.
@@ -254,7 +276,7 @@ Accept: application/json
   ],
   "expressionSpecification": {
     "name": "Hospital Surgical Slice Intent Expression Schema",
-    "description": "Authoritative request-shape schema for hospital surgical slice intents. This schema is syntax-first and does not perform semantic, policy, or fulfilment validation.",
+    "description": "Authoritative request-shape schema for hospital surgical slice intents. This schema is syntax-first and validates the canonical targets, constraints, and preferences buckets. It does not perform semantic, policy, or fulfilment validation.",
     "expressionLanguage": "JSON_SCHEMA",
     "schema": {
       "$schema": "https://json-schema.org/draft/2020-12/schema",
@@ -262,7 +284,7 @@ Accept: application/json
       "title": "Hospital Surgical Slice Intent Expression",
       "type": "object",
       "additionalProperties": false,
-      "required": ["location", "serviceClass", "priority"],
+      "required": ["location", "serviceType", "serviceClass", "targets", "constraints"],
       "properties": {
         "location": {
           "type": "object",
@@ -275,21 +297,44 @@ Accept: application/json
             "geographicScope": { "type": "string", "minLength": 1 }
           }
         },
+        "serviceType": { "type": "string", "const": "surgical-connectivity" },
         "serviceClass": { "type": "string", "enum": ["critical-gold", "critical-silver"] },
-        "priority": { "type": "string", "enum": ["critical", "high", "standard"] },
-        "maxLatencyMs": { "type": "number", "minimum": 0 },
-        "minAvailabilityPercent": { "type": "number", "minimum": 0, "maximum": 100 },
-        "maxJitterMs": { "type": "number", "minimum": 0 },
-        "maxPacketLossPercent": { "type": "number", "minimum": 0, "maximum": 100 },
-        "redundancyRequired": { "type": "boolean" },
-        "preferredAccessTechnology": { "type": "string", "minLength": 1 },
-        "timeWindow": {
+        "targets": {
           "type": "object",
           "additionalProperties": false,
-          "required": ["startDateTime"],
+          "description": "Measurable SLA/outcome objectives for the intent.",
           "properties": {
-            "startDateTime": { "type": "string", "format": "date-time" },
-            "endDateTime": { "type": "string", "format": "date-time" }
+            "maxLatencyMs": { "type": "number", "minimum": 0 },
+            "minAvailabilityPercent": { "type": "number", "minimum": 0, "maximum": 100 },
+            "maxJitterMs": { "type": "number", "minimum": 0 },
+            "maxPacketLossPercent": { "type": "number", "minimum": 0, "maximum": 100 }
+          }
+        },
+        "constraints": {
+          "type": "object",
+          "additionalProperties": false,
+          "description": "Hard rules or required non-target inputs that must be honoured.",
+          "required": ["priority"],
+          "properties": {
+            "priority": { "type": "string", "enum": ["critical", "high", "standard"] },
+            "redundancyRequired": { "type": "boolean" },
+            "timeWindow": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": ["startDateTime"],
+              "properties": {
+                "startDateTime": { "type": "string", "format": "date-time" },
+                "endDateTime": { "type": "string", "format": "date-time" }
+              }
+            }
+          }
+        },
+        "preferences": {
+          "type": "object",
+          "additionalProperties": false,
+          "description": "Soft selection guidance that can influence optimisation but is not mandatory unless promoted to a constraint.",
+          "properties": {
+            "preferredAccessTechnology": { "type": "string", "minLength": 1 }
           }
         }
       }
