@@ -790,3 +790,25 @@ Date: 2026-05-06T23:47:18.023588+00:00
 - Location/service-level `benchmarks` remain for service capability values.
 - `redundancyAvailable` remains in KP; `redundancyRequired` remains supported through human expression mapping/defaults.
 - KP keeps logical optimiser/orchestrator/observer references, while events map those into event-specific structures.
+
+## Baseline update — Markdown specification completeness:
+
+Date: 2026-05-07T00:37:43.126886+00:00
+
+### Baseline:
+When writing Markdown specification/design files, write sections fully with complete JSON payloads, headers, examples, and related details.
+
+### Rule:
+- Do not abbreviate JSON payloads with placeholders such as `...similar payload...` by default.
+- Do not omit headers when documenting request/response/event examples.
+- Use complete examples unless the user explicitly asks for a shortened version.
+
+## Baseline clarification — placeholders allowed in chat/terminal display:
+
+Date: 2026-05-07T00:39:32.599905+00:00
+
+### Clarification:
+When displaying examples in chat or terminal-style output for review, placeholders may be used to save space.
+
+### Important distinction:
+This does not change the Markdown specification/design file rule. Markdown spec/design files should still be written fully with complete JSON payloads, headers, examples, and related details unless a shortened file is explicitly requested.
