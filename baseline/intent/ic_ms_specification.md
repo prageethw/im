@@ -54,6 +54,7 @@ IC MS does not own:
 |---|---:|---|---|
 | List reports for intent | `GET` | `/intentManagement/v5/intent/{intentId}/intentReport` | Platform/TMF-style nested report projection |
 | Retrieve report by ID | `GET` | `/intentManagement/v5/intent/{intentId}/intentReport/{id}` | Platform/TMF-style nested report projection |
+| Delete report by ID | `DELETE` | `/intentManagement/v5/intent/{intentId}/intentReport/{id}` | TMF-aligned delete verb, platform behaviour is retained/tombstoned report by default |
 
 ### Hub subscription APIs:
 
@@ -920,7 +921,31 @@ Cache-Control: private, max-age=300
 
 ---
 
-## 12. Hub create subscription:
+## 12. Delete IntentReport:
+
+### Request:
+
+```http
+DELETE /intentManagement/v5/intent/INT-HOSP-2026-001/intentReport/IR-INT-HOSP-2026-001-003
+Accept: application/json
+If-Match: "intent-report-IR-INT-HOSP-2026-001-003-v1"
+```
+
+### Success response:
+
+```http
+HTTP/1.1 204 No Content
+```
+
+### Rule:
+
+`DELETE /intent/{intentId}/intentReport/{id}` is supported for TMF compatibility. Platform behaviour is retained/tombstoned report handling by default where retention policy requires preserving report history.
+
+The request requires `If-Match` because report deletion/tombstoning is an unsafe operation.
+
+---
+
+## 13. Hub create subscription:
 
 ### Strict TMF route request:
 
@@ -961,6 +986,7 @@ HTTP/1.1 201 Created
 Location: /intentManagement/v5/intent/hub/sub-intent-001
 Content-Type: application/json
 ETag: "subscription-sub-intent-001-v1"
+Cache-Control: private, max-age=300
 ```
 
 ```json
@@ -991,7 +1017,7 @@ IntentReportDeleteEvent
 
 ---
 
-## 13. Hub retrieve subscription:
+## 14. Hub retrieve subscription:
 
 ### Request:
 
@@ -1000,12 +1026,21 @@ GET /intentManagement/v5/intent/hub/sub-intent-001
 Accept: application/json
 ```
 
+### Request with fresh-read override:
+
+```http
+GET /intentManagement/v5/intent/hub/sub-intent-001
+Accept: application/json
+Cache-Control: no-cache
+```
+
 ### Success response:
 
 ```http
 HTTP/1.1 200 OK
 Content-Type: application/json
 ETag: "subscription-sub-intent-001-v1"
+Cache-Control: private, max-age=300
 ```
 
 ```json
@@ -1024,7 +1059,7 @@ ETag: "subscription-sub-intent-001-v1"
 
 ---
 
-## 14. Hub delete subscription:
+## 15. Hub delete subscription:
 
 ### Request:
 
@@ -1041,7 +1076,7 @@ HTTP/1.1 204 No Content
 
 ---
 
-## 15. Validation and dependency error examples:
+## 16. Validation and dependency error examples:
 
 ### Missing concrete IntentSpecification ID:
 
@@ -1118,7 +1153,7 @@ Content-Type: application/json
 
 ---
 
-## 16. External Intent event family:
+## 17. External Intent event family:
 
 IC MS emits external TMF-style resource events for `Intent` projection changes.
 
@@ -1135,7 +1170,7 @@ They must not expose raw telemetry, raw optimiser decisions, raw `t7.knowledge p
 
 ---
 
-## 17. IntentCreateEvent:
+## 18. IntentCreateEvent:
 
 ```json
 {
@@ -1174,7 +1209,7 @@ They must not expose raw telemetry, raw optimiser decisions, raw `t7.knowledge p
 
 ---
 
-## 18. IntentAttributeValueChangeEvent:
+## 19. IntentAttributeValueChangeEvent:
 
 ```json
 {
@@ -1217,7 +1252,7 @@ They must not expose raw telemetry, raw optimiser decisions, raw `t7.knowledge p
 
 ---
 
-## 19. IntentStatusChangeEvent:
+## 20. IntentStatusChangeEvent:
 
 ```json
 {
@@ -1255,7 +1290,7 @@ They must not expose raw telemetry, raw optimiser decisions, raw `t7.knowledge p
 
 ---
 
-## 20. IntentDeleteEvent:
+## 21. IntentDeleteEvent:
 
 `IntentDeleteEvent` represents accepted termination, not physical deletion.
 
@@ -1293,7 +1328,7 @@ They must not expose raw telemetry, raw optimiser decisions, raw `t7.knowledge p
 
 ---
 
-## 21. External IntentReport event family:
+## 22. External IntentReport event family:
 
 IC MS emits external TMF-style resource events for `IntentReport` projection changes.
 
@@ -1305,7 +1340,7 @@ IC MS emits external TMF-style resource events for `IntentReport` projection cha
 
 ---
 
-## 22. IntentReportCreateEvent:
+## 23. IntentReportCreateEvent:
 
 ```json
 {
@@ -1343,7 +1378,7 @@ IC MS emits external TMF-style resource events for `IntentReport` projection cha
 
 ---
 
-## 23. IntentReportAttributeValueChangeEvent:
+## 24. IntentReportAttributeValueChangeEvent:
 
 ```json
 {
@@ -1388,7 +1423,7 @@ IC MS emits external TMF-style resource events for `IntentReport` projection cha
 
 ---
 
-## 24. IntentReportDeleteEvent:
+## 25. IntentReportDeleteEvent:
 
 ```json
 {
@@ -1424,7 +1459,7 @@ IC MS emits external TMF-style resource events for `IntentReport` projection cha
 
 ---
 
-## 25. Internal event publication note:
+## 26. Internal event publication note:
 
 IC MS publishes `IntentValidatedEvent` internally after syntactic validation and admission.
 
@@ -1436,169 +1471,7 @@ Current primary consumer is II MS / `intent-intelligence-ms`, but the event may 
 
 ---
 
-
-
-## HATEOAS link compliance baseline:
-
-### Rule:
-
-All successful IC MS resource representations must include a `_links` object so clients can discover the next valid actions from the returned representation.
-
-This applies to:
-
-- `Intent` create/retrieve/list-item/update/patch/terminate responses
-- `IntentReport` retrieve/list-item responses
-- `EventSubscription` create/retrieve responses for `/hub` and `/intent/hub`
-
-`204 No Content` responses do not include a response body and therefore do not include `_links`.
-
-### Common link relation rules:
-
-| **Link relation** | **Meaning** | **When included** |
-|---|---|---|
-| `self` | Canonical URL of the returned resource | Always for resource representations |
-| `list` | Collection/list endpoint for the resource type | Optional but recommended on single-resource representations |
-| `intentReport` | Nested reports for an Intent | Included on `Intent` representations |
-| `fullUpdate` | Deterministic full replacement through `PUT` | Included when the Intent can accept a runtime update |
-| `partialUpdate` | TMF-compatible partial update through `PATCH` | Included when the Intent can accept a runtime update; include warning that `PATCH` is supported but discouraged for ordinary edits |
-| `terminate` | Termination through `DELETE /intent/{id}` | Included when the Intent is not already terminal |
-| `delete` | Delete/tombstone report operation | Included on `IntentReport` when report deletion/tombstoning is allowed |
-| `subscribe` | Hub subscription creation endpoint | Recommended on collection/root examples where useful |
-| `unsubscribe` | Hub subscription delete endpoint | Included on subscription representations |
-
-### Intent lifecycle-specific links:
-
-| **Intent lifecycle status** | **HATEOAS links** |
-|---|---|
-| `Acknowledged` | `self`, `list`, `intentReport`, `fullUpdate`, `partialUpdate`, `terminate` |
-| `InProgress` | `self`, `list`, `intentReport`, `terminate`; update links only if platform policy allows concurrent version update |
-| `Active` | `self`, `list`, `intentReport`, `fullUpdate`, `partialUpdate`, `terminate` |
-| `Degraded` | `self`, `list`, `intentReport`, `fullUpdate`, `partialUpdate`, `terminate` |
-| `Paused` | `self`, `list`, `intentReport`, `terminate`; resume is not exposed as a separate action by default |
-| `Rejected` | `self`, `list`, `intentReport`; `terminate` only if retained rejected intents can be explicitly closed |
-| `Failed` | `self`, `list`, `intentReport`, `terminate` |
-| `Terminated` | `self`, `list`, `intentReport`; no update or terminate links |
-
-### Active Intent example:
-
-```json
-{
-  "id": "INT-HOSP-2026-001",
-  "href": "/intentManagement/v5/intent/INT-HOSP-2026-001",
-  "name": "Sydney Hospital Surgical Connection Intent",
-  "version": "v2",
-  "lifecycleStatus": "Active",
-  "@type": "Intent",
-  "@baseType": "Entity",
-  "_links": {
-    "self": {
-      "href": "/intentManagement/v5/intent/INT-HOSP-2026-001"
-    },
-    "list": {
-      "href": "/intentManagement/v5/intent"
-    },
-    "intentReport": {
-      "href": "/intentManagement/v5/intent/INT-HOSP-2026-001/intentReport"
-    },
-    "fullUpdate": {
-      "href": "/intentManagement/v5/intent/INT-HOSP-2026-001",
-      "method": "PUT"
-    },
-    "partialUpdate": {
-      "href": "/intentManagement/v5/intent/INT-HOSP-2026-001",
-      "method": "PATCH",
-      "warning": "PATCH is supported for TMF compatibility but PUT is preferred for deterministic full updates."
-    },
-    "terminate": {
-      "href": "/intentManagement/v5/intent/INT-HOSP-2026-001",
-      "method": "DELETE"
-    }
-  }
-}
-```
-
-### Terminated Intent example:
-
-```json
-{
-  "id": "INT-HOSP-2026-001",
-  "href": "/intentManagement/v5/intent/INT-HOSP-2026-001",
-  "name": "Sydney Hospital Surgical Connection Intent",
-  "version": "v2",
-  "lifecycleStatus": "Terminated",
-  "@type": "Intent",
-  "@baseType": "Entity",
-  "_links": {
-    "self": {
-      "href": "/intentManagement/v5/intent/INT-HOSP-2026-001"
-    },
-    "list": {
-      "href": "/intentManagement/v5/intent"
-    },
-    "intentReport": {
-      "href": "/intentManagement/v5/intent/INT-HOSP-2026-001/intentReport"
-    }
-  }
-}
-```
-
-### IntentReport example:
-
-```json
-{
-  "id": "IR-INT-HOSP-2026-001-003",
-  "href": "/intentManagement/v5/intent/INT-HOSP-2026-001/intentReport/IR-INT-HOSP-2026-001-003",
-  "name": "Sydney Hospital Surgical Connection Intent Report",
-  "@type": "IntentReport",
-  "@baseType": "Entity",
-  "_links": {
-    "self": {
-      "href": "/intentManagement/v5/intent/INT-HOSP-2026-001/intentReport/IR-INT-HOSP-2026-001-003"
-    },
-    "list": {
-      "href": "/intentManagement/v5/intent/INT-HOSP-2026-001/intentReport"
-    },
-    "intent": {
-      "href": "/intentManagement/v5/intent/INT-HOSP-2026-001"
-    },
-    "delete": {
-      "href": "/intentManagement/v5/intent/INT-HOSP-2026-001/intentReport/IR-INT-HOSP-2026-001-003",
-      "method": "DELETE"
-    }
-  }
-}
-```
-
-### EventSubscription example:
-
-```json
-{
-  "id": "sub-intent-001",
-  "callback": "https://consumer.example.com/tmf/intent/events",
-  "query": "eventType=IntentStatusChangeEvent",
-  "@type": "EventSubscription",
-  "_links": {
-    "self": {
-      "href": "/intentManagement/v5/intent/hub/sub-intent-001"
-    },
-    "unsubscribe": {
-      "href": "/intentManagement/v5/intent/hub/sub-intent-001",
-      "method": "DELETE"
-    },
-    "subscribe": {
-      "href": "/intentManagement/v5/intent/hub",
-      "method": "POST"
-    }
-  }
-}
-```
-
-### IC MS HATEOAS baseline statement:
-
-IC MS responses must expose only links for operations that are valid for the current resource state. HATEOAS links must not advertise update or terminate actions for terminal `Intent` projections. `PUT` may be exposed as the preferred deterministic full-update platform extension where supported, while `PATCH` remains available for TMF compatibility but discouraged for ordinary edits.
-
-
-## 26. Final specification notes:
+## 27. Final specification notes:
 
 - `GET /intent/{id}` returns current projected Intent state, not a full internal version aggregate.
 - `GET /intent` lists current projected Intent states for retained Intent IDs.
@@ -1721,20 +1594,3 @@ IC MS accepts and projects runtime Intent resources using the shared semantic bu
 - IC MS validates syntactic shape against the active ID MS `expressionSpecification`.
 - IC MS does not perform semantic/KP validation, optimisation, orchestration, or assurance.
 
-
-
-## Expression schema consumption and drift-prevention baseline:
-
-IC MS does not discover or choose validation schemas independently.
-
-For `POST /intent`, `PUT /intent/{id}`, and runtime-content-changing `PATCH /intent/{id}`, IC MS resolves the concrete `intentSpecification.id`, confirms the referenced specification is `ACTIVE`, and validates `Intent.expression.expressionValue` only against the expression-value schema referenced by that exact specification version.
-
-Rules:
-
-- IC MS must not validate runtime intents against a schema URL inferred from family, name, service type, or latest version.
-- IC MS must not use a newer schema just because one exists.
-- The schema reference is part of the active `IntentSpecification` contract.
-- If the referenced schema is unavailable and IC MS has no valid fresh cached copy tied to the same `IntentSpecification.id` and schema hash, IC MS fails closed for create/update admission.
-- Runtime `Intent.expression.expressionValue` carries only request data; it does not embed the validation schema.
-
-This prevents design-time/runtime drift while keeping the external TMF-facing `Intent.expression` clean.

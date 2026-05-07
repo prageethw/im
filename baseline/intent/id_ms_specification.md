@@ -133,154 +133,156 @@ Accept: application/json
   "@schemaLocation": "https://mycsp.com.au/schemas/intentManagement/v5/intentSpecification/hospital-surgical-slice-spec-v1.19.schema.json",
   "specCharacteristic": [
     {
-      "@type": "CharacteristicSpecification",
-      "id": "targets",
-      "name": "targets",
-      "description": "Measurable runtime objectives supported by this IntentSpecification. Detailed target fields and validation rules are defined by the expression-value schema referenced from targetEntitySchema.@schemaLocation.",
+      "id": "SC-LOCATION-001",
+      "name": "location",
+      "description": "Requested location for the surgical connectivity intent. The expression schema permits only locationId, locationType, and geographicScope. geographicScope remains intentionally open for platform-controlled extension.",
       "valueType": "object",
+      "configurable": true,
+      "minCardinality": 1,
+      "maxCardinality": 1
+    },
+    {
+      "id": "SC-SERVICE-CLASS-001",
+      "name": "serviceClass",
+      "description": "Requested service class for the surgical connectivity intent.",
+      "valueType": "string",
       "configurable": true,
       "minCardinality": 1,
       "maxCardinality": 1,
       "characteristicValueSpecification": [
-        {
-          "@type": "CharacteristicValueSpecification",
-          "valueType": "object",
-          "isDefault": true,
-          "value": {
-            "maxLatencyMs": 10,
-            "minAvailabilityPercent": 99.99,
-            "maxJitterMs": 2,
-            "maxPacketLossPercent": 0.01
-          }
-        }
+        { "valueType": "string", "value": "critical-gold", "isDefault": true },
+        { "valueType": "string", "value": "critical-silver" }
       ]
     },
     {
-      "@type": "CharacteristicSpecification",
-      "id": "constraints",
-      "name": "constraints",
-      "description": "Hard runtime requirements supported by this IntentSpecification. Detailed constraint fields and validation rules are defined by the expression-value schema referenced from targetEntitySchema.@schemaLocation.",
-      "valueType": "object",
+      "id": "SC-POLICY-PRIORITY-001",
+      "name": "priority",
+      "description": "Requested business or clinical priority. This is used as policy input by II MS and the knowledge plane, not as a syntax-only enforcement rule.",
+      "valueType": "string",
       "configurable": true,
       "minCardinality": 1,
       "maxCardinality": 1,
       "characteristicValueSpecification": [
-        {
-          "@type": "CharacteristicValueSpecification",
-          "valueType": "object",
-          "isDefault": true,
-          "value": {
-            "priority": "critical",
-            "redundancyRequired": true,
-            "timeWindow": {
-              "startDateTime": "2026-04-18T12:00:00+10:00"
-            }
-          }
-        }
+        { "valueType": "string", "value": "critical", "isDefault": true },
+        { "valueType": "string", "value": "high" },
+        { "valueType": "string", "value": "standard" }
       ]
     },
     {
-      "@type": "CharacteristicSpecification",
-      "id": "preferences",
-      "name": "preferences",
-      "description": "Soft runtime selection preferences supported by this IntentSpecification. Detailed preference fields and validation rules are defined by the expression-value schema referenced from targetEntitySchema.@schemaLocation.",
-      "valueType": "object",
+      "id": "SC-ASSURANCE-LATENCY-001",
+      "name": "maxLatencyMs",
+      "description": "Requested maximum latency in milliseconds. Values are illustrative/default guidance only. Semantic and policy enforcement is owned by II MS and the knowledge plane.",
+      "valueType": "number",
       "configurable": true,
       "minCardinality": 0,
       "maxCardinality": 1,
       "characteristicValueSpecification": [
-        {
-          "@type": "CharacteristicValueSpecification",
-          "valueType": "object",
-          "isDefault": true,
-          "value": {
-            "preferredAccessTechnology": "5G"
-          }
-        },
-        {
-          "@type": "CharacteristicValueSpecification",
-          "valueType": "object",
-          "value": {
-            "preferredAccessTechnology": "fibre"
-          }
-        }
+        { "valueType": "number", "value": 10, "isDefault": true }
       ]
+    },
+    {
+      "id": "SC-ASSURANCE-AVAILABILITY-001",
+      "name": "minAvailabilityPercent",
+      "description": "Requested minimum availability percentage. Values are illustrative/default guidance only. Semantic and policy enforcement is owned by II MS and the knowledge plane.",
+      "valueType": "number",
+      "configurable": true,
+      "minCardinality": 0,
+      "maxCardinality": 1,
+      "characteristicValueSpecification": [
+        { "valueType": "number", "value": 99.99, "isDefault": true }
+      ]
+    },
+    {
+      "id": "SC-ASSURANCE-JITTER-001",
+      "name": "maxJitterMs",
+      "description": "Requested maximum jitter in milliseconds. Values are illustrative/default guidance only.",
+      "valueType": "number",
+      "configurable": true,
+      "minCardinality": 0,
+      "maxCardinality": 1,
+      "characteristicValueSpecification": [
+        { "valueType": "number", "value": 2, "isDefault": true }
+      ]
+    },
+    {
+      "id": "SC-ASSURANCE-PACKET-LOSS-001",
+      "name": "maxPacketLossPercent",
+      "description": "Requested maximum packet loss percentage. Values are illustrative/default guidance only.",
+      "valueType": "number",
+      "configurable": true,
+      "minCardinality": 0,
+      "maxCardinality": 1,
+      "characteristicValueSpecification": [
+        { "valueType": "number", "value": 0.01, "isDefault": true }
+      ]
+    },
+    {
+      "id": "SC-RESILIENCE-REDUNDANCY-001",
+      "name": "redundancyRequired",
+      "description": "Whether resilient/redundant delivery is requested.",
+      "valueType": "boolean",
+      "configurable": true,
+      "minCardinality": 0,
+      "maxCardinality": 1,
+      "characteristicValueSpecification": [
+        { "valueType": "boolean", "value": true, "isDefault": true }
+      ]
+    },
+    {
+      "id": "SC-ACCESS-TECHNOLOGY-001",
+      "name": "preferredAccessTechnology",
+      "description": "Preferred access technology where supplied by the requester.",
+      "valueType": "string",
+      "configurable": true,
+      "minCardinality": 0,
+      "maxCardinality": 1,
+      "characteristicValueSpecification": [
+        { "valueType": "string", "value": "5G" },
+        { "valueType": "string", "value": "fibre" },
+        { "valueType": "string", "value": "private-wireless" }
+      ]
+    },
+    {
+      "id": "SC-DELIVERY-TIME-WINDOW-001",
+      "name": "timeWindow",
+      "description": "Optional requested delivery or validity time window. When timeWindow is present, startDateTime is required by expressionSpecification.",
+      "valueType": "object",
+      "configurable": true,
+      "minCardinality": 0,
+      "maxCardinality": 1
     }
   ],
   "expressionSpecification": {
-    "@type": "ExpressionSpecification",
-    "name": "Hospital Surgical Slice Intent Expression Model",
-    "description": "TMF expression contract reference for hospital surgical slice intents. Runtime Intent.expression uses JsonLdExpression and carries the domain payload inside expression.expressionValue.",
-    "expressionLanguage": "JsonLdExpression",
-    "iri": "https://mycsp.com.au/tio/hospital-surgical-slice/v1.0"
-  },
-  "targetEntitySchema": {
-    "@type": "TargetEntitySchema",
-    "@schemaLocation": "https://mycsp.com.au/schemas/intentManagement/v5/intentExpression/hospital-surgical-slice-spec-v1.19.expression.schema.json",
-    "schemaVersion": "1.19",
-    "schemaHash": "sha256:REPLACE_WITH_PUBLISHED_SCHEMA_HASH"
-  },
-  "_links": {
-    "self": {
-      "href": "https://mycsp.com.au/intentManagement/v5/intentSpecification/hospital-surgical-slice-spec-v1.19"
-    }
-  }
-}
-```
-
-
-### Implementation guidance — expression.expressionValue schema:
-
-The schema referenced by `targetEntitySchema.@schemaLocation` is the platform validation schema for the JSON-LD `expression.expressionValue` object. It is not the TMF `expressionSpecification.expressionLanguage`.
-
-IC MS uses this schema after resolving the concrete active `IntentSpecification.id` to validate the runtime payload inside `Intent.expression.expressionValue`.
-
-The schema validates this platform domain payload shape:
-
-```json
-{
-  "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://mycsp.com.au/schemas/intentManagement/v5/intentExpression/hospital-surgical-slice-spec-v1.19.expression.schema.json",
-  "title": "Hospital Surgical Slice Intent Expression Value",
-  "type": "object",
-  "additionalProperties": false,
-  "required": [
-    "location",
-    "serviceType",
-    "serviceClass",
-    "targets",
-    "constraints"
-  ],
-  "properties": {
-    "location": {
+    "name": "Hospital Surgical Slice Intent Expression Schema",
+    "description": "Authoritative request-shape schema for hospital surgical slice intents. This schema is syntax-first and does not perform semantic, policy, or fulfilment validation.",
+    "expressionLanguage": "JSON_SCHEMA",
+    "schema": {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "$id": "https://mycsp.com.au/schemas/intentManagement/v5/intentExpression/hospital-surgical-slice-spec-v1.19.expression.schema.json",
+      "title": "Hospital Surgical Slice Intent Expression",
       "type": "object",
       "additionalProperties": false,
-      "required": ["locationId"],
+      "required": ["location", "serviceClass", "priority"],
       "properties": {
-        "locationId": { "type": "string", "minLength": 1 },
-        "locationType": { "type": "string", "minLength": 1 },
-        "geographicScope": { "type": "string", "minLength": 1 }
-      }
-    },
-    "serviceType": { "type": "string", "enum": ["surgical-connectivity"] },
-    "serviceClass": { "type": "string", "enum": ["critical-gold", "critical-silver"] },
-    "targets": {
-      "type": "object",
-      "additionalProperties": false,
-      "properties": {
+        "location": {
+          "type": "object",
+          "additionalProperties": false,
+          "description": "Only locationId, locationType, and geographicScope are permitted. geographicScope is intentionally open for platform-controlled extension.",
+          "required": ["locationId"],
+          "properties": {
+            "locationId": { "type": "string", "minLength": 1 },
+            "locationType": { "type": "string", "minLength": 1 },
+            "geographicScope": { "type": "string", "minLength": 1 }
+          }
+        },
+        "serviceClass": { "type": "string", "enum": ["critical-gold", "critical-silver"] },
+        "priority": { "type": "string", "enum": ["critical", "high", "standard"] },
         "maxLatencyMs": { "type": "number", "minimum": 0 },
         "minAvailabilityPercent": { "type": "number", "minimum": 0, "maximum": 100 },
         "maxJitterMs": { "type": "number", "minimum": 0 },
-        "maxPacketLossPercent": { "type": "number", "minimum": 0, "maximum": 100 }
-      }
-    },
-    "constraints": {
-      "type": "object",
-      "additionalProperties": false,
-      "required": ["priority"],
-      "properties": {
-        "priority": { "type": "string", "enum": ["critical", "high", "standard"] },
+        "maxPacketLossPercent": { "type": "number", "minimum": 0, "maximum": 100 },
         "redundancyRequired": { "type": "boolean" },
+        "preferredAccessTechnology": { "type": "string", "minLength": 1 },
         "timeWindow": {
           "type": "object",
           "additionalProperties": false,
@@ -291,19 +293,15 @@ The schema validates this platform domain payload shape:
           }
         }
       }
-    },
-    "preferences": {
-      "type": "object",
-      "additionalProperties": false,
-      "properties": {
-        "preferredAccessTechnology": { "type": "string", "enum": ["5G", "fibre", "private-wireless"] }
-      }
+    }
+  },
+  "_links": {
+    "self": {
+      "href": "https://mycsp.com.au/intentManagement/v5/intentSpecification/hospital-surgical-slice-spec-v1.19"
     }
   }
 }
 ```
-
-`specCharacteristic.characteristicValueSpecification` provides catalogue examples and defaults for `targets`, `constraints`, and `preferences`; it does not replace this validation schema.
 
 ### Success response:
 
@@ -739,6 +737,7 @@ HTTP/1.1 201 Created
 Location: /intentManagement/v5/intentSpecification/hub/sub-001
 Content-Type: application/json
 ETag: "subscription-sub-001-v1"
+Cache-Control: private, max-age=300
 ```
 
 ```json
@@ -764,12 +763,21 @@ GET /intentManagement/v5/intentSpecification/hub/sub-001
 Accept: application/json
 ```
 
+### Request with fresh-read override:
+
+```http
+GET /intentManagement/v5/intentSpecification/hub/sub-001
+Accept: application/json
+Cache-Control: no-cache
+```
+
 ### Success response:
 
 ```http
 HTTP/1.1 200 OK
 Content-Type: application/json
 ETag: "subscription-sub-001-v1"
+Cache-Control: private, max-age=300
 ```
 
 ```json
@@ -1006,141 +1014,13 @@ They are not internal fulfilment events and must not expose II MS semantic valid
 
 ---
 
-
-
-## HATEOAS link compliance baseline:
-
-### Rule:
-
-All successful ID MS resource representations must include a `_links` object so clients can discover the next valid actions from the returned representation.
-
-This applies to:
-
-- `IntentSpecification` create/retrieve/list-item/update/patch/lifecycle-update responses
-- `EventSubscription` create/retrieve responses for `/hub` and `/intentSpecification/hub`
-- collection responses, where each item includes its own `_links.self`
-
-`204 No Content` responses do not include a response body and therefore do not include `_links`.
-
-### Common link relation rules:
-
-| **Link relation** | **Meaning** | **When included** |
-|---|---|---|
-| `self` | Canonical URL of the returned resource | Always for resource representations |
-| `list` | Collection/list endpoint for the resource type | Optional but recommended on single-resource representations |
-| `fullUpdate` | Deterministic full replacement through `PUT` | Only when the resource is mutable and `PUT` is allowed |
-| `partialUpdate` | TMF-compatible partial update through `PATCH` | Only when the resource is mutable; include warning that `PATCH` is supported but discouraged for ordinary edits |
-| `delete` | Delete/remove operation | Only when delete is allowed for the current lifecycle/reference state |
-| `subscribe` | Hub subscription creation endpoint | Recommended on collection/root examples where useful |
-| `unsubscribe` | Hub subscription delete endpoint | Included on subscription representations |
-
-### IntentSpecification lifecycle-specific links:
-
-| **Lifecycle status** | **HATEOAS links** |
-|---|---|
-| `DRAFT` | `self`, `list`, `fullUpdate`, `partialUpdate`, `delete` |
-| `ACTIVE` | `self`, `list`; no update/delete links because active specs are immutable |
-| `RETIRED` | `self`, `list`; no update/delete links because retired specs are immutable |
-
-Activation is represented as a lifecycle update through `PUT` or `PATCH` on the same resource URL. Do not expose a custom `/activate` action link.
-
-### DRAFT IntentSpecification example:
-
-```json
-{
-  "id": "hospital-surgical-slice-spec-v1.20",
-  "href": "/intentManagement/v5/intentSpecification/hospital-surgical-slice-spec-v1.20",
-  "name": "Hospital Surgical Slice Intent Specification",
-  "version": "1.20",
-  "lifecycleStatus": "DRAFT",
-  "@type": "IntentSpecification",
-  "@baseType": "EntitySpecification",
-  "_links": {
-    "self": {
-      "href": "/intentManagement/v5/intentSpecification/hospital-surgical-slice-spec-v1.20"
-    },
-    "list": {
-      "href": "/intentManagement/v5/intentSpecification"
-    },
-    "fullUpdate": {
-      "href": "/intentManagement/v5/intentSpecification/hospital-surgical-slice-spec-v1.20",
-      "method": "PUT"
-    },
-    "partialUpdate": {
-      "href": "/intentManagement/v5/intentSpecification/hospital-surgical-slice-spec-v1.20",
-      "method": "PATCH",
-      "warning": "PATCH is supported for TMF compatibility but PUT is preferred for deterministic full updates."
-    },
-    "delete": {
-      "href": "/intentManagement/v5/intentSpecification/hospital-surgical-slice-spec-v1.20",
-      "method": "DELETE"
-    }
-  }
-}
-```
-
-### ACTIVE IntentSpecification example:
-
-```json
-{
-  "id": "hospital-surgical-slice-spec-v1.20",
-  "href": "/intentManagement/v5/intentSpecification/hospital-surgical-slice-spec-v1.20",
-  "name": "Hospital Surgical Slice Intent Specification",
-  "version": "1.20",
-  "lifecycleStatus": "ACTIVE",
-  "@type": "IntentSpecification",
-  "@baseType": "EntitySpecification",
-  "_links": {
-    "self": {
-      "href": "/intentManagement/v5/intentSpecification/hospital-surgical-slice-spec-v1.20"
-    },
-    "list": {
-      "href": "/intentManagement/v5/intentSpecification"
-    },
-    "subscribe": {
-      "href": "/intentManagement/v5/intentSpecification/hub",
-      "method": "POST"
-    }
-  }
-}
-```
-
-### EventSubscription example:
-
-```json
-{
-  "id": "sub-001",
-  "callback": "https://consumer.example.com/tmf/intentSpecification/events",
-  "query": "eventType=IntentSpecificationStatusChangeEvent",
-  "@type": "EventSubscription",
-  "_links": {
-    "self": {
-      "href": "/intentManagement/v5/intentSpecification/hub/sub-001"
-    },
-    "unsubscribe": {
-      "href": "/intentManagement/v5/intentSpecification/hub/sub-001",
-      "method": "DELETE"
-    },
-    "subscribe": {
-      "href": "/intentManagement/v5/intentSpecification/hub",
-      "method": "POST"
-    }
-  }
-}
-```
-
-### ID MS HATEOAS baseline statement:
-
-ID MS responses must expose only links for operations that are valid for the current resource state. HATEOAS links must not advertise update/delete actions for immutable `ACTIVE` or `RETIRED` specifications. `PUT` may be exposed as the preferred deterministic full-update platform extension where supported, while `PATCH` remains available for TMF compatibility but discouraged for ordinary edits.
-
-
 ## 21. Final specification notes:
 
 - `@baseType` is `EntitySpecification`, not `ResourceSpecification`.
 - `specCharacteristic` is the high-level characteristic catalogue.
-- `expressionSpecification` is the TMF expression contract reference and uses `expressionLanguage: JsonLdExpression`.
-- `characteristicValueSpecification` is used only for catalogue examples, defaults, and OEX/UI prefill guidance; the expression-value schema remains authoritative for runtime validation.
-- Numeric SLA values and other values in `characteristicValueSpecification` are illustrative/default guidance only, not semantic enforcement.
+- `expressionSpecification` is the authoritative request-shape schema.
+- `characteristicValueSpecification` is used only for defaults, examples, or constrained allowed values where useful.
+- Numeric SLA values in `characteristicValueSpecification` are illustrative/default guidance only, not semantic enforcement.
 - ID MS validates resource shape and syntax.
 - II MS and knowledge sources own semantic/policy validation.
 - IA MS owns runtime assurance.
@@ -1237,57 +1117,3 @@ The domain-scoped route is acceptable only as a documented platform extension an
 ### Baseline statement:
 
 ID MS and IC MS remain TMF-aligned at the external contract level. Controlled platform extensions are allowed when documented, non-breaking, and semantically compatible with TMF. For ID MS, `PATCH /intentSpecification/{id}` is the strict TMF update operation, while `PUT /intentSpecification/{id}` is an accepted platform extension for deterministic full replacement. TMF `/hub` routing is the strict subscription route form, while `/intentSpecification/hub` is an accepted domain-scoped platform extension when deliberately used.
-
-
-## Expression schema separation and drift-prevention baseline:
-
-### Separation rule:
-
-Runtime expression payloads and validation schemas are deliberately separated.
-
-- `Intent.expression.expressionValue` carries the actual runtime request data.
-- `IntentReport.expression.expressionValue` carries the actual runtime report facts.
-- `IntentSpecification.expressionSpecification` identifies the TMF expression language and expression model IRI.
-- `IntentSpecification.targetEntitySchema.@schemaLocation` references the detailed platform JSON Schema used to validate `expression.expressionValue`.
-
-The validation schema must not be embedded inside every runtime `Intent.expression` or `IntentReport.expression`. Runtime expressions carry business/request/report data only; the rulebook belongs to the governed `IntentSpecification` contract bundle.
-
-### Drift-prevention rule:
-
-Externalising the schema is acceptable only when the schema is governed as part of the `IntentSpecification` lifecycle. The active `IntentSpecification` and its referenced schema are treated as one immutable contract bundle.
-
-Controls:
-
-| **Risk** | **Baseline control** |
-|---|---|
-| Schema URL points to mutable content | Use immutable, versioned schema URLs; do not point to branch, latest, or mutable GitHub raw URLs |
-| Schema changes after `IntentSpecification` activation | Any schema change requires a new versioned `IntentSpecification` and a new schema URL |
-| Published schema differs from reviewed schema | Store `schemaHash` / checksum on the `IntentSpecification` and verify it before activation |
-| Runtime validates with the wrong schema | IC MS validates only against the schema referenced by the concrete `IntentSpecification.id` used by that Intent version |
-| Design-time and runtime contracts drift | ID MS validates referenced schema existence, parseability, and hash before activating the specification |
-| Schema and specification are reviewed separately | Promote the `IntentSpecification` and schema artefact through one governance workflow |
-
-Recommended `targetEntitySchema` pattern:
-
-```json
-{
-  "targetEntitySchema": {
-    "@type": "TargetEntitySchema",
-    "@schemaLocation": "https://mycsp.com.au/schemas/intentManagement/v5/intentExpression/hospital-surgical-slice-spec-v1.19.expression.schema.json",
-    "schemaVersion": "1.19",
-    "schemaHash": "sha256:REPLACE_WITH_PUBLISHED_SCHEMA_HASH"
-  }
-}
-```
-
-Lifecycle rule:
-
-- A `DRAFT` `IntentSpecification` may reference a draft/staged schema artefact.
-- Before activation, ID MS must confirm the referenced schema exists, is valid, and matches the stored hash.
-- Once the `IntentSpecification` becomes `ACTIVE`, the referenced schema is frozen.
-- `ACTIVE` and `RETIRED` specifications must not be repointed to a different schema.
-- A changed expression-value schema requires a new `DRAFT` specification version, for example `hospital-surgical-slice-spec-v1.20`, and a new immutable schema URL.
-
-Baseline statement:
-
-**Externalise the expression-value JSON Schema for TMF cleanliness, but version it, hash it, and freeze it with the `IntentSpecification`. Treat the active `IntentSpecification` and its schema as one immutable governed contract bundle.**

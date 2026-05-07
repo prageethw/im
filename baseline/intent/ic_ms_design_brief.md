@@ -82,6 +82,13 @@ Accepted domain-scoped platform extension:
 | Retrieve intent event subscription | `GET` | `/intentManagement/v5/intent/hub/{id}` |
 | Delete intent event subscription | `DELETE` | `/intentManagement/v5/intent/hub/{id}` |
 
+
+### GET cache and ETag baseline:
+
+All successful IC MS GET responses, including Intent, IntentReport, and hub subscription retrieval/list responses, return `ETag` and `Cache-Control`. Clients may request a fresh read using request header `Cache-Control: no-cache`.
+
+Unsafe IC MS operations use `If-Match` for ETag concurrency validation, including `PUT`, `PATCH`, `DELETE /intent/{id}`, `DELETE /intent/{intentId}/intentReport/{id}`, and hub subscription delete operations.
+
 ## IC MS validation responsibility:
 
 On `POST /intentManagement/v5/intent`, IC MS:
@@ -1281,41 +1288,3 @@ Design rules:
 - IC MS does not perform semantic/KP validation.
 - IC MS does not invent optimiser categories; it preserves the bucketed expression for II MS.
 
-
-
-## HATEOAS compliance baseline:
-
-IC MS external REST resource representations must include HATEOAS `_links` so consumers can discover the valid next operations for the returned resource state.
-
-Rules:
-
-- Include `_links.self` on every `Intent`, `IntentReport`, and `EventSubscription` representation.
-- Include `_links.intentReport` on `Intent` representations.
-- Include update links only when the runtime `Intent` can accept a new version/update according to lifecycle and platform policy.
-- Include `terminate` only when the `Intent` is not already terminal.
-- For `Terminated` `Intent` projections, expose navigational links only; do not advertise update or terminate actions.
-- For `IntentReport`, expose `self`, `list`, `intent`, and `delete` only where report deletion/tombstoning is supported.
-- For subscriptions, expose `self` and `unsubscribe` links.
-- `PUT` is the preferred deterministic full-update platform extension where supported; `PATCH` is supported for TMF compatibility but discouraged for ordinary edits.
-- `204 No Content` responses do not include `_links` because there is no body.
-
-Baseline statement:
-
-**IC MS must make successful resource representations HATEOAS-compliant by including `_links` that advertise only operations valid for the current external Intent, IntentReport, or subscription state.**
-
-
-## Expression schema consumption and drift-prevention baseline:
-
-IC MS does not discover or choose validation schemas independently.
-
-For `POST /intent`, `PUT /intent/{id}`, and runtime-content-changing `PATCH /intent/{id}`, IC MS resolves the concrete `intentSpecification.id`, confirms the referenced specification is `ACTIVE`, and validates `Intent.expression.expressionValue` only against the expression-value schema referenced by that exact specification version.
-
-Rules:
-
-- IC MS must not validate runtime intents against a schema URL inferred from family, name, service type, or latest version.
-- IC MS must not use a newer schema just because one exists.
-- The schema reference is part of the active `IntentSpecification` contract.
-- If the referenced schema is unavailable and IC MS has no valid fresh cached copy tied to the same `IntentSpecification.id` and schema hash, IC MS fails closed for create/update admission.
-- Runtime `Intent.expression.expressionValue` carries only request data; it does not embed the validation schema.
-
-This prevents design-time/runtime drift while keeping the external TMF-facing `Intent.expression` clean.
