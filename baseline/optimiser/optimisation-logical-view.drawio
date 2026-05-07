@@ -1,6 +1,6 @@
 <mxfile host="app.diagrams.net" agent="ChatGPT">
   <diagram id="optimisation-logical-view" name="Optimisation Logical View">
-    <mxGraphModel dx="1184" dy="1608" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1500" pageHeight="900" math="0" shadow="0">
+    <mxGraphModel dx="2012" dy="2104" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1500" pageHeight="900" math="0" shadow="0">
       <root>
         <mxCell id="0" />
         <mxCell id="1" parent="0" />
@@ -19,7 +19,7 @@
         <mxCell id="c_exec" parent="1g_pKyIUPg_Uf4EWA1Bv-1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f5f5f5;strokeColor=default;dashed=1;fontStyle=1;verticalAlign=top;spacingTop=8;container=0;" value="Optimisation Execution Layer" vertex="1">
           <mxGeometry height="153.5714285714286" width="568.951048951049" x="20.139860139860136" y="501.6666666666668" as="geometry" />
         </mxCell>
-        <mxCell id="gw" parent="1g_pKyIUPg_Uf4EWA1Bv-1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f8cecc;strokeColor=default;fontStyle=1;container=0;" value="API Gateway&lt;br/&gt;(GW)" vertex="1">
+        <mxCell id="gw" parent="1g_pKyIUPg_Uf4EWA1Bv-1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f8cecc;strokeColor=default;fontStyle=1;container=0;" value="NGW" vertex="1">
           <mxGeometry height="81.90476190476193" width="181.25874125874125" x="589.0863636363637" y="194.52380952380952" as="geometry" />
         </mxCell>
         <mxCell id="od" parent="1g_pKyIUPg_Uf4EWA1Bv-1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=default;fontStyle=1;container=0;" value="OD MS&lt;br/&gt;&lt;span style=&#39;font-size:11px&#39;&gt;Optimisation Definition&lt;/span&gt;" vertex="1">
@@ -96,7 +96,7 @@
         <mxCell id="e15" edge="1" parent="1g_pKyIUPg_Uf4EWA1Bv-1" source="kafka" style="endArrow=block;html=1;rounded=0;strokeWidth=2;dashed=1;strokeColor=default;" target="dlq" value="Dead-letter after retries">
           <mxGeometry relative="1" as="geometry" />
         </mxCell>
-        <mxCell id="8CejT47m1QVgtxC5lFl2-3" parent="1g_pKyIUPg_Uf4EWA1Bv-1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f5f5f5;strokeColor=default;dashed=1;fontStyle=1;verticalAlign=top;spacingTop=8;container=0;" value="Data repositories" vertex="1">
+        <mxCell id="8CejT47m1QVgtxC5lFl2-3" parent="1g_pKyIUPg_Uf4EWA1Bv-1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f5f5f5;strokeColor=default;dashed=1;fontStyle=1;verticalAlign=top;spacingTop=8;container=0;" value="Other entities" vertex="1">
           <mxGeometry height="153.5714285714286" width="568.951048951049" x="20.139860139860136" y="706.4285714285716" as="geometry" />
         </mxCell>
         <mxCell id="8CejT47m1QVgtxC5lFl2-4" parent="1g_pKyIUPg_Uf4EWA1Bv-1" style="shape=cylinder3;whiteSpace=wrap;html=1;boundedLbl=1;backgroundOutline=1;size=15;fillColor=#dae8fc;strokeColor=default;container=0;" value="" vertex="1">
@@ -134,7 +134,7 @@
         <mxCell id="1g_pKyIUPg_Uf4EWA1Bv-4" parent="1g_pKyIUPg_Uf4EWA1Bv-17" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f5f5f5;strokeColor=default;dashed=1;fontStyle=1;verticalAlign=top;spacingTop=8;container=0;" value="Access / Experience Layer" vertex="1">
           <mxGeometry height="316.19" width="258.67" x="321.33" y="163.81" as="geometry" />
         </mxCell>
-        <mxCell id="1g_pKyIUPg_Uf4EWA1Bv-5" parent="1g_pKyIUPg_Uf4EWA1Bv-17" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=default;fontStyle=1;container=0;" value="User / Operator" vertex="1">
+        <mxCell id="1g_pKyIUPg_Uf4EWA1Bv-5" parent="1g_pKyIUPg_Uf4EWA1Bv-17" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=default;fontStyle=1;container=0;" value="User" vertex="1">
           <mxGeometry height="71.66666666666669" width="151.04895104895104" x="90" y="194.52380952380952" as="geometry" />
         </mxCell>
         <mxCell id="1g_pKyIUPg_Uf4EWA1Bv-6" parent="1g_pKyIUPg_Uf4EWA1Bv-17" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f8cecc;strokeColor=default;fontStyle=1;container=0;" value="Microsoft Entra ID" vertex="1">
@@ -147,9 +147,6 @@
           <mxGeometry relative="1" x="-0.3379" y="-1" as="geometry">
             <mxPoint y="1" as="offset" />
           </mxGeometry>
-        </mxCell>
-        <mxCell id="1g_pKyIUPg_Uf4EWA1Bv-7" parent="1g_pKyIUPg_Uf4EWA1Bv-17" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=default;fontStyle=1;container=0;" value="OEX Layer&lt;br&gt;&lt;span style=&quot;font-size:11px&quot;&gt;Experience / UI / API façade&lt;br&gt;&lt;/span&gt;" vertex="1">
-          <mxGeometry height="50" width="211.47" x="351.54" y="200" as="geometry" />
         </mxCell>
         <mxCell id="1g_pKyIUPg_Uf4EWA1Bv-8" edge="1" parent="1g_pKyIUPg_Uf4EWA1Bv-17" source="1g_pKyIUPg_Uf4EWA1Bv-5" style="endArrow=block;html=1;rounded=0;strokeWidth=2;strokeColor=default;" target="1g_pKyIUPg_Uf4EWA1Bv-6" value="Authenticate">
           <mxGeometry relative="1" as="geometry">
@@ -188,11 +185,8 @@
             <mxPoint x="433.01" y="526.7248430738493" as="sourcePoint" />
           </mxGeometry>
         </mxCell>
-        <mxCell id="qLJnQWGgCQ5zNhPKmqbL-1" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f8cecc;strokeColor=default;fontStyle=1;container=0;" value="&lt;span style=&quot;font-size:11px&quot;&gt;OGW&lt;/span&gt;" vertex="1">
-          <mxGeometry height="30" width="140" x="420.67" y="-376" as="geometry" />
-        </mxCell>
-        <mxCell id="qLJnQWGgCQ5zNhPKmqbL-2" edge="1" parent="1" source="1g_pKyIUPg_Uf4EWA1Bv-11" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;strokeWidth=2;" target="qLJnQWGgCQ5zNhPKmqbL-1" value="">
-          <mxGeometry relative="1" as="geometry" />
+        <mxCell id="1g_pKyIUPg_Uf4EWA1Bv-7" parent="1g_pKyIUPg_Uf4EWA1Bv-17" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=default;fontStyle=1;container=0;" value="OEX Layer&lt;br&gt;&lt;span style=&quot;font-size:11px&quot;&gt;Experience / UI / API façade&lt;br&gt;&lt;/span&gt;" vertex="1">
+          <mxGeometry height="50" width="211.47" x="351.54" y="200" as="geometry" />
         </mxCell>
       </root>
     </mxGraphModel>
