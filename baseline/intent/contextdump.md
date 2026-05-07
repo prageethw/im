@@ -721,103 +721,7 @@ Date: 2026-05-07T02:53:16.079859+00:00
 - Replaced abbreviated Intent response payloads with complete payloads using `expression.targets`, `expression.constraints`, and `expression.preferences`.
 - Confirmed IC/ID spec and design Markdown JSON blocks validate.
 
-
-## Baseline update — IntentReport observation results and degraded-report samples:
-
-Date: 2026-05-07T09:50:00+00:00
-
-### Updated files:
-- `ic_ms_design_brief.md`
-- `ic_ms_specification.md`
-- `ia_ms_design_brief.md`
-- `contextdump.md`
-
-### Baseline:
-`IntentReport` is a curated external report projection owned by IC MS. It is based on IA MS assurance truth, but it is not raw assurance telemetry.
-
-`IntentReport` must include curated observation results whenever they are needed to explain lifecycle/status and target compliance.
-
-Observation results are especially important for `Degraded` and `Failed` reports because the external report must explain why the external lifecycle/status projection changed by showing target values beside current observed metrics.
-
-### IntentReport areas:
-- identity and linkage
-- current lifecycle/status
-- assurance summary
-- target summary
-- observation summary
-- service summary
-- resource summary
-- evaluation summary
-- optional version/history summary
-- references
-- report metadata
-
-### Observation rules:
-For `Active` / healthy reports, observations should remain lean and normally include selected/applied resources only.
-
-For `Degraded` or `Failed` reports, observations should include the relevant observed metrics required to explain lifecycle/status and target-compliance outcome.
-
-`targetSummary` compares requested/resolved targets against observed values.
-
-`observationSummary` carries curated observed metrics per relevant resource.
-
-Separate `degradationSummary`, `failureSummary`, and `reoptimisationSummary` sections are not baselined. The report should use `targetSummary`, `observationSummary`, `lifecycleStatus`, `statusReason`, and `summary` to explain current state.
-
-### Exposure rule:
-`IntentReport` may expose curated observation results and target comparisons.
-
-`IntentReport` must not expose raw telemetry streams, raw optimiser decisions, raw `t7.knowledge plane` data, raw callback payloads, internal candidate scoring, internal Kafka payloads, or the full internal `IntentAssuranceEvent` body unless deliberately curated into an externally safe report shape.
-
-### Engineering samples:
-The IC MS design brief and IC MS specification now include concrete healthy and degraded report samples so engineers can understand the intended report shape and how observations should be represented.
-
-
-## Baseline update — IntentReport simplified target/current metrics model:
-
-Date: 2026-05-07T10:05:00+00:00
-
-### Updated files:
-- `ic_ms_design_brief.md`
-- `ic_ms_specification.md`
-- `ia_ms_design_brief.md`
-- `contextdump.md`
-
-### Baseline:
-`IntentReport` does not use separate `degradationSummary` or `reoptimisationSummary` sections by default.
-
-The external report should explain degraded, failed, or re-optimisation-relevant states using:
-- `lifecycleStatus`
-- `statusReason`
-- `summary`
-- `targetSummary`
-- `observationSummary`
-
-### Rationale:
-If `targetSummary` already shows each resolved target beside the current observed value, and `observationSummary` shows the current metrics per relevant resource, separate degradation and re-optimisation sections duplicate the same evidence and create another place for inconsistent truth.
-
-### Rule:
-For `Degraded` reports, include target/current metric comparisons that show which targets are violated.
-
-For healthy `Active` reports, keep observations lean and normally include selected/applied resources only.
-
-For `Failed` reports, include only the relevant target/current metric evidence and status reason needed to explain the failure.
-
-`IntentReport` must not expose raw telemetry streams, raw optimiser decisions, raw KP data, raw callback payloads, internal candidate scoring, or full internal event bodies.
-
-
-## Baseline update — IntentReport targetSummary fact-only values:
-
-Date: 2026-05-07
-
-### Updated files:
-- `ic_ms_design_brief.md`
-- `ic_ms_specification.md`
-- `ia_ms_design_brief.md`
-
-### Baseline:
-`IntentReport.targetSummary` is fact-only by default. It should expose resolved target values and current observed values, but should not include aggregate interpretation fields such as `result: Compliant` or `result: NonCompliant`, and should not include per-target `status` labels such as `Compliant` or `Violated` by default. Consumers decide compliance from the target and observed values. Use `lifecycleStatus`, `statusReason`, and `summary` for the projected state narrative.
-
-## Baseline correction — restore full IntentSpecification and bucket-only specCharacteristic:
+## Baseline update — IntentSpecification characteristic examples/defaults without validation duplication:
 
 Date: 2026-05-07
 
@@ -827,43 +731,16 @@ Date: 2026-05-07
 - `contextdump.md`
 
 ### Baseline:
-The `IntentSpecification` must not be reduced to only the short `specCharacteristic` bucket list. The full create request must retain the complete `IntentSpecification` body, including `expressionSpecification` with the authoritative JSON Schema.
+`IntentSpecification.specCharacteristic` remains the high-level TMF `CharacteristicSpecification` catalogue for `targets`, `constraints`, and `preferences`.
 
-`specCharacteristic` is simplified to the high-level catalogue/discovery buckets only:
-- `targets`
-- `constraints`
-- `preferences`
+`specCharacteristic.characteristicValueSpecification` may be used for catalogue examples, defaults, and OEX/UI prefill guidance, but it is not the authoritative validation source.
 
-Detailed field-level rules for `maxLatencyMs`, `minAvailabilityPercent`, `maxJitterMs`, `maxPacketLossPercent`, `priority`, `redundancyRequired`, `timeWindow`, and `preferredAccessTechnology` belong under `expressionSpecification.schema`.
+### Rules:
+- Use `characteristicValueSpecification` for representative examples/defaults only.
+- Do not duplicate full field-level validation rules under bucket-level `specCharacteristic` entries.
+- Detailed allowed values, required fields, data types, ranges, and nested object rules remain authoritative in the expression-value schema referenced by `targetEntitySchema.@schemaLocation`.
+- `expressionSpecification.expressionLanguage` remains `JsonLdExpression`, not `JSON_SCHEMA`.
+- JSON Schema is a platform validation aid for `expression.expressionValue`; it is not the TMF expression language.
 
-### Correct rule:
-`specCharacteristic` advertises the semantic buckets. `expressionSpecification.schema` defines the full nested request shape. Do not wipe out or replace the full `IntentSpecification` with only the bucket catalogue.
-
-
-## Baseline update — TMF expressionLanguage must be JsonLdExpression:
-
-Date: 2026-05-07
-
-### Updated files:
-- `id_ms_specification.md`
-- `id_ms_design_brief.md`
-- `contextdump.md`
-
-### Baseline:
-External TMF-facing `IntentSpecification.expressionSpecification.expressionLanguage` must use `JsonLdExpression`, not `JSON_SCHEMA`.
-
-JSON Schema is only a platform validation aid for the structure inside `expression.expressionValue`. It should be referenced through `targetEntitySchema.@schemaLocation` or documented as implementation guidance, but it must not be represented as the TMF expression language.
-
-### Rule:
-Use:
-
-```json
-"expressionLanguage": "JsonLdExpression"
-```
-
-Do not use:
-
-```json
-"expressionLanguage": "JSON_SCHEMA"
-```
-
+### Applied:
+The ID MS specification create example now uses bucket-level `specCharacteristic` entries for `targets`, `constraints`, and `preferences`, each with TMF-style `@type`, `name`, `valueType`, and representative `characteristicValueSpecification` examples/defaults. The detailed expression-value validation schema is documented as implementation guidance and referenced through `targetEntitySchema.@schemaLocation`.

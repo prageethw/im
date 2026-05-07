@@ -133,156 +133,152 @@ Accept: application/json
   "@schemaLocation": "https://mycsp.com.au/schemas/intentManagement/v5/intentSpecification/hospital-surgical-slice-spec-v1.19.schema.json",
   "specCharacteristic": [
     {
-      "id": "SC-LOCATION-001",
-      "name": "location",
-      "description": "Requested location for the surgical connectivity intent. The expression schema permits only locationId, locationType, and geographicScope. geographicScope remains intentionally open for platform-controlled extension.",
+      "@type": "CharacteristicSpecification",
+      "id": "targets",
+      "name": "targets",
+      "description": "Measurable runtime objectives supported by this IntentSpecification. Detailed target fields and validation rules are defined by the expression-value schema referenced from targetEntitySchema.@schemaLocation.",
       "valueType": "object",
       "configurable": true,
       "minCardinality": 1,
-      "maxCardinality": 1
+      "maxCardinality": 1,
+      "characteristicValueSpecification": [
+        {
+          "@type": "CharacteristicValueSpecification",
+          "valueType": "object",
+          "isDefault": true,
+          "value": {
+            "maxLatencyMs": 10,
+            "minAvailabilityPercent": 99.99,
+            "maxJitterMs": 2,
+            "maxPacketLossPercent": 0.01
+          }
+        }
+      ]
     },
     {
-      "id": "SC-SERVICE-CLASS-001",
-      "name": "serviceClass",
-      "description": "Requested service class for the surgical connectivity intent.",
-      "valueType": "string",
+      "@type": "CharacteristicSpecification",
+      "id": "constraints",
+      "name": "constraints",
+      "description": "Hard runtime requirements supported by this IntentSpecification. Detailed constraint fields and validation rules are defined by the expression-value schema referenced from targetEntitySchema.@schemaLocation.",
+      "valueType": "object",
       "configurable": true,
       "minCardinality": 1,
       "maxCardinality": 1,
       "characteristicValueSpecification": [
-        { "valueType": "string", "value": "critical-gold", "isDefault": true },
-        { "valueType": "string", "value": "critical-silver" }
+        {
+          "@type": "CharacteristicValueSpecification",
+          "valueType": "object",
+          "isDefault": true,
+          "value": {
+            "priority": "critical",
+            "redundancyRequired": true,
+            "timeWindow": {
+              "startDateTime": "2026-04-18T12:00:00+10:00"
+            }
+          }
+        }
       ]
     },
     {
-      "id": "SC-POLICY-PRIORITY-001",
-      "name": "priority",
-      "description": "Requested business or clinical priority. This is used as policy input by II MS and the knowledge plane, not as a syntax-only enforcement rule.",
-      "valueType": "string",
-      "configurable": true,
-      "minCardinality": 1,
-      "maxCardinality": 1,
-      "characteristicValueSpecification": [
-        { "valueType": "string", "value": "critical", "isDefault": true },
-        { "valueType": "string", "value": "high" },
-        { "valueType": "string", "value": "standard" }
-      ]
-    },
-    {
-      "id": "SC-ASSURANCE-LATENCY-001",
-      "name": "maxLatencyMs",
-      "description": "Requested maximum latency in milliseconds. Values are illustrative/default guidance only. Semantic and policy enforcement is owned by II MS and the knowledge plane.",
-      "valueType": "number",
-      "configurable": true,
-      "minCardinality": 0,
-      "maxCardinality": 1,
-      "characteristicValueSpecification": [
-        { "valueType": "number", "value": 10, "isDefault": true }
-      ]
-    },
-    {
-      "id": "SC-ASSURANCE-AVAILABILITY-001",
-      "name": "minAvailabilityPercent",
-      "description": "Requested minimum availability percentage. Values are illustrative/default guidance only. Semantic and policy enforcement is owned by II MS and the knowledge plane.",
-      "valueType": "number",
-      "configurable": true,
-      "minCardinality": 0,
-      "maxCardinality": 1,
-      "characteristicValueSpecification": [
-        { "valueType": "number", "value": 99.99, "isDefault": true }
-      ]
-    },
-    {
-      "id": "SC-ASSURANCE-JITTER-001",
-      "name": "maxJitterMs",
-      "description": "Requested maximum jitter in milliseconds. Values are illustrative/default guidance only.",
-      "valueType": "number",
-      "configurable": true,
-      "minCardinality": 0,
-      "maxCardinality": 1,
-      "characteristicValueSpecification": [
-        { "valueType": "number", "value": 2, "isDefault": true }
-      ]
-    },
-    {
-      "id": "SC-ASSURANCE-PACKET-LOSS-001",
-      "name": "maxPacketLossPercent",
-      "description": "Requested maximum packet loss percentage. Values are illustrative/default guidance only.",
-      "valueType": "number",
-      "configurable": true,
-      "minCardinality": 0,
-      "maxCardinality": 1,
-      "characteristicValueSpecification": [
-        { "valueType": "number", "value": 0.01, "isDefault": true }
-      ]
-    },
-    {
-      "id": "SC-RESILIENCE-REDUNDANCY-001",
-      "name": "redundancyRequired",
-      "description": "Whether resilient/redundant delivery is requested.",
-      "valueType": "boolean",
-      "configurable": true,
-      "minCardinality": 0,
-      "maxCardinality": 1,
-      "characteristicValueSpecification": [
-        { "valueType": "boolean", "value": true, "isDefault": true }
-      ]
-    },
-    {
-      "id": "SC-ACCESS-TECHNOLOGY-001",
-      "name": "preferredAccessTechnology",
-      "description": "Preferred access technology where supplied by the requester.",
-      "valueType": "string",
-      "configurable": true,
-      "minCardinality": 0,
-      "maxCardinality": 1,
-      "characteristicValueSpecification": [
-        { "valueType": "string", "value": "5G" },
-        { "valueType": "string", "value": "fibre" },
-        { "valueType": "string", "value": "private-wireless" }
-      ]
-    },
-    {
-      "id": "SC-DELIVERY-TIME-WINDOW-001",
-      "name": "timeWindow",
-      "description": "Optional requested delivery or validity time window. When timeWindow is present, startDateTime is required by expressionSpecification.",
+      "@type": "CharacteristicSpecification",
+      "id": "preferences",
+      "name": "preferences",
+      "description": "Soft runtime selection preferences supported by this IntentSpecification. Detailed preference fields and validation rules are defined by the expression-value schema referenced from targetEntitySchema.@schemaLocation.",
       "valueType": "object",
       "configurable": true,
       "minCardinality": 0,
-      "maxCardinality": 1
+      "maxCardinality": 1,
+      "characteristicValueSpecification": [
+        {
+          "@type": "CharacteristicValueSpecification",
+          "valueType": "object",
+          "isDefault": true,
+          "value": {
+            "preferredAccessTechnology": "5G"
+          }
+        },
+        {
+          "@type": "CharacteristicValueSpecification",
+          "valueType": "object",
+          "value": {
+            "preferredAccessTechnology": "fibre"
+          }
+        }
+      ]
     }
   ],
   "expressionSpecification": {
-    "name": "Hospital Surgical Slice Intent Expression Schema",
-    "description": "Authoritative request-shape schema for hospital surgical slice intents. This schema is syntax-first and does not perform semantic, policy, or fulfilment validation.",
-    "expressionLanguage": "JSON_SCHEMA",
-    "schema": {
-      "$schema": "https://json-schema.org/draft/2020-12/schema",
-      "$id": "https://mycsp.com.au/schemas/intentManagement/v5/intentExpression/hospital-surgical-slice-spec-v1.19.expression.schema.json",
-      "title": "Hospital Surgical Slice Intent Expression",
+    "@type": "ExpressionSpecification",
+    "name": "Hospital Surgical Slice Intent Expression Model",
+    "description": "TMF expression contract reference for hospital surgical slice intents. Runtime Intent.expression uses JsonLdExpression and carries the domain payload inside expression.expressionValue.",
+    "expressionLanguage": "JsonLdExpression",
+    "iri": "https://mycsp.com.au/tio/hospital-surgical-slice/v1.0"
+  },
+  "targetEntitySchema": {
+    "@type": "TargetEntitySchema",
+    "@schemaLocation": "https://mycsp.com.au/schemas/intentManagement/v5/intentExpression/hospital-surgical-slice.expression.schema.json"
+  },
+  "_links": {
+    "self": {
+      "href": "https://mycsp.com.au/intentManagement/v5/intentSpecification/hospital-surgical-slice-spec-v1.19"
+    }
+  }
+}
+```
+
+
+### Implementation guidance — expression.expressionValue schema:
+
+The schema referenced by `targetEntitySchema.@schemaLocation` is the platform validation schema for the JSON-LD `expression.expressionValue` object. It is not the TMF `expressionSpecification.expressionLanguage`.
+
+IC MS uses this schema after resolving the concrete active `IntentSpecification.id` to validate the runtime payload inside `Intent.expression.expressionValue`.
+
+The schema validates this platform domain payload shape:
+
+```json
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://mycsp.com.au/schemas/intentManagement/v5/intentExpression/hospital-surgical-slice.expression.schema.json",
+  "title": "Hospital Surgical Slice Intent Expression Value",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "location",
+    "serviceType",
+    "serviceClass",
+    "targets",
+    "constraints"
+  ],
+  "properties": {
+    "location": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["location", "serviceClass", "priority"],
+      "required": ["locationId"],
       "properties": {
-        "location": {
-          "type": "object",
-          "additionalProperties": false,
-          "description": "Only locationId, locationType, and geographicScope are permitted. geographicScope is intentionally open for platform-controlled extension.",
-          "required": ["locationId"],
-          "properties": {
-            "locationId": { "type": "string", "minLength": 1 },
-            "locationType": { "type": "string", "minLength": 1 },
-            "geographicScope": { "type": "string", "minLength": 1 }
-          }
-        },
-        "serviceClass": { "type": "string", "enum": ["critical-gold", "critical-silver"] },
-        "priority": { "type": "string", "enum": ["critical", "high", "standard"] },
+        "locationId": { "type": "string", "minLength": 1 },
+        "locationType": { "type": "string", "minLength": 1 },
+        "geographicScope": { "type": "string", "minLength": 1 }
+      }
+    },
+    "serviceType": { "type": "string", "enum": ["surgical-connectivity"] },
+    "serviceClass": { "type": "string", "enum": ["critical-gold", "critical-silver"] },
+    "targets": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
         "maxLatencyMs": { "type": "number", "minimum": 0 },
         "minAvailabilityPercent": { "type": "number", "minimum": 0, "maximum": 100 },
         "maxJitterMs": { "type": "number", "minimum": 0 },
-        "maxPacketLossPercent": { "type": "number", "minimum": 0, "maximum": 100 },
+        "maxPacketLossPercent": { "type": "number", "minimum": 0, "maximum": 100 }
+      }
+    },
+    "constraints": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["priority"],
+      "properties": {
+        "priority": { "type": "string", "enum": ["critical", "high", "standard"] },
         "redundancyRequired": { "type": "boolean" },
-        "preferredAccessTechnology": { "type": "string", "minLength": 1 },
         "timeWindow": {
           "type": "object",
           "additionalProperties": false,
@@ -293,15 +289,19 @@ Accept: application/json
           }
         }
       }
-    }
-  },
-  "_links": {
-    "self": {
-      "href": "https://mycsp.com.au/intentManagement/v5/intentSpecification/hospital-surgical-slice-spec-v1.19"
+    },
+    "preferences": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "preferredAccessTechnology": { "type": "string", "enum": ["5G", "fibre", "private-wireless"] }
+      }
     }
   }
 }
 ```
+
+`specCharacteristic.characteristicValueSpecification` provides catalogue examples and defaults for `targets`, `constraints`, and `preferences`; it does not replace this validation schema.
 
 ### Success response:
 
@@ -1136,9 +1136,9 @@ ID MS responses must expose only links for operations that are valid for the cur
 
 - `@baseType` is `EntitySpecification`, not `ResourceSpecification`.
 - `specCharacteristic` is the high-level characteristic catalogue.
-- `expressionSpecification` is the authoritative request-shape schema.
-- `characteristicValueSpecification` is used only for defaults, examples, or constrained allowed values where useful.
-- Numeric SLA values in `characteristicValueSpecification` are illustrative/default guidance only, not semantic enforcement.
+- `expressionSpecification` is the TMF expression contract reference and uses `expressionLanguage: JsonLdExpression`.
+- `characteristicValueSpecification` is used only for catalogue examples, defaults, and OEX/UI prefill guidance; the expression-value schema remains authoritative for runtime validation.
+- Numeric SLA values and other values in `characteristicValueSpecification` are illustrative/default guidance only, not semantic enforcement.
 - ID MS validates resource shape and syntax.
 - II MS and knowledge sources own semantic/policy validation.
 - IA MS owns runtime assurance.

@@ -1194,3 +1194,54 @@ Rules:
 Baseline statement:
 
 **ID MS must make successful resource representations HATEOAS-compliant by including `_links` that advertise only operations valid for the resource's current lifecycle and governance state.**
+
+## IntentSpecification characteristic value examples/defaults baseline:
+
+`IntentSpecification.specCharacteristic` remains the high-level TMF `CharacteristicSpecification` catalogue for the three semantic buckets:
+
+- `targets`
+- `constraints`
+- `preferences`
+
+`characteristicValueSpecification` may be used under those bucket characteristics to provide catalogue examples, defaults, and OEX/UI prefill guidance.
+
+Rules:
+
+- Use it for representative example/default values only.
+- Do not use it as the authoritative runtime validation source.
+- Do not duplicate full field-level validation rules under bucket-level `specCharacteristic` entries.
+- Detailed allowed values, required fields, data types, ranges, and nested object rules remain authoritative in the expression-value schema referenced by `targetEntitySchema.@schemaLocation`.
+- `expressionSpecification.expressionLanguage` remains `JsonLdExpression`, not `JSON_SCHEMA`.
+- JSON Schema is a platform validation aid for `expression.expressionValue`; it is not the TMF expression language.
+
+Example bucket-level characteristic:
+
+```json
+{
+  "@type": "CharacteristicSpecification",
+  "id": "targets",
+  "name": "targets",
+  "description": "Measurable runtime objectives supported by this IntentSpecification. Detailed target fields and validation rules are defined by the expression-value schema referenced from targetEntitySchema.@schemaLocation.",
+  "valueType": "object",
+  "configurable": true,
+  "minCardinality": 1,
+  "maxCardinality": 1,
+  "characteristicValueSpecification": [
+    {
+      "@type": "CharacteristicValueSpecification",
+      "valueType": "object",
+      "isDefault": true,
+      "value": {
+        "maxLatencyMs": 10,
+        "minAvailabilityPercent": 99.99,
+        "maxJitterMs": 2,
+        "maxPacketLossPercent": 0.01
+      }
+    }
+  ]
+}
+```
+
+Baseline statement:
+
+**Use `characteristicValueSpecification` for catalogue examples/defaults only. Runtime payload validation is owned by the expression-value schema referenced through `targetEntitySchema.@schemaLocation`.**
