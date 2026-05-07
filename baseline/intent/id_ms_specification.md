@@ -10,7 +10,7 @@
 | Short name | ID MS |
 | Service name | `intent-definition-ms` |
 | Domain | Intent Domain |
-| Base path | `/tmf-api/intentManagement/v5` |
+| Base path | `/intentManagement/v5` |
 | Primary resource | `IntentSpecification` |
 | Primary responsibility | Design-time `IntentSpecification` catalogue, lifecycle/version governance, syntax contract, and external specification events |
 
@@ -26,60 +26,29 @@ ID MS does not own runtime `Intent`, `IntentReport`, semantic validation, policy
 
 ## 1. API endpoints:
 
-### TMF921 public base path rule:
-
-The strict TMF921 public route exposed through NGW is `/tmf-api/intentManagement/v5`. API examples in this specification use that public conformance route.
-
-
 ### IntentSpecification resource APIs:
 
 | **Purpose** | **Method** | **Endpoint** |
 |---|---:|---|
-| Create specification | `POST` | `/tmf-api/intentManagement/v5/intentSpecification` |
-| List specifications | `GET` | `/tmf-api/intentManagement/v5/intentSpecification` |
-| Retrieve specification by ID | `GET` | `/tmf-api/intentManagement/v5/intentSpecification/{id}` |
-| Full replace specification | `PUT` | `/tmf-api/intentManagement/v5/intentSpecification/{id}` |
-| Partial update specification | `PATCH` | `/tmf-api/intentManagement/v5/intentSpecification/{id}` |
-| Delete specification | `DELETE` | `/tmf-api/intentManagement/v5/intentSpecification/{id}` |
-| Activate specification | `PUT` / `PATCH` | `/tmf-api/intentManagement/v5/intentSpecification/{id}` |
+| Create specification | `POST` | `/intentManagement/v5/intentSpecification` |
+| List specifications | `GET` | `/intentManagement/v5/intentSpecification` |
+| Retrieve specification by ID | `GET` | `/intentManagement/v5/intentSpecification/{id}` |
+| Full replace specification | `PUT` | `/intentManagement/v5/intentSpecification/{id}` |
+| Partial update specification | `PATCH` | `/intentManagement/v5/intentSpecification/{id}` |
+| Delete specification | `DELETE` | `/intentManagement/v5/intentSpecification/{id}` |
+| Activate specification | `PUT` / `PATCH` | `/intentManagement/v5/intentSpecification/{id}` |
 
 ### Hub subscription APIs:
 
-Strict TMF route form:
-
 | **Purpose** | **Method** | **Endpoint** |
 |---|---:|---|
-| Create event subscription | `POST` | `/tmf-api/intentManagement/v5/hub` |
-| Delete event subscription | `DELETE` | `/tmf-api/intentManagement/v5/hub/{id}` |
-
-Accepted domain-scoped platform extension:
-
-| **Purpose** | **Method** | **Endpoint** |
-|---|---:|---|
-| Create specification event subscription | `POST` | `/tmf-api/intentManagement/v5/intentSpecification/hub` |
-| Retrieve specification event subscription | `GET` | `/tmf-api/intentManagement/v5/intentSpecification/hub/{id}` |
-| Delete specification event subscription | `DELETE` | `/tmf-api/intentManagement/v5/intentSpecification/hub/{id}` |
+| Create event subscription | `POST` | `/intentManagement/v5/intentSpecification/hub` |
+| Retrieve subscription by ID | `GET` | `/intentManagement/v5/intentSpecification/hub/{id}` |
+| Delete event subscription | `DELETE` | `/intentManagement/v5/intentSpecification/hub/{id}` |
 
 ---
 
 ## 2. Common conventions:
-
-
-### TMF921 IntentSpecification expression contract rule:
-
-`specCharacteristic` is the high-level catalogue/discovery view and uses TMF `CharacteristicSpecification` entries. When present, each entry includes at least `@type`, `name`, and `valueType`.
-
-`expressionSpecification` is the TMF expression contract reference and uses:
-
-```json
-{
-  "@type": "ExpressionSpecification",
-  "expressionLanguage": "JsonLdExpression",
-  "iri": "https://mycsp.com.au/tio/hospital-surgical-slice/v1.0"
-}
-```
-
-The detailed platform JSON schema for `expression.expressionValue` may be documented through `targetEntitySchema.@schemaLocation` and implementation guidance, but it is not a replacement for the TMF `ExpressionSpecification` shape.
 
 ### Lifecycle values:
 
@@ -148,7 +117,7 @@ There is no `DELETED` lifecycle status. Delete is an operation/outcome, not a no
 ### Request:
 
 ```http
-POST /tmf-api/intentManagement/v5/intentSpecification
+POST /intentManagement/v5/intentSpecification
 Content-Type: application/json
 Accept: application/json
 ```
@@ -164,30 +133,27 @@ Accept: application/json
   "@schemaLocation": "https://mycsp.com.au/schemas/intentManagement/v5/intentSpecification/hospital-surgical-slice-spec-v1.19.schema.json",
   "specCharacteristic": [
     {
-      "@type": "CharacteristicSpecification",
       "id": "targets",
       "name": "targets",
-      "description": "Measurable runtime objectives supported by this IntentSpecification. Detailed target fields and validation rules are defined in the target entity schema for expression.expressionValue.targets.",
+      "description": "Measurable runtime objectives supported by this IntentSpecification. Detailed target fields and validation rules are defined in expressionSpecification.schema.properties.targets.",
       "valueType": "object",
       "configurable": true,
       "minCardinality": 1,
       "maxCardinality": 1
     },
     {
-      "@type": "CharacteristicSpecification",
       "id": "constraints",
       "name": "constraints",
-      "description": "Hard runtime requirements supported by this IntentSpecification. Detailed constraint fields and validation rules are defined in the target entity schema for expression.expressionValue.constraints.",
+      "description": "Hard runtime requirements supported by this IntentSpecification. Detailed constraint fields and validation rules are defined in expressionSpecification.schema.properties.constraints.",
       "valueType": "object",
       "configurable": true,
       "minCardinality": 1,
       "maxCardinality": 1
     },
     {
-      "@type": "CharacteristicSpecification",
       "id": "preferences",
       "name": "preferences",
-      "description": "Soft runtime selection preferences supported by this IntentSpecification. Detailed preference fields and validation rules are defined in the target entity schema for expression.expressionValue.preferences.",
+      "description": "Soft runtime selection preferences supported by this IntentSpecification. Detailed preference fields and validation rules are defined in expressionSpecification.schema.properties.preferences.",
       "valueType": "object",
       "configurable": true,
       "minCardinality": 0,
@@ -195,52 +161,75 @@ Accept: application/json
     }
   ],
   "expressionSpecification": {
-    "@type": "ExpressionSpecification",
-    "expressionLanguage": "JsonLdExpression",
-    "iri": "https://mycsp.com.au/tio/hospital-surgical-slice/v1.0"
-  },
-  "targetEntitySchema": {
-    "@type": "TargetEntitySchema",
-    "@schemaLocation": "https://mycsp.com.au/schemas/intentManagement/v5/intentExpression/hospital-surgical-slice-spec-v1.19.expression.schema.json"
+    "name": "Hospital Surgical Slice Intent Expression Schema",
+    "description": "Authoritative request-shape schema for hospital surgical slice intents. This schema is syntax-first and defines the canonical targets, constraints, and preferences buckets. It does not perform semantic, policy, or fulfilment validation.",
+    "expressionLanguage": "JSON_SCHEMA",
+    "schema": {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "$id": "https://mycsp.com.au/schemas/intentManagement/v5/intentExpression/hospital-surgical-slice-spec-v1.19.expression.schema.json",
+      "title": "Hospital Surgical Slice Intent Expression",
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["location", "serviceType", "serviceClass", "targets", "constraints"],
+      "properties": {
+        "location": {
+          "type": "object",
+          "additionalProperties": false,
+          "description": "Only locationId, locationType, and geographicScope are permitted. geographicScope is intentionally open for platform-controlled extension.",
+          "required": ["locationId"],
+          "properties": {
+            "locationId": { "type": "string", "minLength": 1 },
+            "locationType": { "type": "string", "minLength": 1 },
+            "geographicScope": { "type": "string", "minLength": 1 }
+          }
+        },
+        "serviceType": { "type": "string", "enum": ["surgical-connectivity"] },
+        "serviceClass": { "type": "string", "enum": ["critical-gold", "critical-silver"] },
+        "targets": {
+          "type": "object",
+          "additionalProperties": false,
+          "description": "Measurable runtime objectives requested by the intent.",
+          "properties": {
+            "maxLatencyMs": { "type": "number", "minimum": 0 },
+            "minAvailabilityPercent": { "type": "number", "minimum": 0, "maximum": 100 },
+            "maxJitterMs": { "type": "number", "minimum": 0 },
+            "maxPacketLossPercent": { "type": "number", "minimum": 0, "maximum": 100 }
+          }
+        },
+        "constraints": {
+          "type": "object",
+          "additionalProperties": false,
+          "description": "Hard runtime requirements and required non-target inputs.",
+          "required": ["priority"],
+          "properties": {
+            "priority": { "type": "string", "enum": ["critical", "high", "standard"] },
+            "redundancyRequired": { "type": "boolean" },
+            "timeWindow": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": ["startDateTime"],
+              "properties": {
+                "startDateTime": { "type": "string", "format": "date-time" },
+                "endDateTime": { "type": "string", "format": "date-time" }
+              }
+            }
+          }
+        },
+        "preferences": {
+          "type": "object",
+          "additionalProperties": false,
+          "description": "Soft runtime selection guidance.",
+          "properties": {
+            "preferredAccessTechnology": { "type": "string", "minLength": 1 }
+          }
+        }
+      }
+    }
   },
   "_links": {
     "self": {
-      "href": "https://mycsp.com.au/tmf-api/intentManagement/v5/intentSpecification/hospital-surgical-slice-spec-v1.19"
+      "href": "https://mycsp.com.au/intentManagement/v5/intentSpecification/hospital-surgical-slice-spec-v1.19"
     }
-  }
-}
-```
-
-### Implementation guidance — expression.expressionValue schema:
-
-The detailed platform validation schema for `expression.expressionValue` is published at `targetEntitySchema.@schemaLocation`. It is used by IC MS after resolving the concrete active `IntentSpecification.id`. The schema is not embedded as an external TMF resource field.
-
-The referenced schema validates the following domain payload inside `Intent.expression.expressionValue`:
-
-```json
-{
-  "location": {
-    "locationId": "AU-NSW-SYD-HOSP-001",
-    "locationType": "hospital",
-    "geographicScope": "campus"
-  },
-  "serviceType": "surgical-connectivity",
-  "serviceClass": "critical-gold",
-  "targets": {
-    "maxLatencyMs": 10,
-    "minAvailabilityPercent": 99.99,
-    "maxJitterMs": 2,
-    "maxPacketLossPercent": 0.01
-  },
-  "constraints": {
-    "priority": "critical",
-    "redundancyRequired": true,
-    "timeWindow": {
-      "startDateTime": "2026-04-18T12:00:00+10:00"
-    }
-  },
-  "preferences": {
-    "preferredAccessTechnology": "5G"
   }
 }
 ```
@@ -249,7 +238,7 @@ The referenced schema validates the following domain payload inside `Intent.expr
 
 ```http
 HTTP/1.1 201 Created
-Location: /tmf-api/intentManagement/v5/intentSpecification/hospital-surgical-slice-spec-v1.19
+Location: /intentManagement/v5/intentSpecification/hospital-surgical-slice-spec-v1.19
 Content-Type: application/json
 Content-Language: en-AU
 ETag: "intent-spec-hospital-surgical-slice-spec-v1.19-v1"
@@ -259,62 +248,23 @@ Last-Modified: Sat, 18 Apr 2026 02:00:00 GMT
 ```json
 {
   "id": "hospital-surgical-slice-spec-v1.19",
-  "href": "/tmf-api/intentManagement/v5/intentSpecification/hospital-surgical-slice-spec-v1.19",
+  "href": "/intentManagement/v5/intentSpecification/hospital-surgical-slice-spec-v1.19",
   "name": "Hospital Surgical Slice Intent Specification",
   "version": "1.19",
   "lifecycleStatus": "DRAFT",
   "@type": "IntentSpecification",
   "@baseType": "EntitySpecification",
-  "specCharacteristic": [
-    {
-      "@type": "CharacteristicSpecification",
-      "id": "targets",
-      "name": "targets",
-      "description": "Measurable runtime objectives supported by this IntentSpecification. Detailed target fields and validation rules are defined in the target entity schema for expression.expressionValue.targets.",
-      "valueType": "object",
-      "configurable": true,
-      "minCardinality": 1,
-      "maxCardinality": 1
-    },
-    {
-      "@type": "CharacteristicSpecification",
-      "id": "constraints",
-      "name": "constraints",
-      "description": "Hard runtime requirements supported by this IntentSpecification. Detailed constraint fields and validation rules are defined in the target entity schema for expression.expressionValue.constraints.",
-      "valueType": "object",
-      "configurable": true,
-      "minCardinality": 1,
-      "maxCardinality": 1
-    },
-    {
-      "@type": "CharacteristicSpecification",
-      "id": "preferences",
-      "name": "preferences",
-      "description": "Soft runtime selection preferences supported by this IntentSpecification. Detailed preference fields and validation rules are defined in the target entity schema for expression.expressionValue.preferences.",
-      "valueType": "object",
-      "configurable": true,
-      "minCardinality": 0,
-      "maxCardinality": 1
-    }
-  ],
-  "expressionSpecification": {
-    "@type": "ExpressionSpecification",
-    "expressionLanguage": "JsonLdExpression",
-    "iri": "https://mycsp.com.au/tio/hospital-surgical-slice/v1.0"
-  },
-  "targetEntitySchema": {
-    "@type": "TargetEntitySchema",
-    "@schemaLocation": "https://mycsp.com.au/schemas/intentManagement/v5/intentExpression/hospital-surgical-slice-spec-v1.19.expression.schema.json"
-  },
+  "specCharacteristic": "...same as request...",
+  "expressionSpecification": "...same as request...",
   "_links": {
-    "self": { "href": "/tmf-api/intentManagement/v5/intentSpecification/hospital-surgical-slice-spec-v1.19" },
-    "fullUpdate": { "href": "/tmf-api/intentManagement/v5/intentSpecification/hospital-surgical-slice-spec-v1.19", "method": "PUT" },
+    "self": { "href": "/intentManagement/v5/intentSpecification/hospital-surgical-slice-spec-v1.19" },
+    "fullUpdate": { "href": "/intentManagement/v5/intentSpecification/hospital-surgical-slice-spec-v1.19", "method": "PUT" },
     "partialUpdate": {
-      "href": "/tmf-api/intentManagement/v5/intentSpecification/hospital-surgical-slice-spec-v1.19",
+      "href": "/intentManagement/v5/intentSpecification/hospital-surgical-slice-spec-v1.19",
       "method": "PATCH",
       "warning": "PATCH is supported for compatibility but discouraged. Prefer PUT for deterministic full replacement."
     },
-    "delete": { "href": "/tmf-api/intentManagement/v5/intentSpecification/hospital-surgical-slice-spec-v1.19", "method": "DELETE" }
+    "delete": { "href": "/intentManagement/v5/intentSpecification/hospital-surgical-slice-spec-v1.19", "method": "DELETE" }
   }
 }
 ```
@@ -326,7 +276,7 @@ Last-Modified: Sat, 18 Apr 2026 02:00:00 GMT
 ### Request:
 
 ```http
-GET /tmf-api/intentManagement/v5/intentSpecification?offset=0&limit=10&lifecycleStatus=ACTIVE
+GET /intentManagement/v5/intentSpecification?offset=0&limit=10&lifecycleStatus=ACTIVE
 Accept: application/json
 ```
 
@@ -346,16 +296,16 @@ Cache-Control: private, max-age=60
 [
   {
     "id": "hospital-surgical-slice-spec-v1.19",
-    "href": "/tmf-api/intentManagement/v5/intentSpecification/hospital-surgical-slice-spec-v1.19",
+    "href": "/intentManagement/v5/intentSpecification/hospital-surgical-slice-spec-v1.19",
     "name": "Hospital Surgical Slice Intent Specification",
     "version": "1.19",
     "lifecycleStatus": "ACTIVE",
     "@type": "IntentSpecification",
     "@baseType": "EntitySpecification",
     "_links": {
-      "self": { "href": "/tmf-api/intentManagement/v5/intentSpecification/hospital-surgical-slice-spec-v1.19" },
+      "self": { "href": "/intentManagement/v5/intentSpecification/hospital-surgical-slice-spec-v1.19" },
       "partialUpdate": {
-        "href": "/tmf-api/intentManagement/v5/intentSpecification/hospital-surgical-slice-spec-v1.19",
+        "href": "/intentManagement/v5/intentSpecification/hospital-surgical-slice-spec-v1.19",
         "method": "PATCH",
         "warning": "PATCH is supported for compatibility but discouraged. Prefer PUT for deterministic full replacement."
       }
@@ -371,14 +321,14 @@ Cache-Control: private, max-age=60
 ### Request:
 
 ```http
-GET /tmf-api/intentManagement/v5/intentSpecification/hospital-surgical-slice-spec-v1.19
+GET /intentManagement/v5/intentSpecification/hospital-surgical-slice-spec-v1.19
 Accept: application/json
 ```
 
 ### Request with cache override:
 
 ```http
-GET /tmf-api/intentManagement/v5/intentSpecification/hospital-surgical-slice-spec-v1.19
+GET /intentManagement/v5/intentSpecification/hospital-surgical-slice-spec-v1.19
 Accept: application/json
 Cache-Control: no-cache
 ```
@@ -389,7 +339,7 @@ Cache-Control: no-cache
 HTTP/1.1 200 OK
 Content-Type: application/json
 Content-Language: en-AU
-Content-Location: /tmf-api/intentManagement/v5/intentSpecification/hospital-surgical-slice-spec-v1.19
+Content-Location: /intentManagement/v5/intentSpecification/hospital-surgical-slice-spec-v1.19
 ETag: "intent-spec-hospital-surgical-slice-spec-v1.19-v1"
 Last-Modified: Sat, 18 Apr 2026 02:00:00 GMT
 Cache-Control: private, max-age=300
@@ -398,58 +348,19 @@ Cache-Control: private, max-age=300
 ```json
 {
   "id": "hospital-surgical-slice-spec-v1.19",
-  "href": "/tmf-api/intentManagement/v5/intentSpecification/hospital-surgical-slice-spec-v1.19",
+  "href": "/intentManagement/v5/intentSpecification/hospital-surgical-slice-spec-v1.19",
   "name": "Hospital Surgical Slice Intent Specification",
   "description": "Design-time specification for hospital surgical slice intents.",
   "version": "1.19",
   "lifecycleStatus": "ACTIVE",
   "@type": "IntentSpecification",
   "@baseType": "EntitySpecification",
-  "specCharacteristic": [
-    {
-      "@type": "CharacteristicSpecification",
-      "id": "targets",
-      "name": "targets",
-      "description": "Measurable runtime objectives supported by this IntentSpecification. Detailed target fields and validation rules are defined in the target entity schema for expression.expressionValue.targets.",
-      "valueType": "object",
-      "configurable": true,
-      "minCardinality": 1,
-      "maxCardinality": 1
-    },
-    {
-      "@type": "CharacteristicSpecification",
-      "id": "constraints",
-      "name": "constraints",
-      "description": "Hard runtime requirements supported by this IntentSpecification. Detailed constraint fields and validation rules are defined in the target entity schema for expression.expressionValue.constraints.",
-      "valueType": "object",
-      "configurable": true,
-      "minCardinality": 1,
-      "maxCardinality": 1
-    },
-    {
-      "@type": "CharacteristicSpecification",
-      "id": "preferences",
-      "name": "preferences",
-      "description": "Soft runtime selection preferences supported by this IntentSpecification. Detailed preference fields and validation rules are defined in the target entity schema for expression.expressionValue.preferences.",
-      "valueType": "object",
-      "configurable": true,
-      "minCardinality": 0,
-      "maxCardinality": 1
-    }
-  ],
-  "expressionSpecification": {
-    "@type": "ExpressionSpecification",
-    "expressionLanguage": "JsonLdExpression",
-    "iri": "https://mycsp.com.au/tio/hospital-surgical-slice/v1.0"
-  },
-  "targetEntitySchema": {
-    "@type": "TargetEntitySchema",
-    "@schemaLocation": "https://mycsp.com.au/schemas/intentManagement/v5/intentExpression/hospital-surgical-slice-spec-v1.19.expression.schema.json"
-  },
+  "specCharacteristic": "...full characteristic catalogue...",
+  "expressionSpecification": "...full expression schema...",
   "_links": {
-    "self": { "href": "/tmf-api/intentManagement/v5/intentSpecification/hospital-surgical-slice-spec-v1.19" },
+    "self": { "href": "/intentManagement/v5/intentSpecification/hospital-surgical-slice-spec-v1.19" },
     "partialUpdate": {
-      "href": "/tmf-api/intentManagement/v5/intentSpecification/hospital-surgical-slice-spec-v1.19",
+      "href": "/intentManagement/v5/intentSpecification/hospital-surgical-slice-spec-v1.19",
       "method": "PATCH",
       "warning": "PATCH is supported for compatibility but discouraged. Prefer PUT for deterministic full replacement."
     }
@@ -483,7 +394,7 @@ Content-Language: en-AU
 ### Request:
 
 ```http
-PUT /tmf-api/intentManagement/v5/intentSpecification/hospital-surgical-slice-spec-v1.19
+PUT /intentManagement/v5/intentSpecification/hospital-surgical-slice-spec-v1.19
 Content-Type: application/json
 Accept: application/json
 If-Match: "intent-spec-hospital-surgical-slice-spec-v1.19-v1"
@@ -498,47 +409,8 @@ If-Match: "intent-spec-hospital-surgical-slice-spec-v1.19-v1"
   "lifecycleStatus": "DRAFT",
   "@type": "IntentSpecification",
   "@baseType": "EntitySpecification",
-  "specCharacteristic": [
-    {
-      "@type": "CharacteristicSpecification",
-      "id": "targets",
-      "name": "targets",
-      "description": "Measurable runtime objectives supported by this IntentSpecification. Detailed target fields and validation rules are defined in the target entity schema for expression.expressionValue.targets.",
-      "valueType": "object",
-      "configurable": true,
-      "minCardinality": 1,
-      "maxCardinality": 1
-    },
-    {
-      "@type": "CharacteristicSpecification",
-      "id": "constraints",
-      "name": "constraints",
-      "description": "Hard runtime requirements supported by this IntentSpecification. Detailed constraint fields and validation rules are defined in the target entity schema for expression.expressionValue.constraints.",
-      "valueType": "object",
-      "configurable": true,
-      "minCardinality": 1,
-      "maxCardinality": 1
-    },
-    {
-      "@type": "CharacteristicSpecification",
-      "id": "preferences",
-      "name": "preferences",
-      "description": "Soft runtime selection preferences supported by this IntentSpecification. Detailed preference fields and validation rules are defined in the target entity schema for expression.expressionValue.preferences.",
-      "valueType": "object",
-      "configurable": true,
-      "minCardinality": 0,
-      "maxCardinality": 1
-    }
-  ],
-  "expressionSpecification": {
-    "@type": "ExpressionSpecification",
-    "expressionLanguage": "JsonLdExpression",
-    "iri": "https://mycsp.com.au/tio/hospital-surgical-slice/v1.0"
-  },
-  "targetEntitySchema": {
-    "@type": "TargetEntitySchema",
-    "@schemaLocation": "https://mycsp.com.au/schemas/intentManagement/v5/intentExpression/hospital-surgical-slice-spec-v1.19.expression.schema.json"
-  }
+  "specCharacteristic": ["...same high-level bucket catalogue as create request..."],
+  "expressionSpecification": { "...": "same authoritative nested bucket schema as create request" }
 }
 ```
 
@@ -547,14 +419,14 @@ If-Match: "intent-spec-hospital-surgical-slice-spec-v1.19-v1"
 ```http
 HTTP/1.1 200 OK
 Content-Type: application/json
-Content-Location: /tmf-api/intentManagement/v5/intentSpecification/hospital-surgical-slice-spec-v1.19
+Content-Location: /intentManagement/v5/intentSpecification/hospital-surgical-slice-spec-v1.19
 ETag: "intent-spec-hospital-surgical-slice-spec-v1.19-v2"
 ```
 
 ```json
 {
   "id": "hospital-surgical-slice-spec-v1.19",
-  "href": "/tmf-api/intentManagement/v5/intentSpecification/hospital-surgical-slice-spec-v1.19",
+  "href": "/intentManagement/v5/intentSpecification/hospital-surgical-slice-spec-v1.19",
   "name": "Hospital Surgical Slice Intent Specification",
   "description": "Updated draft description.",
   "version": "1.19",
@@ -607,7 +479,7 @@ Content-Type: application/json
 ### Request:
 
 ```http
-PATCH /tmf-api/intentManagement/v5/intentSpecification/hospital-surgical-slice-spec-v1.19
+PATCH /intentManagement/v5/intentSpecification/hospital-surgical-slice-spec-v1.19
 Content-Type: application/json
 Accept: application/json
 If-Match: "intent-spec-hospital-surgical-slice-spec-v1.19-v1"
@@ -624,14 +496,14 @@ If-Match: "intent-spec-hospital-surgical-slice-spec-v1.19-v1"
 ```http
 HTTP/1.1 200 OK
 Content-Type: application/json
-Content-Location: /tmf-api/intentManagement/v5/intentSpecification/hospital-surgical-slice-spec-v1.19
+Content-Location: /intentManagement/v5/intentSpecification/hospital-surgical-slice-spec-v1.19
 ETag: "intent-spec-hospital-surgical-slice-spec-v1.19-v2"
 ```
 
 ```json
 {
   "id": "hospital-surgical-slice-spec-v1.19",
-  "href": "/tmf-api/intentManagement/v5/intentSpecification/hospital-surgical-slice-spec-v1.19",
+  "href": "/intentManagement/v5/intentSpecification/hospital-surgical-slice-spec-v1.19",
   "name": "Hospital Surgical Slice Intent Specification",
   "description": "Updated draft description only.",
   "version": "1.19",
@@ -639,9 +511,9 @@ ETag: "intent-spec-hospital-surgical-slice-spec-v1.19-v2"
   "@type": "IntentSpecification",
   "@baseType": "EntitySpecification",
   "_links": {
-    "self": { "href": "/tmf-api/intentManagement/v5/intentSpecification/hospital-surgical-slice-spec-v1.19" },
+    "self": { "href": "/intentManagement/v5/intentSpecification/hospital-surgical-slice-spec-v1.19" },
     "partialUpdate": {
-      "href": "/tmf-api/intentManagement/v5/intentSpecification/hospital-surgical-slice-spec-v1.19",
+      "href": "/intentManagement/v5/intentSpecification/hospital-surgical-slice-spec-v1.19",
       "method": "PATCH",
       "warning": "PATCH is supported for compatibility but discouraged. Prefer PUT for deterministic full replacement."
     }
@@ -656,7 +528,7 @@ ETag: "intent-spec-hospital-surgical-slice-spec-v1.19-v2"
 ### Request:
 
 ```http
-DELETE /tmf-api/intentManagement/v5/intentSpecification/hospital-surgical-slice-spec-v1.19
+DELETE /intentManagement/v5/intentSpecification/hospital-surgical-slice-spec-v1.19
 If-Match: "intent-spec-hospital-surgical-slice-spec-v1.19-v1"
 ```
 
@@ -699,7 +571,7 @@ Activation is not exposed through a custom action endpoint.
 Do not use:
 
 ```http
-POST /tmf-api/intentManagement/v5/intentSpecification/{id}/activate
+POST /intentManagement/v5/intentSpecification/{id}
 ```
 
 Use the existing TMF-style resource update endpoint instead.
@@ -707,7 +579,7 @@ Use the existing TMF-style resource update endpoint instead.
 ### PATCH request:
 
 ```http
-PATCH /tmf-api/intentManagement/v5/intentSpecification/hospital-surgical-slice-spec-v1.20
+PATCH /intentManagement/v5/intentSpecification/hospital-surgical-slice-spec-v1.20
 Content-Type: application/json
 Accept: application/json
 If-Match: "intent-spec-hospital-surgical-slice-spec-v1.20-v1"
@@ -736,14 +608,14 @@ as part of the complete `IntentSpecification` resource.
 ```http
 HTTP/1.1 200 OK
 Content-Type: application/json
-Content-Location: /tmf-api/intentManagement/v5/intentSpecification/hospital-surgical-slice-spec-v1.20
+Content-Location: /intentManagement/v5/intentSpecification/hospital-surgical-slice-spec-v1.20
 ETag: "intent-spec-hospital-surgical-slice-spec-v1.20-v2"
 ```
 
 ```json
 {
   "id": "hospital-surgical-slice-spec-v1.20",
-  "href": "/tmf-api/intentManagement/v5/intentSpecification/hospital-surgical-slice-spec-v1.20",
+  "href": "/intentManagement/v5/intentSpecification/hospital-surgical-slice-spec-v1.20",
   "familyId": "hospital-surgical-slice-spec",
   "name": "Hospital Surgical Slice Intent Specification",
   "version": "1.20",
@@ -751,7 +623,7 @@ ETag: "intent-spec-hospital-surgical-slice-spec-v1.20-v2"
   "previousActiveSpecification": {
     "id": "hospital-surgical-slice-spec-v1.19",
     "lifecycleStatus": "RETIRED",
-    "href": "/tmf-api/intentManagement/v5/intentSpecification/hospital-surgical-slice-spec-v1.19"
+    "href": "/intentManagement/v5/intentSpecification/hospital-surgical-slice-spec-v1.19"
   },
   "@type": "IntentSpecification",
   "@baseType": "EntitySpecification"
@@ -776,7 +648,7 @@ ETag: "intent-spec-hospital-surgical-slice-spec-v1.20-v2"
 ### Request:
 
 ```http
-POST /tmf-api/intentManagement/v5/intentSpecification/hub
+POST /intentManagement/v5/intentSpecification/hub
 Content-Type: application/json
 Accept: application/json
 ```
@@ -793,7 +665,7 @@ Accept: application/json
 
 ```http
 HTTP/1.1 201 Created
-Location: /tmf-api/intentManagement/v5/intentSpecification/hub/sub-001
+Location: /intentManagement/v5/intentSpecification/hub/sub-001
 Content-Type: application/json
 ETag: "subscription-sub-001-v1"
 ```
@@ -805,7 +677,7 @@ ETag: "subscription-sub-001-v1"
   "query": "eventType=IntentSpecificationStatusChangeEvent",
   "@type": "EventSubscription",
   "_links": {
-    "self": { "href": "/tmf-api/intentManagement/v5/intentSpecification/hub/sub-001" }
+    "self": { "href": "/intentManagement/v5/intentSpecification/hub/sub-001" }
   }
 }
 ```
@@ -817,7 +689,7 @@ ETag: "subscription-sub-001-v1"
 ### Request:
 
 ```http
-GET /tmf-api/intentManagement/v5/intentSpecification/hub/sub-001
+GET /intentManagement/v5/intentSpecification/hub/sub-001
 Accept: application/json
 ```
 
@@ -836,7 +708,7 @@ ETag: "subscription-sub-001-v1"
   "query": "eventType=IntentSpecificationStatusChangeEvent",
   "@type": "EventSubscription",
   "_links": {
-    "self": { "href": "/tmf-api/intentManagement/v5/intentSpecification/hub/sub-001" }
+    "self": { "href": "/intentManagement/v5/intentSpecification/hub/sub-001" }
   }
 }
 ```
@@ -848,7 +720,7 @@ ETag: "subscription-sub-001-v1"
 ### Request:
 
 ```http
-DELETE /tmf-api/intentManagement/v5/intentSpecification/hub/sub-001
+DELETE /intentManagement/v5/intentSpecification/hub/sub-001
 If-Match: "subscription-sub-001-v1"
 ```
 
@@ -912,7 +784,7 @@ They are not internal fulfilment events and must not expose II MS semantic valid
   "event": {
     "intentSpecification": {
       "id": "hospital-surgical-slice-spec-v1.19",
-      "href": "/tmf-api/intentManagement/v5/intentSpecification/hospital-surgical-slice-spec-v1.19",
+      "href": "/intentManagement/v5/intentSpecification/hospital-surgical-slice-spec-v1.19",
       "name": "Hospital Surgical Slice Intent Specification",
       "version": "1.19",
       "lifecycleStatus": "ACTIVE",
@@ -948,7 +820,7 @@ They are not internal fulfilment events and must not expose II MS semantic valid
   "event": {
     "intentSpecification": {
       "id": "hospital-surgical-slice-spec-v1.19",
-      "href": "/tmf-api/intentManagement/v5/intentSpecification/hospital-surgical-slice-spec-v1.19",
+      "href": "/intentManagement/v5/intentSpecification/hospital-surgical-slice-spec-v1.19",
       "name": "Hospital Surgical Slice Intent Specification",
       "version": "1.19",
       "lifecycleStatus": "DRAFT",
@@ -978,7 +850,7 @@ They are not internal fulfilment events and must not expose II MS semantic valid
   "event": {
     "intentSpecification": {
       "id": "hospital-surgical-slice-spec-v1.19",
-      "href": "/tmf-api/intentManagement/v5/intentSpecification/hospital-surgical-slice-spec-v1.19",
+      "href": "/intentManagement/v5/intentSpecification/hospital-surgical-slice-spec-v1.19",
       "name": "Hospital Surgical Slice Intent Specification",
       "version": "1.19",
       "lifecycleStatus": "DRAFT",
@@ -1015,7 +887,7 @@ They are not internal fulfilment events and must not expose II MS semantic valid
   "event": {
     "intentSpecification": {
       "id": "hospital-surgical-slice-spec-v1.20",
-      "href": "/tmf-api/intentManagement/v5/intentSpecification/hospital-surgical-slice-spec-v1.20",
+      "href": "/intentManagement/v5/intentSpecification/hospital-surgical-slice-spec-v1.20",
       "name": "Hospital Surgical Slice Intent Specification",
       "version": "1.20",
       "lifecycleStatus": "ACTIVE",
@@ -1047,7 +919,7 @@ They are not internal fulfilment events and must not expose II MS semantic valid
   "event": {
     "intentSpecification": {
       "id": "hospital-surgical-slice-spec-v1.18-draft",
-      "href": "/tmf-api/intentManagement/v5/intentSpecification/hospital-surgical-slice-spec-v1.18-draft",
+      "href": "/intentManagement/v5/intentSpecification/hospital-surgical-slice-spec-v1.18-draft",
       "name": "Hospital Surgical Slice Intent Specification",
       "version": "1.18-draft",
       "lifecycleStatus": "DRAFT",
@@ -1067,7 +939,11 @@ They are not internal fulfilment events and must not expose II MS semantic valid
 
 - `@baseType` is `EntitySpecification`, not `ResourceSpecification`.
 - `specCharacteristic` is the high-level characteristic catalogue.
-- `expressionSpecification` is the TMF expression contract reference. Detailed request-shape validation is published through `targetEntitySchema.@schemaLocation` and described as implementation guidance.
+- `expressionSpecification` is the authoritative request-shape schema.
+
+- `specCharacteristic` exposes only the high-level semantic buckets: `targets`, `constraints`, and `preferences`, with normal characteristic metadata such as `valueType`, `configurable`, `minCardinality`, and `maxCardinality`.
+- Detailed field-level rules for `maxLatencyMs`, `priority`, `redundancyRequired`, `timeWindow`, and `preferredAccessTechnology` belong in `expressionSpecification.schema`, not as separate top-level `specCharacteristic` entries.
+- `expressionSpecification.schema` defines `targets`, `constraints`, and `preferences` as nested first-class objects.
 - `characteristicValueSpecification` is used only for defaults, examples, or constrained allowed values where useful.
 - Numeric SLA values in `characteristicValueSpecification` are illustrative/default guidance only, not semantic enforcement.
 - ID MS validates resource shape and syntax.
@@ -1091,11 +967,11 @@ For strict TMF alignment, ID MS supports the TMF-style `IntentSpecification` ope
 
 | **Operation** | **Endpoint** | **Position** |
 |---|---|---|
-| Create | `POST /tmf-api/intentManagement/v5/intentSpecification` | TMF-aligned |
-| List | `GET /tmf-api/intentManagement/v5/intentSpecification` | TMF-aligned |
-| Retrieve | `GET /tmf-api/intentManagement/v5/intentSpecification/{id}` | TMF-aligned |
-| Partial update | `PATCH /tmf-api/intentManagement/v5/intentSpecification/{id}` | TMF-aligned |
-| Delete | `DELETE /tmf-api/intentManagement/v5/intentSpecification/{id}` | TMF-aligned |
+| Create | `POST /intentManagement/v5/intentSpecification` | TMF-aligned |
+| List | `GET /intentManagement/v5/intentSpecification` | TMF-aligned |
+| Retrieve | `GET /intentManagement/v5/intentSpecification/{id}` | TMF-aligned |
+| Partial update | `PATCH /intentManagement/v5/intentSpecification/{id}` | TMF-aligned |
+| Delete | `DELETE /intentManagement/v5/intentSpecification/{id}` | TMF-aligned |
 | Event subscription | `/hub` and `/hub/{id}` | Strict TMF route form where required |
 
 ### Accepted platform extensions:
@@ -1106,9 +982,9 @@ For ID MS, accepted platform extensions are:
 
 | **Extension** | **Purpose** | **Rule** |
 |---|---|---|
-| `PUT /tmf-api/intentManagement/v5/intentSpecification/{id}` | Deterministic full replacement | Preferred platform update method where supported |
-| `/tmf-api/intentManagement/v5/intentSpecification/hub` | Domain-scoped event subscription route | Allowed as a clearer domain-owned route when deliberately chosen |
-| `/tmf-api/intentManagement/v5/intentSpecification/hub/{id}` | Domain-scoped subscription delete/retrieve route | Allowed as a clearer domain-owned route when deliberately chosen |
+| `PUT /intentManagement/v5/intentSpecification/{id}` | Deterministic full replacement | Preferred platform update method where supported |
+| `/intentManagement/v5/intentSpecification/hub` | Domain-scoped event subscription route | Allowed as a clearer domain-owned route when deliberately chosen |
+| `/intentManagement/v5/intentSpecification/hub/{id}` | Domain-scoped subscription delete/retrieve route | Allowed as a clearer domain-owned route when deliberately chosen |
 
 ### Update method rule:
 
@@ -1125,7 +1001,7 @@ Activation/retirement is represented as a resource update to `IntentSpecificatio
 Use:
 
 ```http
-PATCH /tmf-api/intentManagement/v5/intentSpecification/{id}
+PATCH /intentManagement/v5/intentSpecification/{id}
 ```
 
 for strict TMF compatibility.
@@ -1133,7 +1009,7 @@ for strict TMF compatibility.
 Use:
 
 ```http
-PUT /tmf-api/intentManagement/v5/intentSpecification/{id}
+PUT /intentManagement/v5/intentSpecification/{id}
 ```
 
 as a platform extension when performing deterministic full replacement.
@@ -1141,7 +1017,7 @@ as a platform extension when performing deterministic full replacement.
 Do not expose custom lifecycle action endpoints such as:
 
 ```http
-POST /tmf-api/intentManagement/v5/intentSpecification/{id}/activate
+POST /intentManagement/v5/intentSpecification/{id}/activate
 ```
 
 ### Hub route rule:
@@ -1149,16 +1025,16 @@ POST /tmf-api/intentManagement/v5/intentSpecification/{id}/activate
 For strict TMF route compatibility, use:
 
 ```http
-POST /tmf-api/intentManagement/v5/hub
-DELETE /tmf-api/intentManagement/v5/hub/{id}
+POST /intentManagement/v5/hub
+DELETE /intentManagement/v5/hub/{id}
 ```
 
 For domain-scoped platform extension routing, ID MS may expose:
 
 ```http
-POST /tmf-api/intentManagement/v5/intentSpecification/hub
-GET /tmf-api/intentManagement/v5/intentSpecification/hub/{id}
-DELETE /tmf-api/intentManagement/v5/intentSpecification/hub/{id}
+POST /intentManagement/v5/intentSpecification/hub
+GET /intentManagement/v5/intentSpecification/hub/{id}
+DELETE /intentManagement/v5/intentSpecification/hub/{id}
 ```
 
 The domain-scoped route is acceptable only as a documented platform extension and must preserve the same subscription semantics.

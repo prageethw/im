@@ -31,22 +31,6 @@ Internal events are state/progress/outcome facts, not point-to-point commands fo
 | Sensitive data | Do not include secrets, tokens, credentials, or raw internal stack traces |
 | External exposure | Internal payloads are not directly exposed as external TMF events |
 
-
-### TMF external wrapper separation rule
-
-Internal events do not use the external TMF921 `IntentExpression` wrapper.
-
-External REST resources carry domain payloads inside `expression.expressionValue` using `@type: JsonLdExpression` by default. Internal events carry the same semantic content directly as native JSON, for example:
-
-```text
-IntentValidatedEvent.body.expression.targets
-IntentResolvedEvent.body.targets
-IntentOptimisedEvent.body.targets
-IntentAssuranceEvent.body.targets
-```
-
-This keeps the external API TMF921-aligned while keeping internal event contracts lean and stable.
-
 ### Stable event ontology rule
 
 Internal events are not raw KP-schema projections.
@@ -60,6 +44,13 @@ Use direct `location`, `serviceType`, and `serviceClass` fields outside KP. Do n
 Internal event `references` should use named resource reference objects with `id` and `href` where available.
 
 Use `correlationId` as a common scalar reference.
+
+
+### Provider metadata rule
+
+`provider` is KP/resource-inventory metadata only and must not be included by default in event-facing resource entries such as `IntentResolvedEvent.resources[]` or `IntentOptimisedEvent.resources[]`.
+
+Reintroduce an event-facing provider-like attribute only if provider-aware optimisation is explicitly baselined later, preferably using a deliberate name such as `resourceProvider` or `providerGroup` depending on the requirement.
 
 ### Optimiser status and evaluation rule
 

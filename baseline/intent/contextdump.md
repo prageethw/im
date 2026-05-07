@@ -721,90 +721,165 @@ Date: 2026-05-07T02:53:16.079859+00:00
 - Replaced abbreviated Intent response payloads with complete payloads using `expression.targets`, `expression.constraints`, and `expression.preferences`.
 - Confirmed IC/ID spec and design Markdown JSON blocks validate.
 
-## Baseline update — TMF921 external expression compliance split:
 
-Date: 2026-05-07
+## Baseline update — IntentReport observation results and degraded-report samples:
+
+Date: 2026-05-07T09:50:00+00:00
 
 ### Updated files:
-- `id_ms_design_brief.md`
-- `id_ms_specification.md`
 - `ic_ms_design_brief.md`
 - `ic_ms_specification.md`
 - `ia_ms_design_brief.md`
 - `contextdump.md`
 
 ### Baseline:
-External TMF-facing REST resources must use TMF921 resource shapes.
+`IntentReport` is a curated external report projection owned by IC MS. It is based on IA MS assurance truth, but it is not raw assurance telemetry.
 
-External `Intent.expression` and `IntentReport.expression` use the TMF921 `IntentExpression` wrapper with:
+`IntentReport` must include curated observation results whenever they are needed to explain lifecycle/status and target compliance.
 
-```text
-expression.@type
-expression.iri
-expression.expressionValue
-```
+Observation results are especially important for `Degraded` and `Failed` reports because the external report must explain why the external lifecycle/status projection changed by showing target values beside current observed metrics.
 
-Use `@type: JsonLdExpression` by default in TMF921-facing examples.
+### IntentReport areas:
+- identity and linkage
+- current lifecycle/status
+- assurance summary
+- target summary
+- observation summary
+- service summary
+- resource summary
+- evaluation summary
+- optional version/history summary
+- references
+- report metadata
 
-The canonical domain buckets remain `targets`, `constraints`, and `preferences`, but on external REST resources they are carried inside `expression.expressionValue`.
+### Observation rules:
+For `Active` / healthy reports, observations should remain lean and normally include selected/applied resources only.
 
-### External to internal mapping:
+For `Degraded` or `Failed` reports, observations should include the relevant observed metrics required to explain lifecycle/status and target-compliance outcome.
 
-```text
-External Intent.expression.expressionValue.targets
--> IntentValidatedEvent.body.expression.targets
--> IntentResolvedEvent.body.targets
--> IntentOptimisedEvent.body.targets
--> IntentAssuranceEvent.body.targets
--> External IntentReport.expression.expressionValue.targetSummary
-```
+`targetSummary` compares requested/resolved targets against observed values.
 
-Internal events and service handoffs keep native JSON buckets directly and do not use the TMF expression wrapper.
+`observationSummary` carries curated observed metrics per relevant resource.
 
-### IntentSpecification baseline:
-`IntentSpecification.specCharacteristic` is the high-level catalogue/discovery view using TMF `CharacteristicSpecification` entries. When present, each entry includes at least `@type`, `name`, and `valueType`.
+Separate `degradationSummary`, `failureSummary`, and `reoptimisationSummary` sections are not baselined. The report should use `targetSummary`, `observationSummary`, `lifecycleStatus`, `statusReason`, and `summary` to explain current state.
 
-`IntentSpecification.expressionSpecification` is the TMF expression contract reference and uses:
+### Exposure rule:
+`IntentReport` may expose curated observation results and target comparisons.
 
-```json
-{
-  "@type": "ExpressionSpecification",
-  "expressionLanguage": "JsonLdExpression",
-  "iri": "https://mycsp.com.au/tio/hospital-surgical-slice/v1.0"
-}
-```
+`IntentReport` must not expose raw telemetry streams, raw optimiser decisions, raw `t7.knowledge plane` data, raw callback payloads, internal candidate scoring, internal Kafka payloads, or the full internal `IntentAssuranceEvent` body unless deliberately curated into an externally safe report shape.
 
-Detailed platform validation schema for `expression.expressionValue` is referenced through `targetEntitySchema.@schemaLocation` and documented as implementation guidance. Do not expose `x-platformExpressionValueSchema` in external TMF-facing resource examples; it must not replace the TMF `ExpressionSpecification` shape.
+### Engineering samples:
+The IC MS design brief and IC MS specification now include concrete healthy and degraded report samples so engineers can understand the intended report shape and how observations should be represented.
 
-### IntentReport baseline:
-External `IntentReport` carries curated report facts inside `IntentReport.expression.expressionValue`.
 
-Default fact-only report sections remain:
+## Baseline update — IntentReport simplified target/current metrics model:
 
-```text
-expression.expressionValue.lifecycleStatus
-expression.expressionValue.summary / statusReason
-expression.expressionValue.targetSummary
-expression.expressionValue.observationSummary
-```
+Date: 2026-05-07T10:05:00+00:00
 
-`targetSummary` remains fact-only by default and does not include aggregate `result` or per-target `status` labels.
-## Baseline update — TMF921 strict interface cleanup for IC MS and ID MS:
+### Updated files:
+- `ic_ms_design_brief.md`
+- `ic_ms_specification.md`
+- `ia_ms_design_brief.md`
+- `contextdump.md`
+
+### Baseline:
+`IntentReport` does not use separate `degradationSummary` or `reoptimisationSummary` sections by default.
+
+The external report should explain degraded, failed, or re-optimisation-relevant states using:
+- `lifecycleStatus`
+- `statusReason`
+- `summary`
+- `targetSummary`
+- `observationSummary`
+
+### Rationale:
+If `targetSummary` already shows each resolved target beside the current observed value, and `observationSummary` shows the current metrics per relevant resource, separate degradation and re-optimisation sections duplicate the same evidence and create another place for inconsistent truth.
+
+### Rule:
+For `Degraded` reports, include target/current metric comparisons that show which targets are violated.
+
+For healthy `Active` reports, keep observations lean and normally include selected/applied resources only.
+
+For `Failed` reports, include only the relevant target/current metric evidence and status reason needed to explain the failure.
+
+`IntentReport` must not expose raw telemetry streams, raw optimiser decisions, raw KP data, raw callback payloads, internal candidate scoring, or full internal event bodies.
+
+
+## Baseline update — IntentReport targetSummary fact-only values:
+
+Date: 2026-05-07
+
+### Updated files:
+- `ic_ms_design_brief.md`
+- `ic_ms_specification.md`
+- `ia_ms_design_brief.md`
+
+### Baseline:
+`IntentReport.targetSummary` is fact-only by default. It should expose resolved target values and current observed values, but should not include aggregate interpretation fields such as `result: Compliant` or `result: NonCompliant`, and should not include per-target `status` labels such as `Compliant` or `Violated` by default. Consumers decide compliance from the target and observed values. Use `lifecycleStatus`, `statusReason`, and `summary` for the projected state narrative.
+
+## Baseline correction — restore full IntentSpecification and bucket-only specCharacteristic:
 
 Date: 2026-05-07
 
 ### Updated files:
 - `id_ms_design_brief.md`
 - `id_ms_specification.md`
-- `ic_ms_design_brief.md`
-- `ic_ms_specification.md`
+- `contextdump.md`
 
 ### Baseline:
-IC MS and ID MS external interfaces use the strict TMF921 public base path `/tmf-api/intentManagement/v5`. Shorter `/intentManagement/v5` paths are internal/documentation shorthand only.
+The `IntentSpecification` must not be reduced to only the short `specCharacteristic` bucket list. The full create request must retain the complete `IntentSpecification` body, including `expressionSpecification` with the authoritative JSON Schema.
 
-External `Intent.expression` and `IntentReport.expression` use the TMF921 expression wrapper with `@type`, `iri`, and `expressionValue`; `JsonLdExpression` is the default external expression type. Domain buckets such as `targets`, `constraints`, and `preferences` remain inside `expression.expressionValue` externally and remain direct native JSON buckets in internal events.
+`specCharacteristic` is simplified to the high-level catalogue/discovery buckets only:
+- `targets`
+- `constraints`
+- `preferences`
 
-`IntentSpecification.specCharacteristic` remains the high-level TMF `CharacteristicSpecification` catalogue using `@type`, `name`, and `valueType`. Detailed validation for `expression.expressionValue` is referenced through `targetEntitySchema.@schemaLocation` and documented as implementation guidance. Do not expose `x-platformExpressionValueSchema` in external TMF-facing resource examples.
+Detailed field-level rules for `maxLatencyMs`, `minAvailabilityPercent`, `maxJitterMs`, `maxPacketLossPercent`, `priority`, `redundancyRequired`, `timeWindow`, and `preferredAccessTechnology` belong under `expressionSpecification.schema`.
 
-`IntentReport` external examples include TMF mandatory fields such as `creationDate`, `name`, and `expression`. Curated report facts such as `targetSummary` and `observationSummary` sit inside `expression.expressionValue`. `DELETE /intent/{intentId}/intentReport/{id}` is supported for TMF921 operation compliance with retained/tombstoned report projection behaviour by default, not hard physical deletion unless retention policy explicitly allows it.
+### Correct rule:
+`specCharacteristic` advertises the semantic buckets. `expressionSpecification.schema` defines the full nested request shape. Do not wipe out or replace the full `IntentSpecification` with only the bucket catalogue.
 
+
+## Baseline validation — file integrity and IntentReport simplification check:
+
+Date: 2026-05-07T09:58:00+10:00
+
+### Checked files:
+- `id_ms_design_brief.md`
+- `id_ms_specification.md`
+- `ic_ms_design_brief.md`
+- `ic_ms_specification.md`
+- `intent_internal_events_specification.md`
+- `ia_ms_design_brief.md`
+- `kp_master_config.md`
+
+### Result:
+No complete file wipe/replacement was found in the active baseline files. The major expected sections remain present across the ID MS, IC MS, IA MS, internal events, and KP files.
+
+### Corrected during validation:
+- Removed remaining confusing active-baseline wording that referenced separate degradation/re-optimisation report sections.
+- Removed `Evaluation summary` wording from the IC MS IntentReport areas table because it implied aggregate interpretation fields such as `result` or per-target status.
+- Kept `IntentReport.targetSummary` fact-only: target name, target value, observed value, and unit.
+- Kept `IntentReport.observationSummary` as curated observed metrics per relevant resource.
+
+### Active IntentReport rule:
+`IntentReport` explains current state through `lifecycleStatus`, `statusReason`, `summary`, `targetSummary`, and `observationSummary`. It does not include aggregate compliance interpretation or separate degradation/re-optimisation interpretation sections by default.
+
+
+## Baseline refinement — IntentSpecification specCharacteristic bucket metadata:
+
+Date: 2026-05-07T10:04:34.046733+00:00
+
+### Updated files:
+- `id_ms_design_brief.md`
+- `id_ms_specification.md`
+
+### Baseline:
+`IntentSpecification.specCharacteristic` must not be reduced to bare `id`, `name`, and `description` entries only. The field-level characteristics such as `maxLatencyMs`, `priority`, `timeWindow`, and `preferredAccessTechnology` should not be duplicated as separate top-level `specCharacteristic` entries, but the three bucket characteristics still carry normal characteristic metadata.
+
+The active `specCharacteristic` catalogue is:
+- `targets` with `valueType: object`, `configurable: true`, `minCardinality: 1`, `maxCardinality: 1`
+- `constraints` with `valueType: object`, `configurable: true`, `minCardinality: 1`, `maxCardinality: 1`
+- `preferences` with `valueType: object`, `configurable: true`, `minCardinality: 0`, `maxCardinality: 1`
+
+Detailed nested field rules remain authoritative under `expressionSpecification.schema.properties.targets`, `expressionSpecification.schema.properties.constraints`, and `expressionSpecification.schema.properties.preferences`.

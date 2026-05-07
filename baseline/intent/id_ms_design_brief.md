@@ -13,13 +13,8 @@ intent-definition-ms
 Base path:
 
 ```http
-/tmf-api/intentManagement/v5
+/intentManagement/v5
 ```
-
-### TMF921 public base path rule:
-
-The strict TMF921 public route exposed through NGW is `/tmf-api/intentManagement/v5`. Any shorter `/intentManagement/v5` route is treated as an internal/documentation shorthand only and must not be the strict external conformance route.
-
 
 ## IntentSpecification resource APIs:
 
@@ -34,27 +29,18 @@ The strict TMF921 public route exposed through NGW is `/tmf-api/intentManagement
 
 ## Hub subscription APIs:
 
-Strict TMF route form:
-
 | **Purpose** | **Method** | **Endpoint** |
 |---|---:|---|
-| Create event subscription | `POST` | `/hub` |
-| Delete event subscription | `DELETE` | `/hub/{id}` |
-
-Accepted domain-scoped platform extension:
-
-| **Purpose** | **Method** | **Endpoint** |
-|---|---:|---|
-| Create specification event subscription | `POST` | `/intentSpecification/hub` |
-| Retrieve specification event subscription | `GET` | `/intentSpecification/hub/{id}` |
-| Delete specification event subscription | `DELETE` | `/intentSpecification/hub/{id}` |
+| Create event subscription | `POST` | `/intentSpecification/hub` |
+| Delete event subscription | `DELETE` | `/intentSpecification/hub/{id}` |
+| Retrieve subscription by ID | `GET` | `/intentSpecification/hub/{id}` |
 
 ## Query conventions:
 
 List endpoint:
 
 ```http
-GET /tmf-api/intentManagement/v5/intentSpecification?offset=0&limit=20&lifecycleStatus=ACTIVE&name=Hospital%20Surgical%20Slice&version=1.19
+GET /intentManagement/v5/intentSpecification?offset=0&limit=20&lifecycleStatus=ACTIVE&name=Hospital%20Surgical%20Slice&version=1.19
 ```
 
 Supported query params:
@@ -133,51 +119,10 @@ Content-Type: application/json
 }
 ```
 
-
-## TMF921 IntentSpecification expression contract baseline:
-
-ID MS remains TMF921-facing for `IntentSpecification` resources.
-
-### specCharacteristic rule:
-
-`specCharacteristic` is the high-level catalogue/discovery view only. It advertises the supported semantic buckets using TMF `CharacteristicSpecification` entries.
-
-Each `specCharacteristic` entry must include at least:
-
-```text
-@type
-name
-valueType
-```
-
-The current bucket characteristics are:
-
-```text
-targets
-constraints
-preferences
-```
-
-Detailed field-level rules such as `maxLatencyMs`, `priority`, `timeWindow`, and `preferredAccessTechnology` are not duplicated as separate top-level `specCharacteristic` entries by default. They are defined in the platform expression-value schema.
-
-### expressionSpecification rule:
-
-`expressionSpecification` is the TMF expression contract reference. It uses:
-
-```json
-{
-  "@type": "ExpressionSpecification",
-  "expressionLanguage": "JsonLdExpression",
-  "iri": "https://mycsp.com.au/tio/hospital-surgical-slice/v1.0"
-}
-```
-
-The detailed platform validation schema for `Intent.expression.expressionValue` is referenced through `targetEntitySchema.@schemaLocation` and described as implementation guidance. It must not replace the TMF `ExpressionSpecification` shape. Do not embed vendor-extension fields such as `x-platformExpressionValueSchema` in external TMF-facing resource examples.
-
 ## Create IntentSpecification:
 
 ```http
-POST /tmf-api/intentManagement/v5/intentSpecification
+POST /intentManagement/v5/intentSpecification
 Content-Type: application/json
 Accept: application/json
 ```
@@ -186,7 +131,7 @@ Success:
 
 ```http
 HTTP/1.1 201 Created
-Location: /tmf-api/intentManagement/v5/intentSpecification/hospital-surgical-slice-spec-v1.19
+Location: /intentManagement/v5/intentSpecification/hospital-surgical-slice-spec-v1.19
 Content-Type: application/json
 Content-Language: en-AU
 ETag: "intent-spec-hospital-surgical-slice-spec-v1.19-v1"
@@ -203,7 +148,7 @@ Notes:
 ## Retrieve IntentSpecification:
 
 ```http
-GET /tmf-api/intentManagement/v5/intentSpecification/hospital-surgical-slice-spec-v1.19
+GET /intentManagement/v5/intentSpecification/hospital-surgical-slice-spec-v1.19
 Accept: application/json
 ```
 
@@ -213,7 +158,7 @@ Success:
 HTTP/1.1 200 OK
 Content-Type: application/json
 Content-Language: en-AU
-Content-Location: /tmf-api/intentManagement/v5/intentSpecification/hospital-surgical-slice-spec-v1.19
+Content-Location: /intentManagement/v5/intentSpecification/hospital-surgical-slice-spec-v1.19
 ETag: "intent-spec-hospital-surgical-slice-spec-v1.19-v1"
 Last-Modified: Sat, 18 Apr 2026 02:00:00 GMT
 Cache-Control: private, max-age=300
@@ -228,7 +173,7 @@ Notes:
 ## Full update IntentSpecification:
 
 ```http
-PUT /tmf-api/intentManagement/v5/intentSpecification/hospital-surgical-slice-spec-v1.19
+PUT /intentManagement/v5/intentSpecification/hospital-surgical-slice-spec-v1.19
 Content-Type: application/json
 Accept: application/json
 If-Match: "intent-spec-hospital-surgical-slice-spec-v1.19-v1"
@@ -239,7 +184,7 @@ Success:
 ```http
 HTTP/1.1 200 OK
 Content-Type: application/json
-Content-Location: /tmf-api/intentManagement/v5/intentSpecification/hospital-surgical-slice-spec-v1.19
+Content-Location: /intentManagement/v5/intentSpecification/hospital-surgical-slice-spec-v1.19
 ETag: "intent-spec-hospital-surgical-slice-spec-v1.19-v2"
 ```
 
@@ -271,7 +216,7 @@ Content-Type: application/json
 ## Partial update IntentSpecification:
 
 ```http
-PATCH /tmf-api/intentManagement/v5/intentSpecification/hospital-surgical-slice-spec-v1.19
+PATCH /intentManagement/v5/intentSpecification/hospital-surgical-slice-spec-v1.19
 Content-Type: application/json
 Accept: application/json
 If-Match: "intent-spec-hospital-surgical-slice-spec-v1.19-v1"
@@ -289,7 +234,7 @@ Rules:
 ## Delete IntentSpecification:
 
 ```http
-DELETE /tmf-api/intentManagement/v5/intentSpecification/hospital-surgical-slice-spec-v1.19
+DELETE /intentManagement/v5/intentSpecification/hospital-surgical-slice-spec-v1.19
 If-Match: "intent-spec-hospital-surgical-slice-spec-v1.19-v1"
 ```
 
@@ -308,7 +253,7 @@ Rules:
 ## Hub create subscription:
 
 ```http
-POST /tmf-api/intentManagement/v5/intentSpecification/hub
+POST /intentManagement/v5/intentSpecification/hub
 Content-Type: application/json
 Accept: application/json
 ```
@@ -325,7 +270,7 @@ Success:
 
 ```http
 HTTP/1.1 201 Created
-Location: /tmf-api/intentManagement/v5/intentSpecification/hub/sub-001
+Location: /intentManagement/v5/intentSpecification/hub/sub-001
 Content-Type: application/json
 ETag: "subscription-sub-001-v1"
 ```
@@ -338,7 +283,7 @@ ETag: "subscription-sub-001-v1"
   "@type": "EventSubscription",
   "_links": {
     "self": {
-      "href": "/tmf-api/intentManagement/v5/intentSpecification/hub/sub-001"
+      "href": "/intentManagement/v5/intentSpecification/hub/sub-001"
     }
   }
 }
@@ -356,7 +301,7 @@ IntentSpecificationDeleteEvent
 ## Hub delete subscription:
 
 ```http
-DELETE /tmf-api/intentManagement/v5/intentSpecification/hub/sub-001
+DELETE /intentManagement/v5/intentSpecification/hub/sub-001
 If-Match: "subscription-sub-001-v1"
 ```
 
@@ -502,8 +447,8 @@ ID MS caching applies only to GET responses.
 Caching is baselined for:
 
 ```http
-GET /tmf-api/intentManagement/v5/intentSpecification/{id}
-GET /tmf-api/intentManagement/v5/intentSpecification
+GET /intentManagement/v5/intentSpecification/{id}
+GET /intentManagement/v5/intentSpecification
 ```
 
 No caching strategy is baselined for non-GET operations.
@@ -513,7 +458,7 @@ No caching strategy is baselined for non-GET operations.
 For a single `IntentSpecification`:
 
 ```http
-GET /tmf-api/intentManagement/v5/intentSpecification/hospital-surgical-slice-spec-v1.19
+GET /intentManagement/v5/intentSpecification/hospital-surgical-slice-spec-v1.19
 ```
 
 ID MS may return:
@@ -537,7 +482,7 @@ Meaning:
 For list reads:
 
 ```http
-GET /tmf-api/intentManagement/v5/intentSpecification?offset=0&limit=20&lifecycleStatus=ACTIVE
+GET /intentManagement/v5/intentSpecification?offset=0&limit=20&lifecycleStatus=ACTIVE
 ```
 
 ID MS may return:
@@ -568,7 +513,7 @@ Cache-Control: no-cache
 Example:
 
 ```http
-GET /tmf-api/intentManagement/v5/intentSpecification/hospital-surgical-slice-spec-v1.19
+GET /intentManagement/v5/intentSpecification/hospital-surgical-slice-spec-v1.19
 Cache-Control: no-cache
 ```
 
@@ -604,9 +549,9 @@ If-Match
 Applies to:
 
 ```http
-PUT /tmf-api/intentManagement/v5/intentSpecification/{id}
-PATCH /tmf-api/intentManagement/v5/intentSpecification/{id}
-DELETE /tmf-api/intentManagement/v5/intentSpecification/{id}
+PUT /intentManagement/v5/intentSpecification/{id}
+PATCH /intentManagement/v5/intentSpecification/{id}
+DELETE /intentManagement/v5/intentSpecification/{id}
 ```
 
 and any activation/state-changing operation where stale updates could overwrite newer resource state.
@@ -1229,3 +1174,69 @@ The ID MS design brief is internally consistent for the current baseline.
 The design keeps ID MS focused on design-time `IntentSpecification` resource ownership, lifecycle/version governance, syntax/resource-shape validation, ETag/If-Match concurrency, GET-only caching, external `IntentSpecification*Event` publication, PostgreSQL-compatible persistence, and technical observability/audit.
 
 ID MS does not own semantic validation, policy validation, candidate/resource feasibility, optimisation, runtime assurance, telemetry, or callback ingestion.
+
+## IntentSpecification semantic bucket baseline — targets, constraints, and preferences:
+
+### Purpose:
+
+`IntentSpecification.specCharacteristic` is the high-level catalogue/discovery view only.
+
+It should advertise the three semantic buckets supported by the specification:
+
+```json
+"specCharacteristic": [
+  {
+    "id": "targets",
+    "name": "targets",
+    "description": "Measurable runtime objectives supported by this IntentSpecification. Detailed target fields and validation rules are defined in expressionSpecification.schema.properties.targets.",
+    "valueType": "object",
+    "configurable": true,
+    "minCardinality": 1,
+    "maxCardinality": 1
+  },
+  {
+    "id": "constraints",
+    "name": "constraints",
+    "description": "Hard runtime requirements supported by this IntentSpecification. Detailed constraint fields and validation rules are defined in expressionSpecification.schema.properties.constraints.",
+    "valueType": "object",
+    "configurable": true,
+    "minCardinality": 1,
+    "maxCardinality": 1
+  },
+  {
+    "id": "preferences",
+    "name": "preferences",
+    "description": "Soft runtime selection preferences supported by this IntentSpecification. Detailed preference fields and validation rules are defined in expressionSpecification.schema.properties.preferences.",
+    "valueType": "object",
+    "configurable": true,
+    "minCardinality": 0,
+    "maxCardinality": 1
+  }
+]
+```
+
+### Detailed schema rule:
+
+`IntentSpecification.expressionSpecification` remains the authoritative syntax/schema definition.
+
+Detailed field-level rules belong under `expressionSpecification.schema`, not as separate top-level `specCharacteristic` entries.
+
+The expression schema must define these first-class nested buckets:
+
+```text
+targets
+constraints
+preferences
+```
+
+### Bucket meanings:
+
+| **Bucket** | **Meaning** | **Examples** |
+|---|---|---|
+| `targets` | Measurable runtime objectives | `maxLatencyMs`, `minAvailabilityPercent`, `maxJitterMs`, `maxPacketLossPercent` |
+| `constraints` | Hard runtime requirements or required non-target inputs | `priority`, `redundancyRequired`, `timeWindow` |
+| `preferences` | Soft runtime selection guidance | `preferredAccessTechnology` |
+
+### Baseline statement:
+
+**Do not duplicate nested target, constraint, or preference fields as separate top-level `specCharacteristic` entries. `specCharacteristic` exposes only the high-level buckets, but each bucket characteristic still carries normal characteristic metadata such as `valueType`, `configurable`, `minCardinality`, and `maxCardinality`. `expressionSpecification.schema` defines the detailed nested request shape for `targets`, `constraints`, and `preferences`.**
