@@ -440,7 +440,7 @@ User
 -> OEX UI
 -> OEX APIs
 -> OGW
--> OEX Screen Builder MS
+-> OSB MS
 -> NGW
 -> OD MS
 ```
@@ -656,4 +656,13 @@ User
 -> OC MS Inbox
 -> OC MS DB
 -> User polls GET /optimisation/{id}
+```
+
+OD MS role in the detailed flow:
+
+```text
+OC MS -> OD MS:
+  OC MS calls OD MS over mTLS to validate the referenced ACTIVE OptimisationSpecification and request contract.
+
+OD MS does not own runtime persistence, OC MS Outbox, Kafka worker execution, OC MS Inbox, or result projection.
 ```
