@@ -109,7 +109,7 @@ HTTP/1.1 412 Precondition Failed
 
 # Baselined OD MS / Optimisation-Definition-MS REST Specification
 
-## 1. OD MS summary
+## OD MS summary
 
 Optimisation-Definition-MS (OD MS) owns the definition side of the optimisation platform. Its responsibility is to publish and govern the externally visible optimisation capability contract, called `OptimisationSpecification`.
 
@@ -132,7 +132,7 @@ In one sentence:
 OD MS is the governed catalogue of optimisation capabilities; it tells callers what inputs they must provide, while the platform privately owns how those inputs are translated into deterministic Gurobi execution.
 ```
 
-## 2. OD MS endpoint set
+## OD MS endpoint set
 
 ```http
 # List/search OptimisationSpecification resources.
@@ -154,7 +154,7 @@ PUT /optimisationSpecification/{id}
 DELETE /optimisationSpecification/{id}
 ```
 
-## 3. OptimisationSpecification lifecycle
+## OptimisationSpecification lifecycle
 
 ```text
 DRAFT
@@ -184,7 +184,7 @@ DELETED
 ARCHIVED
 ```
 
-## 4. Version activation rule
+## Version activation rule
 
 ```text
 Only one ACTIVE OptimisationSpecification is allowed per specificationKey.
@@ -221,7 +221,7 @@ Transactional activation logic:
 8. Commit atomically.
 ```
 
-## 5. Public OptimisationSpecification shape
+## Public OptimisationSpecification shape
 
 The public OD MS resource exposes only the caller-facing input contract.
 
@@ -347,7 +347,7 @@ Example resource:
 }
 ```
 
-## 6. POST /optimisationSpecification
+## POST /optimisationSpecification
 
 Creates a new `OptimisationSpecification`.
 
@@ -509,7 +509,7 @@ Content-Type: application/json
 }
 ```
 
-## 7. GET /optimisationSpecification/{id}
+## GET /optimisationSpecification/{id}
 
 Retrieves one `OptimisationSpecification`.
 
@@ -601,7 +601,7 @@ Cache-Control: max-age=3600
 }
 ```
 
-## 8. GET /optimisationSpecification
+## GET /optimisationSpecification
 
 Lists/searches `OptimisationSpecification` resources.
 
@@ -661,7 +661,7 @@ X-Result-Count: 1
 ]
 ```
 
-## 9. PUT /optimisationSpecification/{id}
+## PUT /optimisationSpecification/{id}
 
 Full replacement only.
 
@@ -849,7 +849,7 @@ Content-Type: application/json
 }
 ```
 
-## 10. DELETE /optimisationSpecification/{id}
+## DELETE /optimisationSpecification/{id}
 
 Delete is only for DRAFT cleanup.
 
@@ -927,7 +927,7 @@ Content-Type: application/json
 }
 ```
 
-## 11. HATEOAS by lifecycle state
+## HATEOAS by lifecycle state
 
 ### DRAFT
 
@@ -974,7 +974,7 @@ Content-Type: application/json
 }
 ```
 
-## 12. Header rules
+## Header rules
 
 ```text
 GET /optimisationSpecification/{id}
@@ -1005,7 +1005,7 @@ Stale/wrong If-Match:
   412 Precondition Failed
 ```
 
-## 13. Key OD MS baseline summary
+## Key OD MS baseline summary
 
 ```text
 OD MS owns OptimisationSpecification.
@@ -1487,3 +1487,38 @@ Added one-to-one process views for all seven E2E use cases:
 - Execute optimisation
 
 These are separate from the sequence diagrams and show ownership/process boundaries for each use case.
+
+---
+
+## Baseline appended 2026-05-08T09:50:50 - Moved seven process views under 3.3
+
+Moved the seven one-to-one use-case process views into the E2E solution brief `### 3.3 Process view:` section and removed the separate duplicate process-view section.
+
+3.3 now includes:
+- 3.3.1 Discover optimisation capability
+- 3.3.2 Manage optimisation catalogue
+- 3.3.3 Create runtime optimisation
+- 3.3.4 Monitor optimisation
+- 3.3.5 Cancellation optimisation
+- 3.3.6 Retrial failed optimisation
+- 3.3.7 Execute optimisation
+
+---
+
+## Baseline appended 2026-05-08T09:53:26 - Removed heading numbers from artefacts
+
+Removed numeric prefixes from Markdown headings across current artefacts.
+
+Examples:
+```text
+## Business context:
+### Process view:
+#### Discover optimisation capability:
+```
+
+are now:
+```text
+## Business context:
+### Process view:
+#### Discover optimisation capability:
+```
