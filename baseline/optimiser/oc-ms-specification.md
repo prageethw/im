@@ -1473,7 +1473,6 @@ The agreed runtime process view is:
 Consumer
 -> OEX
 -> OGW
--> OEX APIs
 -> OGW
 -> OEX Screen Builder MS
 -> NGW

@@ -480,7 +480,6 @@ Full runtime process reference:
 Consumer
 -> OEX
 -> OGW
--> OEX APIs
 -> OGW
 -> OEX Screen Builder MS
 -> NGW

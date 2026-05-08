@@ -360,7 +360,7 @@ The agreed OSB access path is aligned with the E2E solution brief:
 User
 -> OEX UI
 -> OGW
--> OSB MS(OEX API)
+-> OSB MS (OEX API)
 -> NGW
 -> OC MS / OD MS
 ```
@@ -376,10 +376,10 @@ User:
 OEX UI -> OGW:
   OEX UI reaches the optimisation experience through OGW.
 
-OGW -> OSB MS(OEX API):
-  OGW invokes OSB MS(OEX API) using mTLS and User Context JWT.
+OGW -> OSB MS (OEX API):
+  OGW invokes OSB MS (OEX API) using mTLS and User Context JWT.
 
-OSB MS(OEX API) -> NGW:
+OSB MS (OEX API) -> NGW:
   OSB MS calls NGW using mTLS and OAuth2 system-to-system.
 
 NGW -> OC MS / OD MS:
@@ -390,12 +390,12 @@ NGW -> OC MS / OD MS:
 
 ## Runtime E2E alignment baseline:
 
-OSB MS(OEX API) participates in the E2E runtime path as the OEX-facing facade before NGW:
+OSB MS (OEX API) participates in the E2E runtime path as the OEX-facing facade before NGW:
 
 ```text
 User
 -> OGW
--> OSB MS(OEX API)
+-> OSB MS (OEX API)
 -> NGW
 -> OC MS
 -> OD MS
@@ -410,4 +410,4 @@ User
 -> User polls GET /optimisation/{id}
 ```
 
-OSB MS(OEX API) owns user-context-aware experience shaping only. OC MS owns runtime Optimisation. OD MS owns OptimisationSpecification. Kafka, Python/Gurobi Worker, and Gurobi Optimizer are not owned by OSB MS.
+OSB MS (OEX API) owns user-context-aware experience shaping only. OC MS owns runtime Optimisation. OD MS owns OptimisationSpecification. Kafka, Python/Gurobi Worker, and Gurobi Optimizer are not owned by OSB MS.

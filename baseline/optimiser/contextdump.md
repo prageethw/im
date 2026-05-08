@@ -1150,9 +1150,8 @@ Baselined the E2E logical integration sequence as:
 User
 -> Microsoft Entra ID SSO
 -> OEX UI
--> OEX APIs
 -> OGW
--> OEX Screen Builder MS
+-> OSB MS
 -> NGW
 -> OD MS / OC MS
 -> Kafka
@@ -1164,8 +1163,8 @@ Rules:
 - User authentication starts with Microsoft Entra ID SSO.
 - OEX UI calls OEX APIs.
 - OEX APIs are exposed through OGW.
-- OGW routes to OEX Screen Builder MS.
-- OEX Screen Builder MS integrates with NGW.
+- OGW routes to OSB MS.
+- OSB MS integrates with NGW.
 - NGW exposes TMF-compliant backend APIs for OD MS and OC MS.
 - Runtime OC MS execution continues through Kafka, Python/Gurobi Worker, and Gurobi Optimizer.
 - OD MS definition-management flows stop at OD MS and do not continue to Kafka/worker/optimizer unless a runtime optimisation is created through OC MS.
@@ -1180,9 +1179,8 @@ Updated the active E2E process flows to follow the agreed sequence:
 User
 -> Microsoft Entra ID SSO
 -> OEX UI
--> OEX APIs
 -> OGW
--> OEX Screen Builder MS
+-> OSB MS
 -> NGW
 -> OD MS / OC MS
 -> Kafka
@@ -1193,8 +1191,8 @@ User
 Key corrections:
 - OEX UI appears before OEX APIs.
 - OEX APIs are exposed through OGW.
-- OGW routes to OEX Screen Builder MS.
-- OEX Screen Builder MS calls NGW.
+- OGW routes to OSB MS.
+- OSB MS calls NGW.
 - NGW exposes TMF-compliant OD MS / OC MS backend APIs.
 - Runtime OC MS flows continue to Kafka, Python/Gurobi Worker, and Gurobi Optimizer.
 - OD MS definition flows stop at OD MS unless a runtime optimisation is created through OC MS.
@@ -1256,8 +1254,8 @@ User
 
 Cleanup rules applied:
 - No product-specific service mesh name for mTLS.
-- No `OGW` wording; use `OGW` only where that separate gateway is still intentionally referenced.
-- No stale `OEX APIs -> OGW -> OSB MS` hop in the OSB runtime process.
+- No `OSB MS (OEX APIs)` wording; use `OSB MS (OEX APIs)` only where that separate gateway is still intentionally referenced.
+- No stale `OEX APIs -> OSB MS (OEX APIs)` hop in the OSB runtime process.
 - No `User`; use `User` in the current baseline.
 - No stale `/cancel` or `/retry` endpoint paths.
 - No `cancellation` typo.
@@ -1362,7 +1360,7 @@ User
 
 ---
 
-## Baseline appended 2026-05-08T07:03:00 - Removed stale logical path with OGW
+## Baseline appended 2026-05-08T07:03:00 - Removed stale logical path with OSB MS (OEX APIs)
 
 Removed stale E2E logical view:
 
@@ -1396,7 +1394,7 @@ User
 
 ---
 
-## Baseline appended 2026-05-08T07:05:13 - Removed stale process view with OEX APIs and OGW
+## Baseline appended 2026-05-08T07:05:13 - Removed stale process view with OEX APIs and OSB MS (OEX APIs)
 
 Removed stale process view:
 
@@ -1442,31 +1440,15 @@ User
 
 ---
 
-## Baseline appended 2026-05-08T08:12:37 - Re-added specification catalogue use case to E2E use case view
+## Baseline appended 2026-05-08T07:08:19 - Detailed flows aligned to OSB process path
 
-Re-added the governed specification/catalogue use case to the E2E use case view.
+Updated detailed runtime, cancellation, and retrial flows to use the current OSB process path:
 
-Use case:
-```text
-Manage optimisation catalogue
-```
-
-Clarification:
-- In this optimisation platform, the governed specification resource is `OptimisationSpecification`.
-- The use case covers create/update/activate/retire/govern `OptimisationSpecification` records.
-- Access is restricted to approved optimisation domain engineers after agreement with broader E2E teams.
-
----
-
-## Baseline appended 2026-05-08T12:28:52 - Aligned OD MS, OC MS, and OSB MS to current E2E brief
-
-Updated design/specification artefacts to match the current E2E solution brief, not the other way around.
-
-Aligned path:
 ```text
 User
+-> OEX UI
 -> OGW
--> OSB MS(OEX API)
+-> OSB MS (OEX APIs)
 -> NGW
 -> OC MS
 -> OD MS
@@ -1481,21 +1463,9 @@ User
 -> User polls GET /optimisation/{id}
 ```
 
-Changes:
-- OD MS definition path now uses OEX UI -> OGW -> OSB MS(OEX API) -> NGW -> OD MS.
-- OD MS process participation now references the current E2E runtime process and clarifies OD MS only validates OptimisationSpecification/request contract for OC MS.
-- OC MS runtime access and process sections now use the current E2E process flow.
-- OSB MS access path now uses OSB MS(OEX API) and aligns to the E2E path through NGW to OC MS / OD MS.
-- Removed stale OEX APIs / OGW / OEX GW / Istio wording from OD, OC, and OSB artefacts where found.
-
----
-
-## Baseline appended 2026-05-08T12:33:36 - Renamed OWG to OGW everywhere
-
-Renamed all remaining `OWG` references to `OGW` across current optimisation artefacts.
-
-Rule:
-```text
-Use OGW everywhere.
-Do not use OWG.
-```
+Detailed flows now use:
+- `OEX UI -> OGW -> OSB MS (OEX APIs) -> NGW`
+- no stale `OEX APIs -> OSB MS (OEX APIs)` hop
+- no `User`
+- `OC MS DB`, `OC MS Outbox`, `OC MS Inbox`
+- `Python/Gurobi Worker` and `Gurobi Optimizer`
