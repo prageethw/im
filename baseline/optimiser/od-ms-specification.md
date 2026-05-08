@@ -633,4 +633,27 @@ OD MS also participates in runtime validation as the specification source:
 OC MS -> OD MS
 ```
 
-OD MS does not participate in Kafka, Python/Gurobi Worker, Gurobi Optimizer, OC MS Inbox, or runtime result projection.
+---
+
+## Runtime process view participation baseline:
+
+OD MS participates as the OptimisationSpecification definition source in the runtime process view:
+
+```text
+User
+-> OEX UI
+-> OGW
+-> OSB MS (OEX APIs)
+-> NGW
+-> OC MS
+-> OD MS
+-> OC MS DB
+-> OC MS Outbox
+-> Kafka
+-> Python/Gurobi Worker
+-> Gurobi Optimizer
+-> Kafka
+-> OC MS Inbox
+-> OC MS DB
+-> User polls GET /optimisation/{id}
+```

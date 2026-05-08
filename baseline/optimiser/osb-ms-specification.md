@@ -510,30 +510,27 @@ User
 -> Gurobi Optimizer
 ```
 
-Logical responsibility split:
+---
+
+## Runtime process view baseline:
+
+For readability, the runtime process view is shown as:
 
 ```text
-OSB MS(OEX API):
-  Provides the optimisation-specific OEX API/facade behind OGW.
-  Uses User Context JWT to shape the OEX optimisation experience.
-  Calls backend optimisation APIs through NGW.
-
-OD MS:
-  Owns OptimisationSpecification definitions using constraintSpecifications[], targetSpecifications[], and contextSpecifications[].
-
-OC MS:
-  Owns runtime Optimisation resources using constraints[], targets[], and context[].
-
-Kafka / Python/Gurobi Worker / Gurobi Optimizer:
-  Participate only in runtime execution flows after OC MS accepts the request.
-```
-
-API compliance rule:
-
-```text
-NGW-exposed OD MS and OC MS APIs are TMF-compliant.
-
-OSB MS(OEX API) APIs exposed behind OGW are private/OEX experience APIs and do not need to be TMF-compliant.
-
-Private MS-to-MS APIs and Kafka events are internal contracts unless separately exposed.
+User
+-> OEX UI
+-> OGW
+-> OSB MS (OEX APIs)
+-> NGW
+-> OC MS
+-> OD MS
+-> OC MS DB
+-> OC MS Outbox
+-> Kafka
+-> Python/Gurobi Worker
+-> Gurobi Optimizer
+-> Kafka
+-> OC MS Inbox
+-> OC MS DB
+-> User polls GET /optimisation/{id}
 ```
