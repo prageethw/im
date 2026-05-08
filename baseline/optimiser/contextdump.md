@@ -1150,8 +1150,9 @@ Baselined the E2E logical integration sequence as:
 User
 -> Microsoft Entra ID SSO
 -> OEX UI
+-> OEX APIs
 -> OGW
--> OSB MS
+-> OEX Screen Builder MS
 -> NGW
 -> OD MS / OC MS
 -> Kafka
@@ -1163,8 +1164,8 @@ Rules:
 - User authentication starts with Microsoft Entra ID SSO.
 - OEX UI calls OEX APIs.
 - OEX APIs are exposed through OGW.
-- OGW routes to OSB MS.
-- OSB MS integrates with NGW.
+- OGW routes to OEX Screen Builder MS.
+- OEX Screen Builder MS integrates with NGW.
 - NGW exposes TMF-compliant backend APIs for OD MS and OC MS.
 - Runtime OC MS execution continues through Kafka, Python/Gurobi Worker, and Gurobi Optimizer.
 - OD MS definition-management flows stop at OD MS and do not continue to Kafka/worker/optimizer unless a runtime optimisation is created through OC MS.
@@ -1179,8 +1180,9 @@ Updated the active E2E process flows to follow the agreed sequence:
 User
 -> Microsoft Entra ID SSO
 -> OEX UI
+-> OEX APIs
 -> OGW
--> OSB MS
+-> OEX Screen Builder MS
 -> NGW
 -> OD MS / OC MS
 -> Kafka
@@ -1191,8 +1193,8 @@ User
 Key corrections:
 - OEX UI appears before OEX APIs.
 - OEX APIs are exposed through OGW.
-- OGW routes to OSB MS.
-- OSB MS calls NGW.
+- OGW routes to OEX Screen Builder MS.
+- OEX Screen Builder MS calls NGW.
 - NGW exposes TMF-compliant OD MS / OC MS backend APIs.
 - Runtime OC MS flows continue to Kafka, Python/Gurobi Worker, and Gurobi Optimizer.
 - OD MS definition flows stop at OD MS unless a runtime optimisation is created through OC MS.
@@ -1254,8 +1256,8 @@ User
 
 Cleanup rules applied:
 - No product-specific service mesh name for mTLS.
-- No `OSB MS (OEX APIs)` wording; use `OSB MS (OEX APIs)` only where that separate gateway is still intentionally referenced.
-- No stale `OEX APIs -> OSB MS (OEX APIs)` hop in the OSB runtime process.
+- No `OWG` wording; use `OWG` only where that separate gateway is still intentionally referenced.
+- No stale `OEX APIs -> OWG -> OSB MS` hop in the OSB runtime process.
 - No `User`; use `User` in the current baseline.
 - No stale `/cancel` or `/retry` endpoint paths.
 - No `cancellation` typo.
@@ -1273,130 +1275,49 @@ Updated the E2E solution summary to explicitly include the OEX layer:
 
 ---
 
-## Baseline appended 2026-05-08T05:59:04 - Logical view updated with OSB MS(OEX API)
+## Baseline appended 2026-05-08T04:41:19 - Runtime Optimisation lifecycle/status baseline
 
-Updated logical view baseline to:
+Baselined runtime Optimisation statuses and transitions.
 
+Statuses:
 ```text
-User
--> Microsoft Entra ID SSO
--> OEX UI
--> OGW
--> OSB MS(OEX API)
--> NGW
--> OD MS / OC MS
--> Kafka
--> Python/Gurobi Worker
--> Gurobi Optimizer
+ACKNOWLEDGED
+QUEUED
+PROCESSING
+COMPLETED
+INFEASIBLE
+FAILED
+CANCELLING
+CANCELLED
 ```
 
-Definition logical path:
+Outcome mapping:
 ```text
-User
--> Microsoft Entra ID SSO
--> OEX UI
--> OGW
--> OSB MS(OEX API)
--> NGW
--> OD MS
+SUCCESS -> COMPLETED
+INFEASIBLE -> INFEASIBLE
+FAILURE -> FAILED
 ```
 
-Runtime logical path:
+Transition baseline:
 ```text
-User
--> Microsoft Entra ID SSO
--> OEX UI
--> OGW
--> OSB MS(OEX API)
--> NGW
--> OC MS
--> Kafka
--> Python/Gurobi Worker
--> Gurobi Optimizer
+ACKNOWLEDGED -> QUEUED -> PROCESSING -> COMPLETED
+ACKNOWLEDGED -> QUEUED -> PROCESSING -> INFEASIBLE
+ACKNOWLEDGED -> QUEUED -> PROCESSING -> FAILED
+ACKNOWLEDGED -> CANCELLING -> CANCELLED
+QUEUED -> CANCELLING -> CANCELLED
+PROCESSING -> CANCELLING -> CANCELLED
+FAILED -> retrial creates new ACKNOWLEDGED Optimisation
 ```
 
-Naming:
-- Use `OSB MS(OEX API)` in logical views to show that OSB MS is the optimisation-specific OEX API/facade behind OGW.
+Retrial rule:
+- Retrial does not move FAILED back to PROCESSING.
+- Retrial creates a new runtime Optimisation resource with `retrialOf` pointing to the failed one.
 
 ---
 
-## Baseline appended 2026-05-08T06:02:45 - Re-applied visible logical and runtime process views
+## Baseline appended 2026-05-08T05:51:59 - Readable runtime process view
 
-Re-applied the visible logical view and runtime process view.
-
-Logical view:
-```text
-User
--> Microsoft Entra ID SSO
--> OEX UI
--> OGW
--> OSB MS(OEX API)
--> NGW
--> OD MS / OC MS
--> Kafka
--> Python/Gurobi Worker
--> Gurobi Optimizer
-```
-
-Runtime process view:
-```text
-User
--> OEX UI
--> OGW
--> OSB MS (OEX APIs)
--> NGW
--> OC MS
--> OD MS
--> OC MS DB
--> OC MS Outbox
--> Kafka
--> Python/Gurobi Worker
--> Gurobi Optimizer
--> Kafka
--> OC MS Inbox
--> OC MS DB
--> User polls GET /optimisation/{id}
-```
-
----
-
-## Baseline appended 2026-05-08T07:03:00 - Removed stale logical path with OSB MS (OEX APIs)
-
-Removed stale E2E logical view:
-
-```text
-User
--> Microsoft Entra ID SSO
--> OEX UI
--> OGW
--> OSB MS(OEX API)
--> NGW
--> OD MS / OC MS
--> Kafka
--> Python/Gurobi Worker
--> Gurobi Optimizer
-```
-
-Replaced with:
-
-```text
-User
--> Microsoft Entra ID SSO
--> OEX UI
--> OGW
--> OSB MS(OEX API)
--> NGW
--> OD MS / OC MS
--> Kafka
--> Python/Gurobi Worker
--> Gurobi Optimizer
-```
-
----
-
-## Baseline appended 2026-05-08T07:05:13 - Removed stale process view with OEX APIs and OSB MS (OEX APIs)
-
-Removed stale process view:
+Updated the runtime process view for readability:
 
 ```text
 User
@@ -1417,66 +1338,22 @@ User
 -> User polls GET /optimisation/{id}
 ```
 
-Replaced with:
-
-```text
-User
--> OEX UI
--> OGW
--> OSB MS (OEX APIs)
--> NGW
--> OC MS
--> OD MS
--> OC MS DB
--> OC MS Outbox
--> Kafka
--> Python/Gurobi Worker
--> Gurobi Optimizer
--> Kafka
--> OC MS Inbox
--> OC MS DB
--> User polls GET /optimisation/{id}
-```
+Key naming:
+- `OSB MS (OEX APIs)` makes clear that OSB MS is the optimisation-specific OEX API/facade behind OGW.
+- `OC MS DB`, `OC MS Outbox`, and `OC MS Inbox` are shown explicitly.
+- Worker and solver are shown as `Python/Gurobi Worker` and `Gurobi Optimizer`.
 
 ---
 
-## Baseline appended 2026-05-08T07:08:19 - Detailed flows aligned to OSB process path
+## Baseline appended 2026-05-08T12:59:16 - Added all use cases to E2E process view
 
-Updated detailed runtime, cancellation, and retrial flows to use the current OSB process path:
+Updated only the E2E `3.3 Process view` section so every use case has a matching detailed process flow. Logical view was left unchanged.
 
-```text
-User
--> OEX UI
--> OGW
--> OSB MS (OEX APIs)
--> NGW
--> OC MS
--> OD MS
--> OC MS DB
--> OC MS Outbox
--> Kafka
--> Python/Gurobi Worker
--> Gurobi Optimizer
--> Kafka
--> OC MS Inbox
--> OC MS DB
--> User polls GET /optimisation/{id}
-```
-
-Detailed flows now use:
-- `OEX UI -> OGW -> OSB MS (OEX APIs) -> NGW`
-- no stale `OEX APIs -> OSB MS (OEX APIs)` hop
-- no `User`
-- `OC MS DB`, `OC MS Outbox`, `OC MS Inbox`
-- `Python/Gurobi Worker` and `Gurobi Optimizer`
-
----
-
-## Baseline appended 2026-05-08T12:48:59 - Added optimisation specification creation use case
-
-Added `Create optimisation specification` to the E2E use case list.
-
-Use case intent:
-- Optimisation domain engineer creates a new governed `OptimisationSpecification` in OD MS.
-- Creation happens after agreement with broader E2E teams.
-- The created specification starts in DRAFT and is not usable for runtime optimisation until reviewed and activated.
+Process flows now cover:
+- Discover optimisation capability
+- Create optimisation specification
+- Create and execute optimisation
+- Monitor optimisation
+- Cancellation optimisation
+- Retrial failed optimisation
+- Execute optimisation
