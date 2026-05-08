@@ -1472,3 +1472,18 @@ Diagrams added for:
 - Execute optimisation
 
 Each diagram matches an E2E use case and uses the current OSB path: OEX UI -> OGW -> OSB MS (OEX APIs) -> NGW -> OD/OC.
+
+---
+
+## Baseline appended 2026-05-08T08:37:48 - Added one-to-one process views for all use cases
+
+Added one-to-one process views for all seven E2E use cases:
+- Discover optimisation capability
+- Manage optimisation catalogue
+- Create runtime optimisation
+- Monitor optimisation
+- Cancellation optimisation
+- Retrial failed optimisation
+- Execute optimisation
+
+These are separate from the sequence diagrams and show ownership/process boundaries for each use case.

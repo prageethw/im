@@ -1,6 +1,6 @@
 # Optimisation Full Recovery Pack
 
-Generated: 2026-05-08T08:21:59
+Generated: 2026-05-08T08:37:48
 
 This file combines the current optimisation architecture recovery material into one place.
 
@@ -1490,6 +1490,21 @@ Diagrams added for:
 
 Each diagram matches an E2E use case and uses the current OSB path: OEX UI -> OGW -> OSB MS (OEX APIs) -> NGW -> OD/OC.
 
+---
+
+## Baseline appended 2026-05-08T08:37:48 - Added one-to-one process views for all use cases
+
+Added one-to-one process views for all seven E2E use cases:
+- Discover optimisation capability
+- Manage optimisation catalogue
+- Create runtime optimisation
+- Monitor optimisation
+- Cancellation optimisation
+- Retrial failed optimisation
+- Execute optimisation
+
+These are separate from the sequence diagrams and show ownership/process boundaries for each use case.
+
 
 ---
 
@@ -2165,14 +2180,6 @@ OC MS -> OD MS
 ```
 
 OD MS does not participate in Kafka, Python/Gurobi Worker, Gurobi Optimizer, OC MS Inbox, or runtime result projection.
-
----
-
-## Outbox pattern participation note:
-
-OD MS does not own an outbox in the current optimisation baseline.
-
-If OD MS later introduces an outbox, it must follow the shared processed-record lifecycle rule: mark successfully processed/published records as processed, retain them for a configured retention window, and clean up or archive only processed records.
 
 
 ---
@@ -3788,95 +3795,6 @@ User
 
 OC MS owns runtime Optimisation resources. It validates runtime requests against OD MS definitions, persists accepted executions, emits Kafka instructions, consumes worker outcomes, and projects lifecycle/result state.
 
----
-
-## Outbox processed-record lifecycle baseline:
-
-For services that use an outbox pattern, outbox records must be lifecycle-managed after successful publication/processing.
-
-Baseline rule:
-
-```text
-An outbox record is not deleted immediately after publish.
-
-After successful relay/publication to Kafka, the outbox relay marks the outbox record as processed/published with a processed timestamp.
-
-Processed records are retained for a configured retention window, then cleaned up by an operational cleanup job.
-```
-
-Typical outbox record lifecycle:
-
-```text
-PENDING
--> PROCESSING
--> PROCESSED
-```
-
-Failure lifecycle:
-
-```text
-PENDING
--> PROCESSING
--> FAILED_RETRYABLE
--> PROCESSING
--> PROCESSED
-```
-
-Poison/unrecoverable lifecycle:
-
-```text
-PENDING
--> PROCESSING
--> FAILED_NON_RETRYABLE
--> DLQ_PUBLISHED
--> PROCESSED_FOR_CLEANUP
-```
-
-Minimum persisted fields:
-
-```text
-outboxRecordId
-aggregateId / optimisationId
-eventType
-eventVersion
-payload
-status
-attemptCount
-createdAt
-lastAttemptAt
-processedAt
-failureReason
-correlationId
-```
-
-Cleanup rule:
-
-```text
-Only processed/published records older than the configured retention period are eligible for deletion or archival.
-
-Unprocessed, retryable-failed, or unresolved DLQ records must not be removed by routine cleanup.
-```
-
-Operational rule:
-
-```text
-Outbox cleanup must be observable and auditable.
-
-Cleanup metrics should include processed-record count, deleted/archived count, oldest unprocessed record age, failed record count, and cleanup failures.
-```
-
----
-
-## OC MS outbox cleanup baseline:
-
-OC MS uses the outbox pattern for worker instructions such as `EXECUTE` and `CANCEL`.
-
-After OC MS Outbox Relay successfully publishes the worker instruction event to Kafka, OC MS marks the outbox record as processed/published and records `processedAt`.
-
-Processed outbox records are retained for the configured retention window and then cleaned up or archived.
-
-OC MS must not delete pending, processing, retryable failed, unresolved DLQ, or unprocessed outbox records through normal cleanup.
-
 
 ---
 
@@ -4508,14 +4426,6 @@ OSB MS(OEX API) APIs exposed behind OGW are private/OEX experience APIs and do n
 Private MS-to-MS APIs and Kafka events are internal contracts unless separately exposed.
 ```
 
----
-
-## Outbox pattern participation note:
-
-OSB MS does not own an outbox in the current baseline.
-
-If OSB MS later introduces an outbox or any durable asynchronous publication pattern, it must follow the shared processed-record lifecycle rule: mark successfully processed/published records as processed, retain them for a configured retention window, and clean up or archive only processed records.
-
 
 ---
 
@@ -4588,6 +4498,199 @@ The Python/Gurobi worker is responsible for executing the internal deterministic
 | Execute optimisation | Python/Gurobi worker | Consume worker instruction and execute the deterministic optimisation model. | Worker emits `SUCCESS`, `INFEASIBLE`, or `FAILURE` outcome. |
 
 Note: In this optimisation platform, the governed specification resource is `OptimisationSpecification`.
+
+
+---
+
+## One-to-one process views by use case:
+
+Each use case has a matching process view. These process views are intentionally separate from the sequence diagrams. The process views show the main path and ownership boundary for each use case.
+
+### Process view 1: Discover optimisation capability:
+
+```text
+User
+-> OEX UI
+-> OGW
+-> OSB MS (OEX APIs)
+-> NGW
+-> OD MS
+-> OD MS DB
+-> NGW
+-> OSB MS (OEX APIs)
+-> OGW
+-> OEX UI
+-> User views available optimisation capabilities
+```
+
+Purpose:
+
+```text
+OD MS is the source of truth for OptimisationSpecification discovery.
+OSB MS context-filters and shapes the capability view for OEX UI.
+No runtime Optimisation is created.
+No OC MS Outbox, Kafka, Python/Gurobi Worker, or Gurobi Optimizer is involved.
+```
+
+### Process view 2: Manage optimisation catalogue:
+
+```text
+User
+-> OEX UI
+-> OGW
+-> OSB MS (OEX APIs)
+-> NGW
+-> OD MS
+-> OD MS DB
+-> NGW
+-> OSB MS (OEX APIs)
+-> OGW
+-> OEX UI
+-> User views catalogue-management result
+```
+
+Purpose:
+
+```text
+This is an internal governed capability.
+Only approved optimisation domain engineers can create, update, activate, retire, or govern OptimisationSpecification records.
+Catalogue changes require agreement with broader E2E teams before becoming ACTIVE.
+OD MS owns catalogue state and governance.
+OC MS, Kafka, Python/Gurobi Worker, and Gurobi Optimizer are not involved.
+```
+
+### Process view 3: Create runtime optimisation:
+
+```text
+User
+-> OEX UI
+-> OGW
+-> OSB MS (OEX APIs)
+-> NGW
+-> OC MS
+-> OD MS
+-> OC MS DB
+-> OC MS Outbox
+-> Kafka
+-> Python/Gurobi Worker
+-> Gurobi Optimizer
+```
+
+Purpose:
+
+```text
+OSB MS shapes the request using User Context JWT.
+OC MS validates the runtime request against the ACTIVE OptimisationSpecification from OD MS.
+OC MS persists the accepted Optimisation in OC MS DB.
+OC MS writes an EXECUTE instruction to OC MS Outbox.
+OC MS Outbox publishes to Kafka.
+Python/Gurobi Worker consumes the event and invokes Gurobi Optimizer.
+```
+
+### Process view 4: Monitor optimisation:
+
+```text
+User
+-> OEX UI
+-> OGW
+-> OSB MS (OEX APIs)
+-> NGW
+-> OC MS
+-> OC MS DB
+-> NGW
+-> OSB MS (OEX APIs)
+-> OGW
+-> OEX UI
+-> User views current lifecycle/result
+```
+
+Purpose:
+
+```text
+OC MS is the source of truth for runtime Optimisation lifecycle and result projection.
+OSB MS returns a UI-friendly status/result view.
+No new worker instruction is created.
+No OC MS Outbox event is emitted for read-only monitoring.
+```
+
+### Process view 5: Cancellation optimisation:
+
+```text
+User
+-> OEX UI
+-> OGW
+-> OSB MS (OEX APIs)
+-> NGW
+-> OC MS
+-> OC MS DB
+-> OC MS Outbox
+-> Kafka
+-> Python/Gurobi Worker
+-> OC MS Inbox
+-> OC MS DB
+-> User polls GET /optimisation/{id}
+```
+
+Purpose:
+
+```text
+OSB MS exposes the cancellation action only when user context and runtime state allow it.
+OC MS validates If-Match and lifecycleStatus.
+OC MS updates lifecycleStatus to CANCELLING.
+OC MS writes a CANCEL instruction to OC MS Outbox.
+Worker stops, cancels, or ignores work where safely possible.
+OC MS later projects CANCELLED when confirmed or safely resolved.
+```
+
+### Process view 6: Retrial failed optimisation:
+
+```text
+User
+-> OEX UI
+-> OGW
+-> OSB MS (OEX APIs)
+-> NGW
+-> OC MS
+-> OC MS DB
+-> OC MS Outbox
+-> Kafka
+-> Python/Gurobi Worker
+-> Gurobi Optimizer
+-> User polls GET /optimisation/{id}
+```
+
+Purpose:
+
+```text
+OSB MS exposes retrial only when user context and runtime state allow it.
+OC MS validates the original Optimisation lifecycleStatus = FAILED.
+OC MS creates a new ACKNOWLEDGED Optimisation with retrialOf pointing to the failed one.
+Retrial does not move the failed Optimisation back to PROCESSING.
+OC MS writes a new EXECUTE instruction to OC MS Outbox.
+```
+
+### Process view 7: Execute optimisation:
+
+```text
+Kafka
+-> Python/Gurobi Worker
+-> Gurobi Optimizer
+-> Kafka
+-> OC MS Inbox
+-> OC MS DB
+-> User polls GET /optimisation/{id}
+```
+
+Purpose:
+
+```text
+This is the asynchronous worker execution path after OC MS has accepted the runtime Optimisation.
+Python/Gurobi Worker consumes EXECUTE instructions.
+Gurobi Optimizer executes the model.
+Worker publishes SUCCESS, INFEASIBLE, or FAILURE outcome.
+OC MS Inbox consumes the outcome and projects lifecycle/result into OC MS DB.
+User observes the result through the monitor/polling path.
+```
 
 ### 3.2 Logical view:
 
