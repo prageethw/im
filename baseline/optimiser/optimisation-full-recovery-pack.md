@@ -1,6 +1,6 @@
 # Optimisation Full Recovery Pack
 
-Generated: 2026-05-08T11:36:52
+Generated: 2026-05-08T11:39:42
 
 This file combines the current optimisation architecture recovery material into one place.
 
@@ -1693,6 +1693,32 @@ https://github.com/prageethw/im/blob/3f184867db74a6397ca3b67bc0ba062d9d0dd76e/ba
 
 A local backup of the immediately previous E2E file was created before replacing it.
 
+---
+
+## Baseline appended 2026-05-08T11:39:42 - Fixed E2E process view after GitHub rollback
+
+Updated the E2E solution brief process view to:
+
+```text
+User
+-> OGW
+-> OSB MS(OEX API)
+-> NGW
+-> OC MS
+-> OD MS
+-> OC MS DB
+-> OC MS Outbox
+-> Kafka
+-> Python/Gurobi Worker
+-> Gurobi Optimizer
+-> Kafka
+-> OC MS Inbox
+-> OC MS DB
+-> User polls GET /optimisation/{id}
+```
+
+Also aligned the detailed interpretation to remove the OEX UI/OEX APIs/OWG hops from the runtime process view and use OGW -> OSB MS(OEX API) -> NGW.
+
 
 ---
 
@@ -2368,14 +2394,6 @@ OC MS -> OD MS
 ```
 
 OD MS does not participate in Kafka, Python/Gurobi Worker, Gurobi Optimizer, OC MS Inbox, or runtime result projection.
-
----
-
-## Outbox pattern participation note:
-
-OD MS does not own an outbox in the current optimisation baseline.
-
-If OD MS later introduces an outbox, it must follow the shared processed-record lifecycle rule: mark successfully processed/published records as processed, retain them for a configured retention window, and clean up or archive only processed records.
 
 
 ---
@@ -3991,95 +4009,6 @@ User
 
 OC MS owns runtime Optimisation resources. It validates runtime requests against OD MS definitions, persists accepted executions, emits Kafka instructions, consumes worker outcomes, and projects lifecycle/result state.
 
----
-
-## Outbox processed-record lifecycle baseline:
-
-For services that use an outbox pattern, outbox records must be lifecycle-managed after successful publication/processing.
-
-Baseline rule:
-
-```text
-An outbox record is not deleted immediately after publish.
-
-After successful relay/publication to Kafka, the outbox relay marks the outbox record as processed/published with a processed timestamp.
-
-Processed records are retained for a configured retention window, then cleaned up by an operational cleanup job.
-```
-
-Typical outbox record lifecycle:
-
-```text
-PENDING
--> PROCESSING
--> PROCESSED
-```
-
-Failure lifecycle:
-
-```text
-PENDING
--> PROCESSING
--> FAILED_RETRYABLE
--> PROCESSING
--> PROCESSED
-```
-
-Poison/unrecoverable lifecycle:
-
-```text
-PENDING
--> PROCESSING
--> FAILED_NON_RETRYABLE
--> DLQ_PUBLISHED
--> PROCESSED_FOR_CLEANUP
-```
-
-Minimum persisted fields:
-
-```text
-outboxRecordId
-aggregateId / optimisationId
-eventType
-eventVersion
-payload
-status
-attemptCount
-createdAt
-lastAttemptAt
-processedAt
-failureReason
-correlationId
-```
-
-Cleanup rule:
-
-```text
-Only processed/published records older than the configured retention period are eligible for deletion or archival.
-
-Unprocessed, retryable-failed, or unresolved DLQ records must not be removed by routine cleanup.
-```
-
-Operational rule:
-
-```text
-Outbox cleanup must be observable and auditable.
-
-Cleanup metrics should include processed-record count, deleted/archived count, oldest unprocessed record age, failed record count, and cleanup failures.
-```
-
----
-
-## OC MS outbox cleanup baseline:
-
-OC MS uses the outbox pattern for worker instructions such as `EXECUTE` and `CANCEL`.
-
-After OC MS Outbox Relay successfully publishes the worker instruction event to Kafka, OC MS marks the outbox record as processed/published and records `processedAt`.
-
-Processed outbox records are retained for the configured retention window and then cleaned up or archived.
-
-OC MS must not delete pending, processing, retryable failed, unresolved DLQ, or unprocessed outbox records through normal cleanup.
-
 
 ---
 
@@ -4711,14 +4640,6 @@ OSB MS(OEX API) APIs exposed behind OGW are private/OEX experience APIs and do n
 Private MS-to-MS APIs and Kafka events are internal contracts unless separately exposed.
 ```
 
----
-
-## Outbox pattern participation note:
-
-OSB MS does not own an outbox in the current baseline.
-
-If OSB MS later introduces an outbox or any durable asynchronous publication pattern, it must follow the shared processed-record lifecycle rule: mark successfully processed/published records as processed, retain them for a configured retention window, and clean up or archive only processed records.
-
 
 ---
 
@@ -4799,7 +4720,6 @@ The logical integration model is:
 ```text
 User
 -> Microsoft Entra ID SSO
--> OEX UI
 -> OGW
 -> OSB MS(OEX API)
 -> NGW
@@ -4859,7 +4779,6 @@ optimisation-logical-view.drawio
 ```text
 User
 -> OGW
--> OEX APIs
 -> OSB MS(OEX API)
 -> NGW
 -> OC MS
@@ -4903,7 +4822,6 @@ Detailed flow:
 ```text
 User
 -> OGW
--> OEX APIs
 -> OSB MS(OEX API)
 -> NGW
 -> OC MS
@@ -4933,7 +4851,6 @@ Detailed flow:
 ```text
 User
 -> OGW
--> OEX APIs
 -> OSB MS(OEX API)
 -> NGW
 -> OC MS
@@ -5013,8 +4930,7 @@ User Context JWT
 This preserves user context while securely invoking OEX backend experience services.
 
 ```text
-OGW / OEX APIs
--> OSB MS(OEX API)
+OGW / OSB MS(OEX API)
 ```
 
 ### 5.3 OEX to optimisation backend access:
@@ -5440,9 +5356,7 @@ The agreed runtime process view is:
 
 ```text
 User
--> OEX
 -> OGW
--> OEX APIs
 -> OSB MS(OEX API)
 -> NGW
 -> OC MS
@@ -5461,23 +5375,24 @@ User
 Detailed interpretation:
 
 ```text
-1. Consumer initiates the optimisation journey through OEX.
-2. OEX routes the request to OGW.
-3. OGW routes to OEX APIs.
-4. OEX APIs route through OWG.
-5. OGW routes to OSB MS.
-6. OSB MS calls NGW.
-7. NGW calls OC MS.
-8. OC MS validates the runtime request against the ACTIVE OptimisationSpecification from OD MS.
-9. OC MS persists the accepted runtime Optimisation in OC MS DB.
-10. OC MS writes OptimisationRequestedEvent to OC MS Outbox in the same transaction.
+1. User initiates the optimisation journey.
+2. User request reaches OGW.
+3. OGW invokes OSB MS(OEX API) using mTLS and User Context JWT.
+4. OSB MS validates the User Context JWT and shapes the OEX request/action model.
+5. OSB MS calls NGW using mTLS and OAuth2 system-to-system.
+6. NGW routes the request to OC MS.
+7. OC MS calls OD MS over mTLS to validate the referenced ACTIVE OptimisationSpecification and request contract.
+8. OC MS validates constraints[], targets[], and context[] against the OD MS request contract.
+9. OC MS persists the accepted runtime Optimisation with lifecycleStatus = ACKNOWLEDGED in OC MS DB.
+10. OC MS writes OptimisationRequestedEvent with instruction = EXECUTE to OC MS Outbox in the same transaction.
 11. OC MS Outbox relay publishes the event to Kafka.
 12. Python/Gurobi Worker consumes the event from Kafka.
-13. Python/Gurobi Worker invokes Gurobi Optimizer.
-14. Worker publishes outcome event back to Kafka.
-15. OC MS Inbox consumes the outcome event from Kafka.
-16. OC MS Inbox updates OC MS DB with lifecycle/result projection.
-17. User polls GET /optimisation/{id} to retrieve current status/result.
+13. Python/Gurobi Worker resolves internal deterministic model binding.
+14. Python/Gurobi Worker invokes Gurobi Optimizer.
+15. Worker publishes OptimisationCompletedEvent or OptimisationFailedEvent back to Kafka.
+16. OC MS Inbox consumes the worker outcome event.
+17. OC MS Inbox updates OC MS DB with lifecycle and result projection.
+18. User polls GET /optimisation/{id} through OGW -> OSB MS(OEX API) -> NGW -> OC MS to retrieve current status/result.
 ```
 
 Runtime request model:
@@ -5586,7 +5501,6 @@ The logical integration model is:
 ```text
 User
 -> Microsoft Entra ID SSO
--> OEX UI
 -> OGW
 -> OSB MS(OEX API)
 -> NGW
@@ -5601,7 +5515,6 @@ Definition-management logical path:
 ```text
 User
 -> Microsoft Entra ID SSO
--> OEX UI
 -> OGW
 -> OSB MS(OEX API)
 -> NGW
@@ -5613,7 +5526,6 @@ Runtime-optimisation logical path:
 ```text
 User
 -> Microsoft Entra ID SSO
--> OEX UI
 -> OGW
 -> OSB MS(OEX API)
 -> NGW

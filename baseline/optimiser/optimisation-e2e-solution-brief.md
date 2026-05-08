@@ -73,7 +73,6 @@ The logical integration model is:
 ```text
 User
 -> Microsoft Entra ID SSO
--> OEX UI
 -> OGW
 -> OSB MS(OEX API)
 -> NGW
@@ -133,7 +132,6 @@ optimisation-logical-view.drawio
 ```text
 User
 -> OGW
--> OEX APIs
 -> OSB MS(OEX API)
 -> NGW
 -> OC MS
@@ -177,7 +175,6 @@ Detailed flow:
 ```text
 User
 -> OGW
--> OEX APIs
 -> OSB MS(OEX API)
 -> NGW
 -> OC MS
@@ -207,7 +204,6 @@ Detailed flow:
 ```text
 User
 -> OGW
--> OEX APIs
 -> OSB MS(OEX API)
 -> NGW
 -> OC MS
@@ -287,8 +283,7 @@ User Context JWT
 This preserves user context while securely invoking OEX backend experience services.
 
 ```text
-OGW / OEX APIs
--> OSB MS(OEX API)
+OGW / OSB MS(OEX API)
 ```
 
 ### 5.3 OEX to optimisation backend access:
@@ -714,9 +709,7 @@ The agreed runtime process view is:
 
 ```text
 User
--> OEX
 -> OGW
--> OEX APIs
 -> OSB MS(OEX API)
 -> NGW
 -> OC MS
@@ -735,23 +728,24 @@ User
 Detailed interpretation:
 
 ```text
-1. Consumer initiates the optimisation journey through OEX.
-2. OEX routes the request to OGW.
-3. OGW routes to OEX APIs.
-4. OEX APIs route through OWG.
-5. OGW routes to OSB MS.
-6. OSB MS calls NGW.
-7. NGW calls OC MS.
-8. OC MS validates the runtime request against the ACTIVE OptimisationSpecification from OD MS.
-9. OC MS persists the accepted runtime Optimisation in OC MS DB.
-10. OC MS writes OptimisationRequestedEvent to OC MS Outbox in the same transaction.
+1. User initiates the optimisation journey.
+2. User request reaches OGW.
+3. OGW invokes OSB MS(OEX API) using mTLS and User Context JWT.
+4. OSB MS validates the User Context JWT and shapes the OEX request/action model.
+5. OSB MS calls NGW using mTLS and OAuth2 system-to-system.
+6. NGW routes the request to OC MS.
+7. OC MS calls OD MS over mTLS to validate the referenced ACTIVE OptimisationSpecification and request contract.
+8. OC MS validates constraints[], targets[], and context[] against the OD MS request contract.
+9. OC MS persists the accepted runtime Optimisation with lifecycleStatus = ACKNOWLEDGED in OC MS DB.
+10. OC MS writes OptimisationRequestedEvent with instruction = EXECUTE to OC MS Outbox in the same transaction.
 11. OC MS Outbox relay publishes the event to Kafka.
 12. Python/Gurobi Worker consumes the event from Kafka.
-13. Python/Gurobi Worker invokes Gurobi Optimizer.
-14. Worker publishes outcome event back to Kafka.
-15. OC MS Inbox consumes the outcome event from Kafka.
-16. OC MS Inbox updates OC MS DB with lifecycle/result projection.
-17. User polls GET /optimisation/{id} to retrieve current status/result.
+13. Python/Gurobi Worker resolves internal deterministic model binding.
+14. Python/Gurobi Worker invokes Gurobi Optimizer.
+15. Worker publishes OptimisationCompletedEvent or OptimisationFailedEvent back to Kafka.
+16. OC MS Inbox consumes the worker outcome event.
+17. OC MS Inbox updates OC MS DB with lifecycle and result projection.
+18. User polls GET /optimisation/{id} through OGW -> OSB MS(OEX API) -> NGW -> OC MS to retrieve current status/result.
 ```
 
 Runtime request model:
@@ -860,7 +854,6 @@ The logical integration model is:
 ```text
 User
 -> Microsoft Entra ID SSO
--> OEX UI
 -> OGW
 -> OSB MS(OEX API)
 -> NGW
@@ -875,7 +868,6 @@ Definition-management logical path:
 ```text
 User
 -> Microsoft Entra ID SSO
--> OEX UI
 -> OGW
 -> OSB MS(OEX API)
 -> NGW
@@ -887,7 +879,6 @@ Runtime-optimisation logical path:
 ```text
 User
 -> Microsoft Entra ID SSO
--> OEX UI
 -> OGW
 -> OSB MS(OEX API)
 -> NGW

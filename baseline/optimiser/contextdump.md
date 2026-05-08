@@ -1675,3 +1675,29 @@ https://github.com/prageethw/im/blob/3f184867db74a6397ca3b67bc0ba062d9d0dd76e/ba
 ```
 
 A local backup of the immediately previous E2E file was created before replacing it.
+
+---
+
+## Baseline appended 2026-05-08T11:39:42 - Fixed E2E process view after GitHub rollback
+
+Updated the E2E solution brief process view to:
+
+```text
+User
+-> OGW
+-> OSB MS(OEX API)
+-> NGW
+-> OC MS
+-> OD MS
+-> OC MS DB
+-> OC MS Outbox
+-> Kafka
+-> Python/Gurobi Worker
+-> Gurobi Optimizer
+-> Kafka
+-> OC MS Inbox
+-> OC MS DB
+-> User polls GET /optimisation/{id}
+```
+
+Also aligned the detailed interpretation to remove the OEX UI/OEX APIs/OWG hops from the runtime process view and use OGW -> OSB MS(OEX API) -> NGW.
