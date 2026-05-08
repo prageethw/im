@@ -439,7 +439,7 @@ User
 -> Microsoft Entra ID SSO
 -> OEX UI
 -> OEX APIs
--> OGW
+-> OWG
 -> OEX Screen Builder MS
 -> NGW
 -> OD MS
@@ -472,3 +472,39 @@ OD MS does not integrate directly with Kafka in the current baseline.
 OD MS is a REST definition/specification service. It does not produce optimisation worker instructions, consume worker outcomes, own Kafka consumer groups, or participate in OC MS outbox/inbox processing.
 
 MS-to-Kafka security requirements apply to OC MS, Python/Gurobi Worker, and any other service that later becomes an authorised Kafka producer or consumer.
+
+---
+
+## Runtime process participation baseline:
+
+OD MS participates in the runtime process as the OptimisationSpecification source of truth.
+
+Readable runtime process reference:
+
+```text
+User
+-> OEX UI
+-> OWG
+-> OSB MS (OEX APIs)
+-> NGW
+-> OC MS
+-> OD MS
+-> OC MS DB
+-> OC MS Outbox
+-> Kafka
+-> Python/Gurobi Worker
+-> Gurobi Optimizer
+-> Kafka
+-> OC MS Inbox
+-> OC MS DB
+-> User polls GET /optimisation/{id}
+```
+
+OD MS role:
+
+```text
+OC MS -> OD MS:
+  OC MS validates the referenced ACTIVE OptimisationSpecification and request contract against OD MS.
+
+OD MS does not persist runtime Optimisation records, write OC MS outbox events, consume Kafka outcomes, or project runtime results.
+```
