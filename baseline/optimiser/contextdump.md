@@ -1152,7 +1152,7 @@ User
 -> OEX UI
 -> OEX APIs
 -> OGW
--> OSB MS
+-> OEX Screen Builder MS
 -> NGW
 -> OD MS / OC MS
 -> Kafka
@@ -1164,8 +1164,8 @@ Rules:
 - User authentication starts with Microsoft Entra ID SSO.
 - OEX UI calls OEX APIs.
 - OEX APIs are exposed through OGW.
-- OGW routes to OSB MS.
-- OSB MS integrates with NGW.
+- OGW routes to OEX Screen Builder MS.
+- OEX Screen Builder MS integrates with NGW.
 - NGW exposes TMF-compliant backend APIs for OD MS and OC MS.
 - Runtime OC MS execution continues through Kafka, Python/Gurobi Worker, and Gurobi Optimizer.
 - OD MS definition-management flows stop at OD MS and do not continue to Kafka/worker/optimizer unless a runtime optimisation is created through OC MS.
@@ -1182,7 +1182,7 @@ User
 -> OEX UI
 -> OEX APIs
 -> OGW
--> OSB MS
+-> OEX Screen Builder MS
 -> NGW
 -> OD MS / OC MS
 -> Kafka
@@ -1193,8 +1193,8 @@ User
 Key corrections:
 - OEX UI appears before OEX APIs.
 - OEX APIs are exposed through OGW.
-- OGW routes to OSB MS.
-- OSB MS calls NGW.
+- OGW routes to OEX Screen Builder MS.
+- OEX Screen Builder MS calls NGW.
 - NGW exposes TMF-compliant OD MS / OC MS backend APIs.
 - Runtime OC MS flows continue to Kafka, Python/Gurobi Worker, and Gurobi Optimizer.
 - OD MS definition flows stop at OD MS unless a runtime optimisation is created through OC MS.
@@ -1256,8 +1256,8 @@ User
 
 Cleanup rules applied:
 - No product-specific service mesh name for mTLS.
-- No `OSB MS (OEX APIs)` wording; use `OSB MS (OEX APIs)` only where that separate gateway is still intentionally referenced.
-- No stale `OEX APIs -> OSB MS (OEX APIs)` hop in the OSB runtime process.
+- No `OWG` wording; use `OWG` only where that separate gateway is still intentionally referenced.
+- No stale `OEX APIs -> OWG -> OSB MS` hop in the OSB runtime process.
 - No `User`; use `User` in the current baseline.
 - No stale `/cancel` or `/retry` endpoint paths.
 - No `cancellation` typo.
@@ -1362,7 +1362,7 @@ User
 
 ---
 
-## Baseline appended 2026-05-08T07:03:00 - Removed stale logical path with OSB MS (OEX APIs)
+## Baseline appended 2026-05-08T07:03:00 - Removed stale logical path with OWG
 
 Removed stale E2E logical view:
 
@@ -1396,7 +1396,7 @@ User
 
 ---
 
-## Baseline appended 2026-05-08T07:05:13 - Removed stale process view with OEX APIs and OSB MS (OEX APIs)
+## Baseline appended 2026-05-08T07:05:13 - Removed stale process view with OEX APIs and OWG
 
 Removed stale process view:
 
@@ -1442,100 +1442,33 @@ User
 
 ---
 
-## Baseline appended 2026-05-08T07:08:19 - Detailed flows aligned to OSB process path
+## Baseline appended 2026-05-08T08:12:37 - Re-added specification catalogue use case to E2E use case view
 
-Updated detailed runtime, cancellation, and retrial flows to use the current OSB process path:
+Re-added the governed specification/catalogue use case to the E2E use case view.
 
+Use case:
 ```text
-User
--> OEX UI
--> OGW
--> OSB MS (OEX APIs)
--> NGW
--> OC MS
--> OD MS
--> OC MS DB
--> OC MS Outbox
--> Kafka
--> Python/Gurobi Worker
--> Gurobi Optimizer
--> Kafka
--> OC MS Inbox
--> OC MS DB
--> User polls GET /optimisation/{id}
+Manage optimisation catalogue
 ```
 
-Detailed flows now use:
-- `OEX UI -> OGW -> OSB MS (OEX APIs) -> NGW`
-- no stale `OEX APIs -> OSB MS (OEX APIs)` hop
-- no `User`
-- `OC MS DB`, `OC MS Outbox`, `OC MS Inbox`
-- `Python/Gurobi Worker` and `Gurobi Optimizer`
+Clarification:
+- In this optimisation platform, the governed specification resource is `OptimisationSpecification`.
+- The use case covers create/update/activate/retire/govern `OptimisationSpecification` records.
+- Access is restricted to approved optimisation domain engineers after agreement with broader E2E teams.
 
 ---
 
-## Baseline appended 2026-05-08T07:18:06 - Force-cleaned stale E2E process view
+## Baseline appended 2026-05-08T08:21:59 - Added one-to-one use case sequence diagrams
 
-Removed the stale process view that started with:
+Added a one-to-one sequence diagram section to the E2E solution brief.
 
-```text
-User
--> OEX UI
--> OGW
--> OSB MS (OEX APIs)
-```
+Diagrams added for:
+- Discover optimisation capability
+- Manage optimisation catalogue
+- Create runtime optimisation
+- Monitor optimisation
+- Cancellation optimisation
+- Retrial failed optimisation
+- Execute optimisation
 
-The active runtime process view is now:
-
-```text
-User
--> OEX UI
--> OGW
--> OSB MS (OEX APIs)
--> NGW
--> OC MS
--> OD MS
--> OC MS DB
--> OC MS Outbox
--> Kafka
--> Python/Gurobi Worker
--> Gurobi Optimizer
--> Kafka
--> OC MS Inbox
--> OC MS DB
--> User polls GET /optimisation/{id}
-```
-
----
-
-## Baseline appended 2026-05-08T07:19:41 - Force-cleaned stale logical view
-
-Removed stale logical view that included:
-
-```text
-User
--> Microsoft Entra ID SSO
--> OEX UI
--> OGW
--> OSB MS(OEX API)
--> NGW
--> OD MS / OC MS
--> Kafka
--> Python/Gurobi Worker
--> Gurobi Optimizer
-```
-
-The active E2E/OSB logical view is now:
-
-```text
-User
--> Microsoft Entra ID SSO
--> OEX UI
--> OGW
--> OSB MS(OEX API)
--> NGW
--> OD MS / OC MS
--> Kafka
--> Python/Gurobi Worker
--> Gurobi Optimizer
-```
+Each diagram matches an E2E use case and uses the current OSB path: OEX UI -> OGW -> OSB MS (OEX APIs) -> NGW -> OD/OC.
