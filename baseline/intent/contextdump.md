@@ -721,41 +721,45 @@ Date: 2026-05-07T02:53:16.079859+00:00
 - Replaced abbreviated Intent response payloads with complete payloads using `expression.targets`, `expression.constraints`, and `expression.preferences`.
 - Confirmed IC/ID spec and design Markdown JSON blocks validate.
 
+---
 
-## Baseline update — external schema separated in Markdown:
+## Baseline update — event alignment and external projection cleanup:
 
-Date: 2026-05-08
+Applied event/projection alignment across IA MS, IC MS, ID MS, and internal event documentation.
 
-### Updated files:
-- `id_ms_design_brief.md`
-- `id_ms_specification.md`
+Per-file active changes:
 
-### Baseline:
-The full JSON Schema for `Intent.expression.expressionValue` must remain visibly separated from the TMF-facing API payload examples in Markdown.
+- `ia_ms_design_brief.md`: aligned `IntentAssuranceEvent` with the internal event specification. Removed the old default `assuranceOutcome`, `runtimeState`, and `candidates` pattern. IA MS now emits lifecycle-driving assurance truth using top-level `body.lifecycleStatus`, `body.statusReason`, `targets`, `resources`, and `observations`.
+- `intent_internal_events_specification.md`: removed event-facing `provider` attributes from `IntentResolvedEvent.resources[]` and `IntentOptimisedEvent.resources[]`. `provider` remains KP/resource-inventory metadata only.
+- `ic_ms_design_brief.md`: clarified `IntentReport` projection rules. IntentReport is based on IA truth but is not raw telemetry and not the raw `IntentAssuranceEvent` body. It uses TMF `expression.expressionValue` for curated facts and keeps `targetSummary` fact-only.
+- `ic_ms_specification.md`: replaced old IntentReport examples that used direct fields and `evaluationSummary.result` with TMF-wrapped `IntentReport.expression.expressionValue`, containing fact-only `targetSummary` and curated `observationSummary`.
+- `id_ms_specification.md`: corrected `specCharacteristic` to the high-level bucket catalogue (`targets`, `constraints`, `preferences`) with example/default `characteristicValueSpecification` only. Detailed validation remains in the external expression-value schema referenced through `targetEntitySchema.@schemaLocation`.
 
-The main `IntentSpecification` request/response examples show only:
-- `expressionSpecification` as the TMF expression contract reference
-- `targetEntitySchema.@schemaLocation` as the external validation schema reference
-- `schemaVersion` and `schemaHash` as drift-prevention metadata
+Active rule: internal events carry native JSON facts; external TMF resources carry TMF expression wrappers; external reports contain curated projection facts only and do not expose raw telemetry, raw callback payloads, raw optimiser details, raw KP data, or internal event bodies.
 
-The full JSON Schema body may be documented in a separate appendix or separate schema file, but it must not appear inline as if it is part of the `IntentSpecification` resource body or runtime `Intent.expression.expressionValue`.
+## Baseline update — II MS design/specification
 
-### Reason:
-The validation schema is an external governed artefact. Keeping it separated in the Markdown prevents engineers from accidentally embedding schema definitions inside runtime API examples and reinforces the active baseline that runtime expressions carry actual data only.
+II MS is baselined as `intent-intelligence-ms`, the internal semantic interpretation and resolution service.
 
-## Baseline update — neutral subscriber callback URLs
+Active ownership:
 
-Callback URL examples must not use `/tmf` or `/tmf-api` path segments and must not imply that subscriber endpoints are TMF-owned paths.
+- II MS consumes `IntentValidatedEvent` from IC MS.
+- II MS performs semantic interpretation, KP-backed validation, canonicalisation, policy/capability checks, and resource discovery.
+- II MS preserves canonical `targets`, `constraints`, and `preferences` buckets.
+- II MS emits either `IntentRejectedEvent` or `IntentResolvedEvent`.
+- II MS has no external TMF-facing API by default.
+- II MS does not own runtime `Intent` APIs, external lifecycle projection, optimisation decisions, assurance truth, callback ingestion, orchestration execution, or KP governance.
 
-Baseline rule:
+Specification baseline:
 
-- Callback URLs are subscriber-owned listener endpoints.
-- Use neutral examples such as `https://consumer.example.com/listener/intent/events` and `https://consumer.example.com/listener/intentSpecification/events`.
-- Event-specific examples may use `/listener/<eventName>` style paths.
-- Do not use examples such as `https://consumer.example.com/tmf/intent/events`.
+- `ii_ms_specification.md` contains full input and output event samples.
+- `IntentRejectedEvent` samples include service-unavailable and redundancy-unavailable cases.
+- `IntentResolvedEvent` samples include Sydney and Melbourne resolved handoffs, including bounded and open-ended `timeWindow` examples.
+- `IntentResolvedEvent.resources[]` contains optimiser candidate resources, not optimiser-selected resources.
+- `provider` is not included in event-facing resource entries by default.
+- KP inventory metadata is curated into stable event-facing fields only.
 
-Files updated:
+Files added:
 
-- `ic_ms_specification.md`
-- `id_ms_design_brief.md`
-- `id_ms_specification.md`
+- `ii_ms_design_brief.md`
+- `ii_ms_specification.md`
