@@ -40,7 +40,6 @@
 - [Optimisation validation and outcome clarification:](#optimisation-validation-and-outcome-clarification)
 - [Contract definition versus runtime values:](#contract-definition-versus-runtime-values)
 - [Definition versus runtime contract naming:](#definition-versus-runtime-contract-naming)
-- [Corrected process view baseline:](#corrected-process-view-baseline)
 - [Infrastructure security controls across solution briefs:](#infrastructure-security-controls-across-solution-briefs)
 - [Use case sequence diagrams:](#use-case-sequence-diagrams)
   - [Discover optimisation capability sequence:](#discover-optimisation-capability-sequence)
@@ -50,6 +49,8 @@
   - [Cancellation optimisation sequence:](#cancellation-optimisation-sequence)
   - [Retrial failed optimisation sequence:](#retrial-failed-optimisation-sequence)
   - [Execute optimisation sequence:](#execute-optimisation-sequence)
+
+> **Status:** Draft
 
 > **Status:** Draft
 
@@ -232,7 +233,6 @@ OSB MS(OEX API) APIs exposed behind OGW are private/OEX experience APIs and do n
 Private MS-to-MS APIs and Kafka events are internal contracts unless separately exposed.
 ```
 
-
 ---
 
 ## Runtime process view baseline:
@@ -258,6 +258,29 @@ User
 -> User polls GET /optimisation/{id}
 ```
 
+Detailed flow:
+
+```text
+1. User opens the OEX UI and initiates an optimisation journey.
+2. OEX UI calls OGW.
+3. OGW invokes OSB MS (OEX APIs) using mTLS and User Context JWT.
+4. OSB MS validates the User Context JWT and shapes the OEX request/action model.
+5. OSB MS calls NGW using mTLS and OAuth2 system-to-system.
+6. NGW routes the request to OC MS.
+7. OC MS calls OD MS over mTLS to validate the referenced ACTIVE OptimisationSpecification and request contract.
+8. OC MS validates constraints[], targets[], and context[] against the OD MS request contract.
+9. OC MS persists the accepted runtime Optimisation with lifecycleStatus = ACKNOWLEDGED in OC MS DB.
+10. OC MS writes OptimisationRequestedEvent with instruction = EXECUTE to OC MS Outbox in the same transaction.
+11. OC MS Outbox relay publishes the event to Kafka.
+12. Python/Gurobi Worker consumes the event from Kafka.
+13. Python/Gurobi Worker resolves internal deterministic model binding.
+14. Python/Gurobi Worker invokes Gurobi Optimizer.
+15. Worker publishes OptimisationCompletedEvent or OptimisationFailedEvent back to Kafka.
+16. OC MS Inbox consumes the worker outcome event.
+17. OC MS Inbox updates OC MS DB with lifecycle and result projection.
+18. User polls GET /optimisation/{id} through OEX UI -> OGW -> OSB MS (OEX APIs) -> NGW -> OC MS to retrieve current status/result.
+```
+
 Meaning:
 
 ```text
@@ -273,6 +296,7 @@ OC MS Outbox:
 OC MS Inbox:
   Durable/idempotent worker outcome consumption and projection.
 ```
+
 
 ---
 
@@ -749,86 +773,6 @@ context[]
 ```
 
 This keeps the design clear: OD MS defines what is allowed; OC MS stores and returns what was accepted at runtime.
-
----
-
-## Corrected process view baseline:
-
-The agreed runtime process view is:
-
-```text
-User
--> OEX
--> OGW
--> OEX APIs
--> OSB MS(OEX API)
--> NGW
--> OC MS
--> OD MS
--> OC MS DB
--> OC MS Outbox
--> Kafka
--> Python/Gurobi Worker
--> Gurobi Optimizer
--> Kafka
--> OC MS Inbox
--> OC MS DB
--> User polls GET /optimisation/{id}
-```
-
-Detailed interpretation:
-
-```text
-1. Consumer initiates the optimisation journey through OEX.
-2. OEX routes the request to OGW.
-3. OGW routes to OEX APIs.
-4. OEX APIs route through OWG.
-5. OGW routes to OSB MS.
-6. OSB MS calls NGW.
-7. NGW calls OC MS.
-8. OC MS validates the runtime request against the ACTIVE OptimisationSpecification from OD MS.
-9. OC MS persists the accepted runtime Optimisation in OC MS DB.
-10. OC MS writes OptimisationRequestedEvent to OC MS Outbox in the same transaction.
-11. OC MS Outbox relay publishes the event to Kafka.
-12. Python/Gurobi Worker consumes the event from Kafka.
-13. Python/Gurobi Worker invokes Gurobi Optimizer.
-14. Worker publishes outcome event back to Kafka.
-15. OC MS Inbox consumes the outcome event from Kafka.
-16. OC MS Inbox updates OC MS DB with lifecycle/result projection.
-17. User polls GET /optimisation/{id} to retrieve current status/result.
-```
-
-Runtime request model:
-
-```text
-constraints[]
-targets[]
-context[]
-```
-
-Runtime contract validation:
-
-```text
-OC MS validates runtime constraints[], targets[], and context[] against the ACTIVE OD MS OptimisationSpecification.
-OC MS validates structure, required fields, value types, supported names, supported enum values, and cardinality such as candidateResources minItems = 2.
-OC MS does not perform solver feasibility, metric-vs-constraint evaluation, candidate ranking, or objective trade-off evaluation.
-```
-
-Outcome projection:
-
-```text
-SUCCESS -> COMPLETED
-INFEASIBLE -> INFEASIBLE
-FAILURE -> FAILED
-```
-
-Process view compliance rule:
-
-```text
-NGW-exposed OC MS and OD MS APIs are TMF-compliant.
-OEX / OGW / OEX APIs / OWG / OSB MS are experience-layer/private integration components and do not need to be TMF-compliant.
-Kafka events are internal contracts and do not need to be TMF-compliant unless separately required.
-```
 
 ---
 

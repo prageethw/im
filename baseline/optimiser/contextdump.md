@@ -61,6 +61,9 @@
 - [Baseline appended 2026-05-08T11:00:04 - Draft status, table of contents, logical-before-process ordering](#baseline-appended-2026-05-08t110004---draft-status-table-of-contents-logical-before-process-ordering)
 - [Baseline appended 2026-05-08T11:06:17 - Restored logical view diagram and logical view details](#baseline-appended-2026-05-08t110617---restored-logical-view-diagram-and-logical-view-details)
 - [Baseline appended 2026-05-08T11:18:29 - Restored logical view as the section between use case and process view](#baseline-appended-2026-05-08t111829---restored-logical-view-as-the-section-between-use-case-and-process-view)
+- [Baseline appended 2026-05-08T11:23:55 - Restored requested E2E runtime process view](#baseline-appended-2026-05-08t112355---restored-requested-e2e-runtime-process-view)
+
+> **Status:** Draft
 
 > **Status:** Draft
 
@@ -1644,3 +1647,19 @@ Logical view is placed before process view.
 Restored the detailed logical view as `### Logical view:` between `### Use case view:` and `### Process view:` in the E2E solution brief.
 
 Kept heading numbers removed while using the same placement that previously corresponded to section 3.2.
+
+---
+
+## Baseline appended 2026-05-08T11:23:55 - Restored requested E2E runtime process view
+
+Rolled the E2E solution brief process view back to the version with the 18-step detailed runtime flow:
+- User opens OEX UI
+- OEX UI calls OGW
+- OGW invokes OSB MS (OEX APIs) using mTLS and User Context JWT
+- OSB MS calls NGW using mTLS and OAuth2 system-to-system
+- NGW routes to OC MS
+- OC MS validates against OD MS
+- OC MS persists ACKNOWLEDGED state, writes OC MS Outbox, publishes to Kafka
+- Python/Gurobi Worker invokes Gurobi Optimizer
+- OC MS Inbox consumes outcome and updates OC MS DB
+- User polls GET /optimisation/{id} through OEX UI -> OGW -> OSB MS (OEX APIs) -> NGW -> OC MS
