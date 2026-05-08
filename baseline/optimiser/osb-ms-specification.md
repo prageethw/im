@@ -463,3 +463,74 @@ catalogue-management access attempts
 NGW dependency latency and failures
 OC MS / OD MS backend error surfacing counts
 ```
+
+---
+
+## Runtime Optimisation lifecycle baseline:
+
+Runtime Optimisation status list:
+
+```text
+ACKNOWLEDGED
+QUEUED
+PROCESSING
+COMPLETED
+INFEASIBLE
+FAILED
+CANCELLING
+CANCELLED
+```
+
+Status meanings:
+
+| Status | Meaning |
+|---|---|
+| `ACKNOWLEDGED` | OC MS accepted the runtime optimisation request and persisted it. |
+| `QUEUED` | Request is waiting for worker processing. |
+| `PROCESSING` | Python/Gurobi Worker is executing or preparing the optimisation. |
+| `COMPLETED` | Worker returned `SUCCESS`; result is available. |
+| `INFEASIBLE` | Worker/model determined no feasible solution exists. |
+| `FAILED` | Technical/runtime failure occurred. |
+| `CANCELLING` | Cancellation was requested and is being handled. |
+| `CANCELLED` | Optimisation was cancelled or safely resolved as cancelled. |
+
+Outcome mapping:
+
+```text
+SUCCESS -> COMPLETED
+INFEASIBLE -> INFEASIBLE
+FAILURE -> FAILED
+```
+
+Lifecycle transition baseline:
+
+```text
+ACKNOWLEDGED -> QUEUED -> PROCESSING -> COMPLETED
+ACKNOWLEDGED -> QUEUED -> PROCESSING -> INFEASIBLE
+ACKNOWLEDGED -> QUEUED -> PROCESSING -> FAILED
+ACKNOWLEDGED -> CANCELLING -> CANCELLED
+QUEUED -> CANCELLING -> CANCELLED
+PROCESSING -> CANCELLING -> CANCELLED
+FAILED -> retrial creates new ACKNOWLEDGED Optimisation
+```
+
+Transition rules:
+
+| From | To | Trigger |
+|---|---|---|
+| `ACKNOWLEDGED` | `QUEUED` | OC MS outbox event is ready/published for worker execution. |
+| `QUEUED` | `PROCESSING` | Worker starts or claims execution. |
+| `PROCESSING` | `COMPLETED` | Worker returns `SUCCESS`. |
+| `PROCESSING` | `INFEASIBLE` | Worker returns `INFEASIBLE`. |
+| `PROCESSING` | `FAILED` | Worker returns `FAILURE` or technical failure is projected. |
+| `ACKNOWLEDGED` / `QUEUED` / `PROCESSING` | `CANCELLING` | User requests cancellation through `POST /optimisation/{id}/cancellation`. |
+| `CANCELLING` | `CANCELLED` | Cancellation is confirmed or safely resolved. |
+| `FAILED` | new `ACKNOWLEDGED` | User requests retrial through `POST /optimisation/{id}/retrial`; creates a new Optimisation. |
+
+Retrial rule:
+
+```text
+Retrial does not move FAILED back to PROCESSING.
+
+Retrial creates a new runtime Optimisation resource with retrialOf pointing to the failed one.
+```

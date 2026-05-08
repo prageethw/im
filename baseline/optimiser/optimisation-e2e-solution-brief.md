@@ -22,9 +22,15 @@ The solution separates the **definition of optimisation capabilities** from the 
 
 - Consumers may include **OEX**, platform services, planning tools, assurance functions, intent-management flows, or other authorised entities that need to run optimisation.
 
+- OEX layer:
+  - **OEX UI** provides the user-facing optimisation experience.
+  - **OGW** is the user-context-aware gateway that invokes OSB MS using mTLS and User Context JWT.
+  - **OSB MS / Optimisation Screen Builder MS** is the context-aware OEX facade/backend-for-frontend for optimisation journeys. It shapes OEX screens and actions using the User Context JWT, initially proxies runtime optimisation journeys to OC MS through NGW, and later supports governed OD MS catalogue/specification journeys through NGW.
+
+
 - Operator access to OEX is governed by the ACG approval process and Microsoft Entra ID SSO.
 
-- OGW exposes OEX APIs for the OEX UI using user-context-aware OAuth2. OWG calls OEX Screen Builder MS using mTLS and User Context JWT. OEX Screen Builder MS reaches backend OD MS and OC MS APIs through NGW using mTLS and OAuth2 system-to-system.
+- OGW exposes OEX APIs for the OEX UI using user-context-aware OAuth2. OWG calls OSB MS using mTLS and User Context JWT. OSB MS reaches backend OD MS and OC MS APIs through NGW using mTLS and OAuth2 system-to-system.
 
 - OC MS validates only request structure and the OD MS request contract, then returns `202 Accepted` and drives execution asynchronously through Kafka.
 
@@ -67,7 +73,7 @@ User
 -> OGW
 -> OEX APIs / OEX UI
 -> OWG
--> OEX Screen Builder MS
+-> OSB MS
 -> NGW
 -> OD MS / OC MS
 -> Kafka
@@ -87,10 +93,10 @@ UI -> OGW:
 OGW -> OEX APIs:
   Uses user SSO OAuth2 and propagates user context.
 
-OGW -> OEX Screen Builder MS:
+OGW -> OSB MS:
   Uses mTLS and User Context JWT.
 
-OEX Screen Builder MS -> NGW:
+OSB MS -> NGW:
   Uses mTLS and OAuth2 system-to-system.
 
 NGW -> OD MS:
@@ -127,7 +133,7 @@ User
 -> OGW
 -> OEX APIs
 -> OWG
--> OEX Screen Builder MS
+-> OSB MS
 -> NGW
 -> OC MS
 -> OD MS
@@ -147,8 +153,8 @@ Detailed flow:
 ```text
 1. Consumer submits an optimisation request through the OEX experience or another authorised integration path.
 2. User-facing access is handled through OGW and OEX APIs.
-3. OGW invokes OEX Screen Builder MS with mTLS and User Context JWT.
-4. OEX Screen Builder MS calls NGW using mTLS and OAuth2 system-to-system.
+3. OGW invokes OSB MS with mTLS and User Context JWT.
+4. OSB MS calls NGW using mTLS and OAuth2 system-to-system.
 5. NGW routes the request to OC MS.
 6. OC MS validates request structure.
 7. OC MS calls OD MS over mTLS to validate the referenced ACTIVE OptimisationSpecification.
@@ -172,7 +178,7 @@ User
 -> OGW
 -> OEX APIs
 -> OWG
--> OEX Screen Builder MS
+-> OSB MS
 -> NGW
 -> OC MS
 -> OC MS DB
@@ -203,7 +209,7 @@ User
 -> OGW
 -> OEX APIs
 -> OWG
--> OEX Screen Builder MS
+-> OSB MS
 -> NGW
 -> OC MS
 -> OC MS DB
@@ -235,9 +241,9 @@ Detailed flow:
 | **ACG approval process** | Governs operator access to OEX. Users must be approved through the organisational access-control process before they can use the OEX optimisation experience. |
 | **OGW** | User-context-aware gateway for OEX APIs and OEX UI integration. Uses user SSO OAuth2 from the UI/OEX API path and propagates user identity context into the OEX layer. |
 | **OEX APIs / OEX UI** | Provides the user/operator-facing experience for discovering optimisation capabilities, submitting requests, monitoring state, cancelling, retrying, and viewing results. |
-| **OWG** | Secures internal OEX access to OEX Screen Builder MS using mTLS and User Context JWT. Preserves user context across the OEX backend interaction. |
-| **OEX Screen Builder MS** | Builds and orchestrates the OEX screen/backend experience. Integrates with NGW using mTLS and OAuth2 system-to-system to call backend optimisation APIs. |
-| **NGW** | NAAS Gateway exposing backend optimisation domain APIs for OD MS and OC MS. Provides the controlled backend API entry point for OEX Screen Builder MS and other authorised system consumers. NGW-exposed backend APIs are TMF-compliant. |
+| **OWG** | Secures internal OEX access to OSB MS using mTLS and User Context JWT. Preserves user context across the OEX backend interaction. |
+| **OSB MS** | Builds and orchestrates the OEX screen/backend experience. Integrates with NGW using mTLS and OAuth2 system-to-system to call backend optimisation APIs. |
+| **NGW** | NAAS Gateway exposing backend optimisation domain APIs for OD MS and OC MS. Provides the controlled backend API entry point for OSB MS and other authorised system consumers. NGW-exposed backend APIs are TMF-compliant. |
 | **Optimisation-Definition-MS / OD MS** | Owns the definition side of the optimisation platform through `OptimisationSpecification`. Publishes caller-facing request contracts, manages `DRAFT`, `ACTIVE`, and `RETIRED` specification lifecycle, and ensures only one ACTIVE specification exists per `specificationKey`. Does not expose solver/model internals. |
 | **OD MS Database** | Stores `OptimisationSpecification` records, version metadata, lifecycle state, request contracts, timestamps, ETag/revision data, and retained retired specifications for audit/history. |
 | **Optimisation-Controller-MS / OC MS** | Owns runtime `Optimisation` resources. Accepts requests, validates the generic wrapper and OD MS request contract, manages lifecycle, cancellation, retrial, outbox/inbox integration, and result projection. Performs syntactic and contract validation only. |
@@ -272,7 +278,7 @@ OGW is the user-context-aware gateway for the OEX channel. It uses user SSO OAut
 
 ### 5.2 OEX internal access path:
 
-OWG integrates with the OEX Screen Builder MS using:
+OWG integrates with the OSB MS using:
 
 ```text
 mTLS
@@ -284,12 +290,12 @@ This preserves user context while securely invoking OEX backend experience servi
 ```text
 OGW / OEX APIs
 -> OWG
--> OEX Screen Builder MS
+-> OSB MS
 ```
 
 ### 5.3 OEX to optimisation backend access:
 
-OEX Screen Builder MS integrates with NGW using:
+OSB MS integrates with NGW using:
 
 ```text
 mTLS
@@ -299,7 +305,7 @@ OAuth2 system-to-system
 NGW exposes backend optimisation domain APIs for OD MS and OC MS.
 
 ```text
-OEX Screen Builder MS
+OSB MS
 -> NGW
 -> OD MS / OC MS
 ```
@@ -498,9 +504,9 @@ OD MS specification responses may use caching where appropriate. OC MS runtime r
 
 - OGW is the user-context-aware gateway for OEX APIs and OEX UI integration.
 
-- OWG integrates with OEX Screen Builder MS using mTLS and User Context JWT.
+- OWG integrates with OSB MS using mTLS and User Context JWT.
 
-- OEX Screen Builder MS integrates with NGW using mTLS and OAuth2 system-to-system.
+- OSB MS integrates with NGW using mTLS and OAuth2 system-to-system.
 
 - NGW exposes OD MS and OC MS APIs to authorised backend consumers.
 
@@ -714,7 +720,7 @@ User
 -> OGW
 -> OEX APIs
 -> OWG
--> OEX Screen Builder MS
+-> OSB MS
 -> NGW
 -> OC MS
 -> OD MS
@@ -736,8 +742,8 @@ Detailed interpretation:
 2. OEX routes the request to OGW.
 3. OGW routes to OEX APIs.
 4. OEX APIs route through OWG.
-5. OGW routes to OEX Screen Builder MS.
-6. OEX Screen Builder MS calls NGW.
+5. OGW routes to OSB MS.
+6. OSB MS calls NGW.
 7. NGW calls OC MS.
 8. OC MS validates the runtime request against the ACTIVE OptimisationSpecification from OD MS.
 9. OC MS persists the accepted runtime Optimisation in OC MS DB.
@@ -779,7 +785,7 @@ Process view compliance rule:
 
 ```text
 NGW-exposed OC MS and OD MS APIs are TMF-compliant.
-OEX / OGW / OEX APIs / OWG / OEX Screen Builder MS are experience-layer/private integration components and do not need to be TMF-compliant.
+OEX / OGW / OEX APIs / OWG / OSB MS are experience-layer/private integration components and do not need to be TMF-compliant.
 Kafka events are internal contracts and do not need to be TMF-compliant unless separately required.
 ```
 
@@ -846,4 +852,75 @@ OC MS design brief:
 E2E solution brief:
   captures common cross-cutting infrastructure security controls.
   summarises database, Kafka, cache/future-infrastructure, identity, encryption, ACL, secret-management, and audit requirements.
+```
+
+---
+
+## Runtime Optimisation lifecycle baseline:
+
+Runtime Optimisation status list:
+
+```text
+ACKNOWLEDGED
+QUEUED
+PROCESSING
+COMPLETED
+INFEASIBLE
+FAILED
+CANCELLING
+CANCELLED
+```
+
+Status meanings:
+
+| Status | Meaning |
+|---|---|
+| `ACKNOWLEDGED` | OC MS accepted the runtime optimisation request and persisted it. |
+| `QUEUED` | Request is waiting for worker processing. |
+| `PROCESSING` | Python/Gurobi Worker is executing or preparing the optimisation. |
+| `COMPLETED` | Worker returned `SUCCESS`; result is available. |
+| `INFEASIBLE` | Worker/model determined no feasible solution exists. |
+| `FAILED` | Technical/runtime failure occurred. |
+| `CANCELLING` | Cancellation was requested and is being handled. |
+| `CANCELLED` | Optimisation was cancelled or safely resolved as cancelled. |
+
+Outcome mapping:
+
+```text
+SUCCESS -> COMPLETED
+INFEASIBLE -> INFEASIBLE
+FAILURE -> FAILED
+```
+
+Lifecycle transition baseline:
+
+```text
+ACKNOWLEDGED -> QUEUED -> PROCESSING -> COMPLETED
+ACKNOWLEDGED -> QUEUED -> PROCESSING -> INFEASIBLE
+ACKNOWLEDGED -> QUEUED -> PROCESSING -> FAILED
+ACKNOWLEDGED -> CANCELLING -> CANCELLED
+QUEUED -> CANCELLING -> CANCELLED
+PROCESSING -> CANCELLING -> CANCELLED
+FAILED -> retrial creates new ACKNOWLEDGED Optimisation
+```
+
+Transition rules:
+
+| From | To | Trigger |
+|---|---|---|
+| `ACKNOWLEDGED` | `QUEUED` | OC MS outbox event is ready/published for worker execution. |
+| `QUEUED` | `PROCESSING` | Worker starts or claims execution. |
+| `PROCESSING` | `COMPLETED` | Worker returns `SUCCESS`. |
+| `PROCESSING` | `INFEASIBLE` | Worker returns `INFEASIBLE`. |
+| `PROCESSING` | `FAILED` | Worker returns `FAILURE` or technical failure is projected. |
+| `ACKNOWLEDGED` / `QUEUED` / `PROCESSING` | `CANCELLING` | User requests cancellation through `POST /optimisation/{id}/cancellation`. |
+| `CANCELLING` | `CANCELLED` | Cancellation is confirmed or safely resolved. |
+| `FAILED` | new `ACKNOWLEDGED` | User requests retrial through `POST /optimisation/{id}/retrial`; creates a new Optimisation. |
+
+Retrial rule:
+
+```text
+Retrial does not move FAILED back to PROCESSING.
+
+Retrial creates a new runtime Optimisation resource with retrialOf pointing to the failed one.
 ```

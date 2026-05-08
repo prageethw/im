@@ -1262,3 +1262,53 @@ Cleanup rules applied:
 - No stale `/cancel` or `/retry` endpoint paths.
 - No `cancellation` typo.
 - Use `Gurobi Optimizer` consistently.
+
+---
+
+## Baseline appended 2026-05-04T00:02:50 - Added OSB MS under OEX layer in E2E solution summary
+
+Updated the E2E solution summary to explicitly include the OEX layer:
+- OEX UI provides the user-facing optimisation experience.
+- OGW invokes OSB MS using mTLS and User Context JWT.
+- OSB MS / Optimisation Screen Builder MS is the context-aware OEX facade/backend-for-frontend.
+- OSB MS shapes screens/actions using User Context JWT, initially proxies runtime optimisation journeys to OC MS through NGW, and later supports governed OD MS catalogue/specification journeys through NGW.
+
+---
+
+## Baseline appended 2026-05-08T04:41:19 - Runtime Optimisation lifecycle/status baseline
+
+Baselined runtime Optimisation statuses and transitions.
+
+Statuses:
+```text
+ACKNOWLEDGED
+QUEUED
+PROCESSING
+COMPLETED
+INFEASIBLE
+FAILED
+CANCELLING
+CANCELLED
+```
+
+Outcome mapping:
+```text
+SUCCESS -> COMPLETED
+INFEASIBLE -> INFEASIBLE
+FAILURE -> FAILED
+```
+
+Transition baseline:
+```text
+ACKNOWLEDGED -> QUEUED -> PROCESSING -> COMPLETED
+ACKNOWLEDGED -> QUEUED -> PROCESSING -> INFEASIBLE
+ACKNOWLEDGED -> QUEUED -> PROCESSING -> FAILED
+ACKNOWLEDGED -> CANCELLING -> CANCELLED
+QUEUED -> CANCELLING -> CANCELLED
+PROCESSING -> CANCELLING -> CANCELLED
+FAILED -> retrial creates new ACKNOWLEDGED Optimisation
+```
+
+Retrial rule:
+- Retrial does not move FAILED back to PROCESSING.
+- Retrial creates a new runtime Optimisation resource with `retrialOf` pointing to the failed one.
