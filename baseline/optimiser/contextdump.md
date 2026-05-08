@@ -5,35 +5,35 @@
 ## Table of contents:
 - [Baseline: Reference books for Gurobi optimisation architecture exercise](#baseline-reference-books-for-gurobi-optimisation-architecture-exercise)
 - [Baseline Update — REST HATEOAS, ETag Concurrency, and Cache-Control Position](#baseline-update-rest-hateoas-etag-concurrency-and-cache-control-position)
-- [1. OD MS summary](#1-od-ms-summary)
-- [2. OD MS endpoint set](#2-od-ms-endpoint-set)
-- [3. OptimisationSpecification lifecycle](#3-optimisationspecification-lifecycle)
-- [4. Version activation rule](#4-version-activation-rule)
-- [5. Public OptimisationSpecification shape](#5-public-optimisationspecification-shape)
-- [6. POST /optimisationSpecification](#6-post-optimisationspecification)
+- [OD MS summary](#od-ms-summary)
+- [OD MS endpoint set](#od-ms-endpoint-set)
+- [OptimisationSpecification lifecycle](#optimisationspecification-lifecycle)
+- [Version activation rule](#version-activation-rule)
+- [Public OptimisationSpecification shape](#public-optimisationspecification-shape)
+- [POST /optimisationSpecification](#post-optimisationspecification)
   - [Request](#request)
   - [Successful response](#successful-response)
-- [7. GET /optimisationSpecification/{id}](#7-get-optimisationspecificationid)
+- [GET /optimisationSpecification/{id}](#get-optimisationspecificationid)
   - [Request](#request-1)
   - [Response](#response)
-- [8. GET /optimisationSpecification](#8-get-optimisationspecification)
+- [GET /optimisationSpecification](#get-optimisationspecification)
   - [Request](#request-2)
   - [Response](#response-1)
-- [9. PUT /optimisationSpecification/{id}](#9-put-optimisationspecificationid)
+- [PUT /optimisationSpecification/{id}](#put-optimisationspecificationid)
   - [Request](#request-3)
   - [Successful response](#successful-response-1)
   - [PUT failure responses](#put-failure-responses)
-- [10. DELETE /optimisationSpecification/{id}](#10-delete-optimisationspecificationid)
+- [DELETE /optimisationSpecification/{id}](#delete-optimisationspecificationid)
   - [Request](#request-4)
   - [Successful response](#successful-response-2)
   - [DELETE rules](#delete-rules)
   - [DELETE failure responses](#delete-failure-responses)
-- [11. HATEOAS by lifecycle state](#11-hateoas-by-lifecycle-state)
+- [HATEOAS by lifecycle state](#hateoas-by-lifecycle-state)
   - [DRAFT](#draft)
   - [ACTIVE](#active)
   - [RETIRED](#retired)
-- [12. Header rules](#12-header-rules)
-- [13. Key OD MS baseline summary](#13-key-od-ms-baseline-summary)
+- [Header rules](#header-rules)
+- [Key OD MS baseline summary](#key-od-ms-baseline-summary)
 - [Baseline appended 2026-05-02T04:29:57 - Runtime Optimisation result visibility rule](#baseline-appended-2026-05-02t042957---runtime-optimisation-result-visibility-rule)
 - [Baseline appended 2026-05-03T07:55:57 - Rebuilt OD MS specification as clean definition model](#baseline-appended-2026-05-03t075557---rebuilt-od-ms-specification-as-clean-definition-model)
 - [Baseline appended 2026-05-03T08:08:22 - Shared location moved to topologySnapshot level](#baseline-appended-2026-05-03t080822---shared-location-moved-to-topologysnapshot-level)
@@ -52,8 +52,17 @@
 - [Baseline appended 2026-05-08T08:21:59 - Added one-to-one use case sequence diagrams](#baseline-appended-2026-05-08t082159---added-one-to-one-use-case-sequence-diagrams)
 - [Baseline appended 2026-05-08T08:37:48 - Added one-to-one process views for all use cases](#baseline-appended-2026-05-08t083748---added-one-to-one-process-views-for-all-use-cases)
 - [Baseline appended 2026-05-08T09:50:50 - Moved seven process views under 3.3](#baseline-appended-2026-05-08t095050---moved-seven-process-views-under-33)
-- [Baseline appended 2026-05-08T11:11:27 - Rolled back seven process-flow addition](#baseline-appended-2026-05-08t111127---rolled-back-seven-process-flow-addition)
-- [Baseline appended 2026-05-08T11:15:05 - Restored previous detailed logical view in E2E brief](#baseline-appended-2026-05-08t111505---restored-previous-detailed-logical-view-in-e2e-brief)
+- [Baseline appended 2026-05-08T09:53:26 - Removed heading numbers from artefacts](#baseline-appended-2026-05-08t095326---removed-heading-numbers-from-artefacts)
+- [Business context:](#business-context)
+  - [Process view:](#process-view)
+- [Business context:](#business-context-1)
+  - [Process view:](#process-view-1)
+- [Baseline appended 2026-05-08T09:59:06 - Restored logical view after heading cleanup](#baseline-appended-2026-05-08t095906---restored-logical-view-after-heading-cleanup)
+- [Baseline appended 2026-05-08T11:00:04 - Draft status, table of contents, logical-before-process ordering](#baseline-appended-2026-05-08t110004---draft-status-table-of-contents-logical-before-process-ordering)
+- [Baseline appended 2026-05-08T11:06:17 - Restored logical view diagram and logical view details](#baseline-appended-2026-05-08t110617---restored-logical-view-diagram-and-logical-view-details)
+- [Baseline appended 2026-05-08T11:18:29 - Restored logical view as the section between use case and process view](#baseline-appended-2026-05-08t111829---restored-logical-view-as-the-section-between-use-case-and-process-view)
+
+> **Status:** Draft
 
 > **Status:** Draft
 
@@ -166,7 +175,7 @@ HTTP/1.1 412 Precondition Failed
 
 # Baselined OD MS / Optimisation-Definition-MS REST Specification
 
-## 1. OD MS summary
+## OD MS summary
 
 Optimisation-Definition-MS (OD MS) owns the definition side of the optimisation platform. Its responsibility is to publish and govern the externally visible optimisation capability contract, called `OptimisationSpecification`.
 
@@ -189,7 +198,7 @@ In one sentence:
 OD MS is the governed catalogue of optimisation capabilities; it tells callers what inputs they must provide, while the platform privately owns how those inputs are translated into deterministic Gurobi execution.
 ```
 
-## 2. OD MS endpoint set
+## OD MS endpoint set
 
 ```http
 # List/search OptimisationSpecification resources.
@@ -211,7 +220,7 @@ PUT /optimisationSpecification/{id}
 DELETE /optimisationSpecification/{id}
 ```
 
-## 3. OptimisationSpecification lifecycle
+## OptimisationSpecification lifecycle
 
 ```text
 DRAFT
@@ -241,7 +250,7 @@ DELETED
 ARCHIVED
 ```
 
-## 4. Version activation rule
+## Version activation rule
 
 ```text
 Only one ACTIVE OptimisationSpecification is allowed per specificationKey.
@@ -278,7 +287,7 @@ Transactional activation logic:
 8. Commit atomically.
 ```
 
-## 5. Public OptimisationSpecification shape
+## Public OptimisationSpecification shape
 
 The public OD MS resource exposes only the caller-facing input contract.
 
@@ -404,7 +413,7 @@ Example resource:
 }
 ```
 
-## 6. POST /optimisationSpecification
+## POST /optimisationSpecification
 
 Creates a new `OptimisationSpecification`.
 
@@ -566,7 +575,7 @@ Content-Type: application/json
 }
 ```
 
-## 7. GET /optimisationSpecification/{id}
+## GET /optimisationSpecification/{id}
 
 Retrieves one `OptimisationSpecification`.
 
@@ -658,7 +667,7 @@ Cache-Control: max-age=3600
 }
 ```
 
-## 8. GET /optimisationSpecification
+## GET /optimisationSpecification
 
 Lists/searches `OptimisationSpecification` resources.
 
@@ -718,7 +727,7 @@ X-Result-Count: 1
 ]
 ```
 
-## 9. PUT /optimisationSpecification/{id}
+## PUT /optimisationSpecification/{id}
 
 Full replacement only.
 
@@ -906,7 +915,7 @@ Content-Type: application/json
 }
 ```
 
-## 10. DELETE /optimisationSpecification/{id}
+## DELETE /optimisationSpecification/{id}
 
 Delete is only for DRAFT cleanup.
 
@@ -984,7 +993,7 @@ Content-Type: application/json
 }
 ```
 
-## 11. HATEOAS by lifecycle state
+## HATEOAS by lifecycle state
 
 ### DRAFT
 
@@ -1031,7 +1040,7 @@ Content-Type: application/json
 }
 ```
 
-## 12. Header rules
+## Header rules
 
 ```text
 GET /optimisationSpecification/{id}
@@ -1062,7 +1071,7 @@ Stale/wrong If-Match:
   412 Precondition Failed
 ```
 
-## 13. Key OD MS baseline summary
+## Key OD MS baseline summary
 
 ```text
 OD MS owns OptimisationSpecification.
@@ -1562,26 +1571,76 @@ Moved the seven one-to-one use-case process views into the E2E solution brief `#
 
 ---
 
-## Baseline appended 2026-05-08T11:11:27 - Rolled back seven process-flow addition
+## Baseline appended 2026-05-08T09:53:26 - Removed heading numbers from artefacts
 
-Rolled the E2E brief back to the pre-seven-process-flow structure:
-- removed the separate one-to-one process-view section
-- removed stale `Corrected process view baseline`
-- restored a single `Runtime process view baseline`
-- kept logical view before runtime process view
-- preserved use-case sequence diagrams
+Removed numeric prefixes from Markdown headings across current artefacts.
+
+Examples:
+```text
+## Business context:
+### Process view:
+#### Discover optimisation capability:
+```
+
+are now:
+```text
+## Business context:
+### Process view:
+#### Discover optimisation capability:
+```
 
 ---
 
-## Baseline appended 2026-05-08T11:15:05 - Restored previous detailed logical view in E2E brief
+## Baseline appended 2026-05-08T09:59:06 - Restored logical view after heading cleanup
 
-Restored the previous detailed logical view into the E2E brief, before the runtime process view.
+Restored the logical view sections after heading-number cleanup.
 
-Restored content includes:
+E2E/OSB logical view:
+```text
+User
+-> Microsoft Entra ID SSO
+-> OEX UI
+-> OGW
+-> OSB MS(OEX API)
+-> NGW
+-> OD MS / OC MS
+-> Kafka
+-> Python/Gurobi Worker
+-> Gurobi Optimizer
+```
+
+OD MS has the definition logical path.
+OC MS has the runtime logical path.
+
+---
+
+## Baseline appended 2026-05-08T11:00:04 - Draft status, table of contents, logical-before-process ordering
+
+Updated artefacts to show `Status: Draft`, add a table of contents near the top, remove heading numbers, and keep the logical view before the process view where both sections exist.
+
+---
+
+## Baseline appended 2026-05-08T11:06:17 - Restored logical view diagram and logical view details
+
+Restored logical view details and diagrams.
+
+E2E and OSB now include:
 - logical view diagram
 - logical integration model
 - definition-management logical path
 - runtime-optimisation logical path
-- logical responsibilities table
+- logical responsibility table
 - boundary rules
 - API compliance rule
+
+OD MS and OC MS now include service-focused logical diagrams and responsibility tables.
+
+Logical view is placed before process view.
+
+---
+
+## Baseline appended 2026-05-08T11:18:29 - Restored logical view as the section between use case and process view
+
+Restored the detailed logical view as `### Logical view:` between `### Use case view:` and `### Process view:` in the E2E solution brief.
+
+Kept heading numbers removed while using the same placement that previously corresponded to section 3.2.
