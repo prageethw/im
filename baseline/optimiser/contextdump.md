@@ -53,6 +53,9 @@
 - [Baseline appended 2026-05-08T08:37:48 - Added one-to-one process views for all use cases](#baseline-appended-2026-05-08t083748---added-one-to-one-process-views-for-all-use-cases)
 - [Baseline appended 2026-05-08T09:50:50 - Moved seven process views under 3.3](#baseline-appended-2026-05-08t095050---moved-seven-process-views-under-33)
 - [Baseline appended 2026-05-08T11:11:27 - Rolled back seven process-flow addition](#baseline-appended-2026-05-08t111127---rolled-back-seven-process-flow-addition)
+- [Baseline appended 2026-05-08T11:15:05 - Restored previous detailed logical view in E2E brief](#baseline-appended-2026-05-08t111505---restored-previous-detailed-logical-view-in-e2e-brief)
+
+> **Status:** Draft
 
 This file is the running baseline dump for this conversation. New baselines are appended to the end unless explicitly requested otherwise.
 
@@ -1567,3 +1570,18 @@ Rolled the E2E brief back to the pre-seven-process-flow structure:
 - restored a single `Runtime process view baseline`
 - kept logical view before runtime process view
 - preserved use-case sequence diagrams
+
+---
+
+## Baseline appended 2026-05-08T11:15:05 - Restored previous detailed logical view in E2E brief
+
+Restored the previous detailed logical view into the E2E brief, before the runtime process view.
+
+Restored content includes:
+- logical view diagram
+- logical integration model
+- definition-management logical path
+- runtime-optimisation logical path
+- logical responsibilities table
+- boundary rules
+- API compliance rule

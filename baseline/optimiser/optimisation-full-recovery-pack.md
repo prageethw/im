@@ -53,6 +53,7 @@
 - [Baseline appended 2026-05-08T08:37:48 - Added one-to-one process views for all use cases](#baseline-appended-2026-05-08t083748---added-one-to-one-process-views-for-all-use-cases)
 - [Baseline appended 2026-05-08T09:50:50 - Moved seven process views under 3.3](#baseline-appended-2026-05-08t095050---moved-seven-process-views-under-33)
 - [Baseline appended 2026-05-08T11:11:27 - Rolled back seven process-flow addition](#baseline-appended-2026-05-08t111127---rolled-back-seven-process-flow-addition)
+- [Baseline appended 2026-05-08T11:15:05 - Restored previous detailed logical view in E2E brief](#baseline-appended-2026-05-08t111505---restored-previous-detailed-logical-view-in-e2e-brief)
 - [Service purpose:](#service-purpose)
 - [Ownership:](#ownership)
 - [Definition versus runtime model:](#definition-versus-runtime-model)
@@ -75,7 +76,6 @@
 - [OD MS observability focus:](#od-ms-observability-focus)
 - [Runtime process view participation baseline:](#runtime-process-view-participation-baseline)
 - [Logical view baseline:](#logical-view-baseline)
-- [Outbox pattern participation note:](#outbox-pattern-participation-note)
 - [OC MS summary:](#oc-ms-summary)
 - [OC MS endpoint set:](#oc-ms-endpoint-set)
 - [Runtime lifecycle:](#runtime-lifecycle)
@@ -84,7 +84,7 @@
 - [POST /optimisation:](#post-optimisation)
 - [OC MS validation boundary:](#oc-ms-validation-boundary)
 
-Generated: 2026-05-08T11:11:27
+Generated: 2026-05-08T11:15:05
 
 This file combines the current optimisation architecture recovery material into one place.
 
@@ -100,6 +100,8 @@ It contains:
 # Part: Cumulative Context Dump
 
 # Context Dump
+
+> **Status:** Draft
 
 > **Status:** Draft
 
@@ -1617,6 +1619,21 @@ Rolled the E2E brief back to the pre-seven-process-flow structure:
 - kept logical view before runtime process view
 - preserved use-case sequence diagrams
 
+---
+
+## Baseline appended 2026-05-08T11:15:05 - Restored previous detailed logical view in E2E brief
+
+Restored the previous detailed logical view into the E2E brief, before the runtime process view.
+
+Restored content includes:
+- logical view diagram
+- logical integration model
+- definition-management logical path
+- runtime-optimisation logical path
+- logical responsibilities table
+- boundary rules
+- API compliance rule
+
 
 ---
 
@@ -2292,14 +2309,6 @@ OC MS -> OD MS
 ```
 
 OD MS does not participate in Kafka, Python/Gurobi Worker, Gurobi Optimizer, OC MS Inbox, or runtime result projection.
-
----
-
-## Outbox pattern participation note:
-
-OD MS does not own an outbox in the current optimisation baseline.
-
-If OD MS later introduces an outbox, it must follow the shared processed-record lifecycle rule: mark successfully processed/published records as processed, retain them for a configured retention window, and clean up or archive only processed records.
 
 
 ---
@@ -3915,95 +3924,6 @@ User
 
 OC MS owns runtime Optimisation resources. It validates runtime requests against OD MS definitions, persists accepted executions, emits Kafka instructions, consumes worker outcomes, and projects lifecycle/result state.
 
----
-
-## Outbox processed-record lifecycle baseline:
-
-For services that use an outbox pattern, outbox records must be lifecycle-managed after successful publication/processing.
-
-Baseline rule:
-
-```text
-An outbox record is not deleted immediately after publish.
-
-After successful relay/publication to Kafka, the outbox relay marks the outbox record as processed/published with a processed timestamp.
-
-Processed records are retained for a configured retention window, then cleaned up by an operational cleanup job.
-```
-
-Typical outbox record lifecycle:
-
-```text
-PENDING
--> PROCESSING
--> PROCESSED
-```
-
-Failure lifecycle:
-
-```text
-PENDING
--> PROCESSING
--> FAILED_RETRYABLE
--> PROCESSING
--> PROCESSED
-```
-
-Poison/unrecoverable lifecycle:
-
-```text
-PENDING
--> PROCESSING
--> FAILED_NON_RETRYABLE
--> DLQ_PUBLISHED
--> PROCESSED_FOR_CLEANUP
-```
-
-Minimum persisted fields:
-
-```text
-outboxRecordId
-aggregateId / optimisationId
-eventType
-eventVersion
-payload
-status
-attemptCount
-createdAt
-lastAttemptAt
-processedAt
-failureReason
-correlationId
-```
-
-Cleanup rule:
-
-```text
-Only processed/published records older than the configured retention period are eligible for deletion or archival.
-
-Unprocessed, retryable-failed, or unresolved DLQ records must not be removed by routine cleanup.
-```
-
-Operational rule:
-
-```text
-Outbox cleanup must be observable and auditable.
-
-Cleanup metrics should include processed-record count, deleted/archived count, oldest unprocessed record age, failed record count, and cleanup failures.
-```
-
----
-
-## OC MS outbox cleanup baseline:
-
-OC MS uses the outbox pattern for worker instructions such as `EXECUTE` and `CANCEL`.
-
-After OC MS Outbox Relay successfully publishes the worker instruction event to Kafka, OC MS marks the outbox record as processed/published and records `processedAt`.
-
-Processed outbox records are retained for the configured retention window and then cleaned up or archived.
-
-OC MS must not delete pending, processing, retryable failed, unresolved DLQ, or unprocessed outbox records through normal cleanup.
-
 
 ---
 
@@ -4635,20 +4555,14 @@ OSB MS(OEX API) APIs exposed behind OGW are private/OEX experience APIs and do n
 Private MS-to-MS APIs and Kafka events are internal contracts unless separately exposed.
 ```
 
----
-
-## Outbox pattern participation note:
-
-OSB MS does not own an outbox in the current baseline.
-
-If OSB MS later introduces an outbox or any durable asynchronous publication pattern, it must follow the shared processed-record lifecycle rule: mark successfully processed/published records as processed, retain them for a configured retention window, and clean up or archive only processed records.
-
 
 ---
 
 # Part: Current E2E Optimisation Solution Brief
 
 # End-to-End Solution Brief — Optimisation Platform
+
+> **Status:** Draft
 
 > **Status:** Draft
 
@@ -5457,7 +5371,39 @@ E2E solution brief:
 
 ## Logical view baseline:
 
-The logical integration model is:
+The logical view shows the main optimisation platform components and their domain boundaries. It is intentionally higher level than the process view.
+
+Logical view diagram:
+
+```mermaid
+flowchart LR
+    User[User]
+    Entra[Microsoft Entra ID SSO]
+    OEX[OEX UI]
+    OGW[OGW]
+    OSB[OSB MS<br/>(OEX API)]
+    NGW[NGW]
+    OD[OD MS<br/>OptimisationSpecification]
+    OC[OC MS<br/>Runtime Optimisation]
+    Kafka[Kafka]
+    Worker[Python/Gurobi Worker]
+    Gurobi[Gurobi Optimizer]
+
+    User --> Entra
+    Entra --> OEX
+    OEX --> OGW
+    OGW --> OSB
+    OSB --> NGW
+    NGW --> OD
+    NGW --> OC
+    OC --> Kafka
+    Kafka --> Worker
+    Worker --> Gurobi
+    Worker --> Kafka
+    Kafka --> OC
+```
+
+Logical integration model:
 
 ```text
 User
@@ -5498,6 +5444,42 @@ User
 -> Python/Gurobi Worker
 -> Gurobi Optimizer
 ```
+
+Logical responsibilities:
+
+| Component | Responsibility |
+|---|---|
+| User | Uses OEX UI to discover capabilities, submit runtime optimisation requests, monitor outcomes, or perform governed catalogue-management journeys when authorised. |
+| Microsoft Entra ID SSO | Provides enterprise authentication for the OEX user journey. |
+| OEX UI | User-facing optimisation experience. |
+| OGW | Gateway that invokes OSB MS using mTLS and User Context JWT. |
+| OSB MS(OEX API) | Optimisation-specific OEX API/facade. It uses User Context JWT to shape the OEX experience and calls backend optimisation APIs through NGW. |
+| NGW | Backend gateway for TMF-compliant OD MS and OC MS APIs. |
+| OD MS | Owns OptimisationSpecification catalogue, lifecycle, governance, and request-contract definitions. |
+| OC MS | Owns runtime Optimisation lifecycle, validation, cancellation, retrial, outbox/inbox, result projection, and ETag concurrency. |
+| Kafka | Internal asynchronous event backbone for worker instructions and outcomes. |
+| Python/Gurobi Worker | Consumes execution instructions, binds the deterministic model, invokes Gurobi, and publishes outcomes. |
+| Gurobi Optimizer | Solver/runtime optimisation engine. |
+
+Boundary rules:
+
+```text
+OSB MS is not the source of truth for OptimisationSpecification or runtime Optimisation.
+OD MS is the source of truth for OptimisationSpecification.
+OC MS is the source of truth for runtime Optimisation.
+Kafka, Python/Gurobi Worker, and Gurobi Optimizer participate only in runtime execution flows after OC MS accepts the request.
+```
+
+API compliance rule:
+
+```text
+NGW-exposed OD MS and OC MS APIs are TMF-compliant.
+
+OSB MS(OEX API) APIs exposed behind OGW are private/OEX experience APIs and do not need to be TMF-compliant.
+
+Private MS-to-MS APIs and Kafka events are internal contracts unless separately exposed.
+```
+
 
 ---
 
