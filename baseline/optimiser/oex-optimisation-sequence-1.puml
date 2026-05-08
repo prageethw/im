@@ -1,0 +1,234 @@
+@startuml
+!theme plain
+skinparam backgroundColor #F8FAFC
+skinparam handwritten false
+skinparam shadowing false
+skinparam defaultTextAlignment left
+skinparam wrapWidth 240
+skinparam maxMessageSize 200
+
+skinparam participant {
+  BackgroundColor #FFFFFF
+  BorderColor     #4A5568
+  FontSize        12
+  FontColor       #1A202C
+  FontStyle       bold
+  Padding         12
+}
+skinparam actor {
+  BackgroundColor #FFFFFF
+  BorderColor     #2B6CB0
+  FontSize        12
+  FontColor       #1A202C
+  FontStyle       bold
+}
+skinparam database {
+  BackgroundColor #FFFFF0
+  BorderColor     #B7791F
+  FontSize        11
+  FontColor       #1A202C
+  FontStyle       bold
+}
+skinparam queue {
+  BackgroundColor #FFF5F5
+  BorderColor     #C53030
+  FontSize        11
+  FontColor       #1A202C
+  FontStyle       bold
+}
+skinparam sequence {
+  ArrowColor                #2C5282
+  ArrowFontSize             11
+  ArrowFontColor            #2D3748
+  ArrowThickness            1
+  LifeLineBorderColor       #CBD5E0
+  LifeLineBorderThickness   1
+  LifeLineBackgroundColor   #EDF2F7
+  BoxBorderColor            #A0AEC0
+  BoxFontSize               12
+  BoxFontStyle              bold
+  BoxFontColor              #1A202C
+  BoxBackgroundColor        transparent
+  DividerBackgroundColor    #EBF4FF
+  DividerBorderColor        #3182CE
+  DividerBorderThickness    1
+  DividerFontSize           11
+  DividerFontColor          #1A365D
+  DividerFontStyle          bold
+  ActivationBorderColor     #2B6CB0
+  ActivationBackgroundColor #BEE3F8
+  ParticipantPadding        20
+  BoxPadding                18
+  MessageAlign              left
+}
+skinparam note {
+  BackgroundColor #FFFBEB
+  BorderColor     #D69E2E
+  FontSize        10
+  FontColor       #744210
+}
+
+title
+  <size:17><b>OEX Optimisation Platform</b></size>
+  <size:11><color:#718096>End-to-End Sequence · Steps 1–18</color></size>
+end title
+
+'─────────────────────────────────────────────────
+' Participants
+'─────────────────────────────────────────────────
+
+actor       "User"          as USER
+
+box "<b>OEX Channel</b>" #EBF8FF
+  participant "OEX UI"      as UI
+  participant "OGW"         as OGW
+  participant "OSB MS\n<size:10>(OEX APIs)</size>" as OSB
+end box
+
+box "<b>Network Edge</b>" #F0FFF4
+  participant "NGW"         as NGW
+end box
+
+box "<b>Optimisation Platform</b>" #FFFFF0
+  participant "OC MS"       as OC
+  participant "OD MS"       as OD
+  database    "OC MS DB"    as OCDB
+  database    "OC MS\nOutbox" as Outbox
+  database    "OC MS\nInbox"  as Inbox
+end box
+
+box "<b>Event Fabric</b>" #FFF5F5
+  queue "Kafka\n<size:10>t7.optimisation.events</size>" as Kafka
+end box
+
+box "<b>Solver Execution</b>" #FAF5FF
+  participant "Python /\nGurobi Worker" as Worker
+  participant "Gurobi\nOptimiser"       as Gurobi
+end box
+
+'═════════════════════════════════════════════════
+== 1–2 · User initiates optimisation journey ==
+'═════════════════════════════════════════════════
+
+USER -> UI  : [1] Open OEX UI\nInitiate optimisation journey
+UI   -> OGW : [2] Submit optimisation request
+
+'═════════════════════════════════════════════════
+== 3–6 · Channel routing through to OC MS ==
+'═════════════════════════════════════════════════
+
+OGW  -> OSB : [3] Invoke OSB MS\n<color:#2B6CB0><i>mTLS + User Context JWT</i></color>
+activate OSB
+OSB  -> OSB : [4] Validate User Context JWT\nShape OEX request / action model
+OSB  -> NGW : [5] POST /optimisation\n<color:#2B6CB0><i>mTLS + OAuth2 system-to-system</i></color>
+deactivate OSB
+NGW  -> OC  : [6] Route request to OC MS
+activate OC
+
+'═════════════════════════════════════════════════
+== 7–8 · OC MS validates against OD MS contract ==
+'═════════════════════════════════════════════════
+
+OC   -> OD  : [7] Validate ACTIVE OptimisationSpecification\nand retrieve request contract\n<color:#2B6CB0><i>mTLS</i></color>
+activate OD
+OD  --> OC  : ACTIVE OptimisationSpecification + request contract
+deactivate OD
+
+OC   -> OC  : [8] Validate constraints[] · targets[] · context[]\n<i>against OD MS request contract</i>
+
+'═════════════════════════════════════════════════
+== 9–10 · OC MS persists and emits (single transaction) ==
+'═════════════════════════════════════════════════
+
+group <color:#276749><b>Atomic DB Transaction</b></color>
+  OC -> OCDB   : [9] Persist runtime Optimisation\n<i>lifecycleStatus = ACKNOWLEDGED</i>
+  activate OCDB
+  OCDB --> OC  : OK
+  deactivate OCDB
+
+  OC -> Outbox : [10] Write OptimisationRequestedEvent\n<i>instruction = EXECUTE</i>
+  activate Outbox
+  Outbox --> OC : OK
+  deactivate Outbox
+end
+
+OC --> NGW : 202 Accepted\n<i>Location: /optimisation/{id} · ETag: opt-rev1</i>
+deactivate OC
+
+NGW  --> OSB : 202 Accepted
+OSB  --> OGW : 202 Accepted
+OGW  --> UI  : 202 Accepted
+UI   --> USER: Request accepted\n<i>jobId returned to UI</i>
+
+'═════════════════════════════════════════════════
+== 11 · Outbox relay publishes to Kafka ==
+'═════════════════════════════════════════════════
+
+note over Outbox, Kafka
+  <b>[11] Transactional Outbox Pattern</b>
+  Relay polls committed outbox rows and
+  publishes to Kafka — at-least-once delivery
+end note
+
+Outbox ->> Kafka : OptimisationRequestedEvent\n<i>instruction=EXECUTE · correlationId · inputs · spec ref</i>
+
+'═════════════════════════════════════════════════
+== 12–15 · Worker consumes, resolves, solves, publishes ==
+'═════════════════════════════════════════════════
+
+Kafka -> Worker : [12] Consume OptimisationRequestedEvent\n<i>(idempotency check on correlationId)</i>
+activate Worker
+
+Worker -> Worker : [13] Resolve internal deterministic\n       model binding from spec ref
+
+Worker -> Gurobi : [14] Invoke Gurobi Optimiser
+activate Gurobi
+Gurobi --> Worker : Solve result\n<i>SUCCESS · INFEASIBLE · FAILURE</i>
+deactivate Gurobi
+
+Worker ->> Kafka : [15] Publish outcome event\n<i>OptimisationCompletedEvent  or  OptimisationFailedEvent\ncorrelationId · outcome · outputs</i>
+deactivate Worker
+
+'═════════════════════════════════════════════════
+== 16–17 · OC MS Inbox projects outcome ==
+'═════════════════════════════════════════════════
+
+Kafka -> Inbox : [16] Consume worker outcome event
+activate Inbox
+note right of Inbox
+  Idempotency check —
+  guard against duplicate delivery
+end note
+
+Inbox -> OCDB  : [17] Update OC MS DB\n<i>lifecycleStatus = COMPLETED / INFEASIBLE / FAILED\nresult.outcome · result.outputs</i>
+activate OCDB
+OCDB --> Inbox : OK
+deactivate OCDB
+deactivate Inbox
+
+'═════════════════════════════════════════════════
+== 18 · User polls for current status / result ==
+'═════════════════════════════════════════════════
+
+loop [18] Poll until lifecycleStatus is terminal
+  USER -> UI  : Poll — check optimisation status
+  UI   -> OGW : GET /optimisation/{id}
+  OGW  -> OSB : Forward\n<color:#2B6CB0><i>mTLS + User Context JWT</i></color>
+  activate OSB
+  OSB  -> NGW : Forward\n<color:#2B6CB0><i>mTLS + OAuth2 system-to-system</i></color>
+  deactivate OSB
+  NGW  -> OC  : GET /optimisation/{id}
+  activate OC
+  OC   -> OCDB : Load Optimisation state
+  activate OCDB
+  OCDB --> OC  : Optimisation row
+  deactivate OCDB
+  OC  --> NGW  : 200 Optimisation\n<i>lifecycleStatus · result when terminal</i>
+  deactivate OC
+  NGW  --> OSB : Response
+  OSB  --> OGW : Response
+  OGW  --> UI  : Response
+  UI  --> USER : Render current status / result
+end
+
+@enduml
