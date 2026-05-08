@@ -721,45 +721,93 @@ Date: 2026-05-07T02:53:16.079859+00:00
 - Replaced abbreviated Intent response payloads with complete payloads using `expression.targets`, `expression.constraints`, and `expression.preferences`.
 - Confirmed IC/ID spec and design Markdown JSON blocks validate.
 
----
+## Baseline update — TMF921 external expression compliance split:
 
-## Baseline update — event alignment and external projection cleanup:
+Date: 2026-05-07
 
-Applied event/projection alignment across IA MS, IC MS, ID MS, and internal event documentation.
+### Updated files:
+- `id_ms_design_brief.md`
+- `id_ms_specification.md`
+- `ic_ms_design_brief.md`
+- `ic_ms_specification.md`
+- `ia_ms_design_brief.md`
+- `contextdump.md`
 
-Per-file active changes:
+### Baseline:
+External TMF-facing REST resources must use TMF921 resource shapes.
 
-- `ia_ms_design_brief.md`: aligned `IntentAssuranceEvent` with the internal event specification. Removed the old default `assuranceOutcome`, `runtimeState`, and `candidates` pattern. IA MS now emits lifecycle-driving assurance truth using top-level `body.lifecycleStatus`, `body.statusReason`, `targets`, `resources`, and `observations`.
-- `intent_internal_events_specification.md`: removed event-facing `provider` attributes from `IntentResolvedEvent.resources[]` and `IntentOptimisedEvent.resources[]`. `provider` remains KP/resource-inventory metadata only.
-- `ic_ms_design_brief.md`: clarified `IntentReport` projection rules. IntentReport is based on IA truth but is not raw telemetry and not the raw `IntentAssuranceEvent` body. It uses TMF `expression.expressionValue` for curated facts and keeps `targetSummary` fact-only.
-- `ic_ms_specification.md`: replaced old IntentReport examples that used direct fields and `evaluationSummary.result` with TMF-wrapped `IntentReport.expression.expressionValue`, containing fact-only `targetSummary` and curated `observationSummary`.
-- `id_ms_specification.md`: corrected `specCharacteristic` to the high-level bucket catalogue (`targets`, `constraints`, `preferences`) with example/default `characteristicValueSpecification` only. Detailed validation remains in the external expression-value schema referenced through `targetEntitySchema.@schemaLocation`.
+External `Intent.expression` and `IntentReport.expression` use the TMF921 `IntentExpression` wrapper with:
 
-Active rule: internal events carry native JSON facts; external TMF resources carry TMF expression wrappers; external reports contain curated projection facts only and do not expose raw telemetry, raw callback payloads, raw optimiser details, raw KP data, or internal event bodies.
+```text
+expression.@type
+expression.iri
+expression.expressionValue
+```
 
-## Baseline update — II MS design/specification
+Use `@type: JsonLdExpression` by default in TMF921-facing examples.
 
-II MS is baselined as `intent-intelligence-ms`, the internal semantic interpretation and resolution service.
+The canonical domain buckets remain `targets`, `constraints`, and `preferences`, but on external REST resources they are carried inside `expression.expressionValue`.
 
-Active ownership:
+### External to internal mapping:
 
-- II MS consumes `IntentValidatedEvent` from IC MS.
-- II MS performs semantic interpretation, KP-backed validation, canonicalisation, policy/capability checks, and resource discovery.
-- II MS preserves canonical `targets`, `constraints`, and `preferences` buckets.
-- II MS emits either `IntentRejectedEvent` or `IntentResolvedEvent`.
-- II MS has no external TMF-facing API by default.
-- II MS does not own runtime `Intent` APIs, external lifecycle projection, optimisation decisions, assurance truth, callback ingestion, orchestration execution, or KP governance.
+```text
+External Intent.expression.expressionValue.targets
+-> IntentValidatedEvent.body.expression.targets
+-> IntentResolvedEvent.body.targets
+-> IntentOptimisedEvent.body.targets
+-> IntentAssuranceEvent.body.targets
+-> External IntentReport.expression.expressionValue.targetSummary
+```
 
-Specification baseline:
+Internal events and service handoffs keep native JSON buckets directly and do not use the TMF expression wrapper.
 
-- `ii_ms_specification.md` contains full input and output event samples.
-- `IntentRejectedEvent` samples include service-unavailable and redundancy-unavailable cases.
-- `IntentResolvedEvent` samples include Sydney and Melbourne resolved handoffs, including bounded and open-ended `timeWindow` examples.
-- `IntentResolvedEvent.resources[]` contains optimiser candidate resources, not optimiser-selected resources.
-- `provider` is not included in event-facing resource entries by default.
-- KP inventory metadata is curated into stable event-facing fields only.
+### IntentSpecification baseline:
+`IntentSpecification.specCharacteristic` is the high-level catalogue/discovery view using TMF `CharacteristicSpecification` entries. When present, each entry includes at least `@type`, `name`, and `valueType`.
 
-Files added:
+`IntentSpecification.expressionSpecification` is the TMF expression contract reference and uses:
 
-- `ii_ms_design_brief.md`
-- `ii_ms_specification.md`
+```json
+{
+  "@type": "ExpressionSpecification",
+  "expressionLanguage": "JsonLdExpression",
+  "iri": "https://mycsp.com.au/tio/hospital-surgical-slice/v1.0"
+}
+```
+
+Detailed platform validation schema for `expression.expressionValue` may be documented through `targetEntitySchema.@schemaLocation` and implementation guidance such as `x-platformExpressionValueSchema`, but it must not replace the TMF `ExpressionSpecification` shape.
+
+### IntentReport baseline:
+External `IntentReport` carries curated report facts inside `IntentReport.expression.expressionValue`.
+
+Default fact-only report sections remain:
+
+```text
+expression.expressionValue.lifecycleStatus
+expression.expressionValue.summary / statusReason
+expression.expressionValue.targetSummary
+expression.expressionValue.observationSummary
+```
+
+`targetSummary` remains fact-only by default and does not include aggregate `result` or per-target `status` labels.
+
+## Baseline update — ICB MS callback ingestion design/spec:
+
+Date: 2026-05-08
+
+### Updated files:
+- `icb_ms_design_brief.md`
+- `icb_ms_specification.md`
+- `contextdump.md`
+
+### Baseline:
+ICB MS is `intent-callback-ms`, a thin callback ingestion service. The active callback sequence is:
+
+```text
+External system -> API Gateway -> ICB MS -> Outbox DB -> Kafka callback topic -> IA MS
+```
+
+API Gateway authenticates the caller and forwards trusted identity/claims. ICB MS authorises callback submission, performs structural validation, writes callback submission and outbox event durably, and publishes raw `IntentCallbackEvent` through the outbox relay to `t7.intent.management.events.callbacks`.
+
+ICB MS must not interpret lifecycle or assurance meaning. It must not emit `lifecycleStatus` or `assuranceStatus` in `IntentCallbackEvent`. IA MS consumes the raw callback event, correlates `intentId`, maps raw `orchestratorState`, and emits lifecycle-driving `IntentAssuranceEvent` outcomes.
+
+ICB MS exposes `/intent-callback/v1/submissions` for callback submission and `/intent-callback/v1/submissions/{id}` for callback-submission operational status. The status endpoint describes callback ingestion/publication state only; it does not expose IC MS `Intent` state or IA MS assurance state.

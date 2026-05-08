@@ -36,7 +36,7 @@ IA MS is the runtime assurance truth for IME. IC MS remains the owner of the ext
 | Assurance state update | Updates current assurance/projection state when actionable events are received |
 | Drift/degradation detection | Detects runtime drift/degradation against KP-derived expectations |
 | Assurance event publication | Publishes `IntentAssuranceEvent` to `t7.intent.management.events` |
-| Re-optimisation trigger | No default `requiresReoptimisation` flag; authorised consumers derive re-optimisation need from `lifecycleStatus`, `statusReason`, `targets`, and `observations` |
+| Runtime assurance trigger | Uses callback outcomes and observation metrics obtained through observability endpoints informed by `IntentNetworkReadyEvent.serviceConfiguration.observerConfiguration` |
 | IA outbox ownership | Owns IA outbox and relay for reliable event publication |
 | Idempotency tracking | Tracks consumed events and/or correlation keys where required |
 
@@ -61,7 +61,7 @@ IA MS is the runtime assurance truth for IME. IC MS remains the owner of the ext
 |---|---|---|
 | `IntentCallbackEvent` | ICB MS via `t7.intent.management.events.callbacks` | Raw orchestrator callback state for IA-owned mapping |
 | `IntentNetworkReadyEvent` | II MS via main internal topic | Network-ready configuration and observability scope |
-| Telemetry/runtime observations | Observability platform / telemetry integration | Runtime metrics such as latency, reliability, packet loss, jitter |
+| Runtime metrics from observation endpoints | Observability platform endpoints informed by `IntentNetworkReadyEvent.serviceConfiguration.observerConfiguration` | Runtime metrics such as latency, availability, packet loss, and jitter for observer-scope resources |
 | Knowledge Plane config | KP / governed config source | Thresholds, mapping rules, assurance rules, observability scope |
 | IA state | IA MS DB | Correlation, current assurance/projection state, idempotency |
 
@@ -108,109 +108,53 @@ IA MS is the runtime assurance truth for IME. IC MS remains the owner of the ext
 
 `IntentAssuranceEvent` is the single IA-owned runtime assurance event.
 
-It carries lifecycle-driving assurance truth using the same internal-event shape as `intent_internal_events_specification.md`. IA MS does not wrap the outcome in `assuranceOutcome` by default. The current lifecycle-driving result is carried by top-level `body.lifecycleStatus` and explained by `body.statusReason`.
+It carries curated assurance facts using the internal event contract, not the external TMF expression wrapper.
 
-| **Outcome Type** | **Representation** |
+The active default body shape uses:
+
+| **Field / area** | **Purpose** |
 |---|---|
-| Healthy / active | `body.lifecycleStatus = Active` with selected resources and observations |
-| Degraded / drift detected | `body.lifecycleStatus = Degraded` with targets and observations explaining the current metrics |
-| Failed | `body.lifecycleStatus = Failed` with status reason and relevant observations where available |
-| Termination confirmed | `body.lifecycleStatus = Terminated` with status reason |
-| Re-optimisation signal | Derived by authorised consumers from `lifecycleStatus`, `statusReason`, `targets`, and `observations`; no default `requiresReoptimisation` flag is required |
+| `lifecycleStatus` | Lifecycle-driving state that IC MS projects externally |
+| `statusReason` | Human-readable reason for the current assurance outcome |
+| `location` | Canonical location context |
+| `serviceType` / `serviceClass` | Canonical service context |
+| `targets` | Runtime targets used to interpret observations |
+| `resources` | Selected/applied resources where relevant |
+| `observations` | Curated observed metrics for selected or observer-scope resources |
+| `references` | Correlation and external resource references |
 
-`IntentDriftOccurredEvent` is retired from the active baseline. Drift/degradation is represented by `IntentAssuranceEvent`.
+IA MS does not emit `IntentDriftOccurredEvent` in the active baseline. Drift/degradation is represented through `IntentAssuranceEvent.lifecycleStatus`, `statusReason`, `targets`, and `observations`.
 
-### Indicative IntentAssuranceEvent Shape — degraded outcome:
+IA MS does not include raw callback payloads, raw telemetry dumps, optimiser scoring, solver internals, or `provider` in `IntentAssuranceEvent`.
 
-```json
-{
-  "body": {
-    "intentId": "INT-HOSP-2026-001",
-    "version": "v1",
-    "lifecycleStatus": "Degraded",
-    "statusReason": "Selected resources are outside resolved runtime targets.",
-    "location": {
-      "locationId": "AU-NSW-SYD-HOSP-001",
-      "displayName": "Sydney-Main-Hospital"
-    },
-    "serviceType": "surgical-connectivity",
-    "serviceClass": "critical-gold",
-    "targets": {
-      "maxLatencyMs": 10,
-      "minAvailabilityPercent": 99.99,
-      "maxJitterMs": 2,
-      "maxPacketLossPercent": 0.01
-    },
-    "resources": [
-      {
-        "role": "primary",
-        "resourceId": "SYD-PRI-01"
-      },
-      {
-        "role": "secondary",
-        "resourceId": "SYD-SEC-01"
-      }
-    ],
-    "observations": [
-      {
-        "resourceId": "SYD-PRI-01",
-        "role": "primary",
-        "metrics": {
-          "latencyMs": 18,
-          "availabilityPercent": 99.992,
-          "jitterMs": 1.8,
-          "packetLossPercent": 0.006
-        }
-      },
-      {
-        "resourceId": "SYD-SEC-01",
-        "role": "secondary",
-        "metrics": {
-          "latencyMs": 12,
-          "availabilityPercent": 99.994,
-          "jitterMs": 1.8,
-          "packetLossPercent": 0.006
-        }
-      }
-    ],
-    "references": {
-      "correlationId": "corr-intent-assurance-002",
-      "intent": {
-        "id": "INT-HOSP-2026-001",
-        "href": "/intentManagement/v5/intent/INT-HOSP-2026-001"
-      },
-      "intentSpecification": {
-        "id": "hospital-surgical-slice-spec-v1.20",
-        "href": "/intentManagement/v5/intentSpecification/hospital-surgical-slice-spec-v1.20"
-      }
-    }
-  }
-}
-```
+### Observation endpoint baseline:
 
-### Consumer Behaviour:
+IA MS obtains runtime metrics from observability/observation endpoints.
 
-| **Consumer** | **Behaviour** |
-|---|---|
-| IC MS | Projects external `Intent.lifecycleStatus`, `statusReason`, and `IntentReport.expression.expressionValue` from curated `IntentAssuranceEvent` fields |
-| II MS | May re-run resolution when authorised platform policy determines that assurance observations require a new resolution cycle |
-| IO MS | Re-optimises only when the workflow explicitly asks for a new optimisation run |
-| OEX | Shows assurance/degradation status through IC/OEX read model, not directly from IA unless later designed |
+The observation target, profile, and resource scope are informed by `IntentNetworkReadyEvent.serviceConfiguration.observerConfiguration`, especially:
+
+- `observerConfiguration.target`
+- `observerConfiguration.profile`
+- `observerConfiguration.resourceIds`
+
+No separately named observation snapshot event is baselined by default.
 
 ### Lifecycle Projection Relationship With IC MS:
 
 IA MS does not own the external `Intent.lifecycleStatus` resource API.
 
-IA MS emits lifecycle-driving assurance facts inside `IntentAssuranceEvent`. IC MS consumes those events and updates/projects the external runtime `Intent` lifecycle and external `IntentReport`.
+IA MS emits lifecycle-driving assurance outcomes inside `IntentAssuranceEvent`.
 
-| **IA event fact** | **Typical IC Projection** |
+IC MS consumes those events and updates/projects the external runtime `Intent` lifecycle.
+
+| **IA Outcome** | **Typical IC Projection** |
 |---|---|
-| `body.lifecycleStatus = Active` | `Intent.lifecycleStatus = Active` |
-| `body.lifecycleStatus = InProgress` | `Intent.lifecycleStatus = InProgress` |
-| `body.lifecycleStatus = Degraded` | `Intent.lifecycleStatus = Degraded` |
-| `body.lifecycleStatus = Failed` | `Intent.lifecycleStatus = Failed` |
-| `body.lifecycleStatus = Terminated` | `Intent.lifecycleStatus = Terminated` |
-| II MS `IntentRejectedEvent` | `Intent.lifecycleStatus = Rejected` |
+| Apply completed / healthy | `Active` |
+| Apply in progress | `InProgress` |
+| Assurance degraded / drift detected | `Degraded` |
+| Apply failed / unrecoverable failure | `Failed` |
+| Termination confirmed | `Terminated` |
+| Semantic/policy rejection from II MS | `Rejected` |
 
 ### Internal Event Envelope Baseline:
 
