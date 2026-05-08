@@ -1701,3 +1701,50 @@ User
 ```
 
 Also aligned the detailed interpretation to remove the OEX UI/OEX APIs/OWG hops from the runtime process view and use OGW -> OSB MS(OEX API) -> NGW.
+
+---
+
+## Baseline appended 2026-05-08T11:47:30 - Fixed E2E key logical relationships
+
+Updated the E2E solution brief `Key logical relationships` block so it matches the logical integration model exactly:
+
+```text
+User -> Microsoft Entra ID SSO -> OEX UI -> OGW -> OSB MS(OEX API) -> NGW -> OD MS / OC MS -> Kafka -> Python/Gurobi Worker -> Gurobi Optimizer
+```
+
+Removed stale relationship wording such as `OGW -> OEX APIs`.
+
+---
+
+## Baseline appended 2026-05-08T11:49:16 - Aligned E2E logical view to runtime process path
+
+Updated the E2E logical view to match the requested path:
+
+```text
+User
+-> OEX
+-> OGW
+-> OSB MS(OEX API)
+-> NGW
+-> OC MS
+-> OD MS
+-> OC MS DB
+-> OC MS Outbox
+-> Kafka
+-> Python/Gurobi Worker
+-> Gurobi Optimizer
+-> Kafka
+-> OC MS Inbox
+-> OC MS DB
+-> User polls GET /optimisation/{id}
+```
+
+Updated logical diagram, logical integration model, key logical relationships, and logical responsibility table to remove stale Entra/OEX UI-only logical chain from this section.
+
+---
+
+## Baseline appended 2026-05-08T11:50:23 - Changed OEX to OEX UI in E2E logical/process wording
+
+Updated the E2E solution brief so the user-facing UI component is named `OEX UI` in logical/process paths and relationships.
+
+Kept `OSB MS(OEX API)` / `OSB MS (OEX APIs)` wording unchanged where it refers to the OSB API facade.

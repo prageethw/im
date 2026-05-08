@@ -72,51 +72,72 @@ The logical integration model is:
 
 ```text
 User
--> Microsoft Entra ID SSO
+-> OEX UI
 -> OGW
 -> OSB MS(OEX API)
 -> NGW
--> OD MS / OC MS
+-> OC MS
+-> OD MS
+-> OC MS DB
+-> OC MS Outbox
 -> Kafka
 -> Python/Gurobi Worker
 -> Gurobi Optimizer
+-> Kafka
+-> OC MS Inbox
+-> OC MS DB
+-> User polls GET /optimisation/{id}
 ```
 
 Key logical relationships:
 
 ```text
-User -> Microsoft Entra ID:
-  User authenticates using SSO after ACG approval.
+User -> OEX UI:
+  User initiates the optimisation journey through OEX UI.
 
-UI -> OGW:
-  OGW acts as the user-context-aware gateway for OEX APIs.
+OEX UI -> OGW:
+  OEX UI calls OGW as the user-context-aware gateway entry point.
 
-OGW -> OEX APIs:
-  Uses user SSO OAuth2 and propagates user context.
-
-OGW -> OSB MS:
+OGW -> OSB MS(OEX API):
   Uses mTLS and User Context JWT.
+  OGW passes trusted user context to OSB MS.
 
-OSB MS -> NGW:
+OSB MS(OEX API) -> NGW:
   Uses mTLS and OAuth2 system-to-system.
-
-NGW -> OD MS:
-  Uses mTLS to expose OptimisationSpecification APIs.
+  OSB MS shapes the OEX optimisation experience and calls backend optimisation APIs through NGW.
 
 NGW -> OC MS:
   Uses mTLS to expose runtime Optimisation APIs.
 
 OC MS -> OD MS:
-  Uses mTLS for internal service-to-service validation.
+  Uses mTLS for internal service-to-service validation of the referenced ACTIVE OptimisationSpecification and request contract.
 
-OC MS -> Kafka:
-  Emits OptimisationRequestedEvent with instruction EXECUTE or CANCEL.
+OC MS -> OC MS DB:
+  Persists runtime Optimisation lifecycle, result projection, outbox, and inbox state.
+
+OC MS -> OC MS Outbox:
+  Writes durable worker instruction events in the same transaction as runtime state changes.
+
+OC MS Outbox -> Kafka:
+  Publishes OptimisationRequestedEvent with instruction EXECUTE or CANCEL.
+
+Kafka -> Python/Gurobi Worker:
+  Delivers worker instructions for asynchronous execution.
+
+Python/Gurobi Worker -> Gurobi Optimizer:
+  Invokes the solver for deterministic optimisation execution.
 
 Python/Gurobi Worker -> Kafka:
-  Consumes worker instructions and emits optimisation outcomes.
+  Emits optimisation outcome events.
 
-OC MS <- Kafka:
-  Consumes worker outcomes and projects lifecycle/result.
+Kafka -> OC MS Inbox:
+  Delivers worker outcome events.
+
+OC MS Inbox -> OC MS DB:
+  Projects lifecycle and result state.
+
+OC MS DB -> User polls GET /optimisation/{id}:
+  User observes current status/result through the read path.
 ```
 
 Logical diagram artifact:
