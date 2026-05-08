@@ -16,6 +16,32 @@ Base path:
 /intentManagement/v5
 ```
 
+
+
+## TMF expression and external schema separation baseline:
+
+ID MS keeps the TMF-facing `IntentSpecification` payload and the detailed platform JSON Schema visibly separated in the Markdown specification.
+
+The `IntentSpecification` resource body includes only the TMF expression contract reference and the external schema reference:
+
+```json
+{
+  "expressionSpecification": {
+    "@type": "ExpressionSpecification",
+    "expressionLanguage": "JsonLdExpression",
+    "iri": "https://mycsp.com.au/tio/hospital-surgical-slice/v1.0"
+  },
+  "targetEntitySchema": {
+    "@type": "TargetEntitySchema",
+    "@schemaLocation": "https://mycsp.com.au/schemas/intentManagement/v5/intentExpression/hospital-surgical-slice-spec-v1.19.expression.schema.json",
+    "schemaVersion": "1.19",
+    "schemaHash": "sha256:REPLACE_WITH_PUBLISHED_SCHEMA_HASH"
+  }
+}
+```
+
+The full JSON Schema body is documented separately as an external schema artefact, not inline as part of the API payload example. This prevents engineers and consumers from mistaking the schema definition for runtime `Intent.expression.expressionValue` content.
+
 ## IntentSpecification resource APIs:
 
 | **Purpose** | **Method** | **Endpoint** |
@@ -170,28 +196,6 @@ Notes:
 - IC MS may use this to validate incoming runtime `Intent` requests.
 - The returned resource includes full `specCharacteristic`, `expressionSpecification`, lifecycle status, and `_links`.
 
-## TMF expression contract and schema separation baseline:
-
-External `IntentSpecification` resources must keep the TMF expression contract and the platform validation schema separate.
-
-`specCharacteristic` is the high-level catalogue/discovery view. It uses TMF `CharacteristicSpecification` entries for `targets`, `constraints`, and `preferences`. `characteristicValueSpecification` may provide examples/defaults for OEX/UI prefill guidance, but it is not the authoritative runtime validation source.
-
-`expressionSpecification` is the TMF expression contract reference. It uses:
-
-```json
-{
-  "@type": "ExpressionSpecification",
-  "expressionLanguage": "JsonLdExpression",
-  "iri": "https://mycsp.com.au/tio/hospital-surgical-slice/v1.0"
-}
-```
-
-Detailed validation for runtime `Intent.expression.expressionValue` is referenced through `targetEntitySchema.@schemaLocation`. The schema artefact must be immutable and versioned, and `targetEntitySchema` should carry `schemaVersion` and `schemaHash` so ID MS and IC MS can prevent drift.
-
-ID MS must validate that the referenced schema exists, is valid, and matches the stored schema hash before a specification can be activated. IC MS must validate runtime Intents only against the schema referenced by the concrete active `IntentSpecification.id`.
-
-Do not use `JSON_SCHEMA` as `expressionSpecification.expressionLanguage`. Do not embed the full JSON Schema inside `expressionSpecification` or runtime `Intent.expression`.
-
 ## Full update IntentSpecification:
 
 ```http
@@ -282,7 +286,7 @@ Accept: application/json
 
 ```json
 {
-  "callback": "https://consumer.example.com/tmf/intentSpecification/events",
+  "callback": "https://consumer.example.com/listener/intentSpecification/events",
   "query": "eventType=IntentSpecificationStatusChangeEvent",
   "@type": "EventSubscription"
 }
@@ -300,7 +304,7 @@ ETag: "subscription-sub-001-v1"
 ```json
 {
   "id": "sub-001",
-  "callback": "https://consumer.example.com/tmf/intentSpecification/events",
+  "callback": "https://consumer.example.com/listener/intentSpecification/events",
   "query": "eventType=IntentSpecificationStatusChangeEvent",
   "@type": "EventSubscription",
   "_links": {
