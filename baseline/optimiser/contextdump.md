@@ -59,15 +59,6 @@
   - [Process view:](#process-view-1)
 - [Baseline appended 2026-05-08T09:59:06 - Restored logical view after heading cleanup](#baseline-appended-2026-05-08t095906---restored-logical-view-after-heading-cleanup)
 - [Baseline appended 2026-05-08T11:00:04 - Draft status, table of contents, logical-before-process ordering](#baseline-appended-2026-05-08t110004---draft-status-table-of-contents-logical-before-process-ordering)
-- [Baseline appended 2026-05-08T11:06:17 - Restored logical view diagram and logical view details](#baseline-appended-2026-05-08t110617---restored-logical-view-diagram-and-logical-view-details)
-- [Baseline appended 2026-05-08T11:18:29 - Restored logical view as the section between use case and process view](#baseline-appended-2026-05-08t111829---restored-logical-view-as-the-section-between-use-case-and-process-view)
-- [Baseline appended 2026-05-08T11:23:55 - Restored requested E2E runtime process view](#baseline-appended-2026-05-08t112355---restored-requested-e2e-runtime-process-view)
-
-> **Status:** Draft
-
-> **Status:** Draft
-
-> **Status:** Draft
 
 This file is the running baseline dump for this conversation. New baselines are appended to the end unless explicitly requested otherwise.
 
@@ -1623,65 +1614,16 @@ Updated artefacts to show `Status: Draft`, add a table of contents near the top,
 
 ---
 
-## Baseline appended 2026-05-08T11:06:17 - Restored logical view diagram and logical view details
+## Baseline appended 2026-05-08T11:53:51 - Fixed 3.3.1 create-and-execute process view
 
-Restored logical view details and diagrams.
+Fixed the stale `3.3.1 Create and execute optimisation` process view in the E2E solution brief.
 
-E2E and OSB now include:
-- logical view diagram
-- logical integration model
-- definition-management logical path
-- runtime-optimisation logical path
-- logical responsibility table
-- boundary rules
-- API compliance rule
-
-OD MS and OC MS now include service-focused logical diagrams and responsibility tables.
-
-Logical view is placed before process view.
-
----
-
-## Baseline appended 2026-05-08T11:18:29 - Restored logical view as the section between use case and process view
-
-Restored the detailed logical view as `### Logical view:` between `### Use case view:` and `### Process view:` in the E2E solution brief.
-
-Kept heading numbers removed while using the same placement that previously corresponded to section 3.2.
-
----
-
-## Baseline appended 2026-05-08T11:23:55 - Restored requested E2E runtime process view
-
-Rolled the E2E solution brief process view back to the version with the 18-step detailed runtime flow:
-- User opens OEX UI
-- OEX UI calls OGW
-- OGW invokes OSB MS (OEX APIs) using mTLS and User Context JWT
-- OSB MS calls NGW using mTLS and OAuth2 system-to-system
-- NGW routes to OC MS
-- OC MS validates against OD MS
-- OC MS persists ACKNOWLEDGED state, writes OC MS Outbox, publishes to Kafka
-- Python/Gurobi Worker invokes Gurobi Optimizer
-- OC MS Inbox consumes outcome and updates OC MS DB
-- User polls GET /optimisation/{id} through OEX UI -> OGW -> OSB MS (OEX APIs) -> NGW -> OC MS
-
----
-
-## Baseline appended 2026-05-08T11:36:52 - E2E solution brief rolled back to GitHub commit
-
-Rolled back `optimisation-e2e-solution-brief.md` to the GitHub commit version requested by the user:
-
+Removed the stale hop:
 ```text
-https://github.com/prageethw/im/blob/3f184867db74a6397ca3b67bc0ba062d9d0dd76e/baseline/optimiser/optimisation-e2e-solution-brief.md
+-> OEX APIs
 ```
 
-A local backup of the immediately previous E2E file was created before replacing it.
-
----
-
-## Baseline appended 2026-05-08T11:39:42 - Fixed E2E process view after GitHub rollback
-
-Updated the E2E solution brief process view to:
-
+The active 3.3.1 process flow is:
 ```text
 User
 -> OGW
@@ -1699,52 +1641,3 @@ User
 -> OC MS DB
 -> User polls GET /optimisation/{id}
 ```
-
-Also aligned the detailed interpretation to remove the OEX UI/OEX APIs/OWG hops from the runtime process view and use OGW -> OSB MS(OEX API) -> NGW.
-
----
-
-## Baseline appended 2026-05-08T11:47:30 - Fixed E2E key logical relationships
-
-Updated the E2E solution brief `Key logical relationships` block so it matches the logical integration model exactly:
-
-```text
-User -> Microsoft Entra ID SSO -> OEX UI -> OGW -> OSB MS(OEX API) -> NGW -> OD MS / OC MS -> Kafka -> Python/Gurobi Worker -> Gurobi Optimizer
-```
-
-Removed stale relationship wording such as `OGW -> OEX APIs`.
-
----
-
-## Baseline appended 2026-05-08T11:49:16 - Aligned E2E logical view to runtime process path
-
-Updated the E2E logical view to match the requested path:
-
-```text
-User
--> OEX
--> OGW
--> OSB MS(OEX API)
--> NGW
--> OC MS
--> OD MS
--> OC MS DB
--> OC MS Outbox
--> Kafka
--> Python/Gurobi Worker
--> Gurobi Optimizer
--> Kafka
--> OC MS Inbox
--> OC MS DB
--> User polls GET /optimisation/{id}
-```
-
-Updated logical diagram, logical integration model, key logical relationships, and logical responsibility table to remove stale Entra/OEX UI-only logical chain from this section.
-
----
-
-## Baseline appended 2026-05-08T11:50:23 - Changed OEX to OEX UI in E2E logical/process wording
-
-Updated the E2E solution brief so the user-facing UI component is named `OEX UI` in logical/process paths and relationships.
-
-Kept `OSB MS(OEX API)` / `OSB MS (OEX APIs)` wording unchanged where it refers to the OSB API facade.
