@@ -430,103 +430,19 @@ Example runtime context shape:
 
 ---
 
-## Definition E2E access path baseline:
+## Process view participation baseline:
 
-OD MS definition access follows this path:
+OD MS participates in the runtime process as the OptimisationSpecification definition source.
 
-```text
-User
--> Microsoft Entra ID SSO
--> OEX UI
--> OGW
--> OEX Screen Builder MS
--> NGW
--> OD MS
-```
-
-OD MS sits behind NGW. OD MS does not participate in Kafka, Python/Gurobi Worker, or Gurobi Optimizer runtime execution flows.
-
----
-
-## OD MS infrastructure security controls:
-
-OD MS integrations must explicitly capture service-to-infrastructure security controls.
-
-### OD MS -> OD MS Database:
+In the runtime process view:
 
 ```text
-Authentication:
-  OD MS connects using an authenticated OD MS service identity.
-
-Authorisation:
-  OD MS is authorised only for the OD MS database/schema/tables required for OptimisationSpecification storage and retrieval.
-  No broad database admin/root access by default.
-
-Encrypted connectivity:
-  OD MS database connectivity uses encrypted transport.
-  mTLS or platform-approved encrypted database connectivity is used where supported by the selected database platform.
-
-Secrets and certificates:
-  Database credentials, keys, and certificates are stored in approved secret management.
-  Rotation must be supported without application code changes where possible.
-
-Environment separation:
-  OD MS database principals, roles, schemas, and credentials are environment-scoped.
-  Non-production OD MS identities must not access production OD MS data.
-
-Audit and monitoring:
-  Authentication failures, authorisation denials, privileged operations, schema changes, and unusual access patterns are logged and monitored.
-
-Ownership:
-  OD MS owns application-level access to OptimisationSpecification data.
-  Database/platform teams own database platform controls.
+... -> NGW -> OC MS -> OD MS -> OC MS DB ...
 ```
 
-### OD MS -> platform cache, if introduced later:
+OD MS provides the ACTIVE OptimisationSpecification used by OC MS for request-contract validation.
 
-```text
-OD MS does not require a cache in the current baseline.
-
-If a cache is introduced later, the OD MS design brief must capture:
-  authenticated service identity
-  least-privilege cache namespace/keyspace access
-  encrypted connectivity
-  approved secret/certificate management
-  environment-scoped cache roles
-  audit/monitoring of denied access and privileged operations
-```
-
-### OD MS -> Kafka:
-
-```text
-OD MS does not integrate directly with Kafka in the current baseline.
-
-If OD MS later becomes a Kafka producer or consumer, the OD MS design brief must capture:
-  service identity
-  TLS/mTLS broker connectivity
-  topic-level ACLs
-  consumer-group permissions where applicable
-  DLQ permissions where applicable
-  secret/certificate management
-  monitoring and audit controls
-```
-
----
-
-## OD MS observability focus:
-
-OD MS observability must include specification/catalogue lifecycle monitoring.
-
-Additional OD MS signals:
-
-```text
-OptimisationSpecification create/update/activate/retire attempts
-catalogue authorisation allow/deny counts
-ACTIVE specification lookup counts
-specification validation failures
-ETag / If-Match precondition failures
-OD MS database dependency latency and failures
-```
+OD MS does not persist runtime Optimisation resources, does not write OC MS outbox records, does not consume Kafka worker outcomes, and does not project runtime results.
 
 ---
 
@@ -536,9 +452,10 @@ OD MS definition logical path:
 
 ```text
 User
+-> Microsoft Entra ID SSO
 -> OEX UI
 -> OGW
--> OSB MS(OEX API)
+-> OEX Screen Builder MS
 -> NGW
 -> OD MS
 ```
@@ -553,28 +470,41 @@ OD MS does not participate in Kafka, Python/Gurobi Worker, Gurobi Optimizer, OC 
 
 ---
 
-## Optimisation catalogue management governance:
+## Process view baseline:
 
-OD MS owns the optimisation catalogue through `OptimisationSpecification`.
+OD MS participates in the runtime process as the OptimisationSpecification definition source.
 
-Only approved optimisation domain engineers can create, update, activate, or retire OptimisationSpecification records.
+Full runtime process reference:
 
-Catalogue changes require agreement with broader E2E teams that own, consume, or are impacted by the optimisation capability.
+```text
+Consumer
+-> OEX
+-> OGW
+-> OEX APIs
+-> OGW
+-> OEX Screen Builder MS
+-> NGW
+-> OC MS
+-> OD MS
+-> OC MS DB
+-> OC MS Outbox
+-> Kafka
+-> Python/Gurobi Worker
+-> Gurobi Optimizer
+-> Kafka
+-> OC MS Inbox
+-> OC MS DB
+-> Consumer polls GET /optimisation/{id}
+```
 
-General users, OEX consumers, runtime callers, OC MS, and workers cannot self-author OptimisationSpecification records.
+OD MS role in this process:
 
----
+```text
+OC MS -> OD MS:
+  OC MS uses OD MS to retrieve/validate against the ACTIVE OptimisationSpecification.
 
-## Infrastructure security baseline:
+OD MS -> OC MS DB:
+  OD MS does not call OC MS DB. This arrow in the process view means control returns to OC MS after specification validation, and OC MS then persists the accepted runtime Optimisation in OC MS DB.
+```
 
-OD MS database access is authenticated, authorised, encrypted, and least-privilege. OD MS uses a service-specific database identity/role.
-
-Catalogue write/activate/retire operations must be authenticated, authorised, audited, and protected with ETag / If-Match where applicable.
-
----
-
-## Observability and monitoring telemetry baseline:
-
-OD MS observability includes application logs, metrics, distributed traces, audit/security events, dependency telemetry, and alertable operational signals.
-
-OD MS must emit telemetry for OptimisationSpecification create/update/activate/retire attempts, catalogue authorisation allow/deny counts, ACTIVE specification lookup counts, validation failures, ETag / If-Match precondition failures, and OD MS DB dependency latency/failures.
+OD MS does not persist runtime Optimisation resources, does not write OC MS outbox records, does not consume Kafka worker outcomes, and does not project runtime results.

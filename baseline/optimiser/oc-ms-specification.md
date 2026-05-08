@@ -1444,9 +1444,9 @@ OC MS does not perform solver feasibility, candidate ranking, metric-vs-constrai
 
 ---
 
-## Runtime E2E access path baseline:
+## Logical view baseline:
 
-OC MS runtime access follows this path before backend asynchronous execution:
+OC MS runtime logical path:
 
 ```text
 User
@@ -1461,19 +1461,19 @@ User
 -> Gurobi Optimizer
 ```
 
-OC MS sits behind NGW. OC MS does not directly authenticate end users. User authentication and user-context-aware routing occur through Entra ID SSO, OEX UI/APIs, OGW, OEX Screen Builder MS, and NGW.
-
-OC MS validates the runtime request against OD MS, persists the Optimisation, emits Kafka events, and consumes worker outcomes.
+OC MS owns runtime Optimisation resources. It validates runtime requests against OD MS definitions, persists accepted executions, emits Kafka instructions, consumes worker outcomes, and projects lifecycle/result state.
 
 ---
 
-## Corrected process view baseline:
+## Process view baseline:
 
 The agreed runtime process view is:
 
 ```text
-User
+Consumer
 -> OEX
+-> OGW
+-> OEX APIs
 -> OGW
 -> OEX Screen Builder MS
 -> NGW
@@ -1487,17 +1487,17 @@ User
 -> Kafka
 -> OC MS Inbox
 -> OC MS DB
--> User polls GET /optimisation/{id}
+-> Consumer polls GET /optimisation/{id}
 ```
 
-Detailed interpretation:
+Detailed runtime process interpretation:
 
 ```text
 1. Consumer initiates the optimisation journey through OEX.
-2. OEX routes the request to OGW.
-3. OGW invokes OSB MS(OEX API).
-4. OSB MS(OEX API) is invoked by OGW.
-5. OWG routes to OEX Screen Builder MS.
+2. OEX sends the request to OGW.
+3. OGW routes to OEX APIs.
+4. OEX APIs route through OGW.
+5. OGW routes to OEX Screen Builder MS.
 6. OEX Screen Builder MS calls NGW.
 7. NGW calls OC MS.
 8. OC MS validates the runtime request against the ACTIVE OptimisationSpecification from OD MS.
@@ -1506,10 +1506,10 @@ Detailed interpretation:
 11. OC MS Outbox relay publishes the event to Kafka.
 12. Python/Gurobi Worker consumes the event from Kafka.
 13. Python/Gurobi Worker invokes Gurobi Optimizer.
-14. Worker publishes outcome event back to Kafka.
+14. Worker publishes the outcome event back to Kafka.
 15. OC MS Inbox consumes the outcome event from Kafka.
 16. OC MS Inbox updates OC MS DB with lifecycle/result projection.
-17. User polls GET /optimisation/{id} to retrieve current status/result.
+17. Consumer polls GET /optimisation/{id} to retrieve current status/result.
 ```
 
 Runtime request model:
@@ -1520,146 +1520,11 @@ targets[]
 context[]
 ```
 
-Runtime contract validation:
+Validation and outcome boundary:
 
 ```text
 OC MS validates runtime constraints[], targets[], and context[] against the ACTIVE OD MS OptimisationSpecification.
-OC MS validates structure, required fields, value types, supported names, supported enum values, and cardinality such as candidateResources minItems = 2.
+OC MS validates request structure, required fields, value types, supported names, supported enum values, and cardinality such as candidateResources minItems = 2.
 OC MS does not perform solver feasibility, metric-vs-constraint evaluation, candidate ranking, or objective trade-off evaluation.
+Worker/model owns SUCCESS, INFEASIBLE, or FAILURE outcomes.
 ```
-
-Outcome projection:
-
-```text
-SUCCESS -> COMPLETED
-INFEASIBLE -> INFEASIBLE
-FAILURE -> FAILED
-```
-
-Process view compliance rule:
-
-```text
-NGW-exposed OC MS and OD MS APIs are TMF-compliant.
-OEX / OGW / OEX APIs / OWG / OEX Screen Builder MS are experience-layer/private integration components and do not need to be TMF-compliant.
-Kafka events are internal contracts and do not need to be TMF-compliant unless separately required.
-```
-
----
-
-## MS-to-Kafka security baseline:
-
-Microservice-to-Kafka integration is secured independently from REST API mTLS.
-
-Kafka producers and consumers must use secured broker connectivity and workload identity controls.
-
-Baseline controls:
-
-```text
-Broker connectivity:
-  TLS encrypted connection to Kafka brokers.
-
-Service authentication:
-  Service identity for each producer and consumer.
-  Use platform-approved Kafka authentication mechanism, such as mTLS client certificates, SASL/SCRAM, or cloud-managed workload identity.
-  Do not hard-code Kafka credentials in application configuration.
-
-Authorisation:
-  Kafka ACLs are applied per service identity.
-  OC MS can produce worker instruction events.
-  OC MS can consume worker outcome events through the OC MS Inbox.
-  Python/Gurobi Worker can consume worker instruction events.
-  Python/Gurobi Worker can produce worker outcome events.
-  DLQ produce/access permissions are restricted to approved services and operations support.
-
-Topic boundary:
-  Services receive least-privilege access only to required topics.
-  Runtime events use the agreed optimisation topic and DLQ.
-  No broad cluster-wide produce/consume permissions by default.
-
-Consumer isolation:
-  Dedicated consumer groups for OC MS Inbox and Python/Gurobi Worker.
-  Consumer group names are governed and environment-scoped.
-
-Event integrity:
-  Use CloudEvents-style Kafka headers for event identity, type, source, subject, correlation, and event version.
-  Downstream consumers must be idempotent using ce-id / eventId.
-  Producers must not mutate events after publish.
-  Consumers must validate event type, event version, and required body fields before processing.
-
-Secret/certificate handling:
-  Kafka credentials, keys, and certificates are stored in approved secret management.
-  Rotation is supported without application code changes where possible.
-  Expired or revoked credentials must fail closed.
-
-Observability and audit:
-  Produce/consume failures are logged with correlation id and event id.
-  Authentication/authorisation failures are monitored.
-  Kafka lag, DLQ growth, and replay attempts are observable.
-  Operational access to DLQ payloads is restricted and audited.
-```
-
-MS-to-Kafka security is not TMF-specific. Kafka events are internal contracts unless separately exposed.
-
----
-
-## Logical view baseline:
-
-OC MS runtime logical path:
-
-```text
-User
--> OEX UI
--> OGW
--> OSB MS(OEX API)
--> NGW
--> OC MS
--> Kafka
--> Python/Gurobi Worker
--> Gurobi Optimizer
-```
-
-OC MS validates runtime requests against OD MS definitions, persists accepted executions, emits Kafka instructions, consumes worker outcomes, and projects lifecycle/result state.
-
----
-
-## Runtime process view baseline:
-
-OC MS participates in the runtime process view:
-
-```text
-User
--> OGW
--> OSB MS(OEX API)
--> NGW
--> OC MS
--> OD MS
--> OC MS DB
--> OC MS Outbox
--> Kafka
--> Python/Gurobi Worker
--> Gurobi Optimizer
--> Kafka
--> OC MS Inbox
--> OC MS DB
--> User polls GET /optimisation/{id}
-```
-
-OC MS owns runtime Optimisation resources, OC MS DB persistence, OC MS Outbox publication, OC MS Inbox outcome consumption, lifecycle projection, and result projection.
-
----
-
-## Outbox processed-record lifecycle baseline:
-
-After OC MS Outbox Relay successfully publishes an event to Kafka, OC MS marks the outbox record as processed/published and records `processedAt`.
-
-Processed records are retained for the configured retention window and then cleaned up or archived.
-
-OC MS must not delete pending, processing, retryable failed, unresolved DLQ, or unprocessed outbox records through normal cleanup.
-
----
-
-## Observability and monitoring telemetry baseline:
-
-OC MS observability includes application logs, metrics, distributed traces, audit/security events, dependency telemetry, and alertable operational signals.
-
-OC MS must emit telemetry for runtime Optimisation create/list/detail counts, contract validation failures, lifecycle transition counts, outcome counts, ETag failures, OC MS DB failures, OC MS Outbox backlog, Kafka produce/consume failures, DLQ growth, and OC MS Inbox projection failures.

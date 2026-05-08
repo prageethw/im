@@ -1256,8 +1256,8 @@ User
 
 Cleanup rules applied:
 - No product-specific service mesh name for mTLS.
-- No `OWG` wording; use `OWG` only where that separate gateway is still intentionally referenced.
-- No stale `OEX APIs -> OWG -> OSB MS` hop in the OSB runtime process.
+- No `OGW` wording; use `OGW` only where that separate gateway is still intentionally referenced.
+- No stale `OEX APIs -> OGW -> OSB MS` hop in the OSB runtime process.
 - No `User`; use `User` in the current baseline.
 - No stale `/cancel` or `/retry` endpoint paths.
 - No `cancellation` typo.
@@ -1362,7 +1362,7 @@ User
 
 ---
 
-## Baseline appended 2026-05-08T07:03:00 - Removed stale logical path with OWG
+## Baseline appended 2026-05-08T07:03:00 - Removed stale logical path with OGW
 
 Removed stale E2E logical view:
 
@@ -1396,7 +1396,7 @@ User
 
 ---
 
-## Baseline appended 2026-05-08T07:05:13 - Removed stale process view with OEX APIs and OWG
+## Baseline appended 2026-05-08T07:05:13 - Removed stale process view with OEX APIs and OGW
 
 Removed stale process view:
 
@@ -1458,56 +1458,44 @@ Clarification:
 
 ---
 
-## Baseline appended 2026-05-08T08:21:59 - Added one-to-one use case sequence diagrams
+## Baseline appended 2026-05-08T12:28:52 - Aligned OD MS, OC MS, and OSB MS to current E2E brief
 
-Added a one-to-one sequence diagram section to the E2E solution brief.
+Updated design/specification artefacts to match the current E2E solution brief, not the other way around.
 
-Diagrams added for:
-- Discover optimisation capability
-- Manage optimisation catalogue
-- Create runtime optimisation
-- Monitor optimisation
-- Cancellation optimisation
-- Retrial failed optimisation
-- Execute optimisation
+Aligned path:
+```text
+User
+-> OGW
+-> OSB MS(OEX API)
+-> NGW
+-> OC MS
+-> OD MS
+-> OC MS DB
+-> OC MS Outbox
+-> Kafka
+-> Python/Gurobi Worker
+-> Gurobi Optimizer
+-> Kafka
+-> OC MS Inbox
+-> OC MS DB
+-> User polls GET /optimisation/{id}
+```
 
-Each diagram matches an E2E use case and uses the current OSB path: OEX UI -> OGW -> OSB MS (OEX APIs) -> NGW -> OD/OC.
-
----
-
-## Baseline appended 2026-05-08T08:37:48 - Added one-to-one process views for all use cases
-
-Added one-to-one process views for all seven E2E use cases:
-- Discover optimisation capability
-- Manage optimisation catalogue
-- Create runtime optimisation
-- Monitor optimisation
-- Cancellation optimisation
-- Retrial failed optimisation
-- Execute optimisation
-
-These are separate from the sequence diagrams and show ownership/process boundaries for each use case.
-
----
-
-## Baseline appended 2026-05-08T09:50:50 - Moved seven process views under 3.3
-
-Moved the seven one-to-one use-case process views into the E2E solution brief `### 3.3 Process view:` section and removed the separate duplicate process-view section.
-
-3.3 now includes:
-- 3.3.1 Discover optimisation capability
-- 3.3.2 Manage optimisation catalogue
-- 3.3.3 Create runtime optimisation
-- 3.3.4 Monitor optimisation
-- 3.3.5 Cancellation optimisation
-- 3.3.6 Retrial failed optimisation
-- 3.3.7 Execute optimisation
+Changes:
+- OD MS definition path now uses OEX UI -> OGW -> OSB MS(OEX API) -> NGW -> OD MS.
+- OD MS process participation now references the current E2E runtime process and clarifies OD MS only validates OptimisationSpecification/request contract for OC MS.
+- OC MS runtime access and process sections now use the current E2E process flow.
+- OSB MS access path now uses OSB MS(OEX API) and aligns to the E2E path through NGW to OC MS / OD MS.
+- Removed stale OEX APIs / OGW / OEX GW / Istio wording from OD, OC, and OSB artefacts where found.
 
 ---
 
-## Baseline appended 2026-05-08T12:22:39 - Restored E2E from da6d06e and applied targeted fixes only
+## Baseline appended 2026-05-08T12:33:36 - Renamed OWG to OGW everywhere
 
-Restored `optimisation-e2e-solution-brief.md` from the GitHub da6d06e source, then applied only the agreed E2E targeted fixes:
-- logical model uses `OEX UI -> OGW -> OSB MS(OEX API) -> NGW -> OC MS -> OD MS -> OC MS DB -> OC MS Outbox -> Kafka -> Python/Gurobi Worker -> Gurobi Optimizer -> Kafka -> OC MS Inbox -> OC MS DB -> User polls GET /optimisation/{id}`
-- 3.3.1 process view uses `User -> OGW -> OSB MS(OEX API) -> NGW -> OC MS ...`
-- removed stale `-> OEX APIs`, `OGW -> OEX APIs`, and OWG hops from E2E.
+Renamed all remaining `OWG` references to `OGW` across current optimisation artefacts.
+
+Rule:
+```text
+Use OGW everywhere.
+Do not use OWG.
+```
