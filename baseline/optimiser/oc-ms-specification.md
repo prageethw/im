@@ -1453,7 +1453,7 @@ User
 -> Microsoft Entra ID SSO
 -> OEX UI
 -> OEX APIs
--> OGW
+-> OWG
 -> OEX Screen Builder MS
 -> NGW
 -> OC MS
@@ -1462,7 +1462,7 @@ User
 -> Gurobi Optimizer
 ```
 
-OC MS sits behind NGW. OC MS does not directly authenticate end users. User authentication and user-context-aware routing occur through Entra ID SSO, OEX UI/APIs, OGW, OEX Screen Builder MS, and NGW.
+OC MS sits behind NGW. OC MS does not directly authenticate end users. User authentication and user-context-aware routing occur through Entra ID SSO, OEX UI/APIs, OWG, OEX Screen Builder MS, and NGW.
 
 OC MS validates the runtime request against OD MS, persists the Optimisation, emits Kafka events, and consumes worker outcomes.
 
@@ -1475,7 +1475,7 @@ The agreed runtime process view is:
 ```text
 User
 -> OEX
--> OGW
+-> OWG
 -> OEX APIs
 -> OWG
 -> OEX Screen Builder MS
@@ -1497,8 +1497,8 @@ Detailed interpretation:
 
 ```text
 1. Consumer initiates the optimisation journey through OEX.
-2. OEX routes the request to OGW.
-3. OGW routes to OEX APIs.
+2. OEX routes the request to OWG.
+3. OWG routes to OEX APIs.
 4. OEX APIs route through OWG.
 5. OWG routes to OEX Screen Builder MS.
 6. OEX Screen Builder MS calls NGW.
@@ -1543,7 +1543,7 @@ Process view compliance rule:
 
 ```text
 NGW-exposed OC MS and OD MS APIs are TMF-compliant.
-OEX / OGW / OEX APIs / OWG / OEX Screen Builder MS are experience-layer/private integration components and do not need to be TMF-compliant.
+OEX / OWG / OEX APIs / OWG / OEX Screen Builder MS are experience-layer/private integration components and do not need to be TMF-compliant.
 Kafka events are internal contracts and do not need to be TMF-compliant unless separately required.
 ```
 
@@ -1672,4 +1672,51 @@ Retrial rule:
 Retrial does not move FAILED back to PROCESSING.
 
 Retrial creates a new runtime Optimisation resource with retrialOf pointing to the failed one.
+```
+
+---
+
+## Runtime process view baseline:
+
+The agreed readable runtime process view is:
+
+```text
+User
+-> OEX UI
+-> OWG
+-> OSB MS (OEX APIs)
+-> NGW
+-> OC MS
+-> OD MS
+-> OC MS DB
+-> OC MS Outbox
+-> Kafka
+-> Python/Gurobi Worker
+-> Gurobi Optimizer
+-> Kafka
+-> OC MS Inbox
+-> OC MS DB
+-> User polls GET /optimisation/{id}
+```
+
+Meaning:
+
+```text
+OWG:
+  Optimisation web/API gateway entry for the OEX channel.
+
+OSB MS (OEX APIs):
+  Optimisation Screen Builder MS exposing the OEX optimisation APIs and context-aware experience facade.
+
+NGW:
+  Backend gateway to TMF-compliant optimisation domain APIs.
+
+OC MS:
+  Runtime Optimisation source of truth.
+
+OD MS:
+  OptimisationSpecification source of truth.
+
+OC MS DB / Outbox / Inbox:
+  Durable runtime state, event publication, and outcome projection.
 ```
