@@ -1522,3 +1522,26 @@ are now:
 ### Process view:
 #### Discover optimisation capability:
 ```
+
+---
+
+## Baseline appended 2026-05-08T09:59:06 - Restored logical view after heading cleanup
+
+Restored the logical view sections after heading-number cleanup.
+
+E2E/OSB logical view:
+```text
+User
+-> Microsoft Entra ID SSO
+-> OEX UI
+-> OGW
+-> OSB MS(OEX API)
+-> NGW
+-> OD MS / OC MS
+-> Kafka
+-> Python/Gurobi Worker
+-> Gurobi Optimizer
+```
+
+OD MS has the definition logical path.
+OC MS has the runtime logical path.
