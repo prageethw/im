@@ -1,33 +1,5 @@
 # OD MS / Optimisation-Definition-MS Specification:
 
-> **Status:** Draft
-
-## Table of contents:
-- [Service purpose:](#service-purpose)
-- [Ownership:](#ownership)
-- [Definition versus runtime model:](#definition-versus-runtime-model)
-- [Endpoint set:](#endpoint-set)
-- [OptimisationSpecification resource shape:](#optimisationspecification-resource-shape)
-- [Lifecycle model:](#lifecycle-model)
-- [Canonical OptimisationSpecification example:](#canonical-optimisationspecification-example)
-- [TMF/TIO alignment:](#tmftio-alignment)
-- [Contract validation rules:](#contract-validation-rules)
-- [Contract violation response:](#contract-violation-response)
-- [Relationship to OC MS:](#relationship-to-oc-ms)
-- [Baseline validation note:](#baseline-validation-note)
-- [Shared versus candidate-specific context attributes:](#shared-versus-candidate-specific-context-attributes)
-- [Definition E2E access path baseline:](#definition-e2e-access-path-baseline)
-- [OD MS infrastructure security controls:](#od-ms-infrastructure-security-controls)
-  - [OD MS -> OD MS Database:](#od-ms---od-ms-database)
-  - [OD MS -> platform cache, if introduced later:](#od-ms---platform-cache-if-introduced-later)
-  - [OD MS -> Kafka:](#od-ms---kafka)
-- [Observability and monitoring telemetry baseline:](#observability-and-monitoring-telemetry-baseline)
-- [OD MS observability focus:](#od-ms-observability-focus)
-- [Logical view baseline:](#logical-view-baseline)
-- [Runtime process view participation baseline:](#runtime-process-view-participation-baseline)
-
-> **Status:** Draft
-
 ## Service purpose:
 
 Optimisation-Definition-MS / OD MS owns the governed catalogue of optimisation capabilities.
@@ -466,9 +438,8 @@ OD MS definition access follows this path:
 User
 -> Microsoft Entra ID SSO
 -> OEX UI
--> OEX APIs
 -> OGW
--> OSB MS
+-> OEX Screen Builder MS
 -> NGW
 -> OD MS
 ```
@@ -542,88 +513,6 @@ If OD MS later becomes a Kafka producer or consumer, the OD MS design brief must
 
 ---
 
-## Observability and monitoring telemetry baseline:
-
-Each service design brief and the E2E solution brief must capture observability as more than application logging.
-
-Observability includes:
-
-```text
-application logs
-metrics
-distributed traces
-audit/security events
-dependency telemetry
-alertable operational signals
-```
-
-Correlation and trace propagation:
-
-```text
-accept correlation id / request id from the upstream caller where provided
-generate a correlation id when missing
-propagate correlation id to downstream service, database, cache, Kafka, and platform calls where applicable
-propagate trace context where platform standards support it
-preserve useful downstream correlation identifiers in logs/telemetry where approved
-```
-
-Application log baseline:
-
-```text
-request id / correlation id
-service name
-operation or endpoint
-safe subject/user/service reference where applicable
-resource id where applicable
-dependency called
-dependency status code or outcome
-latency
-authorisation decision result where applicable
-error code/reason
-```
-
-Monitoring telemetry baseline:
-
-```text
-request count by endpoint/operation and status
-latency by endpoint/operation and dependency
-error rate by endpoint/operation and dependency
-dependency failure counts
-timeout and retry counts where applicable
-authorisation allow/deny counts where applicable
-token or credential validation failure counts where applicable
-database connection and query failure counts where applicable
-Kafka produce/consume failure counts where applicable
-Kafka lag and DLQ growth where applicable
-outbox/inbox backlog where applicable
-cache hit/miss/error counts where applicable
-```
-
-Distributed tracing baseline:
-
-```text
-trace inbound service requests
-trace outbound dependency calls
-include correlation id and safe business/resource identifiers as trace attributes where approved
-do not include sensitive token claims, secrets, credentials, or full private payloads in traces
-```
-
-Security/audit baseline:
-
-```text
-authentication failures
-authorisation failures
-privileged operation attempts
-catalogue write/activation/retirement attempts where applicable
-unsafe runtime action attempts such as cancellation and retrial where applicable
-Kafka replay/DLQ actions where applicable
-database privileged access or schema-change actions where applicable
-```
-
-Sensitive claims, full tokens, secrets, credentials, private payload data, and personal data beyond approved identifiers must not be logged or emitted as telemetry attributes.
-
----
-
 ## OD MS observability focus:
 
 OD MS observability must include specification/catalogue lifecycle monitoring.
@@ -643,33 +532,10 @@ OD MS database dependency latency and failures
 
 ## Logical view baseline:
 
-OD MS definition logical view:
-
-```mermaid
-flowchart LR
-    User[User]
-    Entra[Microsoft Entra ID SSO]
-    OEX[OEX UI]
-    OGW[OGW]
-    OSB[OSB MS<br/>(OEX API)]
-    NGW[NGW]
-    OD[OD MS]
-    ODDB[OD MS DB]
-
-    User --> Entra
-    Entra --> OEX
-    OEX --> OGW
-    OGW --> OSB
-    OSB --> NGW
-    NGW --> OD
-    OD --> ODDB
-```
-
 OD MS definition logical path:
 
 ```text
 User
--> Microsoft Entra ID SSO
 -> OEX UI
 -> OGW
 -> OSB MS(OEX API)
@@ -677,54 +543,38 @@ User
 -> OD MS
 ```
 
-Runtime validation relationship:
+OD MS also participates in runtime validation as the specification source:
 
 ```text
 OC MS -> OD MS
 ```
 
-Logical responsibilities:
-
-| Component | Responsibility |
-|---|---|
-| OSB MS(OEX API) | Shapes discovery/catalogue screens and calls OD MS through NGW. |
-| NGW | Backend gateway to OD MS. |
-| OD MS | Owns OptimisationSpecification definitions, lifecycle, governance, and request-contract shape. |
-| OD MS DB | Persists OptimisationSpecification catalogue data. |
-
 OD MS does not participate in Kafka, Python/Gurobi Worker, Gurobi Optimizer, OC MS Inbox, or runtime result projection.
-
 
 ---
 
-## Runtime process view participation baseline:
+## Optimisation catalogue management governance:
 
-OD MS participates as the OptimisationSpecification definition source in the runtime process view:
+OD MS owns the optimisation catalogue through `OptimisationSpecification`.
 
-```text
-User
--> OEX UI
--> OGW
--> OSB MS (OEX APIs)
--> NGW
--> OC MS
--> OD MS
--> OC MS DB
--> OC MS Outbox
--> Kafka
--> Python/Gurobi Worker
--> Gurobi Optimizer
--> Kafka
--> OC MS Inbox
--> OC MS DB
--> User polls GET /optimisation/{id}
-```
+Only approved optimisation domain engineers can create, update, activate, or retire OptimisationSpecification records.
 
-OD MS role:
+Catalogue changes require agreement with broader E2E teams that own, consume, or are impacted by the optimisation capability.
 
-```text
-OC MS -> OD MS:
-  OC MS calls OD MS over mTLS to validate the referenced ACTIVE OptimisationSpecification and request contract.
+General users, OEX consumers, runtime callers, OC MS, and workers cannot self-author OptimisationSpecification records.
 
-OD MS does not own runtime persistence, OC MS Outbox, Kafka worker execution, OC MS Inbox, or result projection.
-```
+---
+
+## Infrastructure security baseline:
+
+OD MS database access is authenticated, authorised, encrypted, and least-privilege. OD MS uses a service-specific database identity/role.
+
+Catalogue write/activate/retire operations must be authenticated, authorised, audited, and protected with ETag / If-Match where applicable.
+
+---
+
+## Observability and monitoring telemetry baseline:
+
+OD MS observability includes application logs, metrics, distributed traces, audit/security events, dependency telemetry, and alertable operational signals.
+
+OD MS must emit telemetry for OptimisationSpecification create/update/activate/retire attempts, catalogue authorisation allow/deny counts, ACTIVE specification lookup counts, validation failures, ETag / If-Match precondition failures, and OD MS DB dependency latency/failures.
