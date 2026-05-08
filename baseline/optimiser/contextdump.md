@@ -1641,3 +1641,19 @@ User
 -> OC MS DB
 -> User polls GET /optimisation/{id}
 ```
+
+---
+
+## Baseline appended 2026-05-08T11:59:29 - Removed stale OEX APIs references
+
+Removed stale E2E solution brief references:
+```text
+OGW -> OEX APIs:
+  Uses user SSO OAuth2 and propagates user context.
+-> OEX APIs
+```
+
+Active path remains through:
+```text
+OGW -> OSB MS(OEX API) -> NGW
+```

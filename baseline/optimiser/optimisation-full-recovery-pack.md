@@ -1,6 +1,6 @@
 # Optimisation Full Recovery Pack
 
-Generated: 2026-05-08T11:53:51
+Generated: 2026-05-08T11:59:29
 
 This file combines the current optimisation architecture recovery material into one place.
 
@@ -1659,6 +1659,22 @@ User
 -> User polls GET /optimisation/{id}
 ```
 
+---
+
+## Baseline appended 2026-05-08T11:59:29 - Removed stale OEX APIs references
+
+Removed stale E2E solution brief references:
+```text
+OGW -> OEX APIs:
+  Uses user SSO OAuth2 and propagates user context.
+-> OEX APIs
+```
+
+Active path remains through:
+```text
+OGW -> OSB MS(OEX API) -> NGW
+```
+
 
 ---
 
@@ -2299,30 +2315,7 @@ OD MS also participates in runtime validation as the specification source:
 OC MS -> OD MS
 ```
 
----
-
-## Runtime process view participation baseline:
-
-OD MS participates as the OptimisationSpecification definition source in the runtime process view:
-
-```text
-User
--> OEX UI
--> OGW
--> OSB MS (OEX APIs)
--> NGW
--> OC MS
--> OD MS
--> OC MS DB
--> OC MS Outbox
--> Kafka
--> Python/Gurobi Worker
--> Gurobi Optimizer
--> Kafka
--> OC MS Inbox
--> OC MS DB
--> User polls GET /optimisation/{id}
-```
+OD MS does not participate in Kafka, Python/Gurobi Worker, Gurobi Optimizer, OC MS Inbox, or runtime result projection.
 
 
 ---
@@ -3953,30 +3946,7 @@ User
 -> Gurobi Optimizer
 ```
 
----
-
-## Runtime process view baseline:
-
-For readability, the runtime process view is shown as:
-
-```text
-User
--> OEX UI
--> OGW
--> OSB MS (OEX APIs)
--> NGW
--> OC MS
--> OD MS
--> OC MS DB
--> OC MS Outbox
--> Kafka
--> Python/Gurobi Worker
--> Gurobi Optimizer
--> Kafka
--> OC MS Inbox
--> OC MS DB
--> User polls GET /optimisation/{id}
-```
+OC MS owns runtime Optimisation resources. It validates runtime requests against OD MS definitions, persists accepted executions, emits Kafka instructions, consumes worker outcomes, and projects lifecycle/result state.
 
 
 ---
@@ -4495,29 +4465,32 @@ User
 -> Gurobi Optimizer
 ```
 
----
-
-## Runtime process view baseline:
-
-For readability, the runtime process view is shown as:
+Logical responsibility split:
 
 ```text
-User
--> OEX UI
--> OGW
--> OSB MS (OEX APIs)
--> NGW
--> OC MS
--> OD MS
--> OC MS DB
--> OC MS Outbox
--> Kafka
--> Python/Gurobi Worker
--> Gurobi Optimizer
--> Kafka
--> OC MS Inbox
--> OC MS DB
--> User polls GET /optimisation/{id}
+OSB MS(OEX API):
+  Provides the optimisation-specific OEX API/facade behind OGW.
+  Uses User Context JWT to shape the OEX optimisation experience.
+  Calls backend optimisation APIs through NGW.
+
+OD MS:
+  Owns OptimisationSpecification definitions using constraintSpecifications[], targetSpecifications[], and contextSpecifications[].
+
+OC MS:
+  Owns runtime Optimisation resources using constraints[], targets[], and context[].
+
+Kafka / Python/Gurobi Worker / Gurobi Optimizer:
+  Participate only in runtime execution flows after OC MS accepts the request.
+```
+
+API compliance rule:
+
+```text
+NGW-exposed OD MS and OC MS APIs are TMF-compliant.
+
+OSB MS(OEX API) APIs exposed behind OGW are private/OEX experience APIs and do not need to be TMF-compliant.
+
+Private MS-to-MS APIs and Kafka events are internal contracts unless separately exposed.
 ```
 
 
