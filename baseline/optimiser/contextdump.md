@@ -1150,7 +1150,6 @@ Baselined the E2E logical integration sequence as:
 User
 -> Microsoft Entra ID SSO
 -> OEX UI
--> OEX APIs
 -> OGW
 -> OEX Screen Builder MS
 -> NGW
@@ -1180,7 +1179,6 @@ Updated the active E2E process flows to follow the agreed sequence:
 User
 -> Microsoft Entra ID SSO
 -> OEX UI
--> OEX APIs
 -> OGW
 -> OEX Screen Builder MS
 -> NGW
@@ -1256,8 +1254,8 @@ User
 
 Cleanup rules applied:
 - No product-specific service mesh name for mTLS.
-- No `OWG` wording; use `OWG` only where that separate gateway is still intentionally referenced.
-- No stale `OEX APIs -> OWG -> OSB MS` hop in the OSB runtime process.
+- No `OGW` wording; use `OGW` only where that separate gateway is still intentionally referenced.
+- No stale `OEX APIs -> OGW -> OSB MS` hop in the OSB runtime process.
 - No `User`; use `User` in the current baseline.
 - No stale `/cancel` or `/retry` endpoint paths.
 - No `cancellation` typo.
@@ -1357,3 +1355,16 @@ Process flows now cover:
 - Cancellation optimisation
 - Retrial failed optimisation
 - Execute optimisation
+
+---
+
+## Baseline appended 2026-05-08T13:40:51 - Removed OGW and OEX UI wording
+
+Removed `OGW` wording because there is no such component.
+
+Replaced `OEX UI` with `OEX UI`.
+
+Active entry path wording remains:
+```text
+OEX UI -> OGW -> OSB MS(OEX API)
+```

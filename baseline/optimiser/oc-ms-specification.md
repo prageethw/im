@@ -1494,8 +1494,8 @@ Detailed runtime process interpretation:
 ```text
 1. Consumer initiates the optimisation journey through OEX.
 2. OEX sends the request to OGW.
-3. OGW routes to OEX APIs.
-4. OEX APIs route through OGW.
+3. OGW invokes OSB MS(OEX API).
+4. OGW invokes OSB MS(OEX API).
 5. OGW routes to OEX Screen Builder MS.
 6. OEX Screen Builder MS calls NGW.
 7. NGW calls OC MS.
