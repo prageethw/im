@@ -1469,3 +1469,14 @@ Detailed flows now use:
 - no `User`
 - `OC MS DB`, `OC MS Outbox`, `OC MS Inbox`
 - `Python/Gurobi Worker` and `Gurobi Optimizer`
+
+---
+
+## Baseline appended 2026-05-08T12:48:59 - Added optimisation specification creation use case
+
+Added `Create optimisation specification` to the E2E use case list.
+
+Use case intent:
+- Optimisation domain engineer creates a new governed `OptimisationSpecification` in OD MS.
+- Creation happens after agreement with broader E2E teams.
+- The created specification starts in DRAFT and is not usable for runtime optimisation until reviewed and activated.

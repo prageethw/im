@@ -56,6 +56,7 @@ The Python/Gurobi worker is responsible for executing the internal deterministic
 
 | **Use case** | **Actor** | **Summary** | **Outcome** |
 |---|---|---|---|
+| Create optimisation specification | Optimisation domain engineer | Create a new governed `OptimisationSpecification` in OD MS after agreement with broader E2E teams, including request-contract metadata such as targets, constraints, context, and lifecycle/governance details. | A new `OptimisationSpecification` is created in DRAFT state and is not usable for runtime optimisation until it is reviewed and activated. |
 | Discover optimisation capability | User / OEX / platform service | Retrieve available `OptimisationSpecification` records from OD MS and understand required constraints, targets, and context. | Caller knows which optimisation capability to use and the required request contract. |
 | Create runtime optimisation | User / OEX / platform service | Submit a runtime `Optimisation` request to OC MS using an ACTIVE specification and valid constraints, targets, and context. | OC MS returns `202 Accepted` and creates an `ACKNOWLEDGED` optimisation. |
 | Monitor optimisation | User / OEX / platform service | Read current lifecycle state and result when available. | Caller can see whether the optimisation is pending, processing, completed, infeasible, failed, cancelling, or cancelled. |
