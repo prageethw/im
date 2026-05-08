@@ -30,7 +30,7 @@ The solution separates the **definition of optimisation capabilities** from the 
 
 - Operator access to OEX is governed by the ACG approval process and Microsoft Entra ID SSO.
 
-- OGW exposes OEX UI using user-context-aware OAuth2. OGW calls OSB MS using mTLS and User Context JWT. OSB MS reaches backend OD MS and OC MS APIs through NGW using mTLS and OAuth2 system-to-system.
+- OGW exposes OEX APIs for the OEX UI using user-context-aware OAuth2. OWG calls OSB MS using mTLS and User Context JWT. OSB MS reaches backend OD MS and OC MS APIs through NGW using mTLS and OAuth2 system-to-system.
 
 - OC MS validates only request structure and the OD MS request contract, then returns `202 Accepted` and drives execution asynchronously through Kafka.
 
@@ -72,8 +72,8 @@ The logical integration model is:
 User
 -> Microsoft Entra ID SSO
 -> OGW
--> OEX UI
--> OGW
+-> OEX APIs / OEX UI
+-> OWG
 -> OSB MS
 -> NGW
 -> OD MS / OC MS
@@ -91,8 +91,9 @@ User -> Microsoft Entra ID:
 UI -> OGW:
   OGW acts as the user-context-aware gateway for OEX APIs.
 
-OGW -> OSB MS(OEX API):
-  Uses mTLS and User Context JWT.
+OGW -> OEX APIs:
+  Uses user SSO OAuth2 and propagates user context.
+
 OGW -> OSB MS:
   Uses mTLS and User Context JWT.
 
@@ -366,6 +367,7 @@ Detailed flow:
 ```
 
 
+
 ---
 
 ## 4. Capability matrix:
@@ -374,9 +376,9 @@ Detailed flow:
 |---|---|
 | **Microsoft Entra ID** | Provides SSO authentication for users before they access OEX. Supplies identity context used by the user-facing access path. |
 | **ACG approval process** | Governs operator access to OEX. Users must be approved through the organisational access-control process before they can use the OEX optimisation experience. |
-| **OGW** | User-context-aware gateway for OEX UI integration. Uses user SSO OAuth2 from the OEX UI path and propagates user identity context into the OEX layer. |
-| **OEX UI** | Provides the user/operator-facing experience for discovering optimisation capabilities, submitting requests, monitoring state, cancelling, retrying, and viewing results. |
-| **OGW** | Secures internal OEX access to OSB MS using mTLS and User Context JWT. Preserves user context across the OEX backend interaction. |
+| **OGW** | User-context-aware gateway for OEX APIs and OEX UI integration. Uses user SSO OAuth2 from the UI/OEX API path and propagates user identity context into the OEX layer. |
+| **OEX APIs / OEX UI** | Provides the user/operator-facing experience for discovering optimisation capabilities, submitting requests, monitoring state, cancelling, retrying, and viewing results. |
+| **OWG** | Secures internal OEX access to OSB MS using mTLS and User Context JWT. Preserves user context across the OEX backend interaction. |
 | **OSB MS** | Builds and orchestrates the OEX screen/backend experience. Integrates with NGW using mTLS and OAuth2 system-to-system to call backend optimisation APIs. |
 | **NGW** | NAAS Gateway exposing backend optimisation domain APIs for OD MS and OC MS. Provides the controlled backend API entry point for OSB MS and other authorised system consumers. NGW-exposed backend APIs are TMF-compliant. |
 | **Optimisation-Definition-MS / OD MS** | Owns the definition side of the optimisation platform through `OptimisationSpecification`. Publishes caller-facing request contracts, manages `DRAFT`, `ACTIVE`, and `RETIRED` specification lifecycle, and ensures only one ACTIVE specification exists per `specificationKey`. Does not expose solver/model internals. |
@@ -406,14 +408,14 @@ User
 -> ACG approval process
 -> Microsoft Entra ID SSO
 -> OGW
--> OEX UI
+-> OEX APIs / OEX UI
 ```
 
-OGW is the user-context-aware gateway for the OEX channel. It uses user SSO OAuth2 from the OEX UI path and propagates user identity context into the OEX layer.
+OGW is the user-context-aware gateway for the OEX channel. It uses user SSO OAuth2 from the UI/OEX API path and propagates user identity context into the OEX layer.
 
 ### 5.2 OEX internal access path:
 
-OGW integrates with OSB MS using:
+OWG integrates with the OSB MS using:
 
 ```text
 mTLS
@@ -423,7 +425,8 @@ User Context JWT
 This preserves user context while securely invoking OEX backend experience services.
 
 ```text
-OGW
+OGW / OEX APIs
+-> OWG
 -> OSB MS
 ```
 
@@ -626,7 +629,7 @@ OD MS specification responses may use caching where appropriate. OC MS runtime r
 | Misconfigured internal model binding | OD MS may expose a valid request contract while worker execution fails. | Add deployment validation, contract tests between OD MS and worker model binding, and pre-production model checks. |
 | Overexposure of solver details | Sensitive optimisation logic could leak externally. | Keep OD MS limited to caller-facing request contracts and keep solver details internal. |
 | Incorrect specification activation | Wrong `ACTIVE` specification may affect all new requests for a `specificationKey`. | Use ETag/If-Match, lifecycle governance, review/approval, and only one ACTIVE version per key. |
-| Complex access path through OEX gateways | Misconfiguration could break user context propagation or backend access. | Use clear contract testing across OGW, OGW, Screen Builder MS, NGW, OD MS, and OC MS. |
+| Complex access path through OEX gateways | Misconfiguration could break user context propagation or backend access. | Use clear contract testing across OGW, OWG, Screen Builder MS, NGW, OD MS, and OC MS. |
 
 ---
 
@@ -636,9 +639,9 @@ OD MS specification responses may use caching where appropriate. OC MS runtime r
 
 - User/operator authentication uses Microsoft Entra ID SSO.
 
-- OGW is the user-context-aware gateway for OEX UI integration.
+- OGW is the user-context-aware gateway for OEX APIs and OEX UI integration.
 
-- OGW integrates with OSB MS using mTLS and User Context JWT.
+- OWG integrates with OSB MS using mTLS and User Context JWT.
 
 - OSB MS integrates with NGW using mTLS and OAuth2 system-to-system.
 
