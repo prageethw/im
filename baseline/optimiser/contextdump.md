@@ -1357,3 +1357,15 @@ Process flows now cover:
 - Cancellation optimisation
 - Retrial failed optimisation
 - Execute optimisation
+
+---
+
+## Baseline appended 2026-05-08T14:20:22 - E2E solution brief made identical to GitHub main
+
+Replaced `optimisation-e2e-solution-brief.md` with the exact raw GitHub main version from:
+
+```text
+https://github.com/prageethw/im/blob/main/baseline/optimiser/optimisation-e2e-solution-brief.md
+```
+
+The immediately previous local E2E file was backed up before replacement.
