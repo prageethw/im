@@ -440,7 +440,7 @@ User
 -> OEX UI
 -> OEX APIs
 -> OGW
--> OSB MS
+-> OEX Screen Builder MS
 -> NGW
 -> OD MS
 ```
@@ -622,7 +622,7 @@ User
 -> Microsoft Entra ID SSO
 -> OEX UI
 -> OGW
--> OSB MS(OEX API)
+-> OSB MS (OEX APIs)
 -> NGW
 -> OD MS
 ```
@@ -633,36 +633,4 @@ OD MS also participates in runtime validation as the specification source:
 OC MS -> OD MS
 ```
 
----
-
-## Runtime process view participation baseline:
-
-OD MS participates as the OptimisationSpecification definition source in the runtime process view:
-
-```text
-User
--> OEX UI
--> OGW
--> OSB MS (OEX APIs)
--> NGW
--> OC MS
--> OD MS
--> OC MS DB
--> OC MS Outbox
--> Kafka
--> Python/Gurobi Worker
--> Gurobi Optimizer
--> Kafka
--> OC MS Inbox
--> OC MS DB
--> User polls GET /optimisation/{id}
-```
-
-OD MS role in the detailed flow:
-
-```text
-OC MS -> OD MS:
-  OC MS calls OD MS over mTLS to validate the referenced ACTIVE OptimisationSpecification and request contract.
-
-OD MS does not own runtime persistence, OC MS Outbox, Kafka worker execution, OC MS Inbox, or result projection.
-```
+OD MS does not participate in Kafka, Python/Gurobi Worker, Gurobi Optimizer, OC MS Inbox, or runtime result projection.
