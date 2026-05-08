@@ -109,7 +109,7 @@ HTTP/1.1 412 Precondition Failed
 
 # Baselined OD MS / Optimisation-Definition-MS REST Specification
 
-## OD MS summary
+## 1. OD MS summary
 
 Optimisation-Definition-MS (OD MS) owns the definition side of the optimisation platform. Its responsibility is to publish and govern the externally visible optimisation capability contract, called `OptimisationSpecification`.
 
@@ -132,7 +132,7 @@ In one sentence:
 OD MS is the governed catalogue of optimisation capabilities; it tells callers what inputs they must provide, while the platform privately owns how those inputs are translated into deterministic Gurobi execution.
 ```
 
-## OD MS endpoint set
+## 2. OD MS endpoint set
 
 ```http
 # List/search OptimisationSpecification resources.
@@ -154,7 +154,7 @@ PUT /optimisationSpecification/{id}
 DELETE /optimisationSpecification/{id}
 ```
 
-## OptimisationSpecification lifecycle
+## 3. OptimisationSpecification lifecycle
 
 ```text
 DRAFT
@@ -184,7 +184,7 @@ DELETED
 ARCHIVED
 ```
 
-## Version activation rule
+## 4. Version activation rule
 
 ```text
 Only one ACTIVE OptimisationSpecification is allowed per specificationKey.
@@ -221,7 +221,7 @@ Transactional activation logic:
 8. Commit atomically.
 ```
 
-## Public OptimisationSpecification shape
+## 5. Public OptimisationSpecification shape
 
 The public OD MS resource exposes only the caller-facing input contract.
 
@@ -347,7 +347,7 @@ Example resource:
 }
 ```
 
-## POST /optimisationSpecification
+## 6. POST /optimisationSpecification
 
 Creates a new `OptimisationSpecification`.
 
@@ -509,7 +509,7 @@ Content-Type: application/json
 }
 ```
 
-## GET /optimisationSpecification/{id}
+## 7. GET /optimisationSpecification/{id}
 
 Retrieves one `OptimisationSpecification`.
 
@@ -601,7 +601,7 @@ Cache-Control: max-age=3600
 }
 ```
 
-## GET /optimisationSpecification
+## 8. GET /optimisationSpecification
 
 Lists/searches `OptimisationSpecification` resources.
 
@@ -661,7 +661,7 @@ X-Result-Count: 1
 ]
 ```
 
-## PUT /optimisationSpecification/{id}
+## 9. PUT /optimisationSpecification/{id}
 
 Full replacement only.
 
@@ -849,7 +849,7 @@ Content-Type: application/json
 }
 ```
 
-## DELETE /optimisationSpecification/{id}
+## 10. DELETE /optimisationSpecification/{id}
 
 Delete is only for DRAFT cleanup.
 
@@ -927,7 +927,7 @@ Content-Type: application/json
 }
 ```
 
-## HATEOAS by lifecycle state
+## 11. HATEOAS by lifecycle state
 
 ### DRAFT
 
@@ -974,7 +974,7 @@ Content-Type: application/json
 }
 ```
 
-## Header rules
+## 12. Header rules
 
 ```text
 GET /optimisationSpecification/{id}
@@ -1005,7 +1005,7 @@ Stale/wrong If-Match:
   412 Precondition Failed
 ```
 
-## Key OD MS baseline summary
+## 13. Key OD MS baseline summary
 
 ```text
 OD MS owns OptimisationSpecification.
@@ -1505,54 +1505,9 @@ Moved the seven one-to-one use-case process views into the E2E solution brief `#
 
 ---
 
-## Baseline appended 2026-05-08T09:53:26 - Removed heading numbers from artefacts
+## Baseline appended 2026-05-08T12:22:39 - Restored E2E from da6d06e and applied targeted fixes only
 
-Removed numeric prefixes from Markdown headings across current artefacts.
-
-Examples:
-```text
-## Business context:
-### Process view:
-#### Discover optimisation capability:
-```
-
-are now:
-```text
-## Business context:
-### Process view:
-#### Discover optimisation capability:
-```
-
----
-
-## Baseline appended 2026-05-08T09:59:06 - Restored logical view after heading cleanup
-
-Restored the logical view sections after heading-number cleanup.
-
-E2E/OSB logical view:
-```text
-User
--> Microsoft Entra ID SSO
--> OEX UI
--> OGW
--> OSB MS(OEX API)
--> NGW
--> OD MS / OC MS
--> Kafka
--> Python/Gurobi Worker
--> Gurobi Optimizer
-```
-
-OD MS has the definition logical path.
-OC MS has the runtime logical path.
-
----
-
-## Baseline appended 2026-05-08T12:17:31 - Aligned E2E with OC MS and OD MS
-
-Aligned E2E, OC MS, and OD MS artefacts:
-- Removed stale OEX APIs / OWG / OEX GW / Istio wording.
-- E2E process view now uses OGW -> OSB MS(OEX API) -> NGW -> OC MS.
-- Added/fixed OC MS logical/runtime/outbox/observability baselines.
-- Added/fixed OD MS logical/catalogue/security/observability baselines.
-- Re-added E2E security, observability, outbox processed-record lifecycle, and manage-catalogue use case if missing after rollback.
+Restored `optimisation-e2e-solution-brief.md` from the GitHub da6d06e source, then applied only the agreed E2E targeted fixes:
+- logical model uses `OEX UI -> OGW -> OSB MS(OEX API) -> NGW -> OC MS -> OD MS -> OC MS DB -> OC MS Outbox -> Kafka -> Python/Gurobi Worker -> Gurobi Optimizer -> Kafka -> OC MS Inbox -> OC MS DB -> User polls GET /optimisation/{id}`
+- 3.3.1 process view uses `User -> OGW -> OSB MS(OEX API) -> NGW -> OC MS ...`
+- removed stale `-> OEX APIs`, `OGW -> OEX APIs`, and OWG hops from E2E.
