@@ -1663,3 +1663,15 @@ Rolled the E2E solution brief process view back to the version with the 18-step 
 - Python/Gurobi Worker invokes Gurobi Optimizer
 - OC MS Inbox consumes outcome and updates OC MS DB
 - User polls GET /optimisation/{id} through OEX UI -> OGW -> OSB MS (OEX APIs) -> NGW -> OC MS
+
+---
+
+## Baseline appended 2026-05-08T11:36:52 - E2E solution brief rolled back to GitHub commit
+
+Rolled back `optimisation-e2e-solution-brief.md` to the GitHub commit version requested by the user:
+
+```text
+https://github.com/prageethw/im/blob/3f184867db74a6397ca3b67bc0ba062d9d0dd76e/baseline/optimiser/optimisation-e2e-solution-brief.md
+```
+
+A local backup of the immediately previous E2E file was created before replacing it.
