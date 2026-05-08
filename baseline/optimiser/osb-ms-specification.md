@@ -2,11 +2,11 @@
 
 ## Service purpose:
 
-OSB MS means Optimisation Screen Builder MS.
+OSB MS means Optimisation Screen Builder MS. In the OEX-facing path it exposes the OEX APIs.
 
 OSB MS is the context-aware OEX facade / backend-for-frontend service for optimisation experiences.
 
-OSB MS sits behind OWG and receives user context from the User Context JWT passed by OWG. It shapes the OEX optimisation experience and calls backend optimisation domain APIs through NGW.
+OSB MS sits behind OGW and receives user context from the User Context JWT passed by OGW. It shapes the OEX optimisation experience and calls backend optimisation domain APIs through NGW.
 
 OSB MS initially supports runtime optimisation journeys through OC MS. It later supports catalogue/specification journeys through OD MS.
 
@@ -17,7 +17,7 @@ The agreed access path is:
 ```text
 User
 -> OEX UI
--> OWG
+-> OGW
 -> OSB MS
 -> NGW
 -> OC MS
@@ -30,11 +30,11 @@ Meaning:
 User:
   Uses OEX UI.
 
-OEX UI -> OWG:
-  OEX UI reaches the optimisation experience through OWG.
+OEX UI -> OGW:
+  OEX UI reaches the optimisation experience through OGW.
 
-OWG -> OSB MS:
-  OWG invokes OSB MS using mTLS and User Context JWT.
+OGW -> OSB MS:
+  OGW invokes OSB MS using mTLS and User Context JWT.
 
 OSB MS -> NGW:
   OSB MS calls NGW using mTLS and OAuth2 system-to-system.
@@ -165,7 +165,7 @@ General users and runtime consumers cannot self-author new OptimisationSpecifica
 
 ## Context awareness:
 
-OSB MS uses the User Context JWT passed by OWG to shape the experience.
+OSB MS uses the User Context JWT passed by OGW to shape the experience.
 
 Examples:
 
@@ -186,7 +186,7 @@ OSB MS must not trust UI-supplied role decisions. It must use trusted claims fro
 ```text
 User
 -> OEX UI
--> OWG
+-> OGW
 -> OSB MS
 -> NGW
 -> OC MS
@@ -196,14 +196,14 @@ Detailed flow:
 
 ```text
 1. User opens the OEX optimisation experience.
-2. OEX UI calls OWG.
-3. OWG invokes OSB MS using mTLS and User Context JWT.
+2. OEX UI calls OGW.
+3. OGW invokes OSB MS using mTLS and User Context JWT.
 4. OSB MS reads authorised user/context claims.
 5. OSB MS shapes the runtime request/view/action model.
 6. OSB MS calls NGW using mTLS and OAuth2 system-to-system.
 7. NGW calls OC MS.
 8. OC MS validates and manages runtime Optimisation as source of truth.
-9. OSB MS returns a UI-friendly response to OEX UI through OWG.
+9. OSB MS returns a UI-friendly response to OEX UI through OGW.
 ```
 
 ## Catalogue/specification flow:
@@ -211,7 +211,7 @@ Detailed flow:
 ```text
 User
 -> OEX UI
--> OWG
+-> OGW
 -> OSB MS
 -> NGW
 -> OD MS
@@ -221,7 +221,7 @@ Detailed flow:
 
 ```text
 1. User opens catalogue/specification journey in OEX UI.
-2. OWG invokes OSB MS using mTLS and User Context JWT.
+2. OGW invokes OSB MS using mTLS and User Context JWT.
 3. OSB MS checks whether the user has approved optimisation domain engineer access.
 4. OSB MS calls NGW using mTLS and OAuth2 system-to-system.
 5. NGW calls OD MS.
@@ -231,7 +231,7 @@ Detailed flow:
 
 ## Security baseline:
 
-### OWG -> OSB MS:
+### OGW -> OSB MS:
 
 ```text
 mTLS
@@ -241,7 +241,7 @@ User Context JWT
 Controls:
 
 ```text
-OWG authenticates to OSB MS.
+OGW authenticates to OSB MS.
 OSB MS validates User Context JWT signature, issuer, audience, expiry, and required claims.
 OSB MS rejects missing, expired, malformed, or unauthorised context tokens.
 OSB MS uses the User Context JWT only for authorised context-aware experience decisions.
@@ -539,12 +539,12 @@ Retrial creates a new runtime Optimisation resource with retrialOf pointing to t
 
 ## Runtime process view baseline:
 
-The agreed readable runtime process view is:
+For readability, the runtime process view is shown as:
 
 ```text
 User
 -> OEX UI
--> OWG
+-> OGW
 -> OSB MS (OEX APIs)
 -> NGW
 -> OC MS
@@ -563,21 +563,15 @@ User
 Meaning:
 
 ```text
-OWG:
-  Optimisation web/API gateway entry for the OEX channel.
-
 OSB MS (OEX APIs):
-  Optimisation Screen Builder MS exposing the OEX optimisation APIs and context-aware experience facade.
+  OSB MS is the optimisation-specific OEX backend/API facade behind OGW.
 
-NGW:
-  Backend gateway to TMF-compliant optimisation domain APIs.
+OC MS DB:
+  Runtime Optimisation persistence.
 
-OC MS:
-  Runtime Optimisation source of truth.
+OC MS Outbox:
+  Durable event publication pattern for worker instructions.
 
-OD MS:
-  OptimisationSpecification source of truth.
-
-OC MS DB / Outbox / Inbox:
-  Durable runtime state, event publication, and outcome projection.
+OC MS Inbox:
+  Durable/idempotent worker outcome consumption and projection.
 ```

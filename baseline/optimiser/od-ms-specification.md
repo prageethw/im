@@ -439,7 +439,7 @@ User
 -> Microsoft Entra ID SSO
 -> OEX UI
 -> OEX APIs
--> OWG
+-> OGW
 -> OEX Screen Builder MS
 -> NGW
 -> OD MS
@@ -475,16 +475,14 @@ MS-to-Kafka security requirements apply to OC MS, Python/Gurobi Worker, and any 
 
 ---
 
-## Runtime process participation baseline:
+## Runtime process view participation baseline:
 
-OD MS participates in the runtime process as the OptimisationSpecification source of truth.
-
-Readable runtime process reference:
+OD MS participates as the OptimisationSpecification definition source in the runtime process view:
 
 ```text
 User
 -> OEX UI
--> OWG
+-> OGW
 -> OSB MS (OEX APIs)
 -> NGW
 -> OC MS
@@ -504,7 +502,7 @@ OD MS role:
 
 ```text
 OC MS -> OD MS:
-  OC MS validates the referenced ACTIVE OptimisationSpecification and request contract against OD MS.
+  OC MS validates the referenced ACTIVE OptimisationSpecification and request contract.
 
-OD MS does not persist runtime Optimisation records, write OC MS outbox events, consume Kafka outcomes, or project runtime results.
+OD MS does not own runtime persistence, outbox, Kafka worker execution, inbox, or result projection.
 ```
