@@ -440,7 +440,7 @@ User
 -> OEX UI
 -> OEX APIs
 -> OGW
--> OEX Screen Builder MS
+-> OSB MS
 -> NGW
 -> OD MS
 ```
@@ -613,6 +613,40 @@ OD MS database dependency latency and failures
 
 ---
 
+## Runtime process view participation baseline:
+
+OD MS participates as the OptimisationSpecification definition source in the runtime process view:
+
+```text
+User
+-> OEX UI
+-> OGW
+-> OSB MS (OEX APIs)
+-> NGW
+-> OC MS
+-> OD MS
+-> OC MS DB
+-> OC MS Outbox
+-> Kafka
+-> Python/Gurobi Worker
+-> Gurobi Optimizer
+-> Kafka
+-> OC MS Inbox
+-> OC MS DB
+-> User polls GET /optimisation/{id}
+```
+
+OD MS role:
+
+```text
+OC MS -> OD MS:
+  OC MS calls OD MS over mTLS to validate the referenced ACTIVE OptimisationSpecification and request contract.
+
+OD MS does not own runtime persistence, OC MS Outbox, Kafka worker execution, OC MS Inbox, or result projection.
+```
+
+---
+
 ## Logical view baseline:
 
 OD MS definition logical path:
@@ -622,7 +656,7 @@ User
 -> Microsoft Entra ID SSO
 -> OEX UI
 -> OGW
--> OSB MS (OEX APIs)
+-> OSB MS(OEX API)
 -> NGW
 -> OD MS
 ```
