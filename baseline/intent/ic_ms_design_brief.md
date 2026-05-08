@@ -238,7 +238,7 @@ IntentReport uses the TMF expression wrapper. Curated report facts are carried i
 - `targetSummary`
 - `observationSummary`
 
-`targetSummary` is fact-only by default: target value, observed value, and unit. It does not include aggregate result labels such as `Compliant` / `NonCompliant` or per-target `status` by default. Consumers decide compliance from the facts.
+`targetSummary` is fact-only by default: target value, observed value, and unit. It does not include aggregate compliance-result labels or per-target `status` by default. Consumers decide compliance from the facts.
 
 IntentReport should not expose raw telemetry dumps, raw callback payloads, raw optimiser details, raw KP data, internal candidate scoring, internal Kafka payloads, or implementation-only details unless deliberately curated and approved for external reporting.
 
