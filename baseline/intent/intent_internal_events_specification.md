@@ -45,13 +45,6 @@ Internal event `references` should use named resource reference objects with `id
 
 Use `correlationId` as a common scalar reference.
 
-
-### Provider metadata rule
-
-`provider` is KP/resource-inventory metadata only and must not be included by default in event-facing resource entries such as `IntentResolvedEvent.resources[]` or `IntentOptimisedEvent.resources[]`.
-
-Reintroduce an event-facing provider-like attribute only if provider-aware optimisation is explicitly baselined later, preferably using a deliberate name such as `resourceProvider` or `providerGroup` depending on the requirement.
-
 ### Optimiser status and evaluation rule
 
 Use optimiser statuses as the primary outcome for the optimisation run, target evaluations, and constraint evaluations.

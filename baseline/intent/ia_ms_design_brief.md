@@ -36,7 +36,7 @@ IA MS is the runtime assurance truth for IME. IC MS remains the owner of the ext
 | Assurance state update | Updates current assurance/projection state when actionable events are received |
 | Drift/degradation detection | Detects runtime drift/degradation against KP-derived expectations |
 | Assurance event publication | Publishes `IntentAssuranceEvent` to `t7.intent.management.events` |
-| Re-optimisation trigger | Uses `IntentAssuranceEvent.assuranceOutcome.requiresReoptimisation` rather than a separate drift event |
+| Re-optimisation trigger | No default `requiresReoptimisation` flag; authorised consumers derive re-optimisation need from `lifecycleStatus`, `statusReason`, `targets`, and `observations` |
 | IA outbox ownership | Owns IA outbox and relay for reliable event publication |
 | Idempotency tracking | Tracks consumed events and/or correlation keys where required |
 
@@ -108,114 +108,109 @@ IA MS is the runtime assurance truth for IME. IC MS remains the owner of the ext
 
 `IntentAssuranceEvent` is the single IA-owned runtime assurance event.
 
-It represents:
+It carries lifecycle-driving assurance truth using the same internal-event shape as `intent_internal_events_specification.md`. IA MS does not wrap the outcome in `assuranceOutcome` by default. The current lifecycle-driving result is carried by top-level `body.lifecycleStatus` and explained by `body.statusReason`.
 
 | **Outcome Type** | **Representation** |
 |---|---|
-| Healthy | `assuranceOutcome.assuranceStatus = healthy` |
-| Degraded | `assuranceOutcome.assuranceStatus = degraded` |
-| Drift detected | `assuranceOutcome.assuranceStatus = driftDetected` |
-| Failed | `assuranceOutcome.lifecycleStatus = Failed` or equivalent lifecycle-driving outcome |
-| Termination confirmed | `assuranceOutcome.lifecycleStatus = Terminated` or equivalent lifecycle-driving outcome |
-| Re-optimisation required | `assuranceOutcome.requiresReoptimisation = true` |
+| Healthy / active | `body.lifecycleStatus = Active` with selected resources and observations |
+| Degraded / drift detected | `body.lifecycleStatus = Degraded` with targets and observations explaining the current metrics |
+| Failed | `body.lifecycleStatus = Failed` with status reason and relevant observations where available |
+| Termination confirmed | `body.lifecycleStatus = Terminated` with status reason |
+| Re-optimisation signal | Derived by authorised consumers from `lifecycleStatus`, `statusReason`, `targets`, and `observations`; no default `requiresReoptimisation` flag is required |
 
-`IntentDriftOccurredEvent` is retired from the active baseline. Do not use it by default.
+`IntentDriftOccurredEvent` is retired from the active baseline. Drift/degradation is represented by `IntentAssuranceEvent`.
 
-### Indicative IntentAssuranceEvent Shape:
+### Indicative IntentAssuranceEvent Shape — degraded outcome:
 
 ```json
 {
   "body": {
-    "eventType": "IntentAssuranceEvent",
-    "eventVersion": "1.0",
-    "source": "intent-assurance-ms",
-    "eventTime": "2026-05-04T12:20:00+10:00",
-    "correlationId": "corr-ia-20260504-002",
     "intentId": "INT-HOSP-2026-001",
+    "version": "v1",
+    "lifecycleStatus": "Degraded",
+    "statusReason": "Selected resources are outside resolved runtime targets.",
     "location": {
-      "locationId": "sydney-hospital"
+      "locationId": "AU-NSW-SYD-HOSP-001",
+      "displayName": "Sydney-Main-Hospital"
     },
-    "service": {
-      "serviceClass": "surgical-slice"
+    "serviceType": "surgical-connectivity",
+    "serviceClass": "critical-gold",
+    "targets": {
+      "maxLatencyMs": 10,
+      "minAvailabilityPercent": 99.99,
+      "maxJitterMs": 2,
+      "maxPacketLossPercent": 0.01
     },
-    "assuranceOutcome": {
-      "lifecycleStatus": "Degraded",
-      "assuranceStatus": "driftDetected",
-      "severity": "major",
-      "reason": "Primary path latency exceeded configured benchmark.",
-      "requiresReoptimisation": true
-    },
-    "runtimeState": {
-      "affectedPathId": "path-syd-hosp-primary-001",
-      "latencyMs": 18,
-      "reliabilityPercent": 99.95
-    },
-    "candidates": [
+    "resources": [
       {
-        "pathId": "path-syd-hosp-primary-001",
-        "pathClass": "primary",
-        "latencyMs": 18,
-        "reliabilityPercent": 99.95,
-        "latencyBenchmarkMs": 10,
-        "reliabilityBenchmarkPercent": 99.99
+        "role": "primary",
+        "resourceId": "SYD-PRI-01"
       },
       {
-        "pathId": "path-syd-hosp-backup-001",
-        "pathClass": "backup",
-        "latencyMs": 9,
-        "reliabilityPercent": 99.991,
-        "latencyBenchmarkMs": 10,
-        "reliabilityBenchmarkPercent": 99.99
+        "role": "secondary",
+        "resourceId": "SYD-SEC-01"
+      }
+    ],
+    "observations": [
+      {
+        "resourceId": "SYD-PRI-01",
+        "role": "primary",
+        "metrics": {
+          "latencyMs": 18,
+          "availabilityPercent": 99.992,
+          "jitterMs": 1.8,
+          "packetLossPercent": 0.006
+        }
+      },
+      {
+        "resourceId": "SYD-SEC-01",
+        "role": "secondary",
+        "metrics": {
+          "latencyMs": 12,
+          "availabilityPercent": 99.994,
+          "jitterMs": 1.8,
+          "packetLossPercent": 0.006
+        }
       }
     ],
     "references": {
-      "intent": "/intentManagement/v5/intent/INT-HOSP-2026-001"
+      "correlationId": "corr-intent-assurance-002",
+      "intent": {
+        "id": "INT-HOSP-2026-001",
+        "href": "/intentManagement/v5/intent/INT-HOSP-2026-001"
+      },
+      "intentSpecification": {
+        "id": "hospital-surgical-slice-spec-v1.20",
+        "href": "/intentManagement/v5/intentSpecification/hospital-surgical-slice-spec-v1.20"
+      }
     }
   }
 }
 ```
 
-
-### TMF-facing IntentReport projection rule:
-
-IA MS does not own the external TMF `IntentReport` API shape. IA MS emits assurance truth internally. IC MS curates that truth into TMF921-facing `IntentReport.expression.expressionValue`.
-
-Default external report facts are:
-
-```text
-expression.expressionValue.lifecycleStatus
-expression.expressionValue.statusReason / summary
-expression.expressionValue.targetSummary
-expression.expressionValue.observationSummary
-```
-
-`targetSummary` is fact-only by default and does not include aggregate `result` or per-target `status` labels.
-
 ### Consumer Behaviour:
 
 | **Consumer** | **Behaviour** |
 |---|---|
-| IC MS | Projects external `Intent.lifecycleStatus` from `IntentAssuranceEvent.assuranceOutcome` |
-| II MS | Re-runs resolution only when authorised and `requiresReoptimisation = true` |
-| IO MS | Re-optimises only when workflow requires and authorised |
+| IC MS | Projects external `Intent.lifecycleStatus`, `statusReason`, and `IntentReport.expression.expressionValue` from curated `IntentAssuranceEvent` fields |
+| II MS | May re-run resolution when authorised platform policy determines that assurance observations require a new resolution cycle |
+| IO MS | Re-optimises only when the workflow explicitly asks for a new optimisation run |
 | OEX | Shows assurance/degradation status through IC/OEX read model, not directly from IA unless later designed |
 
 ### Lifecycle Projection Relationship With IC MS:
 
 IA MS does not own the external `Intent.lifecycleStatus` resource API.
 
-IA MS emits lifecycle-driving assurance outcomes inside `IntentAssuranceEvent`.
+IA MS emits lifecycle-driving assurance facts inside `IntentAssuranceEvent`. IC MS consumes those events and updates/projects the external runtime `Intent` lifecycle and external `IntentReport`.
 
-IC MS consumes those events and updates/projects the external runtime `Intent` lifecycle.
-
-| **IA Outcome** | **Typical IC Projection** |
+| **IA event fact** | **Typical IC Projection** |
 |---|---|
-| Apply completed / healthy | `Active` |
-| Apply in progress | `InProgress` |
-| Assurance degraded / drift detected | `Degraded` |
-| Apply failed / unrecoverable failure | `Failed` |
-| Termination confirmed | `Terminated` |
-| Semantic/policy rejection from II MS | `Rejected` |
+| `body.lifecycleStatus = Active` | `Intent.lifecycleStatus = Active` |
+| `body.lifecycleStatus = InProgress` | `Intent.lifecycleStatus = InProgress` |
+| `body.lifecycleStatus = Degraded` | `Intent.lifecycleStatus = Degraded` |
+| `body.lifecycleStatus = Failed` | `Intent.lifecycleStatus = Failed` |
+| `body.lifecycleStatus = Terminated` | `Intent.lifecycleStatus = Terminated` |
+| II MS `IntentRejectedEvent` | `Intent.lifecycleStatus = Rejected` |
 
 ### Internal Event Envelope Baseline:
 

@@ -224,22 +224,23 @@ They must not expose raw telemetry, raw optimiser decisions, raw `t7.knowledge p
 
 `IntentReport` is a read-only external report projection owned by IC MS.
 
-It is based on assurance truth from IA MS, but it is not raw assurance telemetry.
+It is based on assurance truth from IA MS, but it is not raw assurance telemetry and not the raw `IntentAssuranceEvent` body.
 
-IntentReport may contain curated information such as current lifecycle/status, status reason, assurance summary, current service/resource summary, evaluation summary, violation/degradation summary, last assurance update time, and references to the related `Intent`.
+IntentReport uses the TMF expression wrapper. Curated report facts are carried inside `IntentReport.expression.expressionValue`. The default report areas are:
 
-IntentReport should not expose implementation-only details unless they are explicitly approved for external reporting.
+- `version`
+- `lifecycleStatus`
+- `reportTime`
+- `summary`
+- `statusReason` where useful
+- `serviceSummary`
+- `resourceSummary` where useful
+- `targetSummary`
+- `observationSummary`
 
+`targetSummary` is fact-only by default: target value, observed value, and unit. It does not include aggregate result labels such as `Compliant` / `NonCompliant` or per-target `status` by default. Consumers decide compliance from the facts.
 
-## External expression wrapper baseline:
-
-External IC MS `Intent` and `IntentReport` resources use the TMF expression wrapper. The domain payload is carried inside `expression.expressionValue`.
-
-For runtime Intent resources, `expression.expressionValue` contains request data such as `location`, `serviceType`, `serviceClass`, `targets`, `constraints`, and `preferences`.
-
-For IntentReport resources, `expression.expressionValue` contains report facts such as `version`, `lifecycleStatus`, `reportTime`, `summary`, `serviceSummary`, `targetSummary`, and `observationSummary`.
-
-Internal events do not use the TMF expression wrapper. IC MS emits `IntentValidatedEvent` with native internal JSON buckets so downstream services do not need to unwrap TMF resource representation.
+IntentReport should not expose raw telemetry dumps, raw callback payloads, raw optimiser details, raw KP data, internal candidate scoring, internal Kafka payloads, or implementation-only details unless deliberately curated and approved for external reporting.
 
 ## TMF compliance and platform extension rule:
 
@@ -1258,34 +1259,28 @@ Complete expression shape:
 ```json
 {
   "expression": {
-    "@type": "JsonLdExpression",
-    "@baseType": "Expression",
-    "iri": "https://mycsp.com.au/tio/hospital-surgical-slice/v1.0",
-    "expressionValue": {
-          "location": {
-            "locationId": "AU-NSW-SYD-HOSP-001",
-            "locationType": "hospital",
-            "geographicScope": "campus"
-          },
-          "serviceType": "surgical-connectivity",
-          "serviceClass": "critical-gold",
-          "targets": {
-            "maxLatencyMs": 10,
-            "minAvailabilityPercent": 99.99,
-            "maxJitterMs": 2,
-            "maxPacketLossPercent": 0.01
-          },
-          "constraints": {
-            "priority": "critical",
-            "redundancyRequired": true,
-            "timeWindow": {
-              "startDateTime": "2026-04-18T12:00:00+10:00"
-            }
-          },
-          "preferences": {
-            "preferredAccessTechnology": "5G"
-          }
-  
+    "location": {
+      "locationId": "AU-NSW-SYD-HOSP-001",
+      "locationType": "hospital",
+      "geographicScope": "campus"
+    },
+    "serviceType": "surgical-connectivity",
+    "serviceClass": "critical-gold",
+    "targets": {
+      "maxLatencyMs": 10,
+      "minAvailabilityPercent": 99.99,
+      "maxJitterMs": 2,
+      "maxPacketLossPercent": 0.01
+    },
+    "constraints": {
+      "priority": "critical",
+      "redundancyRequired": true,
+      "timeWindow": {
+        "startDateTime": "2026-04-18T12:00:00+10:00"
+      }
+    },
+    "preferences": {
+      "preferredAccessTechnology": "5G"
     }
   }
 }

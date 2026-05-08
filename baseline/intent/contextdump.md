@@ -721,32 +721,18 @@ Date: 2026-05-07T02:53:16.079859+00:00
 - Replaced abbreviated Intent response payloads with complete payloads using `expression.targets`, `expression.constraints`, and `expression.preferences`.
 - Confirmed IC/ID spec and design Markdown JSON blocks validate.
 
-## Baseline update — IC/ID TMF expression separation and interface sweep:
+---
 
-Date: 2026-05-08
+## Baseline update — event alignment and external projection cleanup:
 
-### Updated files:
-- `id_ms_design_brief.md`
-- `id_ms_specification.md`
-- `ic_ms_design_brief.md`
-- `ic_ms_specification.md`
-- `contextdump.md`
+Applied event/projection alignment across IA MS, IC MS, ID MS, and internal event documentation.
 
-### Baseline:
-IC MS and ID MS external interfaces keep TMF-facing expression resources compliant while preserving domain attributes.
+Per-file active changes:
 
-### ID MS:
-- `IntentSpecification.specCharacteristic` is the high-level catalogue/discovery view for `targets`, `constraints`, and `preferences`.
-- `CharacteristicSpecification.characteristicValueSpecification` may provide examples/defaults and OEX/UI prefill guidance only.
-- `IntentSpecification.expressionSpecification` uses `@type: ExpressionSpecification`, `expressionLanguage: JsonLdExpression`, and the expression model `iri`.
-- Detailed platform validation is not embedded in `expressionSpecification` and is not represented as `JSON_SCHEMA`.
-- Detailed validation for runtime `expression.expressionValue` is referenced through `targetEntitySchema.@schemaLocation` with `schemaVersion` and `schemaHash` drift controls.
-- The full JSON Schema is documented separately as an external schema artefact / appendix, not as part of the main TMF resource payload.
+- `ia_ms_design_brief.md`: aligned `IntentAssuranceEvent` with the internal event specification. Removed the old default `assuranceOutcome`, `runtimeState`, and `candidates` pattern. IA MS now emits lifecycle-driving assurance truth using top-level `body.lifecycleStatus`, `body.statusReason`, `targets`, `resources`, and `observations`.
+- `intent_internal_events_specification.md`: removed event-facing `provider` attributes from `IntentResolvedEvent.resources[]` and `IntentOptimisedEvent.resources[]`. `provider` remains KP/resource-inventory metadata only.
+- `ic_ms_design_brief.md`: clarified `IntentReport` projection rules. IntentReport is based on IA truth but is not raw telemetry and not the raw `IntentAssuranceEvent` body. It uses TMF `expression.expressionValue` for curated facts and keeps `targetSummary` fact-only.
+- `ic_ms_specification.md`: replaced old IntentReport examples that used direct fields and `evaluationSummary.result` with TMF-wrapped `IntentReport.expression.expressionValue`, containing fact-only `targetSummary` and curated `observationSummary`.
+- `id_ms_specification.md`: corrected `specCharacteristic` to the high-level bucket catalogue (`targets`, `constraints`, `preferences`) with example/default `characteristicValueSpecification` only. Detailed validation remains in the external expression-value schema referenced through `targetEntitySchema.@schemaLocation`.
 
-### IC MS:
-- External `Intent.expression` uses the TMF wrapper with `@type: JsonLdExpression`, `@baseType: Expression`, `iri`, and `expressionValue`.
-- External `IntentReport.expression` uses the same TMF wrapper, with report facts under `expression.expressionValue`.
-- Runtime `Intent.expression.expressionValue` carries only request data.
-- Runtime `IntentReport.expression.expressionValue` carries only report facts.
-- Internal `IntentValidatedEvent` and other internal events keep native JSON buckets directly and do not use the TMF expression wrapper.
-- Hub GET examples include `ETag`, `Cache-Control`, and cache-bypass examples using request `Cache-Control: no-cache`.
+Active rule: internal events carry native JSON facts; external TMF resources carry TMF expression wrappers; external reports contain curated projection facts only and do not expose raw telemetry, raw callback payloads, raw optimiser details, raw KP data, or internal event bodies.
