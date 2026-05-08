@@ -1605,112 +1605,21 @@ MS-to-Kafka security is not TMF-specific. Kafka events are internal contracts un
 
 ---
 
-## Runtime Optimisation lifecycle baseline:
+## Logical view baseline:
 
-Runtime Optimisation status list:
-
-```text
-ACKNOWLEDGED
-QUEUED
-PROCESSING
-COMPLETED
-INFEASIBLE
-FAILED
-CANCELLING
-CANCELLED
-```
-
-Status meanings:
-
-| Status | Meaning |
-|---|---|
-| `ACKNOWLEDGED` | OC MS accepted the runtime optimisation request and persisted it. |
-| `QUEUED` | Request is waiting for worker processing. |
-| `PROCESSING` | Python/Gurobi Worker is executing or preparing the optimisation. |
-| `COMPLETED` | Worker returned `SUCCESS`; result is available. |
-| `INFEASIBLE` | Worker/model determined no feasible solution exists. |
-| `FAILED` | Technical/runtime failure occurred. |
-| `CANCELLING` | Cancellation was requested and is being handled. |
-| `CANCELLED` | Optimisation was cancelled or safely resolved as cancelled. |
-
-Outcome mapping:
-
-```text
-SUCCESS -> COMPLETED
-INFEASIBLE -> INFEASIBLE
-FAILURE -> FAILED
-```
-
-Lifecycle transition baseline:
-
-```text
-ACKNOWLEDGED -> QUEUED -> PROCESSING -> COMPLETED
-ACKNOWLEDGED -> QUEUED -> PROCESSING -> INFEASIBLE
-ACKNOWLEDGED -> QUEUED -> PROCESSING -> FAILED
-ACKNOWLEDGED -> CANCELLING -> CANCELLED
-QUEUED -> CANCELLING -> CANCELLED
-PROCESSING -> CANCELLING -> CANCELLED
-FAILED -> retrial creates new ACKNOWLEDGED Optimisation
-```
-
-Transition rules:
-
-| From | To | Trigger |
-|---|---|---|
-| `ACKNOWLEDGED` | `QUEUED` | OC MS outbox event is ready/published for worker execution. |
-| `QUEUED` | `PROCESSING` | Worker starts or claims execution. |
-| `PROCESSING` | `COMPLETED` | Worker returns `SUCCESS`. |
-| `PROCESSING` | `INFEASIBLE` | Worker returns `INFEASIBLE`. |
-| `PROCESSING` | `FAILED` | Worker returns `FAILURE` or technical failure is projected. |
-| `ACKNOWLEDGED` / `QUEUED` / `PROCESSING` | `CANCELLING` | User requests cancellation through `POST /optimisation/{id}/cancellation`. |
-| `CANCELLING` | `CANCELLED` | Cancellation is confirmed or safely resolved. |
-| `FAILED` | new `ACKNOWLEDGED` | User requests retrial through `POST /optimisation/{id}/retrial`; creates a new Optimisation. |
-
-Retrial rule:
-
-```text
-Retrial does not move FAILED back to PROCESSING.
-
-Retrial creates a new runtime Optimisation resource with retrialOf pointing to the failed one.
-```
-
----
-
-## Runtime process view baseline:
-
-For readability, the runtime process view is shown as:
+OC MS runtime logical path:
 
 ```text
 User
+-> Microsoft Entra ID SSO
 -> OEX UI
 -> OGW
--> OSB MS (OEX APIs)
+-> OSB MS(OEX API)
 -> NGW
 -> OC MS
--> OD MS
--> OC MS DB
--> OC MS Outbox
 -> Kafka
 -> Python/Gurobi Worker
 -> Gurobi Optimizer
--> Kafka
--> OC MS Inbox
--> OC MS DB
--> User polls GET /optimisation/{id}
 ```
 
-Meaning:
-
-```text
-OSB MS (OEX APIs):
-  OSB MS is the optimisation-specific OEX backend/API facade behind OGW.
-
-OC MS DB:
-  Runtime Optimisation persistence.
-
-OC MS Outbox:
-  Durable event publication pattern for worker instructions.
-
-OC MS Inbox:
-  Durable/idempotent worker outcome consumption and projection.
-```
+OC MS owns runtime Optimisation resources. It validates runtime requests against OD MS definitions, persists accepted executions, emits Kafka instructions, consumes worker outcomes, and projects lifecycle/result state.

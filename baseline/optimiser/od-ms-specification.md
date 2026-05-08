@@ -449,60 +449,188 @@ OD MS sits behind NGW. OD MS does not participate in Kafka, Python/Gurobi Worker
 
 ---
 
-## Process view participation baseline:
+## OD MS infrastructure security controls:
 
-OD MS participates in the runtime process as the OptimisationSpecification definition source.
+OD MS integrations must explicitly capture service-to-infrastructure security controls.
 
-In the runtime process view:
+### OD MS -> OD MS Database:
 
 ```text
-... -> NGW -> OC MS -> OD MS -> OC MS DB ...
+Authentication:
+  OD MS connects using an authenticated OD MS service identity.
+
+Authorisation:
+  OD MS is authorised only for the OD MS database/schema/tables required for OptimisationSpecification storage and retrieval.
+  No broad database admin/root access by default.
+
+Encrypted connectivity:
+  OD MS database connectivity uses encrypted transport.
+  mTLS or platform-approved encrypted database connectivity is used where supported by the selected database platform.
+
+Secrets and certificates:
+  Database credentials, keys, and certificates are stored in approved secret management.
+  Rotation must be supported without application code changes where possible.
+
+Environment separation:
+  OD MS database principals, roles, schemas, and credentials are environment-scoped.
+  Non-production OD MS identities must not access production OD MS data.
+
+Audit and monitoring:
+  Authentication failures, authorisation denials, privileged operations, schema changes, and unusual access patterns are logged and monitored.
+
+Ownership:
+  OD MS owns application-level access to OptimisationSpecification data.
+  Database/platform teams own database platform controls.
 ```
 
-OD MS provides the ACTIVE OptimisationSpecification used by OC MS for request-contract validation.
+### OD MS -> platform cache, if introduced later:
 
-OD MS does not persist runtime Optimisation resources, does not write OC MS outbox records, does not consume Kafka worker outcomes, and does not project runtime results.
+```text
+OD MS does not require a cache in the current baseline.
 
----
+If a cache is introduced later, the OD MS design brief must capture:
+  authenticated service identity
+  least-privilege cache namespace/keyspace access
+  encrypted connectivity
+  approved secret/certificate management
+  environment-scoped cache roles
+  audit/monitoring of denied access and privileged operations
+```
 
-## Kafka integration security note:
+### OD MS -> Kafka:
 
+```text
 OD MS does not integrate directly with Kafka in the current baseline.
 
-OD MS is a REST definition/specification service. It does not produce optimisation worker instructions, consume worker outcomes, own Kafka consumer groups, or participate in OC MS outbox/inbox processing.
-
-MS-to-Kafka security requirements apply to OC MS, Python/Gurobi Worker, and any other service that later becomes an authorised Kafka producer or consumer.
+If OD MS later becomes a Kafka producer or consumer, the OD MS design brief must capture:
+  service identity
+  TLS/mTLS broker connectivity
+  topic-level ACLs
+  consumer-group permissions where applicable
+  DLQ permissions where applicable
+  secret/certificate management
+  monitoring and audit controls
+```
 
 ---
 
-## Runtime process view participation baseline:
+## Observability and monitoring telemetry baseline:
 
-OD MS participates as the OptimisationSpecification definition source in the runtime process view:
+Each service design brief and the E2E solution brief must capture observability as more than application logging.
+
+Observability includes:
+
+```text
+application logs
+metrics
+distributed traces
+audit/security events
+dependency telemetry
+alertable operational signals
+```
+
+Correlation and trace propagation:
+
+```text
+accept correlation id / request id from the upstream caller where provided
+generate a correlation id when missing
+propagate correlation id to downstream service, database, cache, Kafka, and platform calls where applicable
+propagate trace context where platform standards support it
+preserve useful downstream correlation identifiers in logs/telemetry where approved
+```
+
+Application log baseline:
+
+```text
+request id / correlation id
+service name
+operation or endpoint
+safe subject/user/service reference where applicable
+resource id where applicable
+dependency called
+dependency status code or outcome
+latency
+authorisation decision result where applicable
+error code/reason
+```
+
+Monitoring telemetry baseline:
+
+```text
+request count by endpoint/operation and status
+latency by endpoint/operation and dependency
+error rate by endpoint/operation and dependency
+dependency failure counts
+timeout and retry counts where applicable
+authorisation allow/deny counts where applicable
+token or credential validation failure counts where applicable
+database connection and query failure counts where applicable
+Kafka produce/consume failure counts where applicable
+Kafka lag and DLQ growth where applicable
+outbox/inbox backlog where applicable
+cache hit/miss/error counts where applicable
+```
+
+Distributed tracing baseline:
+
+```text
+trace inbound service requests
+trace outbound dependency calls
+include correlation id and safe business/resource identifiers as trace attributes where approved
+do not include sensitive token claims, secrets, credentials, or full private payloads in traces
+```
+
+Security/audit baseline:
+
+```text
+authentication failures
+authorisation failures
+privileged operation attempts
+catalogue write/activation/retirement attempts where applicable
+unsafe runtime action attempts such as cancellation and retrial where applicable
+Kafka replay/DLQ actions where applicable
+database privileged access or schema-change actions where applicable
+```
+
+Sensitive claims, full tokens, secrets, credentials, private payload data, and personal data beyond approved identifiers must not be logged or emitted as telemetry attributes.
+
+---
+
+## OD MS observability focus:
+
+OD MS observability must include specification/catalogue lifecycle monitoring.
+
+Additional OD MS signals:
+
+```text
+OptimisationSpecification create/update/activate/retire attempts
+catalogue authorisation allow/deny counts
+ACTIVE specification lookup counts
+specification validation failures
+ETag / If-Match precondition failures
+OD MS database dependency latency and failures
+```
+
+---
+
+## Logical view baseline:
+
+OD MS definition logical path:
 
 ```text
 User
+-> Microsoft Entra ID SSO
 -> OEX UI
 -> OGW
--> OSB MS (OEX APIs)
+-> OSB MS(OEX API)
 -> NGW
--> OC MS
 -> OD MS
--> OC MS DB
--> OC MS Outbox
--> Kafka
--> Python/Gurobi Worker
--> Gurobi Optimizer
--> Kafka
--> OC MS Inbox
--> OC MS DB
--> User polls GET /optimisation/{id}
 ```
 
-OD MS role:
+OD MS also participates in runtime validation as the specification source:
 
 ```text
-OC MS -> OD MS:
-  OC MS validates the referenced ACTIVE OptimisationSpecification and request contract.
-
-OD MS does not own runtime persistence, outbox, Kafka worker execution, inbox, or result projection.
+OC MS -> OD MS
 ```
+
+OD MS does not participate in Kafka, Python/Gurobi Worker, Gurobi Optimizer, OC MS Inbox, or runtime result projection.

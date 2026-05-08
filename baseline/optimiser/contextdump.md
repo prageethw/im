@@ -1275,70 +1275,47 @@ Updated the E2E solution summary to explicitly include the OEX layer:
 
 ---
 
-## Baseline appended 2026-05-08T04:41:19 - Runtime Optimisation lifecycle/status baseline
+## Baseline appended 2026-05-08T05:59:04 - Logical view updated with OSB MS(OEX API)
 
-Baselined runtime Optimisation statuses and transitions.
-
-Statuses:
-```text
-ACKNOWLEDGED
-QUEUED
-PROCESSING
-COMPLETED
-INFEASIBLE
-FAILED
-CANCELLING
-CANCELLED
-```
-
-Outcome mapping:
-```text
-SUCCESS -> COMPLETED
-INFEASIBLE -> INFEASIBLE
-FAILURE -> FAILED
-```
-
-Transition baseline:
-```text
-ACKNOWLEDGED -> QUEUED -> PROCESSING -> COMPLETED
-ACKNOWLEDGED -> QUEUED -> PROCESSING -> INFEASIBLE
-ACKNOWLEDGED -> QUEUED -> PROCESSING -> FAILED
-ACKNOWLEDGED -> CANCELLING -> CANCELLED
-QUEUED -> CANCELLING -> CANCELLED
-PROCESSING -> CANCELLING -> CANCELLED
-FAILED -> retrial creates new ACKNOWLEDGED Optimisation
-```
-
-Retrial rule:
-- Retrial does not move FAILED back to PROCESSING.
-- Retrial creates a new runtime Optimisation resource with `retrialOf` pointing to the failed one.
-
----
-
-## Baseline appended 2026-05-08T05:51:59 - Readable runtime process view
-
-Updated the runtime process view for readability:
+Updated logical view baseline to:
 
 ```text
 User
+-> Microsoft Entra ID SSO
 -> OEX UI
 -> OGW
--> OSB MS (OEX APIs)
+-> OSB MS(OEX API)
 -> NGW
--> OC MS
--> OD MS
--> OC MS DB
--> OC MS Outbox
+-> OD MS / OC MS
 -> Kafka
 -> Python/Gurobi Worker
 -> Gurobi Optimizer
--> Kafka
--> OC MS Inbox
--> OC MS DB
--> User polls GET /optimisation/{id}
 ```
 
-Key naming:
-- `OSB MS (OEX APIs)` makes clear that OSB MS is the optimisation-specific OEX API/facade behind OGW.
-- `OC MS DB`, `OC MS Outbox`, and `OC MS Inbox` are shown explicitly.
-- Worker and solver are shown as `Python/Gurobi Worker` and `Gurobi Optimizer`.
+Definition logical path:
+```text
+User
+-> Microsoft Entra ID SSO
+-> OEX UI
+-> OGW
+-> OSB MS(OEX API)
+-> NGW
+-> OD MS
+```
+
+Runtime logical path:
+```text
+User
+-> Microsoft Entra ID SSO
+-> OEX UI
+-> OGW
+-> OSB MS(OEX API)
+-> NGW
+-> OC MS
+-> Kafka
+-> Python/Gurobi Worker
+-> Gurobi Optimizer
+```
+
+Naming:
+- Use `OSB MS(OEX API)` in logical views to show that OSB MS is the optimisation-specific OEX API/facade behind OGW.

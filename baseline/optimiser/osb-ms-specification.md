@@ -2,7 +2,7 @@
 
 ## Service purpose:
 
-OSB MS means Optimisation Screen Builder MS. In the OEX-facing path it exposes the OEX APIs.
+OSB MS means Optimisation Screen Builder MS.
 
 OSB MS is the context-aware OEX facade / backend-for-frontend service for optimisation experiences.
 
@@ -466,112 +466,74 @@ OC MS / OD MS backend error surfacing counts
 
 ---
 
-## Runtime Optimisation lifecycle baseline:
+## Logical view baseline:
 
-Runtime Optimisation status list:
-
-```text
-ACKNOWLEDGED
-QUEUED
-PROCESSING
-COMPLETED
-INFEASIBLE
-FAILED
-CANCELLING
-CANCELLED
-```
-
-Status meanings:
-
-| Status | Meaning |
-|---|---|
-| `ACKNOWLEDGED` | OC MS accepted the runtime optimisation request and persisted it. |
-| `QUEUED` | Request is waiting for worker processing. |
-| `PROCESSING` | Python/Gurobi Worker is executing or preparing the optimisation. |
-| `COMPLETED` | Worker returned `SUCCESS`; result is available. |
-| `INFEASIBLE` | Worker/model determined no feasible solution exists. |
-| `FAILED` | Technical/runtime failure occurred. |
-| `CANCELLING` | Cancellation was requested and is being handled. |
-| `CANCELLED` | Optimisation was cancelled or safely resolved as cancelled. |
-
-Outcome mapping:
-
-```text
-SUCCESS -> COMPLETED
-INFEASIBLE -> INFEASIBLE
-FAILURE -> FAILED
-```
-
-Lifecycle transition baseline:
-
-```text
-ACKNOWLEDGED -> QUEUED -> PROCESSING -> COMPLETED
-ACKNOWLEDGED -> QUEUED -> PROCESSING -> INFEASIBLE
-ACKNOWLEDGED -> QUEUED -> PROCESSING -> FAILED
-ACKNOWLEDGED -> CANCELLING -> CANCELLED
-QUEUED -> CANCELLING -> CANCELLED
-PROCESSING -> CANCELLING -> CANCELLED
-FAILED -> retrial creates new ACKNOWLEDGED Optimisation
-```
-
-Transition rules:
-
-| From | To | Trigger |
-|---|---|---|
-| `ACKNOWLEDGED` | `QUEUED` | OC MS outbox event is ready/published for worker execution. |
-| `QUEUED` | `PROCESSING` | Worker starts or claims execution. |
-| `PROCESSING` | `COMPLETED` | Worker returns `SUCCESS`. |
-| `PROCESSING` | `INFEASIBLE` | Worker returns `INFEASIBLE`. |
-| `PROCESSING` | `FAILED` | Worker returns `FAILURE` or technical failure is projected. |
-| `ACKNOWLEDGED` / `QUEUED` / `PROCESSING` | `CANCELLING` | User requests cancellation through `POST /optimisation/{id}/cancellation`. |
-| `CANCELLING` | `CANCELLED` | Cancellation is confirmed or safely resolved. |
-| `FAILED` | new `ACKNOWLEDGED` | User requests retrial through `POST /optimisation/{id}/retrial`; creates a new Optimisation. |
-
-Retrial rule:
-
-```text
-Retrial does not move FAILED back to PROCESSING.
-
-Retrial creates a new runtime Optimisation resource with retrialOf pointing to the failed one.
-```
-
----
-
-## Runtime process view baseline:
-
-For readability, the runtime process view is shown as:
+The logical integration model is:
 
 ```text
 User
+-> Microsoft Entra ID SSO
 -> OEX UI
 -> OGW
--> OSB MS (OEX APIs)
+-> OSB MS(OEX API)
 -> NGW
--> OC MS
--> OD MS
--> OC MS DB
--> OC MS Outbox
+-> OD MS / OC MS
 -> Kafka
 -> Python/Gurobi Worker
 -> Gurobi Optimizer
--> Kafka
--> OC MS Inbox
--> OC MS DB
--> User polls GET /optimisation/{id}
 ```
 
-Meaning:
+Definition-management logical path:
 
 ```text
-OSB MS (OEX APIs):
-  OSB MS is the optimisation-specific OEX backend/API facade behind OGW.
+User
+-> Microsoft Entra ID SSO
+-> OEX UI
+-> OGW
+-> OSB MS(OEX API)
+-> NGW
+-> OD MS
+```
 
-OC MS DB:
-  Runtime Optimisation persistence.
+Runtime-optimisation logical path:
 
-OC MS Outbox:
-  Durable event publication pattern for worker instructions.
+```text
+User
+-> Microsoft Entra ID SSO
+-> OEX UI
+-> OGW
+-> OSB MS(OEX API)
+-> NGW
+-> OC MS
+-> Kafka
+-> Python/Gurobi Worker
+-> Gurobi Optimizer
+```
 
-OC MS Inbox:
-  Durable/idempotent worker outcome consumption and projection.
+Logical responsibility split:
+
+```text
+OSB MS(OEX API):
+  Provides the optimisation-specific OEX API/facade behind OGW.
+  Uses User Context JWT to shape the OEX optimisation experience.
+  Calls backend optimisation APIs through NGW.
+
+OD MS:
+  Owns OptimisationSpecification definitions using constraintSpecifications[], targetSpecifications[], and contextSpecifications[].
+
+OC MS:
+  Owns runtime Optimisation resources using constraints[], targets[], and context[].
+
+Kafka / Python/Gurobi Worker / Gurobi Optimizer:
+  Participate only in runtime execution flows after OC MS accepts the request.
+```
+
+API compliance rule:
+
+```text
+NGW-exposed OD MS and OC MS APIs are TMF-compliant.
+
+OSB MS(OEX API) APIs exposed behind OGW are private/OEX experience APIs and do not need to be TMF-compliant.
+
+Private MS-to-MS APIs and Kafka events are internal contracts unless separately exposed.
 ```
