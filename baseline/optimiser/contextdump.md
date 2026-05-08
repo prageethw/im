@@ -1657,3 +1657,15 @@ Active path remains through:
 ```text
 OGW -> OSB MS(OEX API) -> NGW
 ```
+
+---
+
+## Baseline appended 2026-05-08T12:11:50 - E2E solution brief rolled back to GitHub commit da6d06e
+
+Rolled back `optimisation-e2e-solution-brief.md` to:
+
+```text
+https://github.com/prageethw/im/blob/da6d06e455c8e8d7a4db80181056cb032c6e1800/baseline/optimiser/optimisation-e2e-solution-brief.md
+```
+
+A local backup of the immediately previous E2E file was created before replacing it.
