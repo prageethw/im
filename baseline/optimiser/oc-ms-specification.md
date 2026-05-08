@@ -34,6 +34,8 @@
 - [Logical view baseline:](#logical-view-baseline)
 - [Runtime process view baseline:](#runtime-process-view-baseline)
 
+> **Status:** Draft
+
 ## OC MS summary:
 
 **Optimisation-Controller-MS (OC MS)** owns the runtime `Optimisation` resource. It is a generic optimisation controller, not an intent-only controller.
@@ -1560,6 +1562,38 @@ MS-to-Kafka security is not TMF-specific. Kafka events are internal contracts un
 
 ## Logical view baseline:
 
+OC MS runtime logical view:
+
+```mermaid
+flowchart LR
+    User[User]
+    Entra[Microsoft Entra ID SSO]
+    OEX[OEX UI]
+    OGW[OGW]
+    OSB[OSB MS<br/>(OEX API)]
+    NGW[NGW]
+    OC[OC MS]
+    OD[OD MS]
+    OCDB[OC MS DB]
+    Kafka[Kafka]
+    Worker[Python/Gurobi Worker]
+    Gurobi[Gurobi Optimizer]
+
+    User --> Entra
+    Entra --> OEX
+    OEX --> OGW
+    OGW --> OSB
+    OSB --> NGW
+    NGW --> OC
+    OC --> OD
+    OC --> OCDB
+    OC --> Kafka
+    Kafka --> Worker
+    Worker --> Gurobi
+    Worker --> Kafka
+    Kafka --> OC
+```
+
 OC MS runtime logical path:
 
 ```text
@@ -1575,7 +1609,17 @@ User
 -> Gurobi Optimizer
 ```
 
-OC MS owns runtime Optimisation resources. It validates runtime requests against OD MS definitions, persists accepted executions, emits Kafka instructions, consumes worker outcomes, and projects lifecycle/result state.
+Logical responsibilities:
+
+| Component | Responsibility |
+|---|---|
+| OSB MS(OEX API) | Shapes runtime create/status/action views and calls OC MS through NGW. |
+| NGW | Backend gateway to OC MS. |
+| OC MS | Owns runtime Optimisation lifecycle, request validation, cancellation, retrial, result projection, ETag concurrency, outbox, and inbox. |
+| OD MS | Provides ACTIVE OptimisationSpecification used by OC MS for runtime request-contract validation. |
+| OC MS DB | Persists runtime Optimisation, lifecycle state, outbox/inbox records, and result projection. |
+| Kafka / Python/Gurobi Worker / Gurobi Optimizer | Execute asynchronous optimisation and return outcomes. |
+
 
 ---
 

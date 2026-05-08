@@ -59,6 +59,9 @@
   - [Process view:](#process-view-1)
 - [Baseline appended 2026-05-08T09:59:06 - Restored logical view after heading cleanup](#baseline-appended-2026-05-08t095906---restored-logical-view-after-heading-cleanup)
 - [Baseline appended 2026-05-08T11:00:04 - Draft status, table of contents, logical-before-process ordering](#baseline-appended-2026-05-08t110004---draft-status-table-of-contents-logical-before-process-ordering)
+- [Baseline appended 2026-05-08T11:06:17 - Restored logical view diagram and logical view details](#baseline-appended-2026-05-08t110617---restored-logical-view-diagram-and-logical-view-details)
+
+> **Status:** Draft
 
 This file is the running baseline dump for this conversation. New baselines are appended to the end unless explicitly requested otherwise.
 
@@ -1611,3 +1614,22 @@ OC MS has the runtime logical path.
 ## Baseline appended 2026-05-08T11:00:04 - Draft status, table of contents, logical-before-process ordering
 
 Updated artefacts to show `Status: Draft`, add a table of contents near the top, remove heading numbers, and keep the logical view before the process view where both sections exist.
+
+---
+
+## Baseline appended 2026-05-08T11:06:17 - Restored logical view diagram and logical view details
+
+Restored logical view details and diagrams.
+
+E2E and OSB now include:
+- logical view diagram
+- logical integration model
+- definition-management logical path
+- runtime-optimisation logical path
+- logical responsibility table
+- boundary rules
+- API compliance rule
+
+OD MS and OC MS now include service-focused logical diagrams and responsibility tables.
+
+Logical view is placed before process view.

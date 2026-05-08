@@ -26,6 +26,8 @@
 - [Logical view baseline:](#logical-view-baseline)
 - [Runtime process view participation baseline:](#runtime-process-view-participation-baseline)
 
+> **Status:** Draft
+
 ## Service purpose:
 
 Optimisation-Definition-MS / OD MS owns the governed catalogue of optimisation capabilities.
@@ -641,6 +643,28 @@ OD MS database dependency latency and failures
 
 ## Logical view baseline:
 
+OD MS definition logical view:
+
+```mermaid
+flowchart LR
+    User[User]
+    Entra[Microsoft Entra ID SSO]
+    OEX[OEX UI]
+    OGW[OGW]
+    OSB[OSB MS<br/>(OEX API)]
+    NGW[NGW]
+    OD[OD MS]
+    ODDB[OD MS DB]
+
+    User --> Entra
+    Entra --> OEX
+    OEX --> OGW
+    OGW --> OSB
+    OSB --> NGW
+    NGW --> OD
+    OD --> ODDB
+```
+
 OD MS definition logical path:
 
 ```text
@@ -653,13 +677,23 @@ User
 -> OD MS
 ```
 
-OD MS also participates in runtime validation as the specification source:
+Runtime validation relationship:
 
 ```text
 OC MS -> OD MS
 ```
 
+Logical responsibilities:
+
+| Component | Responsibility |
+|---|---|
+| OSB MS(OEX API) | Shapes discovery/catalogue screens and calls OD MS through NGW. |
+| NGW | Backend gateway to OD MS. |
+| OD MS | Owns OptimisationSpecification definitions, lifecycle, governance, and request-contract shape. |
+| OD MS DB | Persists OptimisationSpecification catalogue data. |
+
 OD MS does not participate in Kafka, Python/Gurobi Worker, Gurobi Optimizer, OC MS Inbox, or runtime result projection.
+
 
 ---
 

@@ -29,6 +29,8 @@
 - [Logical view baseline:](#logical-view-baseline)
 - [Runtime process view baseline:](#runtime-process-view-baseline)
 
+> **Status:** Draft
+
 ## Service purpose:
 
 OSB MS means Optimisation Screen Builder MS.
@@ -519,7 +521,39 @@ OC MS / OD MS backend error surfacing counts
 
 ## Logical view baseline:
 
-The logical integration model is:
+The logical view shows the main optimisation platform components and their domain boundaries. It is intentionally higher level than the process view.
+
+Logical view diagram:
+
+```mermaid
+flowchart LR
+    User[User]
+    Entra[Microsoft Entra ID SSO]
+    OEX[OEX UI]
+    OGW[OGW]
+    OSB[OSB MS<br/>(OEX API)]
+    NGW[NGW]
+    OD[OD MS<br/>OptimisationSpecification]
+    OC[OC MS<br/>Runtime Optimisation]
+    Kafka[Kafka]
+    Worker[Python/Gurobi Worker]
+    Gurobi[Gurobi Optimizer]
+
+    User --> Entra
+    Entra --> OEX
+    OEX --> OGW
+    OGW --> OSB
+    OSB --> NGW
+    NGW --> OD
+    NGW --> OC
+    OC --> Kafka
+    Kafka --> Worker
+    Worker --> Gurobi
+    Worker --> Kafka
+    Kafka --> OC
+```
+
+Logical integration model:
 
 ```text
 User
@@ -561,22 +595,29 @@ User
 -> Gurobi Optimizer
 ```
 
-Logical responsibility split:
+Logical responsibilities:
+
+| Component | Responsibility |
+|---|---|
+| User | Uses OEX UI to discover capabilities, submit runtime optimisation requests, monitor outcomes, or perform governed catalogue-management journeys when authorised. |
+| Microsoft Entra ID SSO | Provides enterprise authentication for the OEX user journey. |
+| OEX UI | User-facing optimisation experience. |
+| OGW | Gateway that invokes OSB MS using mTLS and User Context JWT. |
+| OSB MS(OEX API) | Optimisation-specific OEX API/facade. It uses User Context JWT to shape the OEX experience and calls backend optimisation APIs through NGW. |
+| NGW | Backend gateway for TMF-compliant OD MS and OC MS APIs. |
+| OD MS | Owns OptimisationSpecification catalogue, lifecycle, governance, and request-contract definitions. |
+| OC MS | Owns runtime Optimisation lifecycle, validation, cancellation, retrial, outbox/inbox, result projection, and ETag concurrency. |
+| Kafka | Internal asynchronous event backbone for worker instructions and outcomes. |
+| Python/Gurobi Worker | Consumes execution instructions, binds the deterministic model, invokes Gurobi, and publishes outcomes. |
+| Gurobi Optimizer | Solver/runtime optimisation engine. |
+
+Boundary rules:
 
 ```text
-OSB MS(OEX API):
-  Provides the optimisation-specific OEX API/facade behind OGW.
-  Uses User Context JWT to shape the OEX optimisation experience.
-  Calls backend optimisation APIs through NGW.
-
-OD MS:
-  Owns OptimisationSpecification definitions using constraintSpecifications[], targetSpecifications[], and contextSpecifications[].
-
-OC MS:
-  Owns runtime Optimisation resources using constraints[], targets[], and context[].
-
-Kafka / Python/Gurobi Worker / Gurobi Optimizer:
-  Participate only in runtime execution flows after OC MS accepts the request.
+OSB MS is not the source of truth for OptimisationSpecification or runtime Optimisation.
+OD MS is the source of truth for OptimisationSpecification.
+OC MS is the source of truth for runtime Optimisation.
+Kafka, Python/Gurobi Worker, and Gurobi Optimizer participate only in runtime execution flows after OC MS accepts the request.
 ```
 
 API compliance rule:
@@ -588,6 +629,7 @@ OSB MS(OEX API) APIs exposed behind OGW are private/OEX experience APIs and do n
 
 Private MS-to-MS APIs and Kafka events are internal contracts unless separately exposed.
 ```
+
 
 ---
 
