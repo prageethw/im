@@ -1,5 +1,31 @@
 # OD MS / Optimisation-Definition-MS Specification:
 
+> **Status:** Draft
+
+## Table of contents:
+- [Service purpose:](#service-purpose)
+- [Ownership:](#ownership)
+- [Definition versus runtime model:](#definition-versus-runtime-model)
+- [Endpoint set:](#endpoint-set)
+- [OptimisationSpecification resource shape:](#optimisationspecification-resource-shape)
+- [Lifecycle model:](#lifecycle-model)
+- [Canonical OptimisationSpecification example:](#canonical-optimisationspecification-example)
+- [TMF/TIO alignment:](#tmftio-alignment)
+- [Contract validation rules:](#contract-validation-rules)
+- [Contract violation response:](#contract-violation-response)
+- [Relationship to OC MS:](#relationship-to-oc-ms)
+- [Baseline validation note:](#baseline-validation-note)
+- [Shared versus candidate-specific context attributes:](#shared-versus-candidate-specific-context-attributes)
+- [Definition E2E access path baseline:](#definition-e2e-access-path-baseline)
+- [OD MS infrastructure security controls:](#od-ms-infrastructure-security-controls)
+  - [OD MS -> OD MS Database:](#od-ms---od-ms-database)
+  - [OD MS -> platform cache, if introduced later:](#od-ms---platform-cache-if-introduced-later)
+  - [OD MS -> Kafka:](#od-ms---kafka)
+- [Observability and monitoring telemetry baseline:](#observability-and-monitoring-telemetry-baseline)
+- [OD MS observability focus:](#od-ms-observability-focus)
+- [Logical view baseline:](#logical-view-baseline)
+- [Runtime process view participation baseline:](#runtime-process-view-participation-baseline)
+
 ## Service purpose:
 
 Optimisation-Definition-MS / OD MS owns the governed catalogue of optimisation capabilities.
@@ -613,6 +639,30 @@ OD MS database dependency latency and failures
 
 ---
 
+## Logical view baseline:
+
+OD MS definition logical path:
+
+```text
+User
+-> Microsoft Entra ID SSO
+-> OEX UI
+-> OGW
+-> OSB MS(OEX API)
+-> NGW
+-> OD MS
+```
+
+OD MS also participates in runtime validation as the specification source:
+
+```text
+OC MS -> OD MS
+```
+
+OD MS does not participate in Kafka, Python/Gurobi Worker, Gurobi Optimizer, OC MS Inbox, or runtime result projection.
+
+---
+
 ## Runtime process view participation baseline:
 
 OD MS participates as the OptimisationSpecification definition source in the runtime process view:
@@ -644,27 +694,3 @@ OC MS -> OD MS:
 
 OD MS does not own runtime persistence, OC MS Outbox, Kafka worker execution, OC MS Inbox, or result projection.
 ```
-
----
-
-## Logical view baseline:
-
-OD MS definition logical path:
-
-```text
-User
--> Microsoft Entra ID SSO
--> OEX UI
--> OGW
--> OSB MS(OEX API)
--> NGW
--> OD MS
-```
-
-OD MS also participates in runtime validation as the specification source:
-
-```text
-OC MS -> OD MS
-```
-
-OD MS does not participate in Kafka, Python/Gurobi Worker, Gurobi Optimizer, OC MS Inbox, or runtime result projection.

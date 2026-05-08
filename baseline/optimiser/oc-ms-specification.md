@@ -1,5 +1,39 @@
 # Optimisation-Controller-MS / OC MS Specification
 
+> **Status:** Draft
+
+## Table of contents:
+- [OC MS summary:](#oc-ms-summary)
+- [OC MS endpoint set:](#oc-ms-endpoint-set)
+- [Runtime lifecycle:](#runtime-lifecycle)
+- [Lifecycle transitions:](#lifecycle-transitions)
+- [HATEOAS by lifecycle:](#hateoas-by-lifecycle)
+- [POST /optimisation:](#post-optimisation)
+- [OC MS validation boundary:](#oc-ms-validation-boundary)
+- [GET /optimisation/{id}:](#get-optimisationid)
+- [GET /optimisation:](#get-optimisation)
+- [POST /optimisation/{id}/cancellation:](#post-optimisationidcancellation)
+- [POST /optimisation/{id}/retrial:](#post-optimisationidretrial)
+- [Event model:](#event-model)
+- [OptimisationRequestedEvent / EXECUTE:](#optimisationrequestedevent-execute)
+- [OptimisationRequestedEvent / CANCEL:](#optimisationrequestedevent-cancel)
+- [Worker outcome events:](#worker-outcome-events)
+- [OptimisationCompletedEvent / SUCCESS:](#optimisationcompletedevent-success)
+- [OptimisationCompletedEvent / INFEASIBLE:](#optimisationcompletedevent-infeasible)
+- [OptimisationFailedEvent / FAILURE:](#optimisationfailedevent-failure)
+- [Header/concurrency rules:](#headerconcurrency-rules)
+- [TMF/TIO constraint representation baseline:](#tmftio-constraint-representation-baseline)
+- [OC MS happy and unhappy path validation/outcome baseline:](#oc-ms-happy-and-unhappy-path-validationoutcome-baseline)
+  - [Happy-path constraints:](#happy-path-constraints)
+  - [Unhappy-path contract violation example:](#unhappy-path-contract-violation-example)
+  - [Unhappy-path optimiser outcome example:](#unhappy-path-optimiser-outcome-example)
+- [Runtime context versus specification contract clarification:](#runtime-context-versus-specification-contract-clarification)
+- [OD definition versus OC runtime model baseline:](#od-definition-versus-oc-runtime-model-baseline)
+- [Runtime E2E access path baseline:](#runtime-e2e-access-path-baseline)
+- [MS-to-Kafka security baseline:](#ms-to-kafka-security-baseline)
+- [Logical view baseline:](#logical-view-baseline)
+- [Runtime process view baseline:](#runtime-process-view-baseline)
+
 ## OC MS summary:
 
 **Optimisation-Controller-MS (OC MS)** owns the runtime `Optimisation` resource. It is a generic optimisation controller, not an intent-only controller.
@@ -1524,6 +1558,27 @@ MS-to-Kafka security is not TMF-specific. Kafka events are internal contracts un
 
 ---
 
+## Logical view baseline:
+
+OC MS runtime logical path:
+
+```text
+User
+-> Microsoft Entra ID SSO
+-> OEX UI
+-> OGW
+-> OSB MS(OEX API)
+-> NGW
+-> OC MS
+-> Kafka
+-> Python/Gurobi Worker
+-> Gurobi Optimizer
+```
+
+OC MS owns runtime Optimisation resources. It validates runtime requests against OD MS definitions, persists accepted executions, emits Kafka instructions, consumes worker outcomes, and projects lifecycle/result state.
+
+---
+
 ## Runtime process view baseline:
 
 For readability, the runtime process view is shown as:
@@ -1585,24 +1640,3 @@ OC MS Outbox:
 OC MS Inbox:
   Durable/idempotent worker outcome consumption and projection.
 ```
-
----
-
-## Logical view baseline:
-
-OC MS runtime logical path:
-
-```text
-User
--> Microsoft Entra ID SSO
--> OEX UI
--> OGW
--> OSB MS(OEX API)
--> NGW
--> OC MS
--> Kafka
--> Python/Gurobi Worker
--> Gurobi Optimizer
-```
-
-OC MS owns runtime Optimisation resources. It validates runtime requests against OD MS definitions, persists accepted executions, emits Kafka instructions, consumes worker outcomes, and projects lifecycle/result state.

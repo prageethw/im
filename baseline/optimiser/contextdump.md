@@ -1,5 +1,65 @@
 # Context Dump
 
+> **Status:** Draft
+
+## Table of contents:
+- [Baseline: Reference books for Gurobi optimisation architecture exercise](#baseline-reference-books-for-gurobi-optimisation-architecture-exercise)
+- [Baseline Update — REST HATEOAS, ETag Concurrency, and Cache-Control Position](#baseline-update-rest-hateoas-etag-concurrency-and-cache-control-position)
+- [OD MS summary](#od-ms-summary)
+- [OD MS endpoint set](#od-ms-endpoint-set)
+- [OptimisationSpecification lifecycle](#optimisationspecification-lifecycle)
+- [Version activation rule](#version-activation-rule)
+- [Public OptimisationSpecification shape](#public-optimisationspecification-shape)
+- [POST /optimisationSpecification](#post-optimisationspecification)
+  - [Request](#request)
+  - [Successful response](#successful-response)
+- [GET /optimisationSpecification/{id}](#get-optimisationspecificationid)
+  - [Request](#request-1)
+  - [Response](#response)
+- [GET /optimisationSpecification](#get-optimisationspecification)
+  - [Request](#request-2)
+  - [Response](#response-1)
+- [PUT /optimisationSpecification/{id}](#put-optimisationspecificationid)
+  - [Request](#request-3)
+  - [Successful response](#successful-response-1)
+  - [PUT failure responses](#put-failure-responses)
+- [DELETE /optimisationSpecification/{id}](#delete-optimisationspecificationid)
+  - [Request](#request-4)
+  - [Successful response](#successful-response-2)
+  - [DELETE rules](#delete-rules)
+  - [DELETE failure responses](#delete-failure-responses)
+- [HATEOAS by lifecycle state](#hateoas-by-lifecycle-state)
+  - [DRAFT](#draft)
+  - [ACTIVE](#active)
+  - [RETIRED](#retired)
+- [Header rules](#header-rules)
+- [Key OD MS baseline summary](#key-od-ms-baseline-summary)
+- [Baseline appended 2026-05-02T04:29:57 - Runtime Optimisation result visibility rule](#baseline-appended-2026-05-02t042957---runtime-optimisation-result-visibility-rule)
+- [Baseline appended 2026-05-03T07:55:57 - Rebuilt OD MS specification as clean definition model](#baseline-appended-2026-05-03t075557---rebuilt-od-ms-specification-as-clean-definition-model)
+- [Baseline appended 2026-05-03T08:08:22 - Shared location moved to topologySnapshot level](#baseline-appended-2026-05-03t080822---shared-location-moved-to-topologysnapshot-level)
+- [Baseline appended 2026-05-03T10:53:26 - Corrected E2E logical integration sequence](#baseline-appended-2026-05-03t105326---corrected-e2e-logical-integration-sequence)
+- [Baseline appended 2026-05-03T10:56:14 - E2E flows updated to corrected OEX/OGW/Screen Builder/NGW sequence](#baseline-appended-2026-05-03t105614---e2e-flows-updated-to-corrected-oexogwscreen-builderngw-sequence)
+- [Baseline appended 2026-05-03T11:37:21 - Standardised User and UI wording](#baseline-appended-2026-05-03t113721---standardised-user-and-ui-wording)
+- [Baseline appended 2026-05-03T21:47:00 - Infrastructure security controls captured in individual and E2E briefs](#baseline-appended-2026-05-03t214700---infrastructure-security-controls-captured-in-individual-and-e2e-briefs)
+- [Baseline appended 2026-05-03T21:51:41 - Users wording and E2E summary security baseline](#baseline-appended-2026-05-03t215141---users-wording-and-e2e-summary-security-baseline)
+- [Baseline appended 2026-05-03T23:57:53 - Applied global cleanup fixes](#baseline-appended-2026-05-03t235753---applied-global-cleanup-fixes)
+- [Baseline appended 2026-05-04T00:02:50 - Added OSB MS under OEX layer in E2E solution summary](#baseline-appended-2026-05-04t000250---added-osb-ms-under-oex-layer-in-e2e-solution-summary)
+- [Baseline appended 2026-05-08T05:59:04 - Logical view updated with OSB MS(OEX API)](#baseline-appended-2026-05-08t055904---logical-view-updated-with-osb-msoex-api)
+- [Baseline appended 2026-05-08T06:02:45 - Re-applied visible logical and runtime process views](#baseline-appended-2026-05-08t060245---re-applied-visible-logical-and-runtime-process-views)
+- [Baseline appended 2026-05-08T07:03:00 - Removed stale logical path with OWG](#baseline-appended-2026-05-08t070300---removed-stale-logical-path-with-owg)
+- [Baseline appended 2026-05-08T07:05:13 - Removed stale process view with OEX APIs and OWG](#baseline-appended-2026-05-08t070513---removed-stale-process-view-with-oex-apis-and-owg)
+- [Baseline appended 2026-05-08T08:12:37 - Re-added specification catalogue use case to E2E use case view](#baseline-appended-2026-05-08t081237---re-added-specification-catalogue-use-case-to-e2e-use-case-view)
+- [Baseline appended 2026-05-08T08:21:59 - Added one-to-one use case sequence diagrams](#baseline-appended-2026-05-08t082159---added-one-to-one-use-case-sequence-diagrams)
+- [Baseline appended 2026-05-08T08:37:48 - Added one-to-one process views for all use cases](#baseline-appended-2026-05-08t083748---added-one-to-one-process-views-for-all-use-cases)
+- [Baseline appended 2026-05-08T09:50:50 - Moved seven process views under 3.3](#baseline-appended-2026-05-08t095050---moved-seven-process-views-under-33)
+- [Baseline appended 2026-05-08T09:53:26 - Removed heading numbers from artefacts](#baseline-appended-2026-05-08t095326---removed-heading-numbers-from-artefacts)
+- [Business context:](#business-context)
+  - [Process view:](#process-view)
+- [Business context:](#business-context-1)
+  - [Process view:](#process-view-1)
+- [Baseline appended 2026-05-08T09:59:06 - Restored logical view after heading cleanup](#baseline-appended-2026-05-08t095906---restored-logical-view-after-heading-cleanup)
+- [Baseline appended 2026-05-08T11:00:04 - Draft status, table of contents, logical-before-process ordering](#baseline-appended-2026-05-08t110004---draft-status-table-of-contents-logical-before-process-ordering)
+
 This file is the running baseline dump for this conversation. New baselines are appended to the end unless explicitly requested otherwise.
 
 ---
@@ -1545,3 +1605,9 @@ User
 
 OD MS has the definition logical path.
 OC MS has the runtime logical path.
+
+---
+
+## Baseline appended 2026-05-08T11:00:04 - Draft status, table of contents, logical-before-process ordering
+
+Updated artefacts to show `Status: Draft`, add a table of contents near the top, remove heading numbers, and keep the logical view before the process view where both sections exist.

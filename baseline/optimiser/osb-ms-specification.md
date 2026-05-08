@@ -1,5 +1,34 @@
 # OSB MS / Optimisation Screen Builder MS Design:
 
+> **Status:** Draft
+
+## Table of contents:
+- [Service purpose:](#service-purpose)
+- [Access path:](#access-path)
+- [Ownership boundary:](#ownership-boundary)
+- [API compliance:](#api-compliance)
+- [Recommended namespace:](#recommended-namespace)
+- [Phase one endpoint set:](#phase-one-endpoint-set)
+- [Endpoint purpose:](#endpoint-purpose)
+- [Phase two catalogue endpoint set:](#phase-two-catalogue-endpoint-set)
+- [Catalogue security rule:](#catalogue-security-rule)
+- [Context awareness:](#context-awareness)
+- [Runtime optimisation flow:](#runtime-optimisation-flow)
+- [Catalogue/specification flow:](#cataloguespecification-flow)
+- [Security baseline:](#security-baseline)
+  - [OGW -> OSB MS:](#ogw---osb-ms)
+  - [OSB MS -> NGW:](#osb-ms---ngw)
+  - [Infrastructure access:](#infrastructure-access)
+- [Backend mapping:](#backend-mapping)
+- [Concurrency handling:](#concurrency-handling)
+- [Error handling:](#error-handling)
+- [Phase baseline:](#phase-baseline)
+- [Baseline timestamp:](#baseline-timestamp)
+- [Observability and monitoring telemetry baseline:](#observability-and-monitoring-telemetry-baseline)
+- [OSB MS observability focus:](#osb-ms-observability-focus)
+- [Logical view baseline:](#logical-view-baseline)
+- [Runtime process view baseline:](#runtime-process-view-baseline)
+
 ## Service purpose:
 
 OSB MS means Optimisation Screen Builder MS.
@@ -488,70 +517,6 @@ OC MS / OD MS backend error surfacing counts
 
 ---
 
-## Runtime process view baseline:
-
-For readability, the runtime process view is shown as:
-
-```text
-User
--> OEX UI
--> OGW
--> OSB MS (OEX APIs)
--> NGW
--> OC MS
--> OD MS
--> OC MS DB
--> OC MS Outbox
--> Kafka
--> Python/Gurobi Worker
--> Gurobi Optimizer
--> Kafka
--> OC MS Inbox
--> OC MS DB
--> User polls GET /optimisation/{id}
-```
-
-Detailed flow:
-
-```text
-1. User opens the OEX UI and initiates an optimisation journey.
-2. OEX UI calls OGW.
-3. OGW invokes OSB MS (OEX APIs) using mTLS and User Context JWT.
-4. OSB MS validates the User Context JWT and shapes the OEX request/action model.
-5. OSB MS calls NGW using mTLS and OAuth2 system-to-system.
-6. NGW routes the request to OC MS.
-7. OC MS calls OD MS over mTLS to validate the referenced ACTIVE OptimisationSpecification and request contract.
-8. OC MS validates constraints[], targets[], and context[] against the OD MS request contract.
-9. OC MS persists the accepted runtime Optimisation with lifecycleStatus = ACKNOWLEDGED in OC MS DB.
-10. OC MS writes OptimisationRequestedEvent with instruction = EXECUTE to OC MS Outbox in the same transaction.
-11. OC MS Outbox relay publishes the event to Kafka.
-12. Python/Gurobi Worker consumes the event from Kafka.
-13. Python/Gurobi Worker resolves internal deterministic model binding.
-14. Python/Gurobi Worker invokes Gurobi Optimizer.
-15. Worker publishes OptimisationCompletedEvent or OptimisationFailedEvent back to Kafka.
-16. OC MS Inbox consumes the worker outcome event.
-17. OC MS Inbox updates OC MS DB with lifecycle and result projection.
-18. User polls GET /optimisation/{id} through OEX UI -> OGW -> OSB MS (OEX APIs) -> NGW -> OC MS to retrieve current status/result.
-```
-
-Meaning:
-
-```text
-OSB MS (OEX APIs):
-  OSB MS is the optimisation-specific OEX backend/API facade behind OGW.
-
-OC MS DB:
-  Runtime Optimisation persistence.
-
-OC MS Outbox:
-  Durable event publication pattern for worker instructions.
-
-OC MS Inbox:
-  Durable/idempotent worker outcome consumption and projection.
-```
-
----
-
 ## Logical view baseline:
 
 The logical integration model is:
@@ -622,4 +587,68 @@ NGW-exposed OD MS and OC MS APIs are TMF-compliant.
 OSB MS(OEX API) APIs exposed behind OGW are private/OEX experience APIs and do not need to be TMF-compliant.
 
 Private MS-to-MS APIs and Kafka events are internal contracts unless separately exposed.
+```
+
+---
+
+## Runtime process view baseline:
+
+For readability, the runtime process view is shown as:
+
+```text
+User
+-> OEX UI
+-> OGW
+-> OSB MS (OEX APIs)
+-> NGW
+-> OC MS
+-> OD MS
+-> OC MS DB
+-> OC MS Outbox
+-> Kafka
+-> Python/Gurobi Worker
+-> Gurobi Optimizer
+-> Kafka
+-> OC MS Inbox
+-> OC MS DB
+-> User polls GET /optimisation/{id}
+```
+
+Detailed flow:
+
+```text
+1. User opens the OEX UI and initiates an optimisation journey.
+2. OEX UI calls OGW.
+3. OGW invokes OSB MS (OEX APIs) using mTLS and User Context JWT.
+4. OSB MS validates the User Context JWT and shapes the OEX request/action model.
+5. OSB MS calls NGW using mTLS and OAuth2 system-to-system.
+6. NGW routes the request to OC MS.
+7. OC MS calls OD MS over mTLS to validate the referenced ACTIVE OptimisationSpecification and request contract.
+8. OC MS validates constraints[], targets[], and context[] against the OD MS request contract.
+9. OC MS persists the accepted runtime Optimisation with lifecycleStatus = ACKNOWLEDGED in OC MS DB.
+10. OC MS writes OptimisationRequestedEvent with instruction = EXECUTE to OC MS Outbox in the same transaction.
+11. OC MS Outbox relay publishes the event to Kafka.
+12. Python/Gurobi Worker consumes the event from Kafka.
+13. Python/Gurobi Worker resolves internal deterministic model binding.
+14. Python/Gurobi Worker invokes Gurobi Optimizer.
+15. Worker publishes OptimisationCompletedEvent or OptimisationFailedEvent back to Kafka.
+16. OC MS Inbox consumes the worker outcome event.
+17. OC MS Inbox updates OC MS DB with lifecycle and result projection.
+18. User polls GET /optimisation/{id} through OEX UI -> OGW -> OSB MS (OEX APIs) -> NGW -> OC MS to retrieve current status/result.
+```
+
+Meaning:
+
+```text
+OSB MS (OEX APIs):
+  OSB MS is the optimisation-specific OEX backend/API facade behind OGW.
+
+OC MS DB:
+  Runtime Optimisation persistence.
+
+OC MS Outbox:
+  Durable event publication pattern for worker instructions.
+
+OC MS Inbox:
+  Durable/idempotent worker outcome consumption and projection.
 ```

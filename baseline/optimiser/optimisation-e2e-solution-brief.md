@@ -1,5 +1,57 @@
 # End-to-End Solution Brief — Optimisation Platform
 
+> **Status:** Draft
+
+## Table of contents:
+- [Business context:](#business-context)
+- [Solution summary:](#solution-summary)
+- [Solution elaboration:](#solution-elaboration)
+  - [Use case view:](#use-case-view)
+- [Logical view baseline:](#logical-view-baseline)
+  - [Process view:](#process-view)
+- [Runtime process view baseline:](#runtime-process-view-baseline)
+- [Capability matrix:](#capability-matrix)
+- [Solution security:](#solution-security)
+  - [User authentication and access governance:](#user-authentication-and-access-governance)
+  - [OEX internal access path:](#oex-internal-access-path)
+  - [OEX to optimisation backend access:](#oex-to-optimisation-backend-access)
+  - [NGW to OD MS / OC MS security:](#ngw-to-od-ms-oc-ms-security)
+  - [OC MS to OD MS service-to-service security:](#oc-ms-to-od-ms-service-to-service-security)
+  - [Kafka security:](#kafka-security)
+  - [API concurrency control:](#api-concurrency-control)
+  - [Event security and integrity:](#event-security-and-integrity)
+  - [Sensitive information boundary:](#sensitive-information-boundary)
+- [Important quality attributes:](#important-quality-attributes)
+  - [Availability:](#availability)
+  - [Scalability:](#scalability)
+  - [Performance:](#performance)
+- [Risks:](#risks)
+- [Assumptions:](#assumptions)
+- [Constraints:](#constraints)
+- [Appendix:](#appendix)
+  - [OD MS endpoint summary:](#od-ms-endpoint-summary)
+  - [OC MS endpoint summary:](#oc-ms-endpoint-summary)
+  - [Runtime lifecycle states:](#runtime-lifecycle-states)
+  - [Kafka topics:](#kafka-topics)
+  - [Event types:](#event-types)
+  - [Worker instructions:](#worker-instructions)
+  - [Outcome values:](#outcome-values)
+  - [Outcome mapping:](#outcome-mapping)
+  - [Key artifacts:](#key-artifacts)
+- [Optimisation validation and outcome clarification:](#optimisation-validation-and-outcome-clarification)
+- [Contract definition versus runtime values:](#contract-definition-versus-runtime-values)
+- [Definition versus runtime contract naming:](#definition-versus-runtime-contract-naming)
+- [Corrected process view baseline:](#corrected-process-view-baseline)
+- [Infrastructure security controls across solution briefs:](#infrastructure-security-controls-across-solution-briefs)
+- [Use case sequence diagrams:](#use-case-sequence-diagrams)
+  - [Discover optimisation capability sequence:](#discover-optimisation-capability-sequence)
+  - [Manage optimisation catalogue sequence:](#manage-optimisation-catalogue-sequence)
+  - [Create runtime optimisation sequence:](#create-runtime-optimisation-sequence)
+  - [Monitor optimisation sequence:](#monitor-optimisation-sequence)
+  - [Cancellation optimisation sequence:](#cancellation-optimisation-sequence)
+  - [Retrial failed optimisation sequence:](#retrial-failed-optimisation-sequence)
+  - [Execute optimisation sequence:](#execute-optimisation-sequence)
+
 ## Business context:
 
 The optimisation platform provides a reusable capability for running deterministic optimisation problems using Gurobi-backed models.
@@ -66,7 +118,79 @@ The Python/Gurobi worker is responsible for executing the internal deterministic
 
 Note: In this optimisation platform, the governed specification resource is `OptimisationSpecification`.
 
+---
 
+## Logical view baseline:
+
+The logical integration model is:
+
+```text
+User
+-> Microsoft Entra ID SSO
+-> OEX UI
+-> OGW
+-> OSB MS(OEX API)
+-> NGW
+-> OD MS / OC MS
+-> Kafka
+-> Python/Gurobi Worker
+-> Gurobi Optimizer
+```
+
+Definition-management logical path:
+
+```text
+User
+-> Microsoft Entra ID SSO
+-> OEX UI
+-> OGW
+-> OSB MS(OEX API)
+-> NGW
+-> OD MS
+```
+
+Runtime-optimisation logical path:
+
+```text
+User
+-> Microsoft Entra ID SSO
+-> OEX UI
+-> OGW
+-> OSB MS(OEX API)
+-> NGW
+-> OC MS
+-> Kafka
+-> Python/Gurobi Worker
+-> Gurobi Optimizer
+```
+
+Logical responsibility split:
+
+```text
+OSB MS(OEX API):
+  Provides the optimisation-specific OEX API/facade behind OGW.
+  Uses User Context JWT to shape the OEX optimisation experience.
+  Calls backend optimisation APIs through NGW.
+
+OD MS:
+  Owns OptimisationSpecification definitions using constraintSpecifications[], targetSpecifications[], and contextSpecifications[].
+
+OC MS:
+  Owns runtime Optimisation resources using constraints[], targets[], and context[].
+
+Kafka / Python/Gurobi Worker / Gurobi Optimizer:
+  Participate only in runtime execution flows after OC MS accepts the request.
+```
+
+API compliance rule:
+
+```text
+NGW-exposed OD MS and OC MS APIs are TMF-compliant.
+
+OSB MS(OEX API) APIs exposed behind OGW are private/OEX experience APIs and do not need to be TMF-compliant.
+
+Private MS-to-MS APIs and Kafka events are internal contracts unless separately exposed.
+```
 
 ### Process view:
 
@@ -258,7 +382,46 @@ OC MS Inbox consumes the outcome and projects lifecycle/result into OC MS DB.
 User observes the result through the monitor/polling path.
 ```
 
+---
 
+## Runtime process view baseline:
+
+For readability, the runtime process view is shown as:
+
+```text
+User
+-> OEX UI
+-> OGW
+-> OSB MS (OEX APIs)
+-> NGW
+-> OC MS
+-> OD MS
+-> OC MS DB
+-> OC MS Outbox
+-> Kafka
+-> Python/Gurobi Worker
+-> Gurobi Optimizer
+-> Kafka
+-> OC MS Inbox
+-> OC MS DB
+-> User polls GET /optimisation/{id}
+```
+
+Meaning:
+
+```text
+OSB MS (OEX APIs):
+  OSB MS is the optimisation-specific OEX backend/API facade behind OGW.
+
+OC MS DB:
+  Runtime Optimisation persistence.
+
+OC MS Outbox:
+  Durable event publication pattern for worker instructions.
+
+OC MS Inbox:
+  Durable/idempotent worker outcome consumption and projection.
+```
 
 ---
 
@@ -883,47 +1046,6 @@ E2E solution brief:
 
 ---
 
-## Runtime process view baseline:
-
-For readability, the runtime process view is shown as:
-
-```text
-User
--> OEX UI
--> OGW
--> OSB MS (OEX APIs)
--> NGW
--> OC MS
--> OD MS
--> OC MS DB
--> OC MS Outbox
--> Kafka
--> Python/Gurobi Worker
--> Gurobi Optimizer
--> Kafka
--> OC MS Inbox
--> OC MS DB
--> User polls GET /optimisation/{id}
-```
-
-Meaning:
-
-```text
-OSB MS (OEX APIs):
-  OSB MS is the optimisation-specific OEX backend/API facade behind OGW.
-
-OC MS DB:
-  Runtime Optimisation persistence.
-
-OC MS Outbox:
-  Durable event publication pattern for worker instructions.
-
-OC MS Inbox:
-  Durable/idempotent worker outcome consumption and projection.
-```
-
----
-
 ## Use case sequence diagrams:
 
 Each use case in the use case view has a matching sequence diagram below.
@@ -1142,78 +1264,4 @@ sequenceDiagram
         OutcomeKafka->>Inbox: Deliver outcome
         Inbox->>OCDB: Project lifecycleStatus = FAILED
     end
-```
-
----
-
-## Logical view baseline:
-
-The logical integration model is:
-
-```text
-User
--> Microsoft Entra ID SSO
--> OEX UI
--> OGW
--> OSB MS(OEX API)
--> NGW
--> OD MS / OC MS
--> Kafka
--> Python/Gurobi Worker
--> Gurobi Optimizer
-```
-
-Definition-management logical path:
-
-```text
-User
--> Microsoft Entra ID SSO
--> OEX UI
--> OGW
--> OSB MS(OEX API)
--> NGW
--> OD MS
-```
-
-Runtime-optimisation logical path:
-
-```text
-User
--> Microsoft Entra ID SSO
--> OEX UI
--> OGW
--> OSB MS(OEX API)
--> NGW
--> OC MS
--> Kafka
--> Python/Gurobi Worker
--> Gurobi Optimizer
-```
-
-Logical responsibility split:
-
-```text
-OSB MS(OEX API):
-  Provides the optimisation-specific OEX API/facade behind OGW.
-  Uses User Context JWT to shape the OEX optimisation experience.
-  Calls backend optimisation APIs through NGW.
-
-OD MS:
-  Owns OptimisationSpecification definitions using constraintSpecifications[], targetSpecifications[], and contextSpecifications[].
-
-OC MS:
-  Owns runtime Optimisation resources using constraints[], targets[], and context[].
-
-Kafka / Python/Gurobi Worker / Gurobi Optimizer:
-  Participate only in runtime execution flows after OC MS accepts the request.
-```
-
-API compliance rule:
-
-```text
-NGW-exposed OD MS and OC MS APIs are TMF-compliant.
-
-OSB MS(OEX API) APIs exposed behind OGW are private/OEX experience APIs and do not need to be TMF-compliant.
-
-Private MS-to-MS APIs and Kafka events are internal contracts unless separately exposed.
 ```
