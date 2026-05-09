@@ -286,93 +286,10 @@ lastUpdate
 
 OD MS assigns server-controlled identity and timestamp fields on creation and returns the full created `OptimisationSpecification` representation.
 
-## Baseline update - OD MS PUT, PATCH, and HATEOAS
+## Baseline update - OD MS retirement governance
 
-OD MS keeps TMF-aligned `GET`, `POST`, `PATCH`, and `DELETE` operations for `OptimisationSpecification`. `PUT /optimisationSpecification/{id}` is retained as an approved platform extension for full replacement of mutable `DRAFT` specifications only.
+`ACTIVE -> RETIRED` is a governed lifecycle transition. It may be performed by `PATCH /optimisationSpecification/{id}` when the only change is `lifecycleStatus: RETIRED`; this is an acceptable small controlled lifecycle update. PATCH remains discouraged for material runtime-contract replacement.
 
-`PATCH /optimisationSpecification/{id}` remains supported for TMF compatibility and JSON Merge Patch style partial updates. It must be treated with a strong warning: do not use PATCH for material runtime-contract replacement. Material changes to `targetEntitySchema`, `expressionSpecification`, `specCharacteristic[]`, `version`, or major lifecycle/version transitions should use governed `PUT` on a mutable `DRAFT`, or create a new versioned `DRAFT` when the current specification is `ACTIVE`.
+`PUT /optimisationSpecification/{id}` remains an approved platform extension for full replacement/finalisation of mutable `DRAFT` specifications and is not the normal retirement mechanism for an `ACTIVE` specification.
 
-OD MS uses `_links` as an approved HATEOAS platform extension. TMF `href` remains the standard resource hyperlink and `_links` does not replace it. `_links` must be lifecycle-aware and authorisation-aware. Baseline link visibility:
-
-```text
-DRAFT   -> self, collection, patch, replace, delete, activate
-ACTIVE  -> self, collection, retire, createNewVersion
-RETIRED -> self, collection, createNewVersion
-```
-
-`replace` maps to `PUT /optimisationSpecification/{id}` and is exposed only when the caller can fully replace a mutable `DRAFT` specification.
-
-## OD MS activation governance baseline:
-
-- `POST /optimisationSpecification` always creates a `DRAFT` `OptimisationSpecification`.
-- `DRAFT -> ACTIVE` is a governed transition performed on an existing `DRAFT`.
-- Use `PATCH` for lifecycle-only activation when the `DRAFT` body is already final.
-- Use approved platform-extension `PUT` when finalising/replacing the full mutable `DRAFT` contract as part of activation.
-- When a new version becomes `ACTIVE`, OD MS atomically moves the previously `ACTIVE` version in the same specification family to `RETIRED`.
-- There must be at most one `ACTIVE` version per specification family.
-- Activation must validate the full `OptimisationSpecification`, including `specCharacteristic[]`, `expressionSpecification`, and `targetEntitySchema`, before committing the transition.
-
-## Baseline appended 2026-05-09 - OD MS HTTP concurrency and cache governance
-
-OD MS applies platform HTTP governance on top of TMF-aligned operations.
-
-Unsafe operations:
-
-```http
-POST   /optimisationSpecification
-PUT    /optimisationSpecification/{id}
-PATCH  /optimisationSpecification/{id}
-DELETE /optimisationSpecification/{id}
-```
-
-Concurrency baseline:
-
-- `POST /optimisationSpecification` creates a server-assigned new `DRAFT` and returns an `ETag`; it does not normally require `If-Match` because it is not mutating an existing resource representation.
-- `PUT /optimisationSpecification/{id}` requires `If-Match` and returns a new `ETag`.
-- `PATCH /optimisationSpecification/{id}` requires `If-Match` and returns a new `ETag`; this includes `DRAFT -> ACTIVE` activation and `ACTIVE -> RETIRED` retirement transitions.
-- `DELETE /optimisationSpecification/{id}` requires `If-Match`.
-- Missing `If-Match` on existing-resource mutations returns `428 Precondition Required`.
-- Stale or mismatched `If-Match` returns `412 Precondition Failed`.
-
-GET cache baseline:
-
-- All `GET` operations return simple bounded cache metadata.
-- Default successful GET headers are `Cache-Control: private, max-age=300` and `ETag`.
-- `GET /optimisationSpecification` collection ETags represent the selected collection view, including filters, paging, fields selection, and caller visibility.
-- `GET /optimisationSpecification/{id}` item ETags represent the current resource representation.
-- Clients can force cache revalidation using request header `Cache-Control: no-cache`.
-
-HATEOAS links for unsafe actions such as `replace`, `patch`, `activate`, `retire`, and `delete` must be lifecycle-aware, authorisation-aware, and indicate that `If-Match` is required.
-
-## OD MS DELETE governance baseline:
-
-`DELETE /optimisationSpecification/{id}` is supported for TMF alignment. Physical delete is allowed only for mutable `DRAFT` OptimisationSpecification resources. `ACTIVE` specifications must be transitioned to `RETIRED` through a governed lifecycle operation rather than physically deleted. `RETIRED` specifications are normally retained for audit and historical runtime traceability.
-
-DELETE is an unsafe operation and requires `If-Match`. Missing `If-Match` returns `428 Precondition Required`; stale or mismatched `If-Match` returns `412 Precondition Failed`; successful DRAFT deletion returns `204 No Content`.
-
-HATEOAS `_links.delete` is exposed only when the current caller is authorised and the specification is a mutable `DRAFT`. For `ACTIVE`, expose `retire` instead when authorised. For `RETIRED`, do not normally expose `delete` unless a separate administrative purge policy is explicitly introduced.
-
-
-## OD MS error handling baseline:
-
-OD MS uses TMF-style error responses with platform-specific error codes. Core status codes are:
-
-- `200 OK` for successful `GET`, `PATCH`, or approved-extension `PUT` with a response body.
-- `201 Created` for successful `POST /optimisationSpecification`.
-- `204 No Content` for successful `DELETE /optimisationSpecification/{id}`.
-- `400 Bad Request`, `401 Unauthorized`, `403 Forbidden`, `404 Not Found`, `405 Method Not Allowed`, `409 Conflict`, `412 Precondition Failed`, `415 Unsupported Media Type`, `422 Unprocessable Entity`, `428 Precondition Required`, `500 Internal Server Error`, and `503 Service Unavailable` for error cases.
-
-Unsafe existing-resource operations require `If-Match`. Missing `If-Match` returns `428 Precondition Required`. Stale or mismatched `If-Match` returns `412 Precondition Failed`. Valid JSON that violates the OD MS OptimisationSpecification contract returns `422 Unprocessable Entity`.
-
-Standard error bodies use `code`, `reason`, `message`, `status`, and `@type: Error`.
-
-
-## OD MS full operation examples baseline:
-
-OD MS `od-ms-specification.md` carries full copy-ready examples for:
-
-- `POST /optimisationSpecification` returning `201 Created` and a `DRAFT` resource.
-- `GET /optimisationSpecification/{id}` returning `200 OK` and an `ACTIVE` resource.
-- `GET /optimisationSpecification?lifecycleStatus=ACTIVE&fields=id,href,name,version,lifecycleStatus` for OEX/UI discovery of runtime-usable specifications.
-
-Examples must keep the TMF-style resource shape, preserve standard `href`, use `ETag`, use simple GET cache policy (`Cache-Control: private, max-age=300`, override by `Cache-Control: no-cache`), and include `_links` as an approved HATEOAS platform extension. `DRAFT` examples expose `self`, `collection`, `patch`, `replace`, `delete`, and `activate`. `ACTIVE` examples expose `self`, `collection`, `retire`, and `createNewVersion`.
+Physical `DELETE` is not used for `ACTIVE` or `RETIRED` specifications. Retired specifications remain available for audit/history and existing runtime `Optimisation` references, but cannot be used for new runtime `Optimisation` creation.
