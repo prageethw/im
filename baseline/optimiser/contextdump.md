@@ -301,3 +301,13 @@ RETIRED -> self, collection, createNewVersion
 ```
 
 `replace` maps to `PUT /optimisationSpecification/{id}` and is exposed only when the caller can fully replace a mutable `DRAFT` specification.
+
+## OD MS activation governance baseline:
+
+- `POST /optimisationSpecification` always creates a `DRAFT` `OptimisationSpecification`.
+- `DRAFT -> ACTIVE` is a governed transition performed on an existing `DRAFT`.
+- Use `PATCH` for lifecycle-only activation when the `DRAFT` body is already final.
+- Use approved platform-extension `PUT` when finalising/replacing the full mutable `DRAFT` contract as part of activation.
+- When a new version becomes `ACTIVE`, OD MS atomically moves the previously `ACTIVE` version in the same specification family to `RETIRED`.
+- There must be at most one `ACTIVE` version per specification family.
+- Activation must validate the full `OptimisationSpecification`, including `specCharacteristic[]`, `expressionSpecification`, and `targetEntitySchema`, before committing the transition.

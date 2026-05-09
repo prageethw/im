@@ -346,13 +346,15 @@ There is no `DEPRECATED` state in the optimiser baseline.
 
 | Operation | Rule |
 |---|---|
-| `POST /optimisationSpecification` | Creates a new `DRAFT` specification by default unless an explicitly governed activation workflow is used. |
-| `PUT /optimisationSpecification/{id}` | Approved platform extension; full replacement of mutable `DRAFT` specifications only. |
-| `PATCH /optimisationSpecification/{id}` | Supported for TMF compatibility, but must be used carefully. Do not use it for material contract replacement such as replacing `targetEntitySchema`, replacing `expressionSpecification`, changing the characteristic catalogue, changing version identity, or major lifecycle/version transitions unless explicitly guarded. |
+| `POST /optimisationSpecification` | Always creates a new `DRAFT` specification. It does not directly create an `ACTIVE` specification. |
+| `PUT /optimisationSpecification/{id}` | Approved platform extension. May fully replace/finalise a mutable `DRAFT`; it may also activate that `DRAFT` as part of a governed full-replacement operation. |
+| `PATCH /optimisationSpecification/{id}` | Supported for TMF compatibility and JSON Merge Patch. May perform lifecycle-only activation when the `DRAFT` body is already final and fully valid. Do not use it for material contract replacement. |
 | `DELETE /optimisationSpecification/{id}` | Allowed for `DRAFT`; for `ACTIVE`, prefer lifecycle transition to `RETIRED` rather than physical delete. |
 | `GET` | Available for all lifecycle states. |
 
 When an `OptimisationSpecification` is `ACTIVE`, changing the runtime contract should normally require a new versioned `DRAFT` specification rather than mutation of the active one.
+
+Activation is a governed transition from `DRAFT` to `ACTIVE`. Before committing activation, OD MS must validate the full `OptimisationSpecification`, including `specCharacteristic[]`, `expressionSpecification`, and `targetEntitySchema`. When a new version becomes `ACTIVE`, OD MS must atomically move the previously `ACTIVE` version in the same specification family to `RETIRED`. There must be at most one `ACTIVE` version per specification family.
 
 
 ## PUT full replacement baseline — approved platform extension:
@@ -381,7 +383,7 @@ Rules:
 | Preferred for | Material contract replacement on `DRAFT` specifications. |
 | Server-controlled fields | `id`, `href`, `creationDate`, and `lastUpdate` remain OD MS controlled. |
 
-Use `PUT` rather than `PATCH` for material `DRAFT` contract changes such as replacing `targetEntitySchema`, replacing `expressionSpecification`, materially changing `specCharacteristic[]`, changing `version`, changing `validFor`, or replacing the specification description and catalogue metadata as a coherent whole.
+Use `PUT` rather than `PATCH` for material `DRAFT` contract changes such as replacing `targetEntitySchema`, replacing `expressionSpecification`, materially changing `specCharacteristic[]`, changing `version`, changing `validFor`, or replacing the specification description and catalogue metadata as a coherent whole. `PUT` may also activate a `DRAFT` if the request is explicitly governed and the complete replacement body is valid for activation.
 
 Example request:
 
@@ -656,7 +658,7 @@ POST /optimisationSpecification
 
 Purpose:
 
-Creates a new `OptimisationSpecification` resource in `DRAFT` state by default, unless an explicitly governed activation workflow is used.
+Creates a new `OptimisationSpecification` resource in `DRAFT` state. `POST` does not directly create an `ACTIVE` specification in the baseline OD MS governance model.
 
 Minimum TMF-aligned create fields:
 
@@ -689,14 +691,25 @@ lastUpdate
 ```
 
 OD MS assigns server-controlled fields when the resource is created. The created resource returns the full `OptimisationSpecification` representation, including server-generated `id`, `href`, `creationDate`, `lastUpdate`, lifecycle state, and TMF-style polymorphism fields.
- This keeps runtime optimisation runs auditable, repeatable, and explainable.
 
 ## Version activation rule:
 
 ```text
-Only one ACTIVE OptimisationSpecification is allowed per specificationKey.
-When a DRAFT specification is promoted to ACTIVE, OD MS must transactionally retire the previous ACTIVE specification with the same specificationKey.
+POST always creates DRAFT.
+DRAFT -> ACTIVE is a governed transition.
+Only one ACTIVE OptimisationSpecification is allowed per specification family.
+When a DRAFT specification is promoted to ACTIVE, OD MS must transactionally retire the previous ACTIVE specification in the same specification family.
+Activation must validate specCharacteristic[], expressionSpecification, and targetEntitySchema before committing the transition.
 ```
+
+Activation can be performed in two ways:
+
+```text
+PATCH: use when the DRAFT body is already final and the request is lifecycle-only or small controlled metadata.
+PUT: use when the caller is finalising/replacing the full mutable DRAFT body and requesting activation as part of that governed operation.
+```
+
+This keeps runtime optimisation runs auditable, repeatable, and explainable.
 
 ## Definition versus runtime model:
 
