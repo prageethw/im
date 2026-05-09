@@ -855,12 +855,12 @@ OD MS uses TMF-style error responses with platform-specific error codes.
 
 Core status codes:
 
-| Status | Use |
+| **Status** | **Use** |
 |---|---|
-| `200 OK` | Successful `GET`, `PATCH`, or `PUT` with body. |
+| `200 OK` | Successful `GET`, `PATCH`, or approved platform-extension `PUT` with body. |
 | `201 Created` | Successful `POST`. |
-| `204 No Content` | Successful `DELETE`. |
-| `400 Bad Request` | Invalid JSON, malformed request, invalid query parameter. |
+| `204 No Content` | Successful physical delete of a mutable `DRAFT` specification. |
+| `400 Bad Request` | Invalid JSON, malformed request, or invalid query parameter. |
 | `401 Unauthorized` | Missing or invalid authentication. |
 | `403 Forbidden` | Authenticated caller is not allowed. |
 | `404 Not Found` | Resource not found or not visible to caller. |
@@ -868,9 +868,10 @@ Core status codes:
 | `409 Conflict` | Lifecycle/version conflict, including concurrent activation conflict. |
 | `412 Precondition Failed` | `If-Match` is stale or mismatched. |
 | `415 Unsupported Media Type` | Unsupported request content type. |
-| `422 Unprocessable Entity` | Valid JSON violates OD MS `OptimisationSpecification` contract. |
+| `422 Unprocessable Entity` | Syntactically valid JSON violates OD MS `OptimisationSpecification` schema, lifecycle, activation, or governance rules. |
 | `428 Precondition Required` | Missing required `If-Match` on unsafe existing-resource operation. |
 | `500 Internal Server Error` | Unexpected OD MS failure. |
+| `501 Not Implemented` | Operation or approved platform extension is not implemented or not enabled in this deployment. |
 | `503 Service Unavailable` | OD MS temporarily unavailable. |
 
 Standard error body:

@@ -338,3 +338,19 @@ The OD MS specification has been cleaned so all operation examples consistently 
 - `_links` is a lifecycle-aware and authorisation-aware HATEOAS platform extension. `href` remains the standard TMF-style resource hyperlink.
 - HATEOAS link visibility remains: `DRAFT -> self, collection, patch, replace, delete, activate`; `ACTIVE -> self, collection, retire, createNewVersion`; `RETIRED -> self, collection, createNewVersion`.
 - The embedded `optimisation-expression-value.schema.json` remains in the OD MS specification file and keeps `$defs` with short names `target`, `constraint`, and `preference`.
+
+---
+
+## Baseline update - OD MS streamlined status-code set
+
+The OD MS status-code baseline is streamlined and TMF-aligned, with platform governance additions where needed. The retained status codes are:
+
+```text
+200, 201, 204,
+400, 401, 403, 404, 405, 409, 412, 415, 422, 428,
+500, 501, 503
+```
+
+`501 Not Implemented` is retained because TMF921 OAS includes it and it is useful when an optional capability or approved platform extension, such as `PUT /optimisationSpecification/{id}`, is not implemented or enabled in a deployment.
+
+`422 Unprocessable Entity` is used when the request JSON is syntactically valid but violates OD MS `OptimisationSpecification` schema, lifecycle, activation, or governance rules.
