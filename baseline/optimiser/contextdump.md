@@ -145,3 +145,143 @@ targetEntitySchema        = authoritative runtime expressionValue validation sch
 ```
 
 Future spec updates should proactively check this separation and cross-document consistency rather than waiting for review comments.
+
+## Baseline update - OD MS OptimisationSpecification resource shape and field responsibilities
+
+OD MS `OptimisationSpecification` canonical fields are:
+
+```text
+id
+href
+name
+description
+version
+lifecycleStatus
+creationDate
+lastUpdate
+validFor
+isBundle
+specCharacteristic[]
+expressionSpecification
+targetEntitySchema
+relatedParty[]
+attachment[]
+constraint[]
+entitySpecRelationship[]
+@type
+@baseType
+@schemaLocation
+```
+
+Field responsibility baseline:
+
+| Field / Section | Responsibility |
+|---|---|
+| `id`, `href` | Server-generated identity and address. |
+| `name`, `description`, `version` | Human-readable catalogue identity/version. |
+| `lifecycleStatus` | `DRAFT`, `ACTIVE`, `RETIRED` only. |
+| `creationDate`, `lastUpdate`, `validFor` | Governance and validity metadata. |
+| `isBundle` | TMF-aligned bundle flag; normally `false` for a single optimisation specification. |
+| `specCharacteristic[]` | Catalogue/discovery metadata only. |
+| `expressionSpecification` | Expression language and ontology IRI. |
+| `targetEntitySchema` | Authoritative schema for runtime `Optimisation.expression.expressionValue.context`. |
+| `relatedParty[]` | Owner/steward/supporting party references. |
+| `attachment[]` | Optional supporting documentation or media. |
+| `constraint[]` | Optional TMF-style policy/rule references applied to the specification; not runtime `context.constraints[]`. |
+| `entitySpecRelationship[]` | Relationships to other specification resources. |
+| `@type`, `@baseType`, `@schemaLocation` | TMF polymorphism and extension fields. |
+
+`targetEntitySchema` owns real structural validation for runtime `expression.expressionValue.context.targets[]`, `context.constraints[]`, and `context.preferences[]`. `specCharacteristic[]` can advertise that those sections exist and provide examples/defaults/UI guidance, but it must not duplicate or replace the full schema.
+
+## Baseline update - OD MS OptimisationSpecification lifecycle and governance
+
+OD MS `OptimisationSpecification` lifecycle is intentionally simple and run-support oriented:
+
+```text
+DRAFT -> ACTIVE -> RETIRED
+```
+
+There is no `DEPRECATED` lifecycle state in the optimiser baseline.
+
+| Status | Meaning | Edit rule | Runtime use rule |
+|---|---|---|---|
+| `DRAFT` | Specification is being prepared. | Editable through approved update operations. | Not usable for new runtime Optimisation creation. |
+| `ACTIVE` | Specification is approved for runtime use. | Immutable except controlled lifecycle/version transition metadata. | Usable for new runtime Optimisation creation. |
+| `RETIRED` | Specification is no longer available for new runtime use. | Immutable except audit metadata if explicitly required. | Not usable for new runtime Optimisation creation; historical runtime references remain readable. |
+
+Operation governance baseline:
+
+| Operation | Rule |
+|---|---|
+| `POST /optimisationSpecification` | Creates a new `DRAFT` specification by default unless an explicitly governed activation workflow is used. |
+| `PUT /optimisationSpecification/{id}` | Approved platform extension; full replacement of mutable `DRAFT` specifications only. |
+| `PATCH /optimisationSpecification/{id}` | Supported for TMF compatibility, but must be used carefully. Do not use it for material contract replacement such as replacing `targetEntitySchema`, replacing `expressionSpecification`, changing the characteristic catalogue, changing version identity, or major lifecycle/version transitions unless explicitly guarded. |
+| `DELETE /optimisationSpecification/{id}` | Allowed for `DRAFT`; for `ACTIVE`, prefer lifecycle transition to `RETIRED` rather than physical delete. |
+| `GET` | Available for all lifecycle states. |
+
+When an `OptimisationSpecification` is `ACTIVE`, changing the runtime contract should normally require a new versioned `DRAFT` specification rather than mutation of the active one. This keeps runtime optimisation runs auditable, repeatable, and explainable.
+
+## Baseline update - OD MS OptimisationSpecification lifecycle and governance
+
+OD MS `OptimisationSpecification` lifecycle is intentionally simple and run-support oriented:
+
+```text
+DRAFT -> ACTIVE -> RETIRED
+```
+
+There is no `DEPRECATED` lifecycle state in the optimiser baseline.
+
+| Status | Meaning | Edit rule | Runtime use rule |
+|---|---|---|---|
+| `DRAFT` | Specification is being prepared. | Editable through approved update operations. | Not usable for new runtime Optimisation creation. |
+| `ACTIVE` | Specification is approved for runtime use. | Immutable except controlled lifecycle/version transition metadata. | Usable for new runtime Optimisation creation. |
+| `RETIRED` | Specification is no longer available for new runtime use. | Immutable except audit metadata if explicitly required. | Not usable for new runtime Optimisation creation; historical runtime references remain readable. |
+
+Operation governance baseline:
+
+| Operation | Rule |
+|---|---|
+| `POST /optimisationSpecification` | Creates a new `DRAFT` specification by default unless an explicitly governed activation workflow is used. |
+| `PUT /optimisationSpecification/{id}` | Approved platform extension; full replacement of mutable `DRAFT` specifications only. |
+| `PATCH /optimisationSpecification/{id}` | Supported for TMF compatibility, but must be used carefully. Do not use it for material contract replacement such as replacing `targetEntitySchema`, replacing `expressionSpecification`, changing the characteristic catalogue, changing version identity, or major lifecycle/version transitions unless explicitly guarded. |
+| `DELETE /optimisationSpecification/{id}` | Allowed for `DRAFT`; for `ACTIVE`, prefer lifecycle transition to `RETIRED` rather than physical delete. |
+| `GET` | Available for all lifecycle states. |
+
+When an `OptimisationSpecification` is `ACTIVE`, changing the runtime contract should normally require a new versioned `DRAFT` specification rather than mutation of the active one. This keeps runtime optimisation runs auditable, repeatable, and explainable.
+
+
+## Baseline update - OD MS POST create OptimisationSpecification
+
+`POST /optimisationSpecification` creates a new `OptimisationSpecification` in `DRAFT` state by default, unless an explicitly governed activation workflow is used.
+
+Minimum TMF-aligned create fields:
+
+```text
+name
+@type
+```
+
+Recommended create body fields:
+
+```text
+description
+version
+validFor
+isBundle
+specCharacteristic[]
+expressionSpecification
+targetEntitySchema
+@baseType
+@schemaLocation
+```
+
+Client create requests must not supply server-controlled fields:
+
+```text
+id
+href
+creationDate
+lastUpdate
+```
+
+OD MS assigns server-controlled identity and timestamp fields on creation and returns the full created `OptimisationSpecification` representation.

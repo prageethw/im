@@ -340,6 +340,63 @@ RETIRED:
 
 There is no `DEPRECATED` state in the optimiser baseline.
 
+
+
+## Operation governance:
+
+| Operation | Rule |
+|---|---|
+| `POST /optimisationSpecification` | Creates a new `DRAFT` specification by default unless an explicitly governed activation workflow is used. |
+| `PUT /optimisationSpecification/{id}` | Approved platform extension; full replacement of mutable `DRAFT` specifications only. |
+| `PATCH /optimisationSpecification/{id}` | Supported for TMF compatibility, but must be used carefully. Do not use it for material contract replacement such as replacing `targetEntitySchema`, replacing `expressionSpecification`, changing the characteristic catalogue, changing version identity, or major lifecycle/version transitions unless explicitly guarded. |
+| `DELETE /optimisationSpecification/{id}` | Allowed for `DRAFT`; for `ACTIVE`, prefer lifecycle transition to `RETIRED` rather than physical delete. |
+| `GET` | Available for all lifecycle states. |
+
+When an `OptimisationSpecification` is `ACTIVE`, changing the runtime contract should normally require a new versioned `DRAFT` specification rather than mutation of the active one.
+
+## POST create OptimisationSpecification baseline:
+
+```http
+POST /optimisationSpecification
+```
+
+Purpose:
+
+Creates a new `OptimisationSpecification` resource in `DRAFT` state by default, unless an explicitly governed activation workflow is used.
+
+Minimum TMF-aligned create fields:
+
+```text
+name
+@type
+```
+
+Recommended create body fields:
+
+```text
+description
+version
+validFor
+isBundle
+specCharacteristic[]
+expressionSpecification
+targetEntitySchema
+@baseType
+@schemaLocation
+```
+
+Client create requests must not supply server-controlled fields:
+
+```text
+id
+href
+creationDate
+lastUpdate
+```
+
+OD MS assigns server-controlled fields when the resource is created. The created resource returns the full `OptimisationSpecification` representation, including server-generated `id`, `href`, `creationDate`, `lastUpdate`, lifecycle state, and TMF-style polymorphism fields.
+ This keeps runtime optimisation runs auditable, repeatable, and explainable.
+
 ## Version activation rule:
 
 ```text
