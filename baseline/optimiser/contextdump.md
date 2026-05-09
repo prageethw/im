@@ -1,4 +1,3 @@
-
 ---
 
 ## E2E solution brief restoration baseline — 2026-05-09:
@@ -37,3 +36,17 @@ Merged updates applied during restoration:
 - OD MS lifecycle remains `DRAFT`, `ACTIVE`, `RETIRED`; no `DEPRECATED`.
 - Activation of a new specification version retires the previous active version in the same specification family.
 - OD HATEOAS `_links`, ETag/If-Match, simple GET cache policy, and approved platform extension wording are preserved at E2E level.
+
+
+## Baseline update — E2E solution brief 1–10 structure cleanup
+
+- Active E2E source is GitHub main `baseline/optimiser/optimisation-e2e-solution-brief.md`.
+- Preserve the existing detailed E2E content and 1–10 design structure.
+- Move important trailing unnumbered sections into the numbered structure:
+  - `TMF ontology alignment note` -> `3.4 Design rules and TMF ontology alignment`.
+  - `Optimisation validation and outcome clarification` -> `3.5 Validation and outcome responsibility`.
+  - `Contract definition versus runtime values` -> `3.6 Specification contract versus runtime values`.
+  - `Canonical runtime expression shape` -> `10.10 Canonical runtime expression shape`.
+  - `Runtime Optimisation lifecycle baseline` -> `10.11 Runtime Optimisation lifecycle baseline`.
+- Keep all current detailed process flows and capability/security/quality/risk/assumption/constraint content.
+- Apply wording cleanup only where it does not change meaning, such as `Cancel optimisation`, `Retry failed optimisation`, and `not limited to the intent-management domain`.

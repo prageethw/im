@@ -2,17 +2,17 @@
 
 ## 1. Business context:
 
-The optimisation platform provides a reusable capability for running deterministic optimisation problems using Gurobi-backed models. The platform is not targeted at the intent-management domain. It is designed as a generic optimisation capability that can be used by OEX, platform services, planning tools, assurance functions, intent-management flows, and other authorised entities that need to run optimisation.
+The optimisation platform provides a reusable capability for running deterministic optimisation problems using Gurobi-backed models. The platform is not limited to the intent-management domain. It is designed as a generic optimisation capability that can be used by OEX, platform services, planning tools, assurance functions, intent-management flows, and other authorised entities that need to run optimisation.
 
-The business need is to allow authorised consumers to discover available optimisation capabilities, understand the required request contract, submit optimisation requests synchronously, execute them asynchronously, monitor execution status, cancel active requests as needed(if cancellable), retry failed requests, and retrieve outcomes without exposing internal solver details or the Gurobi model implementation.
+The business need is to allow authorised consumers to discover available optimisation capabilities, understand the required request contract, submit optimisation requests asynchronously, monitor execution state, cancel active requests where needed, retry failed requests, and retrieve outcomes without exposing internal solver details or Gurobi model implementation.
 
 The solution separates the **definition of optimisation capabilities** from the **execution and lifecycle control of optimisation runs**:
 
-- **OD MS** owns the governed `OptimisationSpecification` resources and the runtime request contract.
-- **OC MS** owns runtime `Optimisation` resources and a short-lived optimisation execution lifecycle.
-- **OSB MS** provides the OEX-facing optimisation journey facade similar to backend-for-frontend.
+- **OD MS** owns governed `OptimisationSpecification` resources and the runtime request contract.
+- **OC MS** owns runtime `Optimisation` resources and short-lived optimisation execution lifecycle.
+- **OSB MS** provides the OEX-facing optimisation journey facade/backend-for-frontend.
 - **OEX UI** provides the user-facing optimisation experience.
-- **Python & Gurobi workers** execute deterministic optimisation models behind the internal event boundary.
+- **Python/Gurobi workers** execute deterministic optimisation models behind the internal event boundary.
 
 ---
 
@@ -21,15 +21,15 @@ The solution separates the **definition of optimisation capabilities** from the 
 - The solution provides a reusable, asynchronous optimisation platform backed by deterministic Gurobi models.
 - External-facing backend APIs are **TMF ontology-aligned** in style, resource structure, expression pattern, polymorphism fields, and extension semantics.
 - The external optimiser domain concept is **Optimisation**, not Intent.
-- A runtime `Optimisation` is a short-lived run. It completes, becomes infeasible, fails, or is cancelled.
+- A runtime `Optimisation` is a short-lived run. It completes, becomes infeasible, fails, or is cancelled. It is not a long-running desired-state intent control loop by default.
 - The solution uses two core optimisation-domain microservices:
   - **OD MS** owns `OptimisationSpecification` and exposes the caller-facing request contract.
-  - **OC MS** owns the runtime `Optimisation` lifecycle, cancellation, retrial, event integration, and result projection.
+  - **OC MS** owns runtime `Optimisation` lifecycle, cancellation, retrial, event integration, and result projection.
 - Consumers may include **OEX**, platform services, planning tools, assurance functions, intent-management flows, or other authorised entities that need to run optimisation.
 - OEX layer:
   - **OEX UI** provides the user-facing optimisation experience.
   - **OGW** is the user-context-aware gateway that invokes OSB MS using mTLS and User Context JWT.
-  - **OSB MS(Optimisation Screen Builder MS)** is the context-aware OEX facade/backend-for-frontend for optimisation journeys.
+  - **OSB MS / Optimisation Screen Builder MS** is the context-aware OEX facade/backend-for-frontend for optimisation journeys.
   - OSB MS shapes OEX screens and actions using the User Context JWT, initially proxies runtime optimisation journeys to OC MS through NGW, and later supports governed OD MS catalogue/specification journeys through NGW.
 - Operator access to OEX is governed by the ACG approval process and Microsoft Entra ID SSO.
 - OGW exposes OEX APIs for the OEX UI using user-context-aware OAuth2.
@@ -69,8 +69,8 @@ The Python/Gurobi worker is responsible for executing the internal deterministic
 | Retire optimisation specification | Optimisation domain engineer / authorised platform role | Retire an `ACTIVE` specification when it must no longer be used for new runtime optimisations. | The specification becomes `RETIRED`; historical runtime references remain readable. |
 | Create runtime optimisation | User / OEX / platform service | Submit a runtime `Optimisation` request to OC MS using an `ACTIVE` specification and valid expression context. | OC MS accepts/creates a short-lived optimisation run and begins asynchronous processing. |
 | Monitor optimisation | User / OEX / platform service | Read current lifecycle state and result when available. | Caller can see whether the optimisation is acknowledged, queued, processing, completed, infeasible, failed, cancelling, or cancelled. |
-| Cancellation optimisation | User / OEX / platform service | Request cancellation for an eligible active optimisation. | OC MS moves the resource to `CANCELLING` and instructs the worker to cancel where safely possible. |
-| Retrial failed optimisation | User / OEX / platform service | Retrial a `FAILED` optimisation by creating a new linked optimisation. | A new `ACKNOWLEDGED` optimisation is created with `retrialOf` pointing to the failed one. |
+| Cancel optimisation | User / OEX / platform service | Request cancellation for an eligible active optimisation. | OC MS moves the resource to `CANCELLING` and instructs the worker to cancel where safely possible. |
+| Retry failed optimisation | User / OEX / platform service | Retry a `FAILED` optimisation by creating a new linked optimisation. | A new `ACKNOWLEDGED` optimisation is created with `retrialOf` pointing to the failed one. |
 | Execute optimisation | Python/Gurobi worker | Consume worker instruction and execute the deterministic optimisation model. | Worker emits `SUCCESS`, `INFEASIBLE`, or `FAILURE` outcome. |
 
 ### 3.2 Logical view:
@@ -227,7 +227,7 @@ Detailed flow:
 12. No OC MS Outbox record is written and no worker instruction is emitted for read-only monitoring.
 ```
 
-#### 3.3.6 Cancellation optimisation:
+#### 3.3.6 Cancel optimisation:
 
 ```text
 User -> OEX UI -> OGW -> OSB MS(OEX API) -> NGW -> OC MS -> OC MS DB -> OC MS Outbox -> Kafka -> Python/Gurobi Worker
@@ -252,7 +252,7 @@ Detailed flow:
 14. OC MS eventually projects CANCELLED when cancellation is confirmed or safely resolved.
 ```
 
-#### 3.3.7 Retrial failed optimisation:
+#### 3.3.7 Retry failed optimisation:
 
 ```text
 User -> OEX UI -> OGW -> OSB MS(OEX API) -> NGW -> OC MS -> OC MS DB -> OC MS Outbox -> Kafka -> Python/Gurobi Worker
@@ -277,7 +277,7 @@ Detailed flow:
 14. Retrial does not move the failed Optimisation back to PROCESSING.
 ```
 
-#### 3.3.8 Gurobi Execute optimisation:
+#### 3.3.8 Gurobi execute optimisation:
 
 ```text
 Kafka -> Python/Gurobi Worker -> Gurobi Optimiser -> Kafka -> OC MS Inbox -> OC MS DB -> User polls GET /optimisation/{id}
@@ -298,6 +298,68 @@ Detailed flow:
 10. OC MS Inbox updates OC MS DB with lifecycle/result projection.
 11. User observes the outcome through GET /optimisation/{id}.
 ```
+
+---
+
+### 3.4 Design rules and TMF ontology alignment:
+
+Backend optimisation API examples use platform-readable optimisation fields while preserving TMF ontology-aligned structure, expression pattern, polymorphism fields, and extension semantics. Detailed standard validation should reference the relevant TMF921 / TR292 material when a specific external API/resource/event decision is being baselined.
+
+---
+
+Non-standard additions on external/backend APIs must be labelled as approved platform extensions and must not break standard resource and operation responsibilities. Internal Kafka events and private service-to-service APIs do not need to use TMF REST representation fields.
+
+### 3.5 Validation and outcome responsibility:
+
+The active design distinguishes request-contract validation from optimiser outcome.
+
+```text
+OC MS validates:
+- required fields
+- enum/value-type rules
+- request contract shape
+- cardinality rules such as candidateResources minItems = 2 where specified by the active targetEntitySchema
+- expression.expressionValue.context.targets[] / constraints[] / preferences[] against OD MS targetEntitySchema
+
+OC MS does not evaluate:
+- solver feasibility
+- candidate ranking
+- metric-vs-constraint fit
+- objective trade-offs
+
+Worker/model returns:
+- SUCCESS
+- INFEASIBLE
+- FAILURE
+```
+
+Use `422 OPTIMISATION_CONTRACT_VIOLATION` for contract/cardinality failures, such as fewer than 2 candidate resources for a selection optimisation.
+
+Use `INFEASIBLE` only when the request is valid and the worker/model determines no feasible solution exists.
+
+---
+
+### 3.6 Specification contract versus runtime values:
+
+OD MS defines the optimisation request contract using TMF-aligned specification structures:
+
+```text
+specCharacteristic[]      = catalogue / discovery / UI guidance
+expressionSpecification   = expression language + ontology IRI
+targetEntitySchema        = authoritative runtime expressionValue validation schema
+```
+
+OC MS carries the actual runtime request instance using:
+
+```text
+expression.expressionValue.context.targets[]
+expression.expressionValue.context.constraints[]
+expression.expressionValue.context.preferences[]
+```
+
+This keeps the design clear: OD MS defines what is allowed; OC MS stores and returns what was accepted at runtime.
+
+---
 
 ---
 
@@ -652,7 +714,7 @@ POST /optimisation/{id}/cancellation
 POST /optimisation/{id}/retrial
 ```
 
-Unsupported or deferred until OC MS shaping confirms otherwise:
+Current E2E assumption pending OC MS specification shaping — unsupported or deferred until OC MS shaping confirms otherwise:
 
 ```http
 PUT /optimisation/{id}
@@ -722,67 +784,7 @@ optimisation-logical-view.drawio
 optimisation-e2e-solution-brief.md
 ```
 
----
-
-## TMF ontology alignment note:
-
-Backend optimisation API examples use platform-readable optimisation fields while preserving TMF ontology-aligned structure, expression pattern, polymorphism fields, and extension semantics. Detailed standard validation should reference the relevant TMF921 / TR292 material when a specific external API/resource/event decision is being baselined.
-
----
-
-## Optimisation validation and outcome clarification:
-
-The active design distinguishes request-contract validation from optimiser outcome.
-
-```text
-OC MS validates:
-- required fields
-- enum/value-type rules
-- request contract shape
-- cardinality rules such as candidateResources minItems = 2 where specified by the active targetEntitySchema
-- expression.expressionValue.context.targets[] / constraints[] / preferences[] against OD MS targetEntitySchema
-
-OC MS does not evaluate:
-- solver feasibility
-- candidate ranking
-- metric-vs-constraint fit
-- objective trade-offs
-
-Worker/model returns:
-- SUCCESS
-- INFEASIBLE
-- FAILURE
-```
-
-Use `422 OPTIMISATION_CONTRACT_VIOLATION` for contract/cardinality failures, such as fewer than 2 candidate resources for a selection optimisation.
-
-Use `INFEASIBLE` only when the request is valid and the worker/model determines no feasible solution exists.
-
----
-
-## Contract definition versus runtime values:
-
-OD MS defines the optimisation request contract using TMF-aligned specification structures:
-
-```text
-specCharacteristic[]      = catalogue / discovery / UI guidance
-expressionSpecification   = expression language + ontology IRI
-targetEntitySchema        = authoritative runtime expressionValue validation schema
-```
-
-OC MS carries the actual runtime request instance using:
-
-```text
-expression.expressionValue.context.targets[]
-expression.expressionValue.context.constraints[]
-expression.expressionValue.context.preferences[]
-```
-
-This keeps the design clear: OD MS defines what is allowed; OC MS stores and returns what was accepted at runtime.
-
----
-
-## Canonical runtime expression shape:
+### 10.10 Canonical runtime expression shape:
 
 ```json
 {
@@ -831,7 +833,7 @@ preferences[] = soft ranking or selection preferences used to choose between oth
 
 ---
 
-## Runtime Optimisation lifecycle baseline:
+### 10.11 Runtime Optimisation lifecycle baseline:
 
 Runtime Optimisation status list:
 
