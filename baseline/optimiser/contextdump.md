@@ -343,3 +343,11 @@ GET cache baseline:
 - Clients can force cache revalidation using request header `Cache-Control: no-cache`.
 
 HATEOAS links for unsafe actions such as `replace`, `patch`, `activate`, `retire`, and `delete` must be lifecycle-aware, authorisation-aware, and indicate that `If-Match` is required.
+
+## OD MS DELETE governance baseline:
+
+`DELETE /optimisationSpecification/{id}` is supported for TMF alignment. Physical delete is allowed only for mutable `DRAFT` OptimisationSpecification resources. `ACTIVE` specifications must be transitioned to `RETIRED` through a governed lifecycle operation rather than physically deleted. `RETIRED` specifications are normally retained for audit and historical runtime traceability.
+
+DELETE is an unsafe operation and requires `If-Match`. Missing `If-Match` returns `428 Precondition Required`; stale or mismatched `If-Match` returns `412 Precondition Failed`; successful DRAFT deletion returns `204 No Content`.
+
+HATEOAS `_links.delete` is exposed only when the current caller is authorised and the specification is a mutable `DRAFT`. For `ACTIVE`, expose `retire` instead when authorised. For `RETIRED`, do not normally expose `delete` unless a separate administrative purge policy is explicitly introduced.

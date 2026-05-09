@@ -967,3 +967,60 @@ Example DRAFT link metadata:
   }
 }
 ```
+
+## DELETE /optimisationSpecification/{id}:
+
+`DELETE /optimisationSpecification/{id}` is supported for TMF alignment and is governed by OptimisationSpecification lifecycle state.
+
+### Request:
+
+```http
+DELETE /optimisationManagement/v1/optimisationSpecification/{id}
+If-Match: "<current-resource-etag>"
+```
+
+### Lifecycle rules:
+
+| Lifecycle state | DELETE behaviour |
+|---|---|
+| `DRAFT` | Allowed. Removes the mutable draft specification. |
+| `ACTIVE` | Physical delete is not allowed. Use a governed lifecycle transition to `RETIRED`. |
+| `RETIRED` | Normally not physically deleted. Retain for audit and historical runtime traceability. |
+
+### Concurrency rules:
+
+DELETE is an unsafe operation against an existing resource and therefore requires `If-Match`.
+
+| Condition | Response |
+|---|---|
+| Missing `If-Match` | `428 Precondition Required` |
+| Stale or mismatched `If-Match` | `412 Precondition Failed` |
+| DRAFT deleted successfully | `204 No Content` |
+| ACTIVE physical delete requested | `409 Conflict` or governed rejection response; caller should retire instead |
+| RETIRED physical delete requested | `409 Conflict` unless an explicit administrative purge policy exists |
+
+### Successful response:
+
+```http
+HTTP/1.1 204 No Content
+```
+
+### HATEOAS interaction:
+
+`delete` is exposed only when the current caller is authorised and the specification is a mutable `DRAFT`.
+
+```json
+"_links": {
+  "delete": {
+    "href": "/optimisationManagement/v1/optimisationSpecification/optimisation-spec-surgical-routing-v1",
+    "method": "DELETE",
+    "requires": ["If-Match"]
+  }
+}
+```
+
+For `ACTIVE` and `RETIRED` specifications, `delete` is not normally exposed. For `ACTIVE`, expose `retire` when the caller is authorised to perform lifecycle retirement.
+
+### Baseline rule:
+
+`DELETE /optimisationSpecification/{id}` is supported for TMF alignment. OD MS allows physical delete only for mutable `DRAFT` specifications. `ACTIVE` specifications must be retired through a governed lifecycle transition rather than physically deleted. `RETIRED` specifications are normally retained for audit and historical runtime traceability. DELETE requires `If-Match` and returns `204 No Content` on success.
