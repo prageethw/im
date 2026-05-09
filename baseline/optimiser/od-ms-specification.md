@@ -1,12 +1,16 @@
-# OD MS / Optimisation-Definition-MS Specification
+# OD MS / Optimisation Definition MS Specification:
 
-## Service purpose
+## Service purpose:
 
-Optimisation-Definition-MS / OD MS owns the governed catalogue of optimisation capabilities. OD MS defines what optimisation requests are allowed to look like.
+Optimisation Definition MS (OD MS) owns the governed catalogue of `OptimisationSpecification` resources.
 
-OD MS does not execute optimisation, does not hold runtime request values, and does not store actual candidate resources from a request. OD MS is the definition/specification service. OC MS is the runtime execution/controller service.
+An `OptimisationSpecification` defines the allowed shape, semantics, and validation contract for runtime `Optimisation` requests. It describes what an optimisation request may contain, including supported `context.targets[]`, `context.constraints[]`, and `context.preferences[]` structures.
 
-## Ownership
+OD MS does not execute optimisation runs, evaluate solver feasibility, select candidates, invoke Gurobi, persist runtime `Optimisation` resources, or project runtime optimisation outcomes. Those runtime responsibilities belong to OSB MS, OC MS, workers, and the optimiser engine.
+
+External OD MS APIs are TMF921/TIO-aligned in structure and semantics, but the domain concept is `OptimisationSpecification` rather than `IntentSpecification`.
+
+## Ownership:
 
 OD MS owns:
 
@@ -14,15 +18,12 @@ OD MS owns:
 OptimisationSpecification resource
 Optimisation capability metadata
 Request contract definition
-Constraint specification definitions
-Target specification definitions
-Preference specification definitions
-Context specification definitions
-Candidate resource schema
-Candidate resource cardinality rules
+Expression specification metadata
+Target entity schema for runtime Optimisation expressions
+Specification characteristic catalogue for discovery and OEX/UI guidance
 Specification lifecycle
 Specification versioning
-Specification list/retrieve/create/update operations
+Specification list/retrieve/create/update/delete operations
 ```
 
 OD MS does not own:
@@ -30,32 +31,44 @@ OD MS does not own:
 ```text
 Runtime Optimisation resources
 Runtime expression values
-Runtime context.targets[] values
-Runtime context.constraints[] values
-Runtime context.preferences[] values
-Actual candidate resource instances
+Runtime expression.expressionValue.context.targets[] values
+Runtime expression.expressionValue.context.constraints[] values
+Runtime expression.expressionValue.context.preferences[] values
+Actual candidate resource instances submitted in a runtime request
 Candidate-resource selection
 Solver feasibility evaluation
 Gurobi model execution
 Runtime optimisation outcome
+Runtime optimisation result projection
 ```
 
-## Endpoint set
+## Endpoint set:
 
-OD MS exposes:
+OD MS exposes the TMF-aligned operation set for `OptimisationSpecification`:
 
 ```http
 GET    /optimisationSpecification
 POST   /optimisationSpecification
 GET    /optimisationSpecification/{id}
-PUT    /optimisationSpecification/{id}
 PATCH  /optimisationSpecification/{id}
 DELETE /optimisationSpecification/{id}
 ```
 
-OD MS does not expose runtime optimisation operations. Runtime operations belong to OC MS.
+OD MS also exposes the following approved platform extension:
 
-## OptimisationSpecification resource shape
+```http
+PUT    /optimisationSpecification/{id}
+```
+
+`PUT` is retained as an approved platform extension for full replacement of mutable `DRAFT` `OptimisationSpecification` resources.
+
+`PATCH` is supported for TMF-style partial update compatibility. Use `PATCH` carefully. Do not use `PATCH` for material contract changes such as replacing `targetEntitySchema`, replacing `expressionSpecification`, changing the characteristic catalogue, changing version identity, or performing major lifecycle/version transitions unless the operation is explicitly designed and guarded. Prefer `PUT` for full replacement of a mutable `DRAFT` specification.
+
+OD MS does not expose runtime optimisation operations. Runtime operations belong to OC MS and OSB MS.
+
+## OptimisationSpecification resource shape:
+
+`OptimisationSpecification` is the optimiser-domain equivalent of the TMF921 `IntentSpecification` resource.
 
 Canonical fields:
 
@@ -69,17 +82,238 @@ lifecycleStatus
 creationDate
 lastUpdate
 validFor
-constraintSpecifications[]
-targetSpecifications[]
-preferenceSpecifications[]
-contextSpecifications[]
-_links
+isBundle
+specCharacteristic[]
+expressionSpecification
+targetEntitySchema
+relatedParty[]
+attachment[]
+constraint[]
+entitySpecRelationship[]
 @type
 @baseType
 @schemaLocation
 ```
 
-## Lifecycle model
+The external `OptimisationSpecification` resource uses TMF-aligned structures only. Optimiser request-contract semantics are represented through `targetEntitySchema`, `expressionSpecification`, and `specCharacteristic[]`.
+
+## Field semantics:
+
+| Field | Meaning |
+|---|---|
+| `id` | Unique identifier for the specification resource. |
+| `href` | Hyperlink reference to the specification resource. |
+| `name` | Human-readable specification name. |
+| `description` | Description of the optimisation capability and contract. |
+| `version` | Specification version. |
+| `lifecycleStatus` | Specification lifecycle value: `DRAFT`, `ACTIVE`, or `RETIRED`. |
+| `creationDate` | Date/time the specification resource was created. |
+| `lastUpdate` | Date/time the specification resource was last updated. |
+| `validFor` | Optional validity window for the specification. |
+| `isBundle` | TMF-style bundle indicator. Default should be `false` unless explicitly modelling a bundle. |
+| `specCharacteristic[]` | Discovery/catalogue metadata for supported optimisation fields and UI/OEX guidance. |
+| `expressionSpecification` | Defines the expression language and ontology IRI for runtime optimisation expressions. |
+| `targetEntitySchema` | Authoritative schema contract for runtime `Optimisation.expression.expressionValue`. |
+| `relatedParty[]` | Parties or roles associated with the specification. |
+| `attachment[]` | Optional attachments relevant to the specification. |
+| `constraint[]` | Optional TMF-style references to governing policy/rule constraints. Not runtime `context.constraints[]`. |
+| `entitySpecRelationship[]` | Relationships to other specification resources. |
+| `@type` | TMF-style discriminator. Use `OptimisationSpecification`. |
+| `@baseType` | TMF-style base type. Use `EntitySpecification`. |
+| `@schemaLocation` | Optional schema location for platform extension details. |
+
+
+## TMF-aligned specification responsibility split:
+
+OD MS must keep the three TMF-aligned specification structures separate. They are related, but they do not mean the same thing.
+
+| Structure | Responsibility | Must not be used for |
+|---|---|---|
+| `specCharacteristic[]` | Catalogue/discovery metadata for OEX/UI and API consumers. It advertises supported optimisation capability characteristics, examples, defaults, and display guidance. | It must not be treated as the authoritative validation schema. |
+| `expressionSpecification` | Expression-language and ontology binding. It defines that runtime optimisation expressions use `JsonLdExpression` and the optimisation ontology IRI. | It must not contain runtime request values or detailed JSON validation rules. |
+| `targetEntitySchema` | Authoritative validation contract for `Optimisation.expression.expressionValue`, including `context.targets[]`, `context.constraints[]`, and `context.preferences[]`. | It must not be replaced by catalogue characteristics or prose-only rules. |
+
+Baseline rule:
+
+```text
+specCharacteristic[]      = catalogue / discovery / UI guidance
+expressionSpecification   = expression language + ontology IRI
+targetEntitySchema        = authoritative runtime expressionValue validation schema
+```
+
+This separation is mandatory in OD MS examples and operation descriptions. Do not blend characteristic metadata with expression language metadata, and do not use either of them as a substitute for `targetEntitySchema`.
+
+## Optimisation context contract:
+
+The runtime optimisation problem is carried inside:
+
+```text
+Optimisation.expression.expressionValue.context
+```
+
+Canonical runtime shape:
+
+```json
+{
+  "expression": {
+    "@type": "JsonLdExpression",
+    "@baseType": "Expression",
+    "iri": "https://example.com/ontology/optimisation/v1",
+    "expressionValue": {
+      "@context": {
+        "opt": "https://example.com/ontology/optimisation#"
+      },
+      "context": {
+        "targets": [],
+        "constraints": [],
+        "preferences": []
+      }
+    }
+  }
+}
+```
+
+Meaning:
+
+| Runtime bucket | Meaning |
+|---|---|
+| `context` | The whole optimisation scenario / big picture. |
+| `context.targets[]` | Optimisation goals the optimiser tries to achieve. |
+| `context.constraints[]` | Hard mandatory requirements that must be satisfied. |
+| `context.preferences[]` | Soft ranking or selection preferences used to choose between otherwise valid outcomes. |
+
+OD MS defines this runtime contract using `targetEntitySchema`. `specCharacteristic[]` may describe these fields for discovery, governance, examples, defaults, and OEX/UI prefill guidance, but it must not replace the authoritative schema.
+
+
+## Embedded schema artifact: optimisation-expression-value.schema.json
+
+To avoid ambiguity, the `targetEntitySchema.@schemaLocation` reference used by `OptimisationSpecification` must be backed by the governed schema content below. The schema is documented inside this OD MS specification baseline so readers do not have to locate a separate artifact to understand the contract.
+
+Logical schema artifact name:
+
+```text
+optimisation-expression-value.schema.json
+```
+
+Schema purpose:
+
+```text
+Validates Optimisation.expression.expressionValue for runtime Optimisation requests.
+The authoritative optimisation problem container is expressionValue.context.
+context.targets[] contains optimisation goals.
+context.constraints[] contains hard mandatory requirements.
+context.preferences[] contains soft ranking or selection preferences.
+```
+
+```json
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://example.com/schema/optimisation/v1/optimisation-expression-value.schema.json",
+  "title": "Optimisation Expression Value",
+  "description": "Schema for Optimisation.expression.expressionValue. The context object is the canonical container for the runtime optimisation problem definition.",
+  "type": "object",
+  "additionalProperties": true,
+  "required": [
+    "@context",
+    "context"
+  ],
+  "properties": {
+    "@context": {
+      "description": "JSON-LD context for optimisation vocabulary prefixes.",
+      "type": "object",
+      "additionalProperties": true
+    },
+    "context": {
+      "description": "The full optimisation scenario / big picture. Contains optimisation goals, hard requirements, and soft preferences.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "targets",
+        "constraints",
+        "preferences"
+      ],
+      "properties": {
+        "targets": {
+          "description": "Optimisation goals the optimiser tries to achieve.",
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "$ref": "#/$defs/target"
+          }
+        },
+        "constraints": {
+          "description": "Hard mandatory requirements that must be satisfied for a valid solution.",
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "$ref": "#/$defs/constraint"
+          }
+        },
+        "preferences": {
+          "description": "Soft ranking or selection preferences used to choose between otherwise valid outcomes.",
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/preference"
+          }
+        }
+      }
+    }
+  },
+  "$defs": {
+    "target": {
+      "type": "object",
+      "additionalProperties": true,
+      "description": "A goal or threshold the optimiser should optimise toward.",
+      "properties": {
+        "maxLatencyMs": {
+          "type": "number",
+          "minimum": 0
+        },
+        "minAvailabilityPercent": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 100
+        }
+      }
+    },
+    "constraint": {
+      "type": "object",
+      "additionalProperties": true,
+      "description": "A hard requirement that every valid optimisation outcome must satisfy.",
+      "properties": {
+        "locationId": {
+          "type": "string",
+          "minLength": 1
+        },
+        "serviceClass": {
+          "type": "string",
+          "minLength": 1
+        },
+        "redundancyRequired": {
+          "type": "boolean"
+        }
+      }
+    },
+    "preference": {
+      "type": "object",
+      "additionalProperties": true,
+      "description": "A soft preference that influences ranking or selection among feasible outcomes.",
+      "properties": {
+        "preferredAccessTechnology": {
+          "type": "string",
+          "minLength": 1
+        },
+        "optimiseFor": {
+          "type": "string",
+          "minLength": 1
+        }
+      }
+    }
+  }
+}
+```
+
+## Lifecycle model:
 
 ```text
 DRAFT
@@ -96,7 +330,7 @@ DRAFT:
   Not usable for new runtime Optimisation creation.
 
 ACTIVE:
-  Specification can be used by OC MS to create runtime Optimisation resources.
+  Specification can be used by OC MS to validate and create runtime Optimisation resources.
   ACTIVE specifications are immutable except controlled lifecycle/version transition metadata.
 
 RETIRED:
@@ -106,73 +340,69 @@ RETIRED:
 
 There is no `DEPRECATED` state in the optimiser baseline.
 
-## Version activation rule
+## Version activation rule:
 
 ```text
 Only one ACTIVE OptimisationSpecification is allowed per specificationKey.
 When a DRAFT specification is promoted to ACTIVE, OD MS must transactionally retire the previous ACTIVE specification with the same specificationKey.
 ```
 
-## Definition versus runtime model
+## Definition versus runtime model:
 
-OD MS uses specification/definition sections:
+OD MS uses TMF-aligned specification structures:
 
 ```text
-constraintSpecifications[]:
-  Defines allowed hard-constraint fields.
-  Does not contain caller-supplied runtime values.
+expressionSpecification:
+  Defines the supported expression language and ontology IRI.
+  Does not contain runtime optimisation values.
 
-targetSpecifications[]:
-  Defines allowed optimisation targets and allowed/default values.
-  Does not contain runtime optimisation results.
+targetEntitySchema:
+  Defines the authoritative JSON/schema contract for runtime expression.expressionValue.
+  Covers expression.expressionValue.context.targets[], constraints[], and preferences[].
+  May define required fields, types, cardinality, allowed values, nested candidate resource shape, and object schemas.
 
-preferenceSpecifications[]:
-  Defines allowed optimisation preferences.
-  Does not contain runtime preference values.
-
-contextSpecifications[]:
-  Defines required context objects and their schemas.
-  Defines candidate resource shape, cardinality, resourceAttributes, and metrics where applicable.
-  Does not contain actual runtime candidate IDs.
+specCharacteristic[]:
+  Provides catalogue/discovery metadata and optional examples/defaults for supported fields.
+  Helps OEX/UI consumers understand supported optimisation targets, constraints, and preferences.
+  Does not replace targetEntitySchema as the validation source.
 ```
 
-OC MS uses runtime Optimisation expression values:
+OC MS uses runtime `Optimisation` expression values:
 
 ```text
 expression.expressionValue.context.targets[]:
   Actual caller-supplied or defaulted target goals/thresholds.
 
 expression.expressionValue.context.constraints[]:
-  Actual caller-supplied constraint values.
+  Actual caller-supplied hard constraint values.
 
 expression.expressionValue.context.preferences[]:
-  Actual caller-supplied preference values.
+  Actual caller-supplied soft preference values.
 ```
 
 Validation mapping:
 
 ```text
-runtime expression.expressionValue.context.targets[]     -> OD MS targetSpecifications[]
-runtime expression.expressionValue.context.constraints[] -> OD MS constraintSpecifications[]
-runtime expression.expressionValue.context.preferences[] -> OD MS preferenceSpecifications[]
-runtime expression.expressionValue.context               -> OD MS contextSpecifications[]
+runtime expression.expressionValue.context -> OD MS targetEntitySchema
+runtime context.targets[]                  -> targetEntitySchema properties for targets[]
+runtime context.constraints[]              -> targetEntitySchema properties for constraints[]
+runtime context.preferences[]              -> targetEntitySchema properties for preferences[]
 ```
 
-## Contract validation rules
+## Contract validation rules:
 
-OC MS validates runtime Optimisation requests against the ACTIVE OptimisationSpecification.
+OC MS validates runtime `Optimisation` requests against the `targetEntitySchema` of the `ACTIVE` `OptimisationSpecification`.
 
 OC MS validates:
 
 ```text
 required fields
 value types
-supported constraint names
 supported target names
+supported constraint names
 supported preference names
-supported context names
-constraint/target/preference value types
-context object schema
+supported context object shape
+allowed values where defined
 cardinality rules such as candidateResources minItems = 2 where applicable
 ```
 
@@ -186,7 +416,7 @@ objective trade-off evaluation
 best-candidate selection
 ```
 
-## Canonical OptimisationSpecification example
+## Canonical OptimisationSpecification example:
 
 ```json
 {
@@ -201,81 +431,48 @@ best-candidate selection
   "validFor": {
     "startDateTime": "2026-05-02T00:00:00Z"
   },
-  "constraintSpecifications": [
-    {
-      "name": "locationId",
-      "valueType": "string",
-      "required": true,
-      "description": "Location scope for the optimisation."
-    },
-    {
-      "name": "serviceClass",
-      "valueType": "string",
-      "required": true,
-      "description": "Service class being optimised."
-    },
-    {
-      "name": "redundancyRequired",
-      "valueType": "boolean",
-      "required": false,
-      "description": "Whether redundant candidate handling is required."
-    }
-  ],
-  "targetSpecifications": [
-    {
-      "name": "maxLatencyMs",
-      "valueType": "number",
-      "required": false,
-      "unit": "ms",
-      "description": "Maximum preferred latency target."
-    },
-    {
-      "name": "minAvailabilityPercent",
-      "valueType": "number",
-      "required": false,
-      "unit": "percent",
-      "description": "Minimum preferred availability target."
-    }
-  ],
-  "preferenceSpecifications": [
-    {
-      "name": "preferredAccessTechnology",
-      "valueType": "string",
-      "required": false
-    },
-    {
-      "name": "optimiseFor",
-      "valueType": "string",
-      "required": false
-    }
-  ],
-  "contextSpecifications": [
-    {
-      "name": "context",
-      "valueType": "object",
-      "required": true,
-      "description": "Runtime optimisation context containing targets, constraints, and preferences arrays."
-    }
-  ],
-  "_links": {
-    "self": {
-      "href": "/optimisationSpecification/os-7f3a9c21",
-      "method": "GET"
-    },
-    "createOptimisation": {
-      "href": "/optimisation",
-      "method": "POST"
-    }
+  "isBundle": false,
+  "expressionSpecification": {
+    "@type": "ExpressionSpecification",
+    "expressionLanguage": "JSON-LD",
+    "iri": "https://example.com/ontology/optimisation/v1"
   },
+  "targetEntitySchema": {
+    "@type": "TargetEntitySchema",
+    "@schemaLocation": "https://example.com/schema/optimisation/v1/optimisation-expression-value.schema.json"
+  },
+  "specCharacteristic": [
+    {
+      "id": "SC-OPT-TARGETS-001",
+      "name": "targets",
+      "description": "Optimisation goals the optimiser tries to achieve.",
+      "valueType": "array",
+      "@type": "CharacteristicSpecification"
+    },
+    {
+      "id": "SC-OPT-CONSTRAINTS-001",
+      "name": "constraints",
+      "description": "Hard mandatory requirements that must be satisfied.",
+      "valueType": "array",
+      "@type": "CharacteristicSpecification"
+    },
+    {
+      "id": "SC-OPT-PREFERENCES-001",
+      "name": "preferences",
+      "description": "Soft ranking or selection preferences used to choose between valid outcomes.",
+      "valueType": "array",
+      "@type": "CharacteristicSpecification"
+    }
+  ],
   "@type": "OptimisationSpecification",
   "@baseType": "EntitySpecification",
   "@schemaLocation": "/schema/OptimisationSpecification.schema.json"
 }
 ```
 
-## Contract violation response
+## Contract violation response:
 
-Use `422 Unprocessable Entity` when the JSON is structurally valid but violates the ACTIVE OptimisationSpecification request contract.
+Use `422 Unprocessable Entity` when the JSON is structurally valid but violates the `ACTIVE` `OptimisationSpecification` request contract.
 
 ```http
 HTTP/1.1 422 Unprocessable Entity
@@ -286,13 +483,13 @@ Content-Type: application/json
 {
   "code": "OPTIMISATION_CONTRACT_VIOLATION",
   "reason": "Optimisation request violates specification contract",
-  "message": "The optimisation expression.context does not satisfy the active OptimisationSpecification contract.",
+  "message": "The optimisation expression.expressionValue.context does not satisfy the active OptimisationSpecification targetEntitySchema contract.",
   "status": 422,
   "@type": "Error"
 }
 ```
 
-## Relationship to OC MS
+## Relationship to OC MS:
 
 ```text
 OD MS: defines what is allowed.
@@ -300,4 +497,4 @@ OC MS: stores what was accepted at runtime.
 Worker/model: decides feasibility and returns SUCCESS, INFEASIBLE, or FAILURE.
 ```
 
-OD MS does not persist runtime Optimisation resources, does not write OC MS outbox records, does not consume Kafka worker outcomes, and does not project runtime results.
+OD MS does not persist runtime `Optimisation` resources, does not write OC MS outbox records, does not consume Kafka worker outcomes, and does not project runtime results.
