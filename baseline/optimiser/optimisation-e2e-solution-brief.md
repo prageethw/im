@@ -2,17 +2,17 @@
 
 ## 1. Business context:
 
-The optimisation platform provides a reusable capability for running deterministic optimisation problems using Gurobi-backed models. The platform is not limited to the intent-management domain. It is designed as a generic optimisation capability that can be used by OEX, platform services, planning tools, assurance functions, intent-management flows, and other authorised entities that need to run optimisation.
+The optimisation platform provides a reusable capability for running deterministic optimisation problems using Gurobi-backed models. The platform is not targeted at the intent-management domain. It is designed as a generic optimisation capability that can be used by OEX, platform services, planning tools, assurance functions, intent-management flows, and other authorised entities that need to run optimisation.
 
-The business need is to allow authorised consumers to discover available optimisation capabilities, understand the required request contract, submit optimisation requests asynchronously, monitor execution state, cancel active requests where needed, retry failed requests, and retrieve outcomes without exposing internal solver details or Gurobi model implementation.
+The business need is to allow authorised consumers to discover available optimisation capabilities, understand the required request contract, submit optimisation requests synchronously, execute them asynchronously, monitor execution status, cancel active requests as needed(if cancellable), retry failed requests, and retrieve outcomes without exposing internal solver details or the Gurobi model implementation.
 
 The solution separates the **definition of optimisation capabilities** from the **execution and lifecycle control of optimisation runs**:
 
-- **OD MS** owns governed `OptimisationSpecification` resources and the runtime request contract.
-- **OC MS** owns runtime `Optimisation` resources and short-lived optimisation execution lifecycle.
-- **OSB MS** provides the OEX-facing optimisation journey facade/backend-for-frontend.
+- **OD MS** owns the governed `OptimisationSpecification` resources and the runtime request contract.
+- **OC MS** owns runtime `Optimisation` resources and a short-lived optimisation execution lifecycle.
+- **OSB MS** provides the OEX-facing optimisation journey facade similar to backend-for-frontend.
 - **OEX UI** provides the user-facing optimisation experience.
-- **Python/Gurobi workers** execute deterministic optimisation models behind the internal event boundary.
+- **Python & Gurobi workers** execute deterministic optimisation models behind the internal event boundary.
 
 ---
 
@@ -21,15 +21,15 @@ The solution separates the **definition of optimisation capabilities** from the 
 - The solution provides a reusable, asynchronous optimisation platform backed by deterministic Gurobi models.
 - External-facing backend APIs are **TMF ontology-aligned** in style, resource structure, expression pattern, polymorphism fields, and extension semantics.
 - The external optimiser domain concept is **Optimisation**, not Intent.
-- A runtime `Optimisation` is a short-lived run. It completes, becomes infeasible, fails, or is cancelled. It is not a long-running desired-state intent control loop by default.
+- A runtime `Optimisation` is a short-lived run. It completes, becomes infeasible, fails, or is cancelled.
 - The solution uses two core optimisation-domain microservices:
   - **OD MS** owns `OptimisationSpecification` and exposes the caller-facing request contract.
-  - **OC MS** owns runtime `Optimisation` lifecycle, cancellation, retrial, event integration, and result projection.
+  - **OC MS** owns the runtime `Optimisation` lifecycle, cancellation, retrial, event integration, and result projection.
 - Consumers may include **OEX**, platform services, planning tools, assurance functions, intent-management flows, or other authorised entities that need to run optimisation.
 - OEX layer:
   - **OEX UI** provides the user-facing optimisation experience.
   - **OGW** is the user-context-aware gateway that invokes OSB MS using mTLS and User Context JWT.
-  - **OSB MS / Optimisation Screen Builder MS** is the context-aware OEX facade/backend-for-frontend for optimisation journeys.
+  - **OSB MS(Optimisation Screen Builder MS)** is the context-aware OEX facade/backend-for-frontend for optimisation journeys.
   - OSB MS shapes OEX screens and actions using the User Context JWT, initially proxies runtime optimisation journeys to OC MS through NGW, and later supports governed OD MS catalogue/specification journeys through NGW.
 - Operator access to OEX is governed by the ACG approval process and Microsoft Entra ID SSO.
 - OGW exposes OEX APIs for the OEX UI using user-context-aware OAuth2.
