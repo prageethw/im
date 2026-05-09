@@ -110,7 +110,6 @@ relatedParty[]
 attachment[]
 constraint[]
 entitySpecRelationship[]
-_links
 @type
 @baseType
 @schemaLocation
@@ -119,62 +118,6 @@ _links
 The external `OptimisationSpecification` resource uses TMF-aligned structures only. Optimiser request-contract semantics are represented through `targetEntitySchema`, `expressionSpecification`, and `specCharacteristic[]`.
 
 `targetEntitySchema` is the authoritative validation contract for runtime `Optimisation.expression.expressionValue.context`, including `targets[]`, `constraints[]`, and `preferences[]`. `specCharacteristic[]` is for discovery/catalogue metadata, examples, defaults, and OEX/UI prefill guidance. It must not replace `targetEntitySchema` as the validation source.
-
-## HATEOAS baseline:
-
-OD MS APIs must return HATEOAS links on `OptimisationSpecification` resources using an approved platform `_links` extension. TMF921 already includes the standard `href` resource hyperlink and standard TMF operation responsibilities. `_links` does not replace `href`; it adds explicit hypermedia controls so clients can discover allowed next actions from the current resource state.
-
-`_links` must be lifecycle-aware and authorisation-aware. OD MS must only include action links that the current caller is allowed to execute for the current `lifecycleStatus`.
-
-Minimum link relations:
-
-| Link relation | Meaning | Typical method |
-|---|---|---|
-| `self` | Current `OptimisationSpecification` resource. | `GET` |
-| `collection` | Parent `OptimisationSpecification` collection. | `GET` |
-| `create` | Create a new specification. | `POST` |
-| `patch` | TMF-compatible partial update. Use with caution. | `PATCH` |
-| `replace` | Approved platform extension for full replacement of mutable `DRAFT` specifications. | `PUT` |
-| `delete` | Delete where allowed, normally `DRAFT` only. | `DELETE` |
-| `activate` | Governed lifecycle transition from `DRAFT` to `ACTIVE`, if authorised. | `PATCH` |
-| `retire` | Governed lifecycle transition from `ACTIVE` to `RETIRED`, if authorised. | `PATCH` |
-| `createNewVersion` | Start a new versioned `DRAFT` derived from the current specification. | `POST` |
-
-Example `_links` for a `DRAFT` resource:
-
-```json
-"_links": {
-  "self": {
-    "href": "/optimisationManagement/v1/optimisationSpecification/optimisation-spec-surgical-routing-v1",
-    "method": "GET"
-  },
-  "collection": {
-    "href": "/optimisationManagement/v1/optimisationSpecification",
-    "method": "GET"
-  },
-  "patch": {
-    "href": "/optimisationManagement/v1/optimisationSpecification/optimisation-spec-surgical-routing-v1",
-    "method": "PATCH",
-    "title": "Partial update. Not for material contract replacement unless explicitly guarded."
-  },
-  "replace": {
-    "href": "/optimisationManagement/v1/optimisationSpecification/optimisation-spec-surgical-routing-v1",
-    "method": "PUT",
-    "title": "Full replacement of mutable DRAFT specification. Approved platform extension."
-  },
-  "activate": {
-    "href": "/optimisationManagement/v1/optimisationSpecification/optimisation-spec-surgical-routing-v1",
-    "method": "PATCH",
-    "title": "Transition lifecycleStatus to ACTIVE through governed activation."
-  },
-  "delete": {
-    "href": "/optimisationManagement/v1/optimisationSpecification/optimisation-spec-surgical-routing-v1",
-    "method": "DELETE"
-  }
-}
-```
-
-Example `_links` for an `ACTIVE` resource should omit mutable `replace` and normally include `retire` and `createNewVersion` where authorised. Example `_links` for a `RETIRED` resource should normally include only navigation links such as `self` and `collection`, plus `createNewVersion` if policy allows deriving a new draft from a retired version.
 
 ## Baseline update - OD MS embedded targetEntitySchema artifact
 
@@ -225,7 +168,6 @@ relatedParty[]
 attachment[]
 constraint[]
 entitySpecRelationship[]
-_links
 @type
 @baseType
 @schemaLocation
@@ -343,3 +285,19 @@ lastUpdate
 ```
 
 OD MS assigns server-controlled identity and timestamp fields on creation and returns the full created `OptimisationSpecification` representation.
+
+## Baseline update - OD MS PUT, PATCH, and HATEOAS
+
+OD MS keeps TMF-aligned `GET`, `POST`, `PATCH`, and `DELETE` operations for `OptimisationSpecification`. `PUT /optimisationSpecification/{id}` is retained as an approved platform extension for full replacement of mutable `DRAFT` specifications only.
+
+`PATCH /optimisationSpecification/{id}` remains supported for TMF compatibility and JSON Merge Patch style partial updates. It must be treated with a strong warning: do not use PATCH for material runtime-contract replacement. Material changes to `targetEntitySchema`, `expressionSpecification`, `specCharacteristic[]`, `version`, or major lifecycle/version transitions should use governed `PUT` on a mutable `DRAFT`, or create a new versioned `DRAFT` when the current specification is `ACTIVE`.
+
+OD MS uses `_links` as an approved HATEOAS platform extension. TMF `href` remains the standard resource hyperlink and `_links` does not replace it. `_links` must be lifecycle-aware and authorisation-aware. Baseline link visibility:
+
+```text
+DRAFT   -> self, collection, patch, replace, delete, activate
+ACTIVE  -> self, collection, retire, createNewVersion
+RETIRED -> self, collection, createNewVersion
+```
+
+`replace` maps to `PUT /optimisationSpecification/{id}` and is exposed only when the caller can fully replace a mutable `DRAFT` specification.

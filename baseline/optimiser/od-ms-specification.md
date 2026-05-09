@@ -90,7 +90,6 @@ relatedParty[]
 attachment[]
 constraint[]
 entitySpecRelationship[]
-_links
 @type
 @baseType
 @schemaLocation
@@ -119,7 +118,6 @@ The external `OptimisationSpecification` resource uses TMF-aligned structures on
 | `attachment[]` | Optional attachments relevant to the specification. |
 | `constraint[]` | Optional TMF-style references to governing policy/rule constraints. Not runtime `context.constraints[]`. |
 | `entitySpecRelationship[]` | Relationships to other specification resources. |
-| `_links` | Approved platform HATEOAS extension containing lifecycle-aware action/navigation links. |
 | `@type` | TMF-style discriminator. Use `OptimisationSpecification`. |
 | `@baseType` | TMF-style base type. Use `EntitySpecification`. |
 | `@schemaLocation` | Optional schema location for platform extension details. |
@@ -144,62 +142,6 @@ targetEntitySchema        = authoritative runtime expressionValue validation sch
 ```
 
 This separation is mandatory in OD MS examples and operation descriptions. Do not blend characteristic metadata with expression language metadata, and do not use either of them as a substitute for `targetEntitySchema`.
-
-## HATEOAS baseline:
-
-OD MS APIs must return HATEOAS links on `OptimisationSpecification` resources using an approved platform `_links` extension. TMF921 already includes the standard `href` resource hyperlink and standard TMF operation responsibilities. `_links` does not replace `href`; it adds explicit hypermedia controls so clients can discover allowed next actions from the current resource state.
-
-`_links` must be lifecycle-aware and authorisation-aware. OD MS must only include action links that the current caller is allowed to execute for the current `lifecycleStatus`.
-
-Minimum link relations:
-
-| Link relation | Meaning | Typical method |
-|---|---|---|
-| `self` | Current `OptimisationSpecification` resource. | `GET` |
-| `collection` | Parent `OptimisationSpecification` collection. | `GET` |
-| `create` | Create a new specification. | `POST` |
-| `patch` | TMF-compatible partial update. Use with caution. | `PATCH` |
-| `replace` | Approved platform extension for full replacement of mutable `DRAFT` specifications. | `PUT` |
-| `delete` | Delete where allowed, normally `DRAFT` only. | `DELETE` |
-| `activate` | Governed lifecycle transition from `DRAFT` to `ACTIVE`, if authorised. | `PATCH` |
-| `retire` | Governed lifecycle transition from `ACTIVE` to `RETIRED`, if authorised. | `PATCH` |
-| `createNewVersion` | Start a new versioned `DRAFT` derived from the current specification. | `POST` |
-
-Example `_links` for a `DRAFT` resource:
-
-```json
-"_links": {
-  "self": {
-    "href": "/optimisationManagement/v1/optimisationSpecification/optimisation-spec-surgical-routing-v1",
-    "method": "GET"
-  },
-  "collection": {
-    "href": "/optimisationManagement/v1/optimisationSpecification",
-    "method": "GET"
-  },
-  "patch": {
-    "href": "/optimisationManagement/v1/optimisationSpecification/optimisation-spec-surgical-routing-v1",
-    "method": "PATCH",
-    "title": "Partial update. Not for material contract replacement unless explicitly guarded."
-  },
-  "replace": {
-    "href": "/optimisationManagement/v1/optimisationSpecification/optimisation-spec-surgical-routing-v1",
-    "method": "PUT",
-    "title": "Full replacement of mutable DRAFT specification. Approved platform extension."
-  },
-  "activate": {
-    "href": "/optimisationManagement/v1/optimisationSpecification/optimisation-spec-surgical-routing-v1",
-    "method": "PATCH",
-    "title": "Transition lifecycleStatus to ACTIVE through governed activation."
-  },
-  "delete": {
-    "href": "/optimisationManagement/v1/optimisationSpecification/optimisation-spec-surgical-routing-v1",
-    "method": "DELETE"
-  }
-}
-```
-
-Example `_links` for an `ACTIVE` resource should omit mutable `replace` and normally include `retire` and `createNewVersion` where authorised. Example `_links` for a `RETIRED` resource should normally include only navigation links such as `self` and `collection`, plus `createNewVersion` if policy allows deriving a new draft from a retired version.
 
 ## Optimisation context contract:
 
@@ -411,6 +353,300 @@ There is no `DEPRECATED` state in the optimiser baseline.
 | `GET` | Available for all lifecycle states. |
 
 When an `OptimisationSpecification` is `ACTIVE`, changing the runtime contract should normally require a new versioned `DRAFT` specification rather than mutation of the active one.
+
+
+## PUT full replacement baseline — approved platform extension:
+
+```http
+PUT /optimisationSpecification/{id}
+```
+
+`PUT` is an approved platform extension. TMF921 defines `GET`, `POST`, `PATCH`, and `DELETE` for `IntentSpecification`; OD MS keeps those TMF-aligned operations intact and adds `PUT` only for controlled full replacement of mutable `DRAFT` optimiser specifications.
+
+Purpose:
+
+```text
+Fully replace a mutable DRAFT OptimisationSpecification resource.
+```
+
+Rules:
+
+| Rule | Decision |
+|---|---|
+| TMF status | Approved platform extension. |
+| Allowed lifecycle state | `DRAFT` only. |
+| Required concurrency control | `If-Match` is required. |
+| Successful response | `200 OK` with the full updated representation. |
+| Not allowed for | `ACTIVE` or `RETIRED` specifications. |
+| Preferred for | Material contract replacement on `DRAFT` specifications. |
+| Server-controlled fields | `id`, `href`, `creationDate`, and `lastUpdate` remain OD MS controlled. |
+
+Use `PUT` rather than `PATCH` for material `DRAFT` contract changes such as replacing `targetEntitySchema`, replacing `expressionSpecification`, materially changing `specCharacteristic[]`, changing `version`, changing `validFor`, or replacing the specification description and catalogue metadata as a coherent whole.
+
+Example request:
+
+```http
+PUT /optimisationManagement/v1/optimisationSpecification/optimisation-spec-surgical-routing-v1
+If-Match: "od-spec-v1"
+Content-Type: application/json
+```
+
+```json
+{
+  "name": "Surgical Routing Optimisation Specification",
+  "description": "Defines the allowed optimisation request contract for surgical routing optimisation.",
+  "version": "1.0.1",
+  "lifecycleStatus": "DRAFT",
+  "validFor": {
+    "startDateTime": "2026-05-09T00:00:00Z"
+  },
+  "isBundle": false,
+  "specCharacteristic": [],
+  "expressionSpecification": {
+    "@type": "ExpressionSpecification",
+    "expressionLanguage": "JsonLdExpression",
+    "iri": "https://example.com/ontology/optimisation/v1"
+  },
+  "targetEntitySchema": {
+    "@type": "TargetEntitySchema",
+    "@schemaLocation": "https://example.com/schema/optimisation/v1/optimisation-expression-value.schema.json"
+  },
+  "@type": "OptimisationSpecification",
+  "@baseType": "EntitySpecification",
+  "@schemaLocation": "https://example.com/schema/optimisation/v1/OptimisationSpecification.schema.json"
+}
+```
+
+Example response:
+
+```http
+HTTP/1.1 200 OK
+ETag: "od-spec-v2"
+Last-Modified: 2026-05-09T05:20:00Z
+Content-Type: application/json
+Cache-Control: private, no-cache
+```
+
+The response body returns the full updated `OptimisationSpecification` representation.
+
+HATEOAS rule:
+
+`replace` maps to `PUT /optimisationSpecification/{id}` and must be shown only when the current caller is authorised to fully replace a mutable `DRAFT` specification. Do not expose `replace` for `ACTIVE` or `RETIRED` specifications.
+
+## PATCH partial update baseline — TMF-compatible but warned:
+
+```http
+PATCH /optimisationSpecification/{id}
+```
+
+`PATCH` is retained for TMF-style partial update compatibility. TMF921 requires JSON Merge Patch support for partial update operations and identifies `href`, `id`, `lastUpdate`, `@baseType`, `@schemaLocation`, and `@type` as non-patchable for `IntentSpecification`. OD MS follows that intent in optimiser terms.
+
+Purpose:
+
+```text
+Apply a small, safe partial update to an OptimisationSpecification.
+```
+
+PATCH warning:
+
+```text
+PATCH must not be used as the normal mechanism for material runtime-contract replacement. Use PUT on a mutable DRAFT specification for full contract replacement.
+```
+
+OD MS allows `PATCH` mainly for small, safe updates such as:
+
+```text
+description
+validFor
+relatedParty[]
+attachment[]
+minor catalogue metadata corrections
+explicitly governed lifecycle transitions such as DRAFT -> ACTIVE or ACTIVE -> RETIRED
+```
+
+Avoid `PATCH` for:
+
+```text
+full targetEntitySchema replacement
+full expressionSpecification replacement
+major specCharacteristic[] catalogue changes
+version identity changes
+ACTIVE runtime-contract mutation
+uncontrolled lifecycle/version transitions
+```
+
+Non-patchable fields:
+
+```text
+id
+href
+creationDate
+lastUpdate
+@baseType
+@schemaLocation
+@type
+```
+
+Conditionally patchable fields:
+
+```text
+description
+validFor
+relatedParty[]
+attachment[]
+constraint[]
+entitySpecRelationship[]
+isBundle
+name
+version
+lifecycleStatus
+specCharacteristic[]
+expressionSpecification
+targetEntitySchema
+```
+
+Although TMF permits `expressionSpecification`, `specCharacteristic`, `targetEntitySchema`, and `version` to be patchable, OD MS treats material changes to those fields as governed operations. For a mutable `DRAFT`, prefer `PUT` when replacing them materially. For an `ACTIVE` specification, create a new versioned `DRAFT` instead of mutating the active runtime contract.
+
+Example safe PATCH request:
+
+```http
+PATCH /optimisationManagement/v1/optimisationSpecification/optimisation-spec-surgical-routing-v1
+If-Match: "od-spec-v2"
+Content-Type: application/merge-patch+json
+```
+
+```json
+{
+  "description": "Updated description for the surgical routing optimisation specification.",
+  "validFor": {
+    "startDateTime": "2026-05-09T00:00:00Z",
+    "endDateTime": "2027-05-09T00:00:00Z"
+  }
+}
+```
+
+Example response:
+
+```http
+HTTP/1.1 200 OK
+ETag: "od-spec-v3"
+Last-Modified: 2026-05-09T05:35:00Z
+Content-Type: application/json
+Cache-Control: private, no-cache
+```
+
+The response body returns the full updated `OptimisationSpecification` representation.
+
+HATEOAS rule:
+
+Expose `patch` only when the caller is authorised and the current lifecycle state allows partial update. Normally:
+
+```text
+DRAFT   -> may expose patch
+ACTIVE  -> do not expose normal patch; may expose guarded retire action
+RETIRED -> do not expose patch
+```
+
+## HATEOAS link baseline:
+
+`_links` is an approved platform HATEOAS extension. It does not replace the TMF-style `href` field. OD MS must keep `href` as the standard resource hyperlink and use `_links` only to advertise valid next actions.
+
+`_links` must be lifecycle-aware and authorisation-aware. It must expose only actions valid for the current caller and current `lifecycleStatus`.
+
+Recommended link relations:
+
+```text
+self
+collection
+create
+patch
+replace
+delete
+activate
+retire
+createNewVersion
+```
+
+State-aware link baseline:
+
+| Lifecycle state | Links normally exposed |
+|---|---|
+| `DRAFT` | `self`, `collection`, `patch`, `replace`, `delete`, `activate` |
+| `ACTIVE` | `self`, `collection`, `retire`, `createNewVersion` |
+| `RETIRED` | `self`, `collection`, `createNewVersion` |
+
+Example `DRAFT` links:
+
+```json
+"_links": {
+  "self": {
+    "href": "/optimisationManagement/v1/optimisationSpecification/optimisation-spec-surgical-routing-v1",
+    "method": "GET"
+  },
+  "collection": {
+    "href": "/optimisationManagement/v1/optimisationSpecification",
+    "method": "GET"
+  },
+  "patch": {
+    "href": "/optimisationManagement/v1/optimisationSpecification/optimisation-spec-surgical-routing-v1",
+    "method": "PATCH"
+  },
+  "replace": {
+    "href": "/optimisationManagement/v1/optimisationSpecification/optimisation-spec-surgical-routing-v1",
+    "method": "PUT"
+  },
+  "delete": {
+    "href": "/optimisationManagement/v1/optimisationSpecification/optimisation-spec-surgical-routing-v1",
+    "method": "DELETE"
+  },
+  "activate": {
+    "href": "/optimisationManagement/v1/optimisationSpecification/optimisation-spec-surgical-routing-v1",
+    "method": "PATCH"
+  }
+}
+```
+
+Example `ACTIVE` links:
+
+```json
+"_links": {
+  "self": {
+    "href": "/optimisationManagement/v1/optimisationSpecification/optimisation-spec-surgical-routing-v1",
+    "method": "GET"
+  },
+  "collection": {
+    "href": "/optimisationManagement/v1/optimisationSpecification",
+    "method": "GET"
+  },
+  "retire": {
+    "href": "/optimisationManagement/v1/optimisationSpecification/optimisation-spec-surgical-routing-v1",
+    "method": "PATCH"
+  },
+  "createNewVersion": {
+    "href": "/optimisationManagement/v1/optimisationSpecification",
+    "method": "POST"
+  }
+}
+```
+
+Example `RETIRED` links:
+
+```json
+"_links": {
+  "self": {
+    "href": "/optimisationManagement/v1/optimisationSpecification/optimisation-spec-surgical-routing-v1",
+    "method": "GET"
+  },
+  "collection": {
+    "href": "/optimisationManagement/v1/optimisationSpecification",
+    "method": "GET"
+  },
+  "createNewVersion": {
+    "href": "/optimisationManagement/v1/optimisationSpecification",
+    "method": "POST"
+  }
+}
+```
 
 ## POST create OptimisationSpecification baseline:
 
