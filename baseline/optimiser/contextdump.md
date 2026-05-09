@@ -354,3 +354,16 @@ The OD MS status-code baseline is streamlined and TMF-aligned, with platform gov
 `501 Not Implemented` is retained because TMF921 OAS includes it and it is useful when an optional capability or approved platform extension, such as `PUT /optimisationSpecification/{id}`, is not implemented or enabled in a deployment.
 
 `422 Unprocessable Entity` is used when the request JSON is syntactically valid but violates OD MS `OptimisationSpecification` schema, lifecycle, activation, or governance rules.
+
+---
+
+## Baseline update - OD MS synchronous REST only
+
+OD MS is baselined as a synchronous REST API only for the initial optimiser architecture.
+
+- Do not include `/hub` subscription endpoints in the initial OD MS baseline.
+- Do not publish external `OptimisationSpecification` events by default.
+- OEX and OC MS query OD MS synchronously for active `OptimisationSpecification` resources and their `targetEntitySchema` contracts.
+- A future TMF-style hub/listener model may be added only when concrete requirements emerge for specification-change notifications.
+- This is acceptable because optimiser specifications support short-run optimisation models and the initial runtime path does not require OD events.
+

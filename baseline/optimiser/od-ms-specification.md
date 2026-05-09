@@ -939,3 +939,16 @@ best-candidate selection
 ```
 
 OD MS does not persist runtime `Optimisation` resources, does not write OC MS outbox records, does not consume Kafka worker outcomes, and does not project runtime results.
+
+---
+
+## Event and subscription posture:
+
+OD MS is baselined as a synchronous REST API only for the initial optimiser architecture.
+
+TMF-style hub/listener subscription support is not included in the initial OD MS baseline. OD MS does not expose `/hub` endpoints and does not publish external `OptimisationSpecification` events by default.
+
+This is a deliberate scope decision. Optimisation specifications support short-run optimisation models, and the initial runtime path can discover and validate against OD MS synchronously. OEX and OC MS may query OD MS directly for active `OptimisationSpecification` resources and their `targetEntitySchema` contracts.
+
+A future TMF-style `/hub` subscription model may be introduced if concrete requirements emerge for external notification of specification creation, activation, retirement, or catalogue changes. Until then, event support is deferred and must not be assumed by clients.
+
