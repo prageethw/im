@@ -262,10 +262,10 @@ OC MS validates:
 generic REST wrapper using its static API/OpenAPI contract
 referenced OptimisationSpecification exists in OD MS
 referenced OptimisationSpecification lifecycleStatus is ACTIVE
-expression.expressionValue.context.targets[] against OD MS targetSpecifications[]
-expression.expressionValue.context.constraints[] against OD MS constraintSpecifications[]
-expression.expressionValue.context.preferences[] against OD MS preferenceSpecifications[]
-context object shape and cardinality against OD MS contextSpecifications[]
+expression.expressionValue.context.targets[] against the ACTIVE OD MS OptimisationSpecification targetEntitySchema
+expression.expressionValue.context.constraints[] against the ACTIVE OD MS OptimisationSpecification targetEntitySchema
+expression.expressionValue.context.preferences[] against the ACTIVE OD MS OptimisationSpecification targetEntitySchema
+context object shape and cardinality against the ACTIVE OD MS OptimisationSpecification targetEntitySchema
 ```
 
 OC MS does not validate:
