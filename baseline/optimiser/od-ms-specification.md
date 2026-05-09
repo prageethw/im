@@ -1,16 +1,33 @@
-# OD MS / Optimisation Definition MS Specification:
+# OD MS / Optimisation Definition MS Specification
 
-## Service purpose:
+## 1. Service purpose
 
 Optimisation Definition MS (OD MS) owns the governed catalogue of `OptimisationSpecification` resources.
 
-An `OptimisationSpecification` defines the allowed shape, semantics, and validation contract for runtime `Optimisation` requests. It describes what an optimisation request may contain, including supported `context.targets[]`, `context.constraints[]`, and `context.preferences[]` structures.
+An `OptimisationSpecification` defines the allowed shape, semantics, lifecycle, and validation contract for runtime `Optimisation` requests. It describes what a runtime optimisation request may contain, including the required `expression.expressionValue.context` container and its `targets[]`, `constraints[]`, and `preferences[]` buckets.
 
-OD MS does not execute optimisation runs, evaluate solver feasibility, select candidates, invoke Gurobi, persist runtime `Optimisation` resources, or project runtime optimisation outcomes. Those runtime responsibilities belong to OSB MS, OC MS, workers, and the optimiser engine.
+External OD MS APIs are aligned to the TMF921 `IntentSpecification` resource and operation pattern, but the domain concept exposed by this optimiser architecture is `OptimisationSpecification`.
 
-External OD MS APIs are TMF921/TIO-aligned in structure and semantics, but the domain concept is `OptimisationSpecification` rather than `IntentSpecification`.
+OD MS does **not** execute optimisation runs, evaluate solver feasibility, select candidates, invoke Gurobi, persist runtime `Optimisation` resources, or project runtime optimisation outcomes. Those runtime responsibilities belong to OSB MS, OC MS, workers, and the optimiser engine.
 
-## Ownership:
+## 2. TMF alignment and platform extensions
+
+OD MS follows the TMF-style external resource model:
+
+- `href` remains the standard resource hyperlink.
+- `@type`, `@baseType`, `@schemaLocation`, and `@referredType` follow the TMF polymorphism and extension style.
+- Standard external operations are `GET`, `POST`, `PATCH`, and `DELETE`.
+- `PATCH` uses JSON Merge Patch style partial update semantics.
+
+Approved platform extensions:
+
+| Extension | Purpose | Guardrail |
+|---|---|---|
+| `PUT /optimisationSpecification/{id}` | Full replacement/finalisation of mutable `DRAFT` specifications. | Requires `If-Match`; not allowed for `ACTIVE` or `RETIRED`. |
+| `_links` | HATEOAS controls. | Does not replace `href`; lifecycle-aware and authorisation-aware. |
+| `ETag` / `If-Match` governance | Optimistic concurrency for unsafe existing-resource operations. | Required for `PUT`, `PATCH`, and `DELETE`. |
+
+## 3. Ownership
 
 OD MS owns:
 
@@ -42,9 +59,9 @@ Runtime optimisation outcome
 Runtime optimisation result projection
 ```
 
-## Endpoint set:
+## 4. Endpoint set
 
-OD MS exposes the TMF-aligned operation set for `OptimisationSpecification`:
+TMF-aligned operation set:
 
 ```http
 GET    /optimisationSpecification
@@ -54,19 +71,15 @@ PATCH  /optimisationSpecification/{id}
 DELETE /optimisationSpecification/{id}
 ```
 
-OD MS also exposes the following approved platform extension:
+Approved platform extension:
 
 ```http
 PUT    /optimisationSpecification/{id}
 ```
 
-`PUT` is retained as an approved platform extension for full replacement of mutable `DRAFT` `OptimisationSpecification` resources.
+OD MS does not expose runtime optimisation operations. Runtime operations belong to OSB MS and OC MS.
 
-`PATCH` is supported for TMF-style partial update compatibility. Use `PATCH` carefully. Do not use `PATCH` for material contract changes such as replacing `targetEntitySchema`, replacing `expressionSpecification`, changing the characteristic catalogue, changing version identity, or performing major lifecycle/version transitions unless the operation is explicitly designed and guarded. Prefer `PUT` for full replacement of a mutable `DRAFT` specification.
-
-OD MS does not expose runtime optimisation operations. Runtime operations belong to OC MS and OSB MS.
-
-## OptimisationSpecification resource shape:
+## 5. OptimisationSpecification resource shape
 
 `OptimisationSpecification` is the optimiser-domain equivalent of the TMF921 `IntentSpecification` resource.
 
@@ -93,11 +106,14 @@ entitySpecRelationship[]
 @type
 @baseType
 @schemaLocation
+_links
 ```
 
-The external `OptimisationSpecification` resource uses TMF-aligned structures only. Optimiser request-contract semantics are represented through `targetEntitySchema`, `expressionSpecification`, and `specCharacteristic[]`.
+`_links` is an approved HATEOAS platform extension. It does not replace the standard `href` field.
 
-## Field semantics:
+The external `OptimisationSpecification` resource must use only the TMF-aligned specification structures shown in the canonical field list. Optimiser request-contract semantics are represented through `targetEntitySchema`, `expressionSpecification`, and `specCharacteristic[]`.
+
+## 6. Field semantics
 
 | Field | Meaning |
 |---|---|
@@ -111,7 +127,7 @@ The external `OptimisationSpecification` resource uses TMF-aligned structures on
 | `lastUpdate` | Date/time the specification resource was last updated. |
 | `validFor` | Optional validity window for the specification. |
 | `isBundle` | TMF-style bundle indicator. Default should be `false` unless explicitly modelling a bundle. |
-| `specCharacteristic[]` | Discovery/catalogue metadata for supported optimisation fields and UI/OEX guidance. |
+| `specCharacteristic[]` | Discovery/catalogue metadata for supported optimisation fields and OEX/UI guidance. |
 | `expressionSpecification` | Defines the expression language and ontology IRI for runtime optimisation expressions. |
 | `targetEntitySchema` | Authoritative schema contract for runtime `Optimisation.expression.expressionValue`. |
 | `relatedParty[]` | Parties or roles associated with the specification. |
@@ -121,9 +137,9 @@ The external `OptimisationSpecification` resource uses TMF-aligned structures on
 | `@type` | TMF-style discriminator. Use `OptimisationSpecification`. |
 | `@baseType` | TMF-style base type. Use `EntitySpecification`. |
 | `@schemaLocation` | Optional schema location for platform extension details. |
+| `_links` | Approved HATEOAS extension containing valid next actions for the current caller and lifecycle state. |
 
-
-## TMF-aligned specification responsibility split:
+## 7. TMF-aligned specification responsibility split
 
 OD MS must keep the three TMF-aligned specification structures separate. They are related, but they do not mean the same thing.
 
@@ -141,9 +157,7 @@ expressionSpecification   = expression language + ontology IRI
 targetEntitySchema        = authoritative runtime expressionValue validation schema
 ```
 
-This separation is mandatory in OD MS examples and operation descriptions. Do not blend characteristic metadata with expression language metadata, and do not use either of them as a substitute for `targetEntitySchema`.
-
-## Optimisation context contract:
+## 8. Runtime optimisation context contract
 
 The runtime optimisation problem is carried inside:
 
@@ -184,10 +198,9 @@ Meaning:
 
 OD MS defines this runtime contract using `targetEntitySchema`. `specCharacteristic[]` may describe these fields for discovery, governance, examples, defaults, and OEX/UI prefill guidance, but it must not replace the authoritative schema.
 
+## 9. Embedded schema artifact: optimisation-expression-value.schema.json
 
-## Embedded schema artifact: optimisation-expression-value.schema.json
-
-To avoid ambiguity, the `targetEntitySchema.@schemaLocation` reference used by `OptimisationSpecification` must be backed by the governed schema content below. The schema is documented inside this OD MS specification baseline so readers do not have to locate a separate artifact to understand the contract.
+To avoid ambiguity, the `targetEntitySchema.@schemaLocation` reference used by `OptimisationSpecification` is backed by the governed schema content below. The schema is documented inside this OD MS specification baseline so readers do not have to locate a separate artifact to understand the contract.
 
 Logical schema artifact name:
 
@@ -244,7 +257,6 @@ context.preferences[] contains soft ranking or selection preferences.
         "constraints": {
           "description": "Hard mandatory requirements that must be satisfied for a valid solution. Concrete active OptimisationSpecification schemas decide whether this array may be empty for a given capability.",
           "type": "array",
-          "minItems": 1,
           "items": {
             "$ref": "#/$defs/constraint"
           }
@@ -313,15 +325,11 @@ context.preferences[] contains soft ranking or selection preferences.
 }
 ```
 
-
-
-## Embedded schema governance baseline:
+## 10. Embedded schema governance baseline
 
 The embedded `optimisation-expression-value.schema.json` validates the runtime `Optimisation.expression.expressionValue` structure only.
 
 It does not perform solver feasibility checks, rank candidates, calculate objective trade-offs, select the best candidate, or decide runtime optimisation outcomes. Those responsibilities remain with OC MS, workers, and the optimiser engine.
-
-Schema rules:
 
 | Schema element | Baseline rule |
 |---|---|
@@ -344,108 +352,463 @@ The reusable JSON Schema definition names intentionally stay short:
 }
 ```
 
-## Lifecycle model:
+## 11. Lifecycle model
 
 ```text
-DRAFT
-ACTIVE
-RETIRED
-```
-
-Rules:
-
-```text
-DRAFT:
-  Specification is being prepared.
-  Editable.
-  Not usable for new runtime Optimisation creation.
-
-ACTIVE:
-  Specification can be used by OC MS to validate and create runtime Optimisation resources.
-  ACTIVE specifications are immutable except controlled lifecycle/version transition metadata.
-
-RETIRED:
-  Specification is no longer usable for new runtime Optimisation creation.
-  It remains available for audit/history and existing Optimisation references.
+DRAFT -> ACTIVE -> RETIRED
 ```
 
 There is no `DEPRECATED` state in the optimiser baseline.
 
+| Lifecycle state | Meaning | Edit/runtime rule |
+|---|---|---|
+| `DRAFT` | Specification is being prepared. | Editable. Not usable for new runtime `Optimisation` creation. |
+| `ACTIVE` | Specification is approved for runtime use. | Used by OC MS to validate and create runtime `Optimisation` resources. Runtime contract is immutable. |
+| `RETIRED` | Specification is no longer available for new use. | Retained for audit/history and existing runtime references. Not usable for new runtime `Optimisation` creation. |
 
+## 12. Version activation and retirement governance
 
-## Operation governance:
+`POST /optimisationSpecification` always creates a `DRAFT` `OptimisationSpecification`.
 
-| Operation | Rule |
-|---|---|
-| `POST /optimisationSpecification` | Creates a new `DRAFT` specification by default unless an explicitly governed activation workflow is used. |
-| `PUT /optimisationSpecification/{id}` | Approved platform extension; full replacement of mutable `DRAFT` specifications only. |
-| `PATCH /optimisationSpecification/{id}` | Supported for TMF compatibility and acceptable for small governed lifecycle-only updates such as `ACTIVE -> RETIRED`. Do not use it for material contract replacement such as replacing `targetEntitySchema`, replacing `expressionSpecification`, changing the characteristic catalogue, or changing version identity. |
-| `DELETE /optimisationSpecification/{id}` | Allowed for `DRAFT`; for `ACTIVE`, prefer lifecycle transition to `RETIRED` rather than physical delete. |
-| `GET` | Available for all lifecycle states. |
+`DRAFT -> ACTIVE` is a governed activation transition on an existing `DRAFT` specification.
 
-When an `OptimisationSpecification` is `ACTIVE`, changing the runtime contract should normally require a new versioned `DRAFT` specification rather than mutation of the active one.
+Activation may be performed by:
 
-## POST create OptimisationSpecification baseline:
+- `PATCH`, when the draft body is already final and only lifecycle activation is required.
+- `PUT`, as an approved platform extension, when finalising/replacing the full mutable `DRAFT` contract as part of activation.
 
-```http
-POST /optimisationSpecification
-```
-
-Purpose:
-
-Creates a new `OptimisationSpecification` resource in `DRAFT` state by default, unless an explicitly governed activation workflow is used.
-
-Minimum TMF-aligned create fields:
-
-```text
-name
-@type
-```
-
-Recommended create body fields:
-
-```text
-description
-version
-validFor
-isBundle
-specCharacteristic[]
-expressionSpecification
-targetEntitySchema
-@baseType
-@schemaLocation
-```
-
-Client create requests must not supply server-controlled fields:
-
-```text
-id
-href
-creationDate
-lastUpdate
-```
-
-OD MS assigns server-controlled fields when the resource is created. The created resource returns the full `OptimisationSpecification` representation, including server-generated `id`, `href`, `creationDate`, `lastUpdate`, lifecycle state, and TMF-style polymorphism fields.
- This keeps runtime optimisation runs auditable, repeatable, and explainable.
-
-## Version activation rule:
+Activation rules:
 
 ```text
 Only one ACTIVE OptimisationSpecification is allowed per specificationKey.
 When a DRAFT specification is promoted to ACTIVE, OD MS must transactionally retire the previous ACTIVE specification with the same specificationKey.
+Activation validates the full OptimisationSpecification before committing the lifecycle transition.
 ```
 
-## Retirement governance baseline:
+`ACTIVE -> RETIRED` is a governed lifecycle transition. It may be performed by `PATCH` when the only change is `lifecycleStatus: RETIRED`. This is an acceptable small controlled lifecycle update, even though `PATCH` remains discouraged for material runtime-contract replacement.
 
-`ACTIVE -> RETIRED` is a governed lifecycle transition for an `OptimisationSpecification`.
+`PUT` is not the normal mechanism for retiring an `ACTIVE` specification. `PUT` remains the approved platform extension for full replacement/finalisation of mutable `DRAFT` specifications.
 
-Retirement may be performed with `PATCH /optimisationSpecification/{id}` when the only change is `lifecycleStatus: RETIRED`. This is an acceptable small controlled lifecycle update. PATCH remains discouraged for material runtime-contract replacement, including changes to `targetEntitySchema`, `expressionSpecification`, `specCharacteristic[]`, or version identity.
+Physical `DELETE` is not used for `ACTIVE` or `RETIRED` specifications.
 
-`PUT /optimisationSpecification/{id}` remains an approved platform extension for full replacement or finalisation of mutable `DRAFT` specifications. It is not the normal mechanism for retiring an `ACTIVE` specification.
+## 13. Operation governance summary
 
-Physical `DELETE` is not used for `ACTIVE` or `RETIRED` specifications. Retired specifications remain available for audit, historical traceability, and existing runtime `Optimisation` references, but cannot be used for new runtime `Optimisation` creation.
+| Operation | Rule |
+|---|---|
+| `GET /optimisationSpecification` | Lists visible specifications. Supports first-level filtering and `fields`. |
+| `GET /optimisationSpecification/{id}` | Retrieves one specification. Supports first-level `fields`. |
+| `POST /optimisationSpecification` | Creates a new `DRAFT` specification. |
+| `PUT /optimisationSpecification/{id}` | Approved platform extension. Full replacement/finalisation of mutable `DRAFT` only. Requires `If-Match`. |
+| `PATCH /optimisationSpecification/{id}` | TMF-compatible partial update. Requires `If-Match`. Discouraged for material runtime-contract replacement. |
+| `DELETE /optimisationSpecification/{id}` | Physical delete only for mutable `DRAFT`. Requires `If-Match`. |
 
-### Retirement example:
+## 14. Concurrency and cache governance
+
+Unsafe existing-resource operations require optimistic concurrency:
+
+```text
+PUT /optimisationSpecification/{id}
+PATCH /optimisationSpecification/{id}
+DELETE /optimisationSpecification/{id}
+```
+
+Required request header:
+
+```http
+If-Match: "<current-etag>"
+```
+
+Failure rules:
+
+| Condition | Response |
+|---|---|
+| Missing `If-Match` on unsafe existing-resource operation | `428 Precondition Required` |
+| Stale or mismatched `If-Match` | `412 Precondition Failed` |
+
+`POST /optimisationSpecification` creates a new server-assigned `DRAFT` resource and does not normally require `If-Match`. It returns an `ETag` for future updates.
+
+Successful GET responses include bounded private cache headers:
+
+```http
+Cache-Control: private, max-age=300
+ETag: "<current-resource-version>"
+```
+
+The only explicit client cache override documented by OD MS is:
+
+```http
+Cache-Control: no-cache
+```
+
+## 15. HATEOAS baseline
+
+`_links` is an approved HATEOAS platform extension. It is lifecycle-aware and authorisation-aware. OD MS must expose only the links that are valid for the current caller and current lifecycle state.
+
+`href` remains the standard TMF-style resource hyperlink and is not replaced by `_links`.
+
+Lifecycle link visibility baseline:
+
+| Lifecycle state | Links normally exposed |
+|---|---|
+| `DRAFT` | `self`, `collection`, `patch`, `replace`, `delete`, `activate` |
+| `ACTIVE` | `self`, `collection`, `retire`, `createNewVersion` |
+| `RETIRED` | `self`, `collection`, `createNewVersion` |
+
+Link relation meaning:
+
+| Link relation | Method | Meaning |
+|---|---|---|
+| `self` | `GET` | Retrieve this resource. |
+| `collection` | `GET` | Return to collection/list. |
+| `create` | `POST` | Create a new specification. Normally shown at collection level. |
+| `patch` | `PATCH` | TMF-compatible partial update where authorised. |
+| `replace` | `PUT` | Approved platform extension for full replacement of mutable `DRAFT`. |
+| `delete` | `DELETE` | Delete mutable `DRAFT`. |
+| `activate` | `PATCH` | Governed activation of a finalised `DRAFT`. |
+| `retire` | `PATCH` | Governed retirement of an `ACTIVE` specification. |
+| `createNewVersion` | `POST` | Create a new versioned `DRAFT` from an existing active/retired family. |
+
+## 16. Operation examples
+
+The examples below are internally consistent and should be used as the OD MS reference pattern.
+
+### 16.1 POST /optimisationSpecification creates DRAFT
+
+Request:
+
+```http
+POST /optimisationManagement/v1/optimisationSpecification
+Content-Type: application/json
+```
+
+```json
+{
+  "name": "Surgical Routing Optimisation Specification",
+  "description": "Defines the allowed optimisation request contract for surgical routing optimisation.",
+  "version": "1.0.0",
+  "validFor": {
+    "startDateTime": "2026-05-09T00:00:00Z"
+  },
+  "isBundle": false,
+  "specCharacteristic": [
+    {
+      "id": "SC-OPT-TARGETS-001",
+      "name": "targets",
+      "description": "Optimisation goals the optimiser tries to achieve.",
+      "valueType": "array",
+      "@type": "CharacteristicSpecification"
+    },
+    {
+      "id": "SC-OPT-CONSTRAINTS-001",
+      "name": "constraints",
+      "description": "Hard mandatory requirements that must be satisfied.",
+      "valueType": "array",
+      "@type": "CharacteristicSpecification"
+    },
+    {
+      "id": "SC-OPT-PREFERENCES-001",
+      "name": "preferences",
+      "description": "Soft ranking or selection preferences used to choose between valid outcomes.",
+      "valueType": "array",
+      "@type": "CharacteristicSpecification"
+    }
+  ],
+  "expressionSpecification": {
+    "@type": "ExpressionSpecification",
+    "expressionLanguage": "JsonLdExpression",
+    "iri": "https://example.com/ontology/optimisation/v1"
+  },
+  "targetEntitySchema": {
+    "@type": "TargetEntitySchema",
+    "@schemaLocation": "https://example.com/schema/optimisation/v1/optimisation-expression-value.schema.json"
+  },
+  "@type": "OptimisationSpecification",
+  "@baseType": "EntitySpecification",
+  "@schemaLocation": "https://example.com/schema/optimisation/v1/OptimisationSpecification.schema.json"
+}
+```
+
+Response:
+
+```http
+HTTP/1.1 201 Created
+Location: /optimisationManagement/v1/optimisationSpecification/optimisation-spec-surgical-routing-v1
+ETag: "od-spec-surgical-routing-v1-r1"
+Content-Type: application/json
+```
+
+```json
+{
+  "id": "optimisation-spec-surgical-routing-v1",
+  "href": "/optimisationManagement/v1/optimisationSpecification/optimisation-spec-surgical-routing-v1",
+  "name": "Surgical Routing Optimisation Specification",
+  "description": "Defines the allowed optimisation request contract for surgical routing optimisation.",
+  "version": "1.0.0",
+  "lifecycleStatus": "DRAFT",
+  "creationDate": "2026-05-09T04:10:00Z",
+  "lastUpdate": "2026-05-09T04:10:00Z",
+  "validFor": {
+    "startDateTime": "2026-05-09T00:00:00Z"
+  },
+  "isBundle": false,
+  "specCharacteristic": [
+    {
+      "id": "SC-OPT-TARGETS-001",
+      "name": "targets",
+      "description": "Optimisation goals the optimiser tries to achieve.",
+      "valueType": "array",
+      "@type": "CharacteristicSpecification"
+    },
+    {
+      "id": "SC-OPT-CONSTRAINTS-001",
+      "name": "constraints",
+      "description": "Hard mandatory requirements that must be satisfied.",
+      "valueType": "array",
+      "@type": "CharacteristicSpecification"
+    },
+    {
+      "id": "SC-OPT-PREFERENCES-001",
+      "name": "preferences",
+      "description": "Soft ranking or selection preferences used to choose between valid outcomes.",
+      "valueType": "array",
+      "@type": "CharacteristicSpecification"
+    }
+  ],
+  "expressionSpecification": {
+    "@type": "ExpressionSpecification",
+    "expressionLanguage": "JsonLdExpression",
+    "iri": "https://example.com/ontology/optimisation/v1"
+  },
+  "targetEntitySchema": {
+    "@type": "TargetEntitySchema",
+    "@schemaLocation": "https://example.com/schema/optimisation/v1/optimisation-expression-value.schema.json"
+  },
+  "@type": "OptimisationSpecification",
+  "@baseType": "EntitySpecification",
+  "@schemaLocation": "https://example.com/schema/optimisation/v1/OptimisationSpecification.schema.json",
+  "_links": {
+    "self": {
+      "href": "/optimisationManagement/v1/optimisationSpecification/optimisation-spec-surgical-routing-v1",
+      "method": "GET"
+    },
+    "collection": {
+      "href": "/optimisationManagement/v1/optimisationSpecification",
+      "method": "GET"
+    },
+    "patch": {
+      "href": "/optimisationManagement/v1/optimisationSpecification/optimisation-spec-surgical-routing-v1",
+      "method": "PATCH"
+    },
+    "replace": {
+      "href": "/optimisationManagement/v1/optimisationSpecification/optimisation-spec-surgical-routing-v1",
+      "method": "PUT"
+    },
+    "delete": {
+      "href": "/optimisationManagement/v1/optimisationSpecification/optimisation-spec-surgical-routing-v1",
+      "method": "DELETE"
+    },
+    "activate": {
+      "href": "/optimisationManagement/v1/optimisationSpecification/optimisation-spec-surgical-routing-v1",
+      "method": "PATCH"
+    }
+  }
+}
+```
+
+### 16.2 GET /optimisationSpecification list
+
+Request:
+
+```http
+GET /optimisationManagement/v1/optimisationSpecification?lifecycleStatus=ACTIVE&fields=id,href,name,version,lifecycleStatus
+Cache-Control: no-cache
+```
+
+Response:
+
+```http
+HTTP/1.1 200 OK
+Cache-Control: private, max-age=300
+ETag: "od-spec-list-r42"
+Content-Type: application/json
+```
+
+```json
+[
+  {
+    "id": "optimisation-spec-surgical-routing-v1",
+    "href": "/optimisationManagement/v1/optimisationSpecification/optimisation-spec-surgical-routing-v1",
+    "name": "Surgical Routing Optimisation Specification",
+    "version": "1.0.0",
+    "lifecycleStatus": "ACTIVE",
+    "@type": "OptimisationSpecification",
+    "_links": {
+      "self": {
+        "href": "/optimisationManagement/v1/optimisationSpecification/optimisation-spec-surgical-routing-v1",
+        "method": "GET"
+      },
+      "collection": {
+        "href": "/optimisationManagement/v1/optimisationSpecification",
+        "method": "GET"
+      },
+      "retire": {
+        "href": "/optimisationManagement/v1/optimisationSpecification/optimisation-spec-surgical-routing-v1",
+        "method": "PATCH"
+      },
+      "createNewVersion": {
+        "href": "/optimisationManagement/v1/optimisationSpecification",
+        "method": "POST"
+      }
+    }
+  }
+]
+```
+
+### 16.3 GET /optimisationSpecification/{id} retrieve ACTIVE
+
+Request:
+
+```http
+GET /optimisationManagement/v1/optimisationSpecification/optimisation-spec-surgical-routing-v1
+Cache-Control: no-cache
+```
+
+Response:
+
+```http
+HTTP/1.1 200 OK
+Cache-Control: private, max-age=300
+ETag: "od-spec-surgical-routing-v1-r4"
+Content-Type: application/json
+```
+
+```json
+{
+  "id": "optimisation-spec-surgical-routing-v1",
+  "href": "/optimisationManagement/v1/optimisationSpecification/optimisation-spec-surgical-routing-v1",
+  "name": "Surgical Routing Optimisation Specification",
+  "description": "Defines the allowed optimisation request contract for surgical routing optimisation.",
+  "version": "1.0.0",
+  "lifecycleStatus": "ACTIVE",
+  "creationDate": "2026-05-09T04:10:00Z",
+  "lastUpdate": "2026-05-09T05:00:00Z",
+  "validFor": {
+    "startDateTime": "2026-05-09T00:00:00Z"
+  },
+  "isBundle": false,
+  "specCharacteristic": [
+    {
+      "id": "SC-OPT-TARGETS-001",
+      "name": "targets",
+      "description": "Optimisation goals the optimiser tries to achieve.",
+      "valueType": "array",
+      "@type": "CharacteristicSpecification"
+    },
+    {
+      "id": "SC-OPT-CONSTRAINTS-001",
+      "name": "constraints",
+      "description": "Hard mandatory requirements that must be satisfied.",
+      "valueType": "array",
+      "@type": "CharacteristicSpecification"
+    },
+    {
+      "id": "SC-OPT-PREFERENCES-001",
+      "name": "preferences",
+      "description": "Soft ranking or selection preferences used to choose between valid outcomes.",
+      "valueType": "array",
+      "@type": "CharacteristicSpecification"
+    }
+  ],
+  "expressionSpecification": {
+    "@type": "ExpressionSpecification",
+    "expressionLanguage": "JsonLdExpression",
+    "iri": "https://example.com/ontology/optimisation/v1"
+  },
+  "targetEntitySchema": {
+    "@type": "TargetEntitySchema",
+    "@schemaLocation": "https://example.com/schema/optimisation/v1/optimisation-expression-value.schema.json"
+  },
+  "@type": "OptimisationSpecification",
+  "@baseType": "EntitySpecification",
+  "@schemaLocation": "https://example.com/schema/optimisation/v1/OptimisationSpecification.schema.json",
+  "_links": {
+    "self": {
+      "href": "/optimisationManagement/v1/optimisationSpecification/optimisation-spec-surgical-routing-v1",
+      "method": "GET"
+    },
+    "collection": {
+      "href": "/optimisationManagement/v1/optimisationSpecification",
+      "method": "GET"
+    },
+    "retire": {
+      "href": "/optimisationManagement/v1/optimisationSpecification/optimisation-spec-surgical-routing-v1",
+      "method": "PATCH"
+    },
+    "createNewVersion": {
+      "href": "/optimisationManagement/v1/optimisationSpecification",
+      "method": "POST"
+    }
+  }
+}
+```
+
+### 16.4 PATCH activation of finalised DRAFT
+
+Request:
+
+```http
+PATCH /optimisationManagement/v1/optimisationSpecification/optimisation-spec-surgical-routing-v1
+If-Match: "od-spec-surgical-routing-v1-r3"
+Content-Type: application/merge-patch+json
+```
+
+```json
+{
+  "lifecycleStatus": "ACTIVE"
+}
+```
+
+Response:
+
+```http
+HTTP/1.1 200 OK
+ETag: "od-spec-surgical-routing-v1-r4"
+Content-Type: application/json
+```
+
+Response body returns the full activated resource. OD MS transactionally retires the previous `ACTIVE` version in the same `specificationKey` family.
+
+### 16.5 PUT finalise and activate mutable DRAFT
+
+Request:
+
+```http
+PUT /optimisationManagement/v1/optimisationSpecification/optimisation-spec-surgical-routing-v1
+If-Match: "od-spec-surgical-routing-v1-r3"
+Content-Type: application/json
+```
+
+The request body contains the full replacement `OptimisationSpecification`, including:
+
+```json
+{
+  "lifecycleStatus": "ACTIVE"
+}
+```
+
+Response:
+
+```http
+HTTP/1.1 200 OK
+ETag: "od-spec-surgical-routing-v1-r4"
+Content-Type: application/json
+```
+
+Response body returns the full activated resource. `PUT` is an approved platform extension and is allowed only for mutable `DRAFT` specifications.
+
+### 16.6 PATCH retirement of ACTIVE
+
+Request:
 
 ```http
 PATCH /optimisationManagement/v1/optimisationSpecification/optimisation-spec-surgical-routing-v1
@@ -459,57 +822,95 @@ Content-Type: application/merge-patch+json
 }
 ```
 
+Response:
+
 ```http
 HTTP/1.1 200 OK
 ETag: "od-spec-surgical-routing-v1-r5"
 Content-Type: application/json
 ```
 
-The response returns the full retired `OptimisationSpecification` representation. Its `_links` should expose only lifecycle-authorised read/new-version actions, such as `self`, `collection`, and `createNewVersion`.
+Response body returns the full retired `OptimisationSpecification`. Retired specifications expose only lifecycle-authorised read/new-version links such as `self`, `collection`, and `createNewVersion`.
 
-## Definition versus runtime model:
+### 16.7 DELETE mutable DRAFT
 
-OD MS uses TMF-aligned specification structures:
+Request:
 
-```text
-expressionSpecification:
-  Defines the supported expression language and ontology IRI.
-  Does not contain runtime optimisation values.
-
-targetEntitySchema:
-  Defines the authoritative JSON/schema contract for runtime expression.expressionValue.
-  Covers expression.expressionValue.context.targets[], constraints[], and preferences[].
-  May define required fields, types, cardinality, allowed values, nested candidate resource shape, and object schemas.
-
-specCharacteristic[]:
-  Provides catalogue/discovery metadata and optional examples/defaults for supported fields.
-  Helps OEX/UI consumers understand supported optimisation targets, constraints, and preferences.
-  Does not replace targetEntitySchema as the validation source.
+```http
+DELETE /optimisationManagement/v1/optimisationSpecification/optimisation-spec-surgical-routing-v1
+If-Match: "od-spec-surgical-routing-v1-r1"
 ```
 
-OC MS uses runtime `Optimisation` expression values:
+Response:
 
-```text
-expression.expressionValue.context.targets[]:
-  Actual caller-supplied or defaulted target goals/thresholds.
-
-expression.expressionValue.context.constraints[]:
-  Actual caller-supplied hard constraint values.
-
-expression.expressionValue.context.preferences[]:
-  Actual caller-supplied soft preference values.
+```http
+HTTP/1.1 204 No Content
 ```
 
-Validation mapping:
+Physical delete is allowed only for mutable `DRAFT` specifications. `ACTIVE` and `RETIRED` specifications are retained.
 
-```text
-runtime expression.expressionValue.context -> OD MS targetEntitySchema
-runtime context.targets[]                  -> targetEntitySchema properties for targets[]
-runtime context.constraints[]              -> targetEntitySchema properties for constraints[]
-runtime context.preferences[]              -> targetEntitySchema properties for preferences[]
+## 17. Error handling baseline
+
+OD MS uses TMF-style error responses with platform-specific error codes.
+
+Core status codes:
+
+| Status | Use |
+|---|---|
+| `200 OK` | Successful `GET`, `PATCH`, or `PUT` with body. |
+| `201 Created` | Successful `POST`. |
+| `204 No Content` | Successful `DELETE`. |
+| `400 Bad Request` | Invalid JSON, malformed request, invalid query parameter. |
+| `401 Unauthorized` | Missing or invalid authentication. |
+| `403 Forbidden` | Authenticated caller is not allowed. |
+| `404 Not Found` | Resource not found or not visible to caller. |
+| `405 Method Not Allowed` | HTTP method not supported for this resource. |
+| `409 Conflict` | Lifecycle/version conflict, including concurrent activation conflict. |
+| `412 Precondition Failed` | `If-Match` is stale or mismatched. |
+| `415 Unsupported Media Type` | Unsupported request content type. |
+| `422 Unprocessable Entity` | Valid JSON violates OD MS `OptimisationSpecification` contract. |
+| `428 Precondition Required` | Missing required `If-Match` on unsafe existing-resource operation. |
+| `500 Internal Server Error` | Unexpected OD MS failure. |
+| `503 Service Unavailable` | OD MS temporarily unavailable. |
+
+Standard error body:
+
+```json
+{
+  "code": "OPTIMISATION_SPEC_CONTRACT_VIOLATION",
+  "reason": "OptimisationSpecification contract violation",
+  "message": "targetEntitySchema must define expressionValue.context.targets, expressionValue.context.constraints, and expressionValue.context.preferences.",
+  "status": 422,
+  "@type": "Error"
+}
 ```
 
-## Contract validation rules:
+## 18. Contract violation response
+
+Use `422 Unprocessable Entity` when the JSON is structurally valid but violates the `ACTIVE` `OptimisationSpecification` request contract.
+
+```http
+HTTP/1.1 422 Unprocessable Entity
+Content-Type: application/json
+```
+
+```json
+{
+  "code": "OPTIMISATION_CONTRACT_VIOLATION",
+  "reason": "Optimisation request violates specification contract",
+  "message": "The optimisation expression.expressionValue.context does not satisfy the active OptimisationSpecification targetEntitySchema contract.",
+  "status": 422,
+  "@type": "Error"
+}
+```
+
+## 19. Relationship to OC MS
+
+```text
+OD MS: defines what is allowed.
+OC MS: stores what was accepted at runtime.
+Worker/model: decides feasibility and returns COMPLETED, INFEASIBLE, or FAILED.
+```
 
 OC MS validates runtime `Optimisation` requests against the `targetEntitySchema` of the `ACTIVE` `OptimisationSpecification`.
 
@@ -534,87 +935,6 @@ candidate ranking
 metric-vs-constraint fit
 objective trade-off evaluation
 best-candidate selection
-```
-
-## Canonical OptimisationSpecification example:
-
-```json
-{
-  "id": "os-7f3a9c21",
-  "href": "/optimisationSpecification/os-7f3a9c21",
-  "name": "Hospital surgical slice path optimisation",
-  "description": "Defines the request contract for hospital surgical slice path selection optimisation.",
-  "version": "1.0",
-  "lifecycleStatus": "ACTIVE",
-  "creationDate": "2026-05-02T01:00:00Z",
-  "lastUpdate": "2026-05-02T02:00:00Z",
-  "validFor": {
-    "startDateTime": "2026-05-02T00:00:00Z"
-  },
-  "isBundle": false,
-  "expressionSpecification": {
-    "@type": "ExpressionSpecification",
-    "expressionLanguage": "JSON-LD",
-    "iri": "https://example.com/ontology/optimisation/v1"
-  },
-  "targetEntitySchema": {
-    "@type": "TargetEntitySchema",
-    "@schemaLocation": "https://example.com/schema/optimisation/v1/optimisation-expression-value.schema.json"
-  },
-  "specCharacteristic": [
-    {
-      "id": "SC-OPT-TARGETS-001",
-      "name": "targets",
-      "description": "Optimisation goals the optimiser tries to achieve.",
-      "valueType": "array",
-      "@type": "CharacteristicSpecification"
-    },
-    {
-      "id": "SC-OPT-CONSTRAINTS-001",
-      "name": "constraints",
-      "description": "Hard mandatory requirements that must be satisfied.",
-      "valueType": "array",
-      "@type": "CharacteristicSpecification"
-    },
-    {
-      "id": "SC-OPT-PREFERENCES-001",
-      "name": "preferences",
-      "description": "Soft ranking or selection preferences used to choose between valid outcomes.",
-      "valueType": "array",
-      "@type": "CharacteristicSpecification"
-    }
-  ],
-  "@type": "OptimisationSpecification",
-  "@baseType": "EntitySpecification",
-  "@schemaLocation": "/schema/OptimisationSpecification.schema.json"
-}
-```
-
-## Contract violation response:
-
-Use `422 Unprocessable Entity` when the JSON is structurally valid but violates the `ACTIVE` `OptimisationSpecification` request contract.
-
-```http
-HTTP/1.1 422 Unprocessable Entity
-Content-Type: application/json
-```
-
-```json
-{
-  "code": "OPTIMISATION_CONTRACT_VIOLATION",
-  "reason": "Optimisation request violates specification contract",
-  "message": "The optimisation expression.expressionValue.context does not satisfy the active OptimisationSpecification targetEntitySchema contract.",
-  "status": 422,
-  "@type": "Error"
-}
-```
-
-## Relationship to OC MS:
-
-```text
-OD MS: defines what is allowed.
-OC MS: stores what was accepted at runtime.
-Worker/model: decides feasibility and returns SUCCESS, INFEASIBLE, or FAILURE.
 ```
 
 OD MS does not persist runtime `Optimisation` resources, does not write OC MS outbox records, does not consume Kafka worker outcomes, and does not project runtime results.

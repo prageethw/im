@@ -319,3 +319,22 @@ Schema rules:
 | `context.constraints[]` | Required array for hard mandatory requirements; whether it may be empty is governed by the concrete active `OptimisationSpecification.targetEntitySchema`. |
 | `context.preferences[]` | Required array for soft ranking/selection preferences; may be empty. |
 | `$defs` | Keep JSON Schema `$defs` and short reusable names `target`, `constraint`, and `preference`. |
+
+---
+
+## OD MS baseline update — operation examples consistency cleanup
+
+The OD MS specification has been cleaned so all operation examples consistently apply the baselined governance rules:
+
+- `POST /optimisationSpecification` always creates `DRAFT` and returns `201 Created`, `Location`, `ETag`, and the full resource body.
+- `GET /optimisationSpecification` and `GET /optimisationSpecification/{id}` return `Cache-Control: private, max-age=300` and `ETag`; the only documented cache override is `Cache-Control: no-cache`.
+- Unsafe existing-resource operations (`PUT`, `PATCH`, `DELETE`) require `If-Match`.
+- Missing `If-Match` returns `428 Precondition Required`; stale/mismatched `If-Match` returns `412 Precondition Failed`.
+- `PUT /optimisationSpecification/{id}` is an approved platform extension for full replacement/finalisation of mutable `DRAFT` specifications only.
+- `PATCH /optimisationSpecification/{id}` remains TMF-compatible but discouraged for material runtime-contract replacement.
+- `PATCH` is acceptable for small controlled lifecycle-only transitions, including `DRAFT -> ACTIVE` activation when the draft body is already final and `ACTIVE -> RETIRED` retirement.
+- Activation validates the full `OptimisationSpecification` and atomically retires the previously `ACTIVE` version in the same `specificationKey` family.
+- Physical `DELETE` is allowed only for mutable `DRAFT`; `ACTIVE` and `RETIRED` specifications are retained.
+- `_links` is a lifecycle-aware and authorisation-aware HATEOAS platform extension. `href` remains the standard TMF-style resource hyperlink.
+- HATEOAS link visibility remains: `DRAFT -> self, collection, patch, replace, delete, activate`; `ACTIVE -> self, collection, retire, createNewVersion`; `RETIRED -> self, collection, createNewVersion`.
+- The embedded `optimisation-expression-value.schema.json` remains in the OD MS specification file and keeps `$defs` with short names `target`, `constraint`, and `preference`.
