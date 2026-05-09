@@ -1,16 +1,14 @@
-# OSB MS / Optimisation Screen Builder MS Design:
+# OSB MS / Optimisation Screen Builder MS Design
 
-## Service purpose:
+## Service purpose
 
-OSB MS means Optimisation Screen Builder MS.
-
-OSB MS is the context-aware OEX facade / backend-for-frontend service for optimisation experiences.
+OSB MS means Optimisation Screen Builder MS. OSB MS is the context-aware OEX facade / backend-for-frontend service for optimisation experiences.
 
 OSB MS sits behind OGW and receives user context from the User Context JWT passed by OGW. It shapes the OEX optimisation experience and calls backend optimisation domain APIs through NGW.
 
 OSB MS initially supports runtime optimisation journeys through OC MS. It later supports catalogue/specification journeys through OD MS.
 
-## Ownership boundary:
+## Ownership boundary
 
 OSB MS owns:
 
@@ -41,25 +39,18 @@ OC MS runtime lifecycle governance
 Source-of-truth ownership:
 
 ```text
-OD MS:
-  owns OptimisationSpecification definitions.
-
-OC MS:
-  owns runtime Optimisation resources.
-
-OSB MS:
-  owns OEX experience/context-aware facade behaviour.
+OD MS: owns OptimisationSpecification definitions.
+OC MS: owns runtime Optimisation resources.
+OSB MS: owns OEX experience/context-aware facade behaviour.
 ```
 
-## API compliance:
+## API compliance
 
-OSB APIs are private/OEX experience APIs and do not need to be TMF-compliant.
-
-NGW-exposed backend OD MS and OC MS APIs remain TMF-compliant.
+OSB APIs are private/OEX experience APIs and do not need to be TMF-compliant. NGW-exposed backend OD MS and OC MS APIs remain TMF/TIO-aligned while using Optimisation as the domain concept.
 
 OSB MS must not expose backend OD/OC resource contracts directly unless the UI journey explicitly needs that shape.
 
-## Recommended namespace:
+## Recommended namespace
 
 ```http
 /optimisationExperience/v1
@@ -74,180 +65,60 @@ Avoid using backend resource namespaces directly from OSB:
 
 Those belong to OC MS and OD MS behind NGW.
 
-## Phase one endpoint set:
+## Phase one endpoint set
 
 ```http
 GET  /optimisationExperience/v1/home
 GET  /optimisationExperience/v1/capabilities
 GET  /optimisationExperience/v1/capabilities/{capabilityId}/request-form
-
 POST /optimisationExperience/v1/optimisations
 GET  /optimisationExperience/v1/optimisations
 GET  /optimisationExperience/v1/optimisations/{id}
-
 POST /optimisationExperience/v1/optimisations/{id}/cancellation
 POST /optimisationExperience/v1/optimisations/{id}/retrial
 ```
 
-## Endpoint purpose:
+## Runtime optimisation flow
 
-| Endpoint | Purpose |
-|---|---|
-| `GET /optimisationExperience/v1/home` | Returns OEX optimisation landing-page model. |
-| `GET /optimisationExperience/v1/capabilities` | Returns context-filtered optimisation capabilities visible to the user. |
-| `GET /optimisationExperience/v1/capabilities/{capabilityId}/request-form` | Returns UI form model generated from the ACTIVE OptimisationSpecification. |
-| `POST /optimisationExperience/v1/optimisations` | Creates runtime optimisation by calling NGW -> OC MS. |
-| `GET /optimisationExperience/v1/optimisations` | Lists runtime optimisations visible to the user/context. |
-| `GET /optimisationExperience/v1/optimisations/{id}` | Returns UI-friendly runtime optimisation detail. |
-| `POST /optimisationExperience/v1/optimisations/{id}/cancellation` | Context-aware cancellation action mapped to OC MS cancellation. |
-| `POST /optimisationExperience/v1/optimisations/{id}/retrial` | Context-aware retrial action mapped to OC MS retrial. |
-
-## Phase two catalogue endpoint set:
-
-Catalogue management is internal and governed.
-
-```http
-GET  /optimisationExperience/v1/catalogue
-GET  /optimisationExperience/v1/catalogue/{specificationId}
-GET  /optimisationExperience/v1/catalogue/{specificationId}/editor-form
-
-POST /optimisationExperience/v1/catalogue
-PUT  /optimisationExperience/v1/catalogue/{specificationId}
-
-POST /optimisationExperience/v1/catalogue/{specificationId}/activation
-POST /optimisationExperience/v1/catalogue/{specificationId}/retirement
+```text
+User -> OEX UI -> OGW -> OSB MS -> NGW -> OC MS
 ```
 
-## Catalogue security rule:
+OSB MS must preserve the runtime expression shape expected by OC MS:
+
+```text
+expression.expressionValue.context.targets[]
+expression.expressionValue.context.constraints[]
+expression.expressionValue.context.preferences[]
+```
+
+## Catalogue/specification flow
+
+```text
+User -> OEX UI -> OGW -> OSB MS -> NGW -> OD MS
+```
 
 Only approved optimisation domain engineers can access catalogue write, activation, and retirement journeys.
 
-OSB MS checks user context and role claims from the User Context JWT.
+## Security baseline
 
-OD MS remains the source of truth and must enforce backend authorisation as well.
-
-Catalogue changes are made only after agreement with the broader E2E teams that own, consume, or are impacted by the optimisation capability.
-
-General users and runtime consumers cannot self-author new OptimisationSpecification records through OSB MS.
-
-## Context awareness:
-
-OSB MS uses the User Context JWT passed by OGW to shape the experience.
-
-Examples:
-
-```text
-filter visible optimisation capabilities
-filter visible runtime optimisation records
-determine whether cancellation action is shown
-determine whether retrial action is shown
-hide catalogue-management journeys unless the user has approved optimisation domain engineer access
-carry source/user context to backend calls where approved
-shape UI labels, warnings, allowed actions, and screen sections
-```
-
-OSB MS must not trust UI-supplied role decisions. It must use trusted claims from the User Context JWT and backend authorisation decisions from OD MS / OC MS.
-
-## Runtime optimisation flow:
-
-```text
-User
--> OEX UI
--> OGW
--> OSB MS
--> NGW
--> OC MS
-```
-
-Detailed flow:
-
-```text
-1. User opens the OEX optimisation experience.
-2. OEX UI calls OGW.
-3. OGW invokes OSB MS using mTLS and User Context JWT.
-4. OSB MS reads authorised user/context claims.
-5. OSB MS shapes the runtime request/view/action model.
-6. OSB MS calls NGW using mTLS and OAuth2 system-to-system.
-7. NGW calls OC MS.
-8. OC MS validates and manages runtime Optimisation as source of truth.
-9. OSB MS returns a UI-friendly response to OEX UI through OGW.
-```
-
-## Catalogue/specification flow:
-
-```text
-User
--> OEX UI
--> OGW
--> OSB MS
--> NGW
--> OD MS
-```
-
-Detailed flow:
-
-```text
-1. User opens catalogue/specification journey in OEX UI.
-2. OGW invokes OSB MS using mTLS and User Context JWT.
-3. OSB MS checks whether the user has approved optimisation domain engineer access.
-4. OSB MS calls NGW using mTLS and OAuth2 system-to-system.
-5. NGW calls OD MS.
-6. OD MS enforces OptimisationSpecification source-of-truth validation and authorisation.
-7. OSB MS returns a UI-friendly catalogue or editor response.
-```
-
-## Security baseline:
-
-### OGW -> OSB MS:
+### OGW -> OSB MS
 
 ```text
 mTLS
 User Context JWT
 ```
 
-Controls:
-
-```text
-OGW authenticates to OSB MS.
-OSB MS validates User Context JWT signature, issuer, audience, expiry, and required claims.
-OSB MS rejects missing, expired, malformed, or unauthorised context tokens.
-OSB MS uses the User Context JWT only for authorised context-aware experience decisions.
-```
-
-### OSB MS -> NGW:
+### OSB MS -> NGW
 
 ```text
 mTLS
 OAuth2 system-to-system
 ```
 
-Controls:
-
-```text
-OSB MS authenticates to NGW as an approved service identity.
-NGW authorises OSB MS to call only required backend optimisation APIs.
 OSB MS does not bypass NGW to call OD MS or OC MS directly unless explicitly approved by architecture/security governance.
-```
 
-### Infrastructure access:
-
-OSB MS should not require a database, cache, or Kafka integration in the initial baseline.
-
-If OSB MS later integrates with any database, cache, Kafka topic, object storage, queue, search index, or other platform infrastructure, the OSB MS design brief must explicitly capture:
-
-```text
-authenticated service identity
-least-privilege authorisation
-encrypted connectivity, including mTLS where supported and appropriate
-resource-level access scoping
-no broad wildcard/admin/root access by default
-approved secret/certificate management and rotation
-environment-scoped principals/roles
-audit and monitoring of access failures and privileged operations
-clear ownership of producer/consumer/read/write permissions where relevant
-```
-
-## Backend mapping:
+## Backend mapping
 
 | OSB endpoint | Backend mapping |
 |---|---|
@@ -260,7 +131,7 @@ clear ownership of producer/consumer/read/write permissions where relevant
 | `POST /optimisationExperience/v1/optimisations/{id}/cancellation` | NGW -> OC MS `POST /optimisation/{id}/cancellation`. |
 | `POST /optimisationExperience/v1/optimisations/{id}/retrial` | NGW -> OC MS `POST /optimisation/{id}/retrial`. |
 
-## Concurrency handling:
+## Concurrency handling
 
 OSB MS must preserve backend ETag semantics for unsafe runtime operations.
 
@@ -270,144 +141,4 @@ For cancellation and retrial, OSB MS forwards If-Match to OC MS through NGW.
 OC MS remains the concurrency source of truth.
 ```
 
-Failure mapping:
-
-```text
-Missing If-Match from backend requirement -> surface as precondition-required UI/action error.
-Stale ETag -> surface as stale-resource UI/action error.
-Backend 412/428 must not be hidden as generic failure.
-```
-
-## Error handling:
-
-OSB MS should convert backend errors into UI-friendly error models while preserving useful error code, reason, correlation id, and status.
-
-OSB MS must not hide backend distinction between:
-
-```text
-400 malformed request
-401 unauthenticated
-403 unauthorised
-404 not found
-412 precondition failed
-422 optimisation contract violation
-500/502/503/504 platform failure
-```
-
-For runtime optimisation:
-
-```text
-422 OPTIMISATION_CONTRACT_VIOLATION is a request-contract validation failure from OC MS.
-INFEASIBLE is an optimisation outcome from the worker/model projected by OC MS.
-```
-
-## Observability:
-
-OSB MS must log and propagate correlation context.
-
-Baseline telemetry:
-
-```text
-request id / correlation id
-user context subject or approved non-sensitive user reference
-capability id
-optimisation id where applicable
-backend dependency called
-backend status code
-latency
-authorisation decision result
-error code/reason
-```
-
-Sensitive claims and tokens must not be logged.
-
-## Phase baseline:
-
-Phase one:
-
-```text
-home
-capability discovery
-request-form generation
-runtime optimisation create/list/detail
-cancellation
-retrial
-```
-
-Phase two:
-
-```text
-catalogue list/detail/editor-form
-catalogue create/update
-catalogue activation
-catalogue retirement
-approved optimisation domain engineer journeys
-```
-
-## Baseline timestamp:
-
-```text
-2026-05-03T23:43:48
-```
-
----
-
-## Access path:
-
-The agreed OSB access path is aligned with the E2E solution brief:
-
-```text
-User
--> OEX UI
--> OGW
--> OSB MS (OEX API)
--> NGW
--> OC MS / OD MS
-```
-
-Runtime execution then continues from OC MS through OD MS, OC MS DB, OC MS Outbox, Kafka, Python/Gurobi Worker, Gurobi Optimizer, Kafka, OC MS Inbox, and OC MS DB.
-
-Meaning:
-
-```text
-User:
-  Uses OEX UI.
-
-OEX UI -> OGW:
-  OEX UI reaches the optimisation experience through OGW.
-
-OGW -> OSB MS (OEX API):
-  OGW invokes OSB MS (OEX API) using mTLS and User Context JWT.
-
-OSB MS (OEX API) -> NGW:
-  OSB MS calls NGW using mTLS and OAuth2 system-to-system.
-
-NGW -> OC MS / OD MS:
-  NGW exposes the backend TMF-compliant optimisation APIs.
-```
-
----
-
-## Runtime E2E alignment baseline:
-
-OSB MS (OEX API) participates in the E2E runtime path as the OEX-facing facade before NGW:
-
-```text
-User
--> OGW
--> OSB MS (OEX API)
--> NGW
--> OC MS
--> OD MS
--> OC MS DB
--> OC MS Outbox
--> Kafka
--> Python/Gurobi Worker
--> Gurobi Optimizer
--> Kafka
--> OC MS Inbox
--> OC MS DB
--> User polls GET /optimisation/{id}
-```
-
-OSB MS (OEX API) owns user-context-aware experience shaping only. OC MS owns runtime Optimisation. OD MS owns OptimisationSpecification. Kafka, Python/Gurobi Worker, and Gurobi Optimizer are not owned by OSB MS.
+Backend `412` and `428` must not be hidden as generic failures.
