@@ -54,3 +54,17 @@ Merged updates applied during restoration:
 ## Baseline update — E2E use case numbering
 
 The `optimisation-e2e-solution-brief.md` use case view now includes a `No.` column with sequential numbers 1–9 for the E2E use cases. The use case names, actors, summaries, and outcomes were preserved; only numbering was added for easier cross-reference to process-view sections.
+
+
+## Baseline update — E2E flow numbering
+
+- Updated `optimisation-e2e-solution-brief.md` so logical flow and process-flow arrow summaries are numbered.
+- The logical integration model now lists each hop as a numbered step.
+- Key logical relationships are numbered 1 to 10.
+- Process-view summary flows now show numbered hops before the existing detailed numbered flows.
+- No service responsibility or API semantics were changed by this update.
+
+
+## E2E solution brief summary cleanup — 2026-05-09
+
+Removed low-level OD MS field-responsibility details from the Solution summary of `optimisation-e2e-solution-brief.md`. Detailed OD MS contract responsibilities remain in the elaboration/appendix sections and OD MS specification.

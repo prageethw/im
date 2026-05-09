@@ -38,9 +38,6 @@ The solution separates the **definition of optimisation capabilities** from the 
 - OD MS exposes a synchronous REST API only in the initial baseline. `/hub` subscription and outbound `OptimisationSpecification` events are deferred until concrete requirements emerge.
 - OD MS `OptimisationSpecification` is the optimiser-domain equivalent of TMF `IntentSpecification`.
 - OD MS uses TMF-aligned structures: `specCharacteristic[]`, `expressionSpecification`, and `targetEntitySchema`.
-- `targetEntitySchema` is the authoritative validation contract for runtime `Optimisation.expression.expressionValue.context`.
-- `specCharacteristic[]` is catalogue/discovery metadata only.
-- `expressionSpecification` defines the expression language and ontology IRI.
 - OC MS validates the runtime request wrapper and the active OD MS request contract, then creates and drives runtime execution asynchronously through Kafka.
 - Kafka carries worker instructions and outcomes, with a dedicated DLQ for unprocessable events.
 - The Python/Gurobi worker consumes `EXECUTE` or `CANCEL` instructions, runs or cancels optimisation work, and returns `SUCCESS`, `INFEASIBLE`, or `FAILURE` outcomes.
@@ -78,22 +75,30 @@ The Python/Gurobi worker is responsible for executing the internal deterministic
 The logical integration model is:
 
 ```text
-User -> OEX UI -> Microsoft Entra ID SSO -> OGW -> OSB MS (OEX API) -> NGW -> OD MS / OC MS -> Kafka -> Python/Gurobi Worker -> Gurobi Optimiser
+1. User -> OEX UI
+2. OEX UI -> Microsoft Entra ID SSO
+3. Microsoft Entra ID SSO -> OGW
+4. OGW -> OSB MS (OEX API)
+5. OSB MS (OEX API) -> NGW
+6. NGW -> OD MS / OC MS
+7. OC MS -> Kafka
+8. Kafka -> Python/Gurobi Worker
+9. Python/Gurobi Worker -> Gurobi Optimiser
 ```
 
 Key logical relationships:
 
 ```text
-User -> Microsoft Entra ID: User authenticates using SSO after ACG approval.
-UI -> OGW: OGW acts as the user-context-aware gateway for OEX APIs.
-OGW -> OSB MS: Uses mTLS and User Context JWT.
-OSB MS -> NGW: Uses mTLS and OAuth2 system-to-system.
-NGW -> OD MS: Uses mTLS to expose OptimisationSpecification APIs.
-NGW -> OC MS: Uses mTLS to expose runtime Optimisation APIs.
-OC MS -> OD MS: Uses mTLS for internal service-to-service validation against ACTIVE OptimisationSpecification contracts.
-OC MS -> Kafka: Emits OptimisationRequestedEvent with instruction EXECUTE or CANCEL.
-Python/Gurobi Worker -> Kafka: Consumes worker instructions and emits optimisation outcomes.
-OC MS <- Kafka: Consumes worker outcomes and projects lifecycle/result.
+1. User -> Microsoft Entra ID: User authenticates using SSO after ACG approval.
+2. UI -> OGW: OGW acts as the user-context-aware gateway for OEX APIs.
+3. OGW -> OSB MS: Uses mTLS and User Context JWT.
+4. OSB MS -> NGW: Uses mTLS and OAuth2 system-to-system.
+5. NGW -> OD MS: Uses mTLS to expose OptimisationSpecification APIs.
+6. NGW -> OC MS: Uses mTLS to expose runtime Optimisation APIs.
+7. OC MS -> OD MS: Uses mTLS for internal service-to-service validation against ACTIVE OptimisationSpecification contracts.
+8. OC MS -> Kafka: Emits OptimisationRequestedEvent with instruction EXECUTE or CANCEL.
+9. Python/Gurobi Worker -> Kafka: Consumes worker instructions and emits optimisation outcomes.
+10. Kafka -> OC MS: OC MS consumes worker outcomes and projects lifecycle/result.
 ```
 
 Logical diagram artifact:
@@ -109,7 +114,16 @@ Each use case has a matching process flow. The process flows are intentionally m
 #### 3.3.1 Discover optimisation capability:
 
 ```text
-User / OEX / platform service -> OGW -> OSB MS(OEX API) -> NGW -> OD MS -> OD MS DB -> OD MS -> NGW -> OSB MS(OEX API) -> OGW -> User / OEX / platform service receives available optimisation capabilities
+1. User / OEX / platform service -> OGW
+2. OGW -> OSB MS(OEX API)
+3. OSB MS(OEX API) -> NGW
+4. NGW -> OD MS
+5. OD MS -> OD MS DB
+6. OD MS DB -> OD MS
+7. OD MS -> NGW
+8. NGW -> OSB MS(OEX API)
+9. OSB MS(OEX API) -> OGW
+10. OGW -> User / OEX / platform service receives available optimisation capabilities
 ```
 
 Detailed flow:
@@ -131,7 +145,16 @@ Detailed flow:
 #### 3.3.2 Create optimisation specification:
 
 ```text
-Optimisation domain engineer -> OGW -> OSB MS(OEX API) -> NGW -> OD MS -> OD MS DB -> OD MS -> NGW -> OSB MS(OEX API) -> OGW -> Optimisation domain engineer receives DRAFT OptimisationSpecification result
+1. Optimisation domain engineer -> OGW
+2. OGW -> OSB MS(OEX API)
+3. OSB MS(OEX API) -> NGW
+4. NGW -> OD MS
+5. OD MS -> OD MS DB
+6. OD MS DB -> OD MS
+7. OD MS -> NGW
+8. NGW -> OSB MS(OEX API)
+9. OSB MS(OEX API) -> OGW
+10. OGW -> Optimisation domain engineer receives DRAFT OptimisationSpecification result
 ```
 
 Detailed flow:
@@ -156,7 +179,16 @@ Detailed flow:
 #### 3.3.3 Activate optimisation specification:
 
 ```text
-Optimisation domain engineer -> OGW -> OSB MS(OEX API) -> NGW -> OD MS -> OD MS DB -> OD MS -> NGW -> OSB MS(OEX API) -> OGW -> Optimisation domain engineer receives ACTIVE OptimisationSpecification result
+1. Optimisation domain engineer -> OGW
+2. OGW -> OSB MS(OEX API)
+3. OSB MS(OEX API) -> NGW
+4. NGW -> OD MS
+5. OD MS -> OD MS DB
+6. OD MS DB -> OD MS
+7. OD MS -> NGW
+8. NGW -> OSB MS(OEX API)
+9. OSB MS(OEX API) -> OGW
+10. OGW -> Optimisation domain engineer receives ACTIVE OptimisationSpecification result
 ```
 
 Detailed flow:
@@ -178,7 +210,21 @@ Detailed flow:
 #### 3.3.4 Create and execute optimisation:
 
 ```text
-User -> OEX UI -> OGW -> OSB MS(OEX API) -> NGW -> OC MS -> OD MS -> OC MS DB -> OC MS Outbox -> Kafka -> Python/Gurobi Worker -> Gurobi Optimiser -> Kafka -> OC MS Inbox -> OC MS DB -> User polls GET /optimisation/{id}
+1. User -> OEX UI
+2. OEX UI -> OGW
+3. OGW -> OSB MS(OEX API)
+4. OSB MS(OEX API) -> NGW
+5. NGW -> OC MS
+6. OC MS -> OD MS
+7. OD MS -> OC MS DB
+8. OC MS DB -> OC MS Outbox
+9. OC MS Outbox -> Kafka
+10. Kafka -> Python/Gurobi Worker
+11. Python/Gurobi Worker -> Gurobi Optimiser
+12. Gurobi Optimiser -> Kafka
+13. Kafka -> OC MS Inbox
+14. OC MS Inbox -> OC MS DB
+15. OC MS DB -> User polls GET /optimisation/{id}
 ```
 
 Detailed flow:
@@ -207,7 +253,16 @@ Detailed flow:
 #### 3.3.5 Monitor optimisation:
 
 ```text
-User / OEX / platform service -> OGW -> OSB MS(OEX API) -> NGW -> OC MS -> OC MS DB -> OC MS -> NGW -> OSB MS(OEX API) -> OGW -> User / OEX / platform service receives current lifecycle/result
+1. User / OEX / platform service -> OGW
+2. OGW -> OSB MS(OEX API)
+3. OSB MS(OEX API) -> NGW
+4. NGW -> OC MS
+5. OC MS -> OC MS DB
+6. OC MS DB -> OC MS
+7. OC MS -> NGW
+8. NGW -> OSB MS(OEX API)
+9. OSB MS(OEX API) -> OGW
+10. OGW -> User / OEX / platform service receives current lifecycle/result
 ```
 
 Detailed flow:
@@ -230,7 +285,15 @@ Detailed flow:
 #### 3.3.6 Cancel optimisation:
 
 ```text
-User -> OEX UI -> OGW -> OSB MS(OEX API) -> NGW -> OC MS -> OC MS DB -> OC MS Outbox -> Kafka -> Python/Gurobi Worker
+1. User -> OEX UI
+2. OEX UI -> OGW
+3. OGW -> OSB MS(OEX API)
+4. OSB MS(OEX API) -> NGW
+5. NGW -> OC MS
+6. OC MS -> OC MS DB
+7. OC MS DB -> OC MS Outbox
+8. OC MS Outbox -> Kafka
+9. Kafka -> Python/Gurobi Worker
 ```
 
 Detailed flow:
@@ -255,7 +318,15 @@ Detailed flow:
 #### 3.3.7 Retry failed optimisation:
 
 ```text
-User -> OEX UI -> OGW -> OSB MS(OEX API) -> NGW -> OC MS -> OC MS DB -> OC MS Outbox -> Kafka -> Python/Gurobi Worker
+1. User -> OEX UI
+2. OEX UI -> OGW
+3. OGW -> OSB MS(OEX API)
+4. OSB MS(OEX API) -> NGW
+5. NGW -> OC MS
+6. OC MS -> OC MS DB
+7. OC MS DB -> OC MS Outbox
+8. OC MS Outbox -> Kafka
+9. Kafka -> Python/Gurobi Worker
 ```
 
 Detailed flow:
@@ -280,7 +351,12 @@ Detailed flow:
 #### 3.3.8 Gurobi execute optimisation:
 
 ```text
-Kafka -> Python/Gurobi Worker -> Gurobi Optimiser -> Kafka -> OC MS Inbox -> OC MS DB -> User polls GET /optimisation/{id}
+1. Kafka -> Python/Gurobi Worker
+2. Python/Gurobi Worker -> Gurobi Optimiser
+3. Gurobi Optimiser -> Kafka
+4. Kafka -> OC MS Inbox
+5. OC MS Inbox -> OC MS DB
+6. OC MS DB -> User polls GET /optimisation/{id}
 ```
 
 Detailed flow:
