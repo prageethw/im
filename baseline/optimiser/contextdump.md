@@ -351,3 +351,17 @@ HATEOAS links for unsafe actions such as `replace`, `patch`, `activate`, `retire
 DELETE is an unsafe operation and requires `If-Match`. Missing `If-Match` returns `428 Precondition Required`; stale or mismatched `If-Match` returns `412 Precondition Failed`; successful DRAFT deletion returns `204 No Content`.
 
 HATEOAS `_links.delete` is exposed only when the current caller is authorised and the specification is a mutable `DRAFT`. For `ACTIVE`, expose `retire` instead when authorised. For `RETIRED`, do not normally expose `delete` unless a separate administrative purge policy is explicitly introduced.
+
+
+## OD MS error handling baseline:
+
+OD MS uses TMF-style error responses with platform-specific error codes. Core status codes are:
+
+- `200 OK` for successful `GET`, `PATCH`, or approved-extension `PUT` with a response body.
+- `201 Created` for successful `POST /optimisationSpecification`.
+- `204 No Content` for successful `DELETE /optimisationSpecification/{id}`.
+- `400 Bad Request`, `401 Unauthorized`, `403 Forbidden`, `404 Not Found`, `405 Method Not Allowed`, `409 Conflict`, `412 Precondition Failed`, `415 Unsupported Media Type`, `422 Unprocessable Entity`, `428 Precondition Required`, `500 Internal Server Error`, and `503 Service Unavailable` for error cases.
+
+Unsafe existing-resource operations require `If-Match`. Missing `If-Match` returns `428 Precondition Required`. Stale or mismatched `If-Match` returns `412 Precondition Failed`. Valid JSON that violates the OD MS OptimisationSpecification contract returns `422 Unprocessable Entity`.
+
+Standard error bodies use `code`, `reason`, `message`, `status`, and `@type: Error`.

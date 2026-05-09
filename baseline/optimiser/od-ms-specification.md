@@ -1024,3 +1024,80 @@ For `ACTIVE` and `RETIRED` specifications, `delete` is not normally exposed. For
 ### Baseline rule:
 
 `DELETE /optimisationSpecification/{id}` is supported for TMF alignment. OD MS allows physical delete only for mutable `DRAFT` specifications. `ACTIVE` specifications must be retired through a governed lifecycle transition rather than physically deleted. `RETIRED` specifications are normally retained for audit and historical runtime traceability. DELETE requires `If-Match` and returns `204 No Content` on success.
+
+
+## Error handling and status-code baseline:
+
+OD MS uses TMF-style error responses with platform-specific error codes. The TMF standard operation shape remains intact; platform governance adds explicit concurrency and contract-validation errors where required.
+
+### Core status codes:
+
+| Status | Use |
+|---|---|
+| `200 OK` | Successful `GET`, `PATCH`, or approved-extension `PUT` returning a resource body. |
+| `201 Created` | Successful `POST /optimisationSpecification`. |
+| `204 No Content` | Successful `DELETE /optimisationSpecification/{id}`. |
+| `400 Bad Request` | Invalid JSON, malformed request, invalid query parameter, or invalid `fields` syntax. |
+| `401 Unauthorized` | Missing or invalid authentication. |
+| `403 Forbidden` | Authenticated caller is not authorised for the requested operation or resource. |
+| `404 Not Found` | Resource does not exist or is not visible to the caller. |
+| `405 Method Not Allowed` | HTTP method is not supported for the target resource. |
+| `409 Conflict` | Lifecycle, version, or specification-family conflict, including invalid activation/retirement conflict. |
+| `412 Precondition Failed` | Supplied `If-Match` is stale or does not match the current resource `ETag`. |
+| `415 Unsupported Media Type` | Request content type is unsupported. |
+| `422 Unprocessable Entity` | JSON is syntactically valid but violates the OptimisationSpecification contract or governance rules. |
+| `428 Precondition Required` | Required `If-Match` is missing on unsafe existing-resource operations. |
+| `500 Internal Server Error` | Unexpected OD MS failure. |
+| `503 Service Unavailable` | OD MS is temporarily unavailable. |
+
+### Standard error body:
+
+```json
+{
+  "code": "OPTIMISATION_SPEC_CONTRACT_VIOLATION",
+  "reason": "OptimisationSpecification contract violation",
+  "message": "targetEntitySchema must define expressionValue.context.targets, expressionValue.context.constraints, and expressionValue.context.preferences.",
+  "status": 422,
+  "@type": "Error"
+}
+```
+
+### Concurrency error examples:
+
+Missing `If-Match` on `PUT`, `PATCH`, or `DELETE` against an existing specification:
+
+```http
+HTTP/1.1 428 Precondition Required
+Content-Type: application/json
+```
+
+```json
+{
+  "code": "PRECONDITION_REQUIRED",
+  "reason": "Missing If-Match header",
+  "message": "This operation requires If-Match with the current OptimisationSpecification ETag.",
+  "status": 428,
+  "@type": "Error"
+}
+```
+
+Stale or mismatched `If-Match`:
+
+```http
+HTTP/1.1 412 Precondition Failed
+Content-Type: application/json
+```
+
+```json
+{
+  "code": "PRECONDITION_FAILED",
+  "reason": "ETag mismatch",
+  "message": "The supplied If-Match value does not match the current OptimisationSpecification ETag.",
+  "status": 412,
+  "@type": "Error"
+}
+```
+
+### Baseline rule:
+
+OD MS uses TMF-style error responses with platform-specific error codes. Unsafe existing-resource operations require `If-Match`; missing `If-Match` returns `428 Precondition Required`; stale or mismatched `If-Match` returns `412 Precondition Failed`. Valid JSON that violates the OD MS OptimisationSpecification contract returns `422 Unprocessable Entity`.
