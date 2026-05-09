@@ -311,3 +311,35 @@ RETIRED -> self, collection, createNewVersion
 - When a new version becomes `ACTIVE`, OD MS atomically moves the previously `ACTIVE` version in the same specification family to `RETIRED`.
 - There must be at most one `ACTIVE` version per specification family.
 - Activation must validate the full `OptimisationSpecification`, including `specCharacteristic[]`, `expressionSpecification`, and `targetEntitySchema`, before committing the transition.
+
+## Baseline appended 2026-05-09 - OD MS HTTP concurrency and cache governance
+
+OD MS applies platform HTTP governance on top of TMF-aligned operations.
+
+Unsafe operations:
+
+```http
+POST   /optimisationSpecification
+PUT    /optimisationSpecification/{id}
+PATCH  /optimisationSpecification/{id}
+DELETE /optimisationSpecification/{id}
+```
+
+Concurrency baseline:
+
+- `POST /optimisationSpecification` creates a server-assigned new `DRAFT` and returns an `ETag`; it does not normally require `If-Match` because it is not mutating an existing resource representation.
+- `PUT /optimisationSpecification/{id}` requires `If-Match` and returns a new `ETag`.
+- `PATCH /optimisationSpecification/{id}` requires `If-Match` and returns a new `ETag`; this includes `DRAFT -> ACTIVE` activation and `ACTIVE -> RETIRED` retirement transitions.
+- `DELETE /optimisationSpecification/{id}` requires `If-Match`.
+- Missing `If-Match` on existing-resource mutations returns `428 Precondition Required`.
+- Stale or mismatched `If-Match` returns `412 Precondition Failed`.
+
+GET cache baseline:
+
+- All `GET` operations return simple bounded cache metadata.
+- Default successful GET headers are `Cache-Control: private, max-age=300` and `ETag`.
+- `GET /optimisationSpecification` collection ETags represent the selected collection view, including filters, paging, fields selection, and caller visibility.
+- `GET /optimisationSpecification/{id}` item ETags represent the current resource representation.
+- Clients can force cache revalidation using request header `Cache-Control: no-cache`.
+
+HATEOAS links for unsafe actions such as `replace`, `patch`, `activate`, `retire`, and `delete` must be lifecycle-aware, authorisation-aware, and indicate that `If-Match` is required.

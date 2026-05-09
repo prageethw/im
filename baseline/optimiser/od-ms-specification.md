@@ -862,3 +862,108 @@ Worker/model: decides feasibility and returns SUCCESS, INFEASIBLE, or FAILURE.
 ```
 
 OD MS does not persist runtime `Optimisation` resources, does not write OC MS outbox records, does not consume Kafka worker outcomes, and does not project runtime results.
+
+## HTTP concurrency and cache governance:
+
+OD MS applies a platform HTTP governance layer on top of the TMF-aligned resource operations.
+
+### Unsafe operation concurrency:
+
+Unsafe operations are operations that can change server state. For OD MS this includes:
+
+```http
+POST   /optimisationSpecification
+PUT    /optimisationSpecification/{id}
+PATCH  /optimisationSpecification/{id}
+DELETE /optimisationSpecification/{id}
+```
+
+Concurrency rules:
+
+| Operation | Request concurrency rule | Response rule |
+|---|---|---|
+| `POST /optimisationSpecification` | Does not require `If-Match` for normal server-assigned create because no existing resource representation is being mutated. | Returns `ETag` for the created `DRAFT` resource. |
+| `PUT /optimisationSpecification/{id}` | Requires `If-Match` with the current resource `ETag`. | Returns updated `ETag`. |
+| `PATCH /optimisationSpecification/{id}` | Requires `If-Match` with the current resource `ETag`, including governed activation and retire transitions. | Returns updated `ETag`. |
+| `DELETE /optimisationSpecification/{id}` | Requires `If-Match` with the current resource `ETag`. | Returns `204 No Content` on success. |
+
+OD MS must reject missing or stale preconditions for existing-resource mutations:
+
+```http
+HTTP/1.1 428 Precondition Required
+Content-Type: application/json
+```
+
+```json
+{
+  "code": "PRECONDITION_REQUIRED",
+  "reason": "IF_MATCH_REQUIRED",
+  "message": "This operation requires If-Match with the current OptimisationSpecification ETag.",
+  "status": 428,
+  "@type": "Error"
+}
+```
+
+```http
+HTTP/1.1 412 Precondition Failed
+Content-Type: application/json
+```
+
+```json
+{
+  "code": "PRECONDITION_FAILED",
+  "reason": "ETAG_MISMATCH",
+  "message": "The supplied If-Match value does not match the current OptimisationSpecification ETag.",
+  "status": 412,
+  "@type": "Error"
+}
+```
+
+### GET cache policy:
+
+All OD MS `GET` operations return simple bounded cache metadata. `GET` remains read-only and may be cached for a bounded period.
+
+Default response headers for successful `GET` operations:
+
+```http
+Cache-Control: private, max-age=300
+ETag: "<current-resource-version>"
+```
+
+For collection `GET /optimisationSpecification`, `ETag` represents the selected collection view, including filters, paging, fields selection, and caller visibility. For item `GET /optimisationSpecification/{id}`, `ETag` represents the current resource representation.
+
+Clients may force cache revalidation / cache override by sending:
+
+```http
+Cache-Control: no-cache
+```
+
+### HATEOAS interaction:
+
+HATEOAS links for unsafe operations must imply the same precondition rules. For example, `replace`, `patch`, `activate`, `retire`, and `delete` links are only actionable when the caller supplies the current `ETag` in `If-Match`.
+
+Example DRAFT link metadata:
+
+```json
+"_links": {
+  "self": {
+    "href": "/optimisationManagement/v1/optimisationSpecification/optimisation-spec-surgical-routing-v1",
+    "method": "GET"
+  },
+  "replace": {
+    "href": "/optimisationManagement/v1/optimisationSpecification/optimisation-spec-surgical-routing-v1",
+    "method": "PUT",
+    "requires": ["If-Match"]
+  },
+  "patch": {
+    "href": "/optimisationManagement/v1/optimisationSpecification/optimisation-spec-surgical-routing-v1",
+    "method": "PATCH",
+    "requires": ["If-Match"]
+  },
+  "delete": {
+    "href": "/optimisationManagement/v1/optimisationSpecification/optimisation-spec-surgical-routing-v1",
+    "method": "DELETE",
+    "requires": ["If-Match"]
+  }
+}
+```
