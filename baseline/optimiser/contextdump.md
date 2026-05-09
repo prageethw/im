@@ -50,3 +50,7 @@ Merged updates applied during restoration:
   - `Runtime Optimisation lifecycle baseline` -> `10.11 Runtime Optimisation lifecycle baseline`.
 - Keep all current detailed process flows and capability/security/quality/risk/assumption/constraint content.
 - Apply wording cleanup only where it does not change meaning, such as `Cancel optimisation`, `Retry failed optimisation`, and `not limited to the intent-management domain`.
+
+## Baseline update — E2E use case numbering
+
+The `optimisation-e2e-solution-brief.md` use case view now includes a `No.` column with sequential numbers 1–9 for the E2E use cases. The use case names, actors, summaries, and outcomes were preserved; only numbering was added for easier cross-reference to process-view sections.

@@ -61,17 +61,17 @@ The Python/Gurobi worker is responsible for executing the internal deterministic
 
 ### 3.1 Use case view:
 
-| **Use case** | **Actor** | **Summary** | **Outcome** |
-|---|---|---|---|
-| Discover optimisation capability | User / OEX / platform service | Retrieve available `OptimisationSpecification` records from OD MS and understand supported `context.targets[]`, `context.constraints[]`, and `context.preferences[]`. | Caller knows which optimisation capability to use and the required request contract. |
-| Create optimisation specification | Optimisation domain engineer | Create a new governed `OptimisationSpecification` in OD MS after agreement with broader E2E teams, including request-contract metadata such as `specCharacteristic[]`, `expressionSpecification`, `targetEntitySchema`, and lifecycle/governance details. | A new `OptimisationSpecification` is created in `DRAFT` state and is not usable for runtime optimisation until it is reviewed and activated. |
-| Activate optimisation specification | Optimisation domain engineer / authorised platform role | Activate a complete `DRAFT` specification after OD validation. | The selected version becomes `ACTIVE`; any previously active version in the same specification family becomes `RETIRED`. |
-| Retire optimisation specification | Optimisation domain engineer / authorised platform role | Retire an `ACTIVE` specification when it must no longer be used for new runtime optimisations. | The specification becomes `RETIRED`; historical runtime references remain readable. |
-| Create runtime optimisation | User / OEX / platform service | Submit a runtime `Optimisation` request to OC MS using an `ACTIVE` specification and valid expression context. | OC MS accepts/creates a short-lived optimisation run and begins asynchronous processing. |
-| Monitor optimisation | User / OEX / platform service | Read current lifecycle state and result when available. | Caller can see whether the optimisation is acknowledged, queued, processing, completed, infeasible, failed, cancelling, or cancelled. |
-| Cancel optimisation | User / OEX / platform service | Request cancellation for an eligible active optimisation. | OC MS moves the resource to `CANCELLING` and instructs the worker to cancel where safely possible. |
-| Retry failed optimisation | User / OEX / platform service | Retry a `FAILED` optimisation by creating a new linked optimisation. | A new `ACKNOWLEDGED` optimisation is created with `retrialOf` pointing to the failed one. |
-| Execute optimisation | Python/Gurobi worker | Consume worker instruction and execute the deterministic optimisation model. | Worker emits `SUCCESS`, `INFEASIBLE`, or `FAILURE` outcome. |
+| **No.** | **Use case** | **Actor** | **Summary** | **Outcome** |
+|---:|---|---|---|---|
+| 1 | Discover optimisation capability | User / OEX / platform service | Retrieve available `OptimisationSpecification` records from OD MS and understand supported `context.targets[]`, `context.constraints[]`, and `context.preferences[]`. | Caller knows which optimisation capability to use and the required request contract. |
+| 2 | Create optimisation specification | Optimisation domain engineer | Create a new governed `OptimisationSpecification` in OD MS after agreement with broader E2E teams, including request-contract metadata such as `specCharacteristic[]`, `expressionSpecification`, `targetEntitySchema`, and lifecycle/governance details. | A new `OptimisationSpecification` is created in `DRAFT` state and is not usable for runtime optimisation until it is reviewed and activated. |
+| 3 | Activate optimisation specification | Optimisation domain engineer / authorised platform role | Activate a complete `DRAFT` specification after OD validation. | The selected version becomes `ACTIVE`; any previously active version in the same specification family becomes `RETIRED`. |
+| 4 | Retire optimisation specification | Optimisation domain engineer / authorised platform role | Retire an `ACTIVE` specification when it must no longer be used for new runtime optimisations. | The specification becomes `RETIRED`; historical runtime references remain readable. |
+| 5 | Create runtime optimisation | User / OEX / platform service | Submit a runtime `Optimisation` request to OC MS using an `ACTIVE` specification and valid expression context. | OC MS accepts/creates a short-lived optimisation run and begins asynchronous processing. |
+| 6 | Monitor optimisation | User / OEX / platform service | Read current lifecycle state and result when available. | Caller can see whether the optimisation is acknowledged, queued, processing, completed, infeasible, failed, cancelling, or cancelled. |
+| 7 | Cancel optimisation | User / OEX / platform service | Request cancellation for an eligible active optimisation. | OC MS moves the resource to `CANCELLING` and instructs the worker to cancel where safely possible. |
+| 8 | Retry failed optimisation | User / OEX / platform service | Retry a `FAILED` optimisation by creating a new linked optimisation. | A new `ACKNOWLEDGED` optimisation is created with `retrialOf` pointing to the failed one. |
+| 9 | Execute optimisation | Python/Gurobi worker | Consume worker instruction and execute the deterministic optimisation model. | Worker emits `SUCCESS`, `INFEASIBLE`, or `FAILURE` outcome. |
 
 ### 3.2 Logical view:
 
