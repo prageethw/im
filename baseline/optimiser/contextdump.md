@@ -85,36 +85,3 @@ Runtime Optimisation expression shape:
   }
 }
 ```
-
-## OD MS OptimisationSpecification TMF-aligned resource shape baseline:
-
-OD MS `OptimisationSpecification` must be modelled as the optimiser-domain equivalent of the TMF921 `IntentSpecification` resource.
-
-Canonical fields:
-
-```text
-id
-href
-name
-description
-version
-lifecycleStatus
-creationDate
-lastUpdate
-validFor
-isBundle
-specCharacteristic[]
-expressionSpecification
-targetEntitySchema
-relatedParty[]
-attachment[]
-constraint[]
-entitySpecRelationship[]
-@type
-@baseType
-@schemaLocation
-```
-
-The external `OptimisationSpecification` resource uses TMF-aligned structures only. Optimiser request-contract semantics are represented through `targetEntitySchema`, `expressionSpecification`, and `specCharacteristic[]`.
-
-`targetEntitySchema` is the authoritative validation contract for runtime `Optimisation.expression.expressionValue.context`, including `targets[]`, `constraints[]`, and `preferences[]`. `specCharacteristic[]` is for discovery/catalogue metadata, examples, defaults, and OEX/UI prefill guidance. It must not replace `targetEntitySchema` as the validation source.
