@@ -365,3 +365,14 @@ OD MS uses TMF-style error responses with platform-specific error codes. Core st
 Unsafe existing-resource operations require `If-Match`. Missing `If-Match` returns `428 Precondition Required`. Stale or mismatched `If-Match` returns `412 Precondition Failed`. Valid JSON that violates the OD MS OptimisationSpecification contract returns `422 Unprocessable Entity`.
 
 Standard error bodies use `code`, `reason`, `message`, `status`, and `@type: Error`.
+
+
+## OD MS full operation examples baseline:
+
+OD MS `od-ms-specification.md` carries full copy-ready examples for:
+
+- `POST /optimisationSpecification` returning `201 Created` and a `DRAFT` resource.
+- `GET /optimisationSpecification/{id}` returning `200 OK` and an `ACTIVE` resource.
+- `GET /optimisationSpecification?lifecycleStatus=ACTIVE&fields=id,href,name,version,lifecycleStatus` for OEX/UI discovery of runtime-usable specifications.
+
+Examples must keep the TMF-style resource shape, preserve standard `href`, use `ETag`, use simple GET cache policy (`Cache-Control: private, max-age=300`, override by `Cache-Control: no-cache`), and include `_links` as an approved HATEOAS platform extension. `DRAFT` examples expose `self`, `collection`, `patch`, `replace`, `delete`, and `activate`. `ACTIVE` examples expose `self`, `collection`, `retire`, and `createNewVersion`.

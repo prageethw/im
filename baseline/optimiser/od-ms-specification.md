@@ -1026,6 +1026,322 @@ For `ACTIVE` and `RETIRED` specifications, `delete` is not normally exposed. For
 `DELETE /optimisationSpecification/{id}` is supported for TMF alignment. OD MS allows physical delete only for mutable `DRAFT` specifications. `ACTIVE` specifications must be retired through a governed lifecycle transition rather than physically deleted. `RETIRED` specifications are normally retained for audit and historical runtime traceability. DELETE requires `If-Match` and returns `204 No Content` on success.
 
 
+## Full operation examples:
+
+This section provides copy-ready examples for the main `OptimisationSpecification` operations. The examples keep the TMF-style resource shape, retain the standard `href`, and add `_links` as an approved HATEOAS platform extension.
+
+### POST /optimisationSpecification example:
+
+Creates a new `DRAFT` `OptimisationSpecification`. `POST` does not require `If-Match` because it creates a new resource. OD MS assigns server-controlled fields such as `id`, `href`, `creationDate`, `lastUpdate`, and the initial `lifecycleStatus`.
+
+```http
+POST /optimisationManagement/v1/optimisationSpecification HTTP/1.1
+Content-Type: application/json
+```
+
+```json
+{
+  "name": "Surgical Routing Optimisation Specification",
+  "description": "Defines the allowed optimisation request contract for surgical routing optimisation.",
+  "version": "1.0.0",
+  "validFor": {
+    "startDateTime": "2026-05-09T00:00:00Z"
+  },
+  "isBundle": false,
+  "specCharacteristic": [
+    {
+      "id": "optimisation-context",
+      "name": "context",
+      "description": "Runtime optimisation problem context containing targets, constraints and preferences.",
+      "valueType": "object",
+      "configurable": true,
+      "@type": "CharacteristicSpecification"
+    },
+    {
+      "id": "optimisation-targets",
+      "name": "targets",
+      "description": "Optimisation goals the optimiser should achieve or optimise toward.",
+      "valueType": "array",
+      "configurable": true,
+      "@type": "CharacteristicSpecification"
+    },
+    {
+      "id": "optimisation-constraints",
+      "name": "constraints",
+      "description": "Hard mandatory requirements that must be satisfied.",
+      "valueType": "array",
+      "configurable": true,
+      "@type": "CharacteristicSpecification"
+    },
+    {
+      "id": "optimisation-preferences",
+      "name": "preferences",
+      "description": "Soft ranking or selection preferences used to choose between otherwise valid outcomes.",
+      "valueType": "array",
+      "configurable": true,
+      "@type": "CharacteristicSpecification"
+    }
+  ],
+  "expressionSpecification": {
+    "expressionLanguage": "JsonLdExpression",
+    "iri": "https://example.com/ontology/optimisation/v1",
+    "@type": "ExpressionSpecification"
+  },
+  "targetEntitySchema": {
+    "@schemaLocation": "https://example.com/schema/optimisation/v1/optimisation-expression-value.schema.json",
+    "@type": "TargetEntitySchema"
+  },
+  "@type": "OptimisationSpecification",
+  "@baseType": "EntitySpecification",
+  "@schemaLocation": "https://example.com/schema/optimisation/v1/OptimisationSpecification.schema.json"
+}
+```
+
+```http
+HTTP/1.1 201 Created
+Location: /optimisationManagement/v1/optimisationSpecification/optimisation-spec-surgical-routing-v1
+ETag: "od-spec-surgical-routing-v1-r1"
+Content-Type: application/json
+```
+
+```json
+{
+  "id": "optimisation-spec-surgical-routing-v1",
+  "href": "/optimisationManagement/v1/optimisationSpecification/optimisation-spec-surgical-routing-v1",
+  "name": "Surgical Routing Optimisation Specification",
+  "description": "Defines the allowed optimisation request contract for surgical routing optimisation.",
+  "version": "1.0.0",
+  "lifecycleStatus": "DRAFT",
+  "creationDate": "2026-05-09T07:35:00Z",
+  "lastUpdate": "2026-05-09T07:35:00Z",
+  "validFor": {
+    "startDateTime": "2026-05-09T00:00:00Z"
+  },
+  "isBundle": false,
+  "specCharacteristic": [
+    {
+      "id": "optimisation-context",
+      "name": "context",
+      "description": "Runtime optimisation problem context containing targets, constraints and preferences.",
+      "valueType": "object",
+      "configurable": true,
+      "@type": "CharacteristicSpecification"
+    },
+    {
+      "id": "optimisation-targets",
+      "name": "targets",
+      "description": "Optimisation goals the optimiser should achieve or optimise toward.",
+      "valueType": "array",
+      "configurable": true,
+      "@type": "CharacteristicSpecification"
+    },
+    {
+      "id": "optimisation-constraints",
+      "name": "constraints",
+      "description": "Hard mandatory requirements that must be satisfied.",
+      "valueType": "array",
+      "configurable": true,
+      "@type": "CharacteristicSpecification"
+    },
+    {
+      "id": "optimisation-preferences",
+      "name": "preferences",
+      "description": "Soft ranking or selection preferences used to choose between otherwise valid outcomes.",
+      "valueType": "array",
+      "configurable": true,
+      "@type": "CharacteristicSpecification"
+    }
+  ],
+  "expressionSpecification": {
+    "expressionLanguage": "JsonLdExpression",
+    "iri": "https://example.com/ontology/optimisation/v1",
+    "@type": "ExpressionSpecification"
+  },
+  "targetEntitySchema": {
+    "@schemaLocation": "https://example.com/schema/optimisation/v1/optimisation-expression-value.schema.json",
+    "@type": "TargetEntitySchema"
+  },
+  "@type": "OptimisationSpecification",
+  "@baseType": "EntitySpecification",
+  "@schemaLocation": "https://example.com/schema/optimisation/v1/OptimisationSpecification.schema.json",
+  "_links": {
+    "self": {
+      "href": "/optimisationManagement/v1/optimisationSpecification/optimisation-spec-surgical-routing-v1",
+      "method": "GET"
+    },
+    "collection": {
+      "href": "/optimisationManagement/v1/optimisationSpecification",
+      "method": "GET"
+    },
+    "patch": {
+      "href": "/optimisationManagement/v1/optimisationSpecification/optimisation-spec-surgical-routing-v1",
+      "method": "PATCH"
+    },
+    "replace": {
+      "href": "/optimisationManagement/v1/optimisationSpecification/optimisation-spec-surgical-routing-v1",
+      "method": "PUT"
+    },
+    "delete": {
+      "href": "/optimisationManagement/v1/optimisationSpecification/optimisation-spec-surgical-routing-v1",
+      "method": "DELETE"
+    },
+    "activate": {
+      "href": "/optimisationManagement/v1/optimisationSpecification/optimisation-spec-surgical-routing-v1",
+      "method": "PATCH"
+    }
+  }
+}
+```
+
+### GET /optimisationSpecification/{id} example:
+
+Retrieves one `OptimisationSpecification`. The example shows an `ACTIVE` version, which is usable for new runtime optimisation requests.
+
+```http
+GET /optimisationManagement/v1/optimisationSpecification/optimisation-spec-surgical-routing-v1 HTTP/1.1
+Cache-Control: no-cache
+```
+
+```http
+HTTP/1.1 200 OK
+Cache-Control: private, max-age=300
+ETag: "od-spec-surgical-routing-v1-r4"
+Content-Type: application/json
+```
+
+```json
+{
+  "id": "optimisation-spec-surgical-routing-v1",
+  "href": "/optimisationManagement/v1/optimisationSpecification/optimisation-spec-surgical-routing-v1",
+  "name": "Surgical Routing Optimisation Specification",
+  "description": "Defines the allowed optimisation request contract for surgical routing optimisation.",
+  "version": "1.0.0",
+  "lifecycleStatus": "ACTIVE",
+  "creationDate": "2026-05-09T07:35:00Z",
+  "lastUpdate": "2026-05-09T07:45:00Z",
+  "validFor": {
+    "startDateTime": "2026-05-09T00:00:00Z"
+  },
+  "isBundle": false,
+  "specCharacteristic": [
+    {
+      "id": "optimisation-context",
+      "name": "context",
+      "description": "Runtime optimisation problem context containing targets, constraints and preferences.",
+      "valueType": "object",
+      "configurable": true,
+      "@type": "CharacteristicSpecification"
+    },
+    {
+      "id": "optimisation-targets",
+      "name": "targets",
+      "description": "Optimisation goals the optimiser should achieve or optimise toward.",
+      "valueType": "array",
+      "configurable": true,
+      "@type": "CharacteristicSpecification"
+    },
+    {
+      "id": "optimisation-constraints",
+      "name": "constraints",
+      "description": "Hard mandatory requirements that must be satisfied.",
+      "valueType": "array",
+      "configurable": true,
+      "@type": "CharacteristicSpecification"
+    },
+    {
+      "id": "optimisation-preferences",
+      "name": "preferences",
+      "description": "Soft ranking or selection preferences used to choose between otherwise valid outcomes.",
+      "valueType": "array",
+      "configurable": true,
+      "@type": "CharacteristicSpecification"
+    }
+  ],
+  "expressionSpecification": {
+    "expressionLanguage": "JsonLdExpression",
+    "iri": "https://example.com/ontology/optimisation/v1",
+    "@type": "ExpressionSpecification"
+  },
+  "targetEntitySchema": {
+    "@schemaLocation": "https://example.com/schema/optimisation/v1/optimisation-expression-value.schema.json",
+    "@type": "TargetEntitySchema"
+  },
+  "@type": "OptimisationSpecification",
+  "@baseType": "EntitySpecification",
+  "@schemaLocation": "https://example.com/schema/optimisation/v1/OptimisationSpecification.schema.json",
+  "_links": {
+    "self": {
+      "href": "/optimisationManagement/v1/optimisationSpecification/optimisation-spec-surgical-routing-v1",
+      "method": "GET"
+    },
+    "collection": {
+      "href": "/optimisationManagement/v1/optimisationSpecification",
+      "method": "GET"
+    },
+    "retire": {
+      "href": "/optimisationManagement/v1/optimisationSpecification/optimisation-spec-surgical-routing-v1",
+      "method": "PATCH"
+    },
+    "createNewVersion": {
+      "href": "/optimisationManagement/v1/optimisationSpecification",
+      "method": "POST"
+    }
+  }
+}
+```
+
+### GET /optimisationSpecification list example:
+
+Lists visible `OptimisationSpecification` resources. For runtime request creation, OEX/UI and external consumers normally filter for active specifications.
+
+```http
+GET /optimisationManagement/v1/optimisationSpecification?lifecycleStatus=ACTIVE&fields=id,href,name,version,lifecycleStatus HTTP/1.1
+Cache-Control: no-cache
+```
+
+```http
+HTTP/1.1 200 OK
+Cache-Control: private, max-age=300
+ETag: "od-spec-list-active-r42"
+Content-Type: application/json
+```
+
+```json
+[
+  {
+    "id": "optimisation-spec-surgical-routing-v1",
+    "href": "/optimisationManagement/v1/optimisationSpecification/optimisation-spec-surgical-routing-v1",
+    "name": "Surgical Routing Optimisation Specification",
+    "version": "1.0.0",
+    "lifecycleStatus": "ACTIVE",
+    "@type": "OptimisationSpecification",
+    "_links": {
+      "self": {
+        "href": "/optimisationManagement/v1/optimisationSpecification/optimisation-spec-surgical-routing-v1",
+        "method": "GET"
+      },
+      "collection": {
+        "href": "/optimisationManagement/v1/optimisationSpecification",
+        "method": "GET"
+      },
+      "retire": {
+        "href": "/optimisationManagement/v1/optimisationSpecification/optimisation-spec-surgical-routing-v1",
+        "method": "PATCH"
+      },
+      "createNewVersion": {
+        "href": "/optimisationManagement/v1/optimisationSpecification",
+        "method": "POST"
+      }
+    }
+  }
+]
+```
+
+### List operation baseline rule:
+
+`GET /optimisationSpecification` supports first-level filtering and `fields` attribute selection. It returns all visible lifecycle states by default unless a filter is supplied. OEX/UI should normally use `lifecycleStatus=ACTIVE` when discovering specifications available for new runtime optimisation runs.
+
+
 ## Error handling and status-code baseline:
 
 OD MS uses TMF-style error responses with platform-specific error codes. The TMF standard operation shape remains intact; platform governance adds explicit concurrency and contract-validation errors where required.
