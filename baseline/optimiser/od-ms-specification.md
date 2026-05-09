@@ -242,7 +242,7 @@ context.preferences[] contains soft ranking or selection preferences.
           }
         },
         "constraints": {
-          "description": "Hard mandatory requirements that must be satisfied for a valid solution.",
+          "description": "Hard mandatory requirements that must be satisfied for a valid solution. Concrete active OptimisationSpecification schemas decide whether this array may be empty for a given capability.",
           "type": "array",
           "minItems": 1,
           "items": {
@@ -310,6 +310,37 @@ context.preferences[] contains soft ranking or selection preferences.
       }
     }
   }
+}
+```
+
+
+
+## Embedded schema governance baseline:
+
+The embedded `optimisation-expression-value.schema.json` validates the runtime `Optimisation.expression.expressionValue` structure only.
+
+It does not perform solver feasibility checks, rank candidates, calculate objective trade-offs, select the best candidate, or decide runtime optimisation outcomes. Those responsibilities remain with OC MS, workers, and the optimiser engine.
+
+Schema rules:
+
+| Schema element | Baseline rule |
+|---|---|
+| `expressionValue.context` | Required object and canonical optimisation problem container. |
+| `context.targets[]` | Required array containing optimisation goals. It should normally contain at least one target. |
+| `context.constraints[]` | Required array containing hard mandatory requirements. Whether it may be empty is capability-specific and governed by the concrete active `OptimisationSpecification.targetEntitySchema`. |
+| `context.preferences[]` | Required array containing soft ranking or selection preferences. It may be empty. |
+| `$defs.target` | Reusable definition for target entries. |
+| `$defs.constraint` | Reusable definition for hard-constraint entries. |
+| `$defs.preference` | Reusable definition for soft-preference entries. |
+| `additionalProperties` | Controlled container levels should be closed unless extension is explicitly intended; individual entry definitions may remain extensible where the capability schema allows domain-specific fields. |
+
+The reusable JSON Schema definition names intentionally stay short:
+
+```json
+"$defs": {
+  "target": {},
+  "constraint": {},
+  "preference": {}
 }
 ```
 

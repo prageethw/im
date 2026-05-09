@@ -293,3 +293,29 @@ OD MS assigns server-controlled identity and timestamp fields on creation and re
 `PUT /optimisationSpecification/{id}` remains an approved platform extension for full replacement/finalisation of mutable `DRAFT` specifications and is not the normal retirement mechanism for an `ACTIVE` specification.
 
 Physical `DELETE` is not used for `ACTIVE` or `RETIRED` specifications. Retired specifications remain available for audit/history and existing runtime `Optimisation` references, but cannot be used for new runtime `Optimisation` creation.
+
+
+## Baseline update - OD MS embedded optimisation expression schema
+
+`targetEntitySchema` validates only the runtime `Optimisation.expression.expressionValue` structure. It does not perform solver feasibility checks, candidate ranking, objective trade-off evaluation, best-candidate selection, or runtime outcome decisions; those remain OC MS / worker / optimiser responsibilities.
+
+`expressionValue.context` is the required canonical optimisation problem container and contains:
+
+```json
+{
+  "context": {
+    "targets": [],
+    "constraints": [],
+    "preferences": []
+  }
+}
+```
+
+Schema rules:
+
+| Element | Rule |
+|---|---|
+| `context.targets[]` | Required array for optimisation goals; normally at least one target. |
+| `context.constraints[]` | Required array for hard mandatory requirements; whether it may be empty is governed by the concrete active `OptimisationSpecification.targetEntitySchema`. |
+| `context.preferences[]` | Required array for soft ranking/selection preferences; may be empty. |
+| `$defs` | Keep JSON Schema `$defs` and short reusable names `target`, `constraint`, and `preference`. |
