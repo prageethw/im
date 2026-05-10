@@ -1,0 +1,42 @@
+@startuml
+title Optimisation Capability Discovery
+
+skinparam sequenceArrowThickness 2
+skinparam roundcorner 10
+skinparam sequenceParticipantBackgroundColor #EEF2FF
+skinparam sequenceParticipantBorderColor #4F46E5
+skinparam sequenceActorBackgroundColor #EEF2FF
+skinparam sequenceActorBorderColor #4F46E5
+skinparam noteBorderColor #A5B4FC
+skinparam noteBackgroundColor #EEF2FF
+
+actor "User / OEX /\nAuthorised Platform" as Caller
+participant "OGW" as OGW
+participant "OSB MS" as OSB
+participant "NGW" as NGW
+participant "OD MS" as ODMS
+database "OD MS DB" as ODDB
+
+== Discovery Request ==
+
+Caller -> OGW : 1. Request available optimisation capabilities
+OGW -> OSB : 2-3. Invoke OSB MS\n<mTLS + User Context JWT>
+note right of OSB : User context applied\nwhere applicable
+OSB -> OSB : 4. Shape discovery request\n& apply user-context-aware filtering
+OSB -> NGW : 5. Call NGW\n<mTLS + OAuth2 (system-to-system)>
+NGW -> ODMS : 6. Route discovery request
+
+== Data Retrieval ==
+
+ODMS -> ODDB : 7. Read ACTIVE OptimisationSpecification records
+ODDB --> ODMS : Return active records
+
+== Discovery Response ==
+
+ODMS --> NGW : 8. Return capability & request-contract metadata\n(specCharacteristic[], expressionSpecification,\ntargetEntitySchema)
+NGW --> OSB : 9. Return response to OSB MS
+OSB --> OSB : 10. Shape response for OEX / API consumer
+OSB --> OGW : Shaped response
+OGW --> Caller : 11. Available optimisation capabilities\n& request contract details
+
+@enduml

@@ -1,0 +1,62 @@
+@startuml
+title Optimisation Retrial Flow
+
+skinparam sequenceArrowThickness 2
+skinparam roundcorner 10
+skinparam sequenceParticipantBackgroundColor #EEF2FF
+skinparam sequenceParticipantBorderColor #4F46E5
+skinparam sequenceActorBackgroundColor #EEF2FF
+skinparam sequenceActorBorderColor #4F46E5
+skinparam noteBorderColor #A5B4FC
+skinparam noteBackgroundColor #EEF2FF
+
+actor "User / OEX /\nAuthorised Platform" as Caller
+participant "OGW" as OGW
+participant "OSB MS" as OSB
+participant "NGW" as NGW
+participant "OC MS" as OCMS
+database "OC MS DB" as OCDB
+queue "OC MS Outbox" as Outbox
+queue "Kafka" as Kafka
+participant "Python/Gurobi\nWorker" as Worker
+
+== Retrial Request ==
+
+Caller -> OGW : 1. POST /optimisation/{id}/retrial\n(If-Match header)
+OGW -> OSB : 2-3. Invoke OSB MS\n<mTLS + User Context JWT>
+OSB -> OSB : 4. Validate user context & runtime state\nExpose retrial action only if allowed
+OSB -> NGW : 5. Forward retrial request\n<mTLS + OAuth2 (system-to-system)>
+NGW -> OCMS : 6. Route retrial request
+
+== Validation ==
+
+OCMS -> OCDB : 7. Validate original Optimisation\nlifecycleStatus = FAILED
+OCDB --> OCMS : FAILED status confirmed
+
+== New Optimisation Creation ==
+
+OCMS -> OCDB : 8. Create new Optimisation resource
+note right of OCDB
+  9. New Optimisation links to original\n   via retrialOf reference
+  10. lifecycleStatus = ACKNOWLEDGED
+end note
+OCDB --> OCMS : New Optimisation persisted
+
+== Event Publishing ==
+
+OCMS -> Outbox : 11. Write OptimisationRequestedEvent\n(instruction = EXECUTE) for new Optimisation\n— same transaction
+Outbox -> Kafka : 12. Relay publishes event to Kafka
+
+== Worker Execution ==
+
+Kafka -> Worker : 13. Python/Gurobi Worker consumes\nand processes new request
+
+== Retrial Boundary ==
+
+note over OCMS, OCDB
+  14. Original FAILED Optimisation remains FAILED.
+  Retrial does NOT move it back to PROCESSING.
+  Only the new Optimisation progresses through the lifecycle.
+end note
+
+@enduml

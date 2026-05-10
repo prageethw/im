@@ -1,0 +1,49 @@
+@startuml
+title Optimisation Specification Creation (Catalogue Management)
+
+skinparam sequenceArrowThickness 2
+skinparam roundcorner 10
+skinparam sequenceParticipantBackgroundColor #EEF2FF
+skinparam sequenceParticipantBorderColor #4F46E5
+skinparam sequenceActorBackgroundColor #EEF2FF
+skinparam sequenceActorBorderColor #4F46E5
+skinparam noteBorderColor #A5B4FC
+skinparam noteBackgroundColor #EEF2FF
+
+actor "Optimisation Domain\nEngineer" as Engineer
+participant "OGW" as OGW
+participant "OSB MS" as OSB
+participant "NGW" as NGW
+participant "OD MS" as ODMS
+database "OD MS DB" as ODDB
+
+== Catalogue Create Request ==
+
+Engineer -> OGW : 1. Initiate OptimisationSpecification creation\n(post E2E team agreement)
+OGW -> OSB : 2-3. Invoke OSB MS\n<mTLS + User Context JWT>
+OSB -> OSB : 4. Validate user context\n& confirm catalogue-management access
+OSB -> NGW : 5. Forward create request\n<mTLS + OAuth2 (system-to-system)>
+NGW -> ODMS : 6. Route create request
+
+== Validation & Persistence ==
+
+ODMS -> ODMS : 7. Authenticate & authorise\ncatalogue operation
+ODMS -> ODMS : 8. Validate OptimisationSpecification shape\n(TMF fields, specCharacteristic[],\nexpressionSpecification, targetEntitySchema)
+ODMS -> ODDB : 9. Persist new OptimisationSpecification\n(lifecycleStatus = DRAFT)
+ODDB --> ODMS : Confirm persisted
+
+== Create Response ==
+
+ODMS --> NGW : 10. Return DRAFT OptimisationSpecification\n(+ Location & ETag where applicable)
+NGW --> OSB : 11. Return response to OSB MS
+OSB --> OGW : 12. Shape catalogue-management response\nfor OEX experience
+OGW --> Engineer : 13. DRAFT OptimisationSpecification result
+
+== Governance Note ==
+
+note over Engineer, ODDB
+  14. DRAFT specification is NOT usable for runtime optimisation
+  until reviewed and activated under OD MS governance.
+end note
+
+@enduml

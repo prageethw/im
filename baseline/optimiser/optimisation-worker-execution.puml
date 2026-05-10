@@ -1,0 +1,60 @@
+@startuml
+title Optimisation Worker Execution & Result Projection
+
+skinparam sequenceArrowThickness 2
+skinparam roundcorner 10
+skinparam sequenceParticipantBackgroundColor #EEF2FF
+skinparam sequenceParticipantBorderColor #4F46E5
+skinparam sequenceActorBackgroundColor #EEF2FF
+skinparam sequenceActorBorderColor #4F46E5
+skinparam noteBorderColor #A5B4FC
+skinparam noteBackgroundColor #EEF2FF
+
+queue "Kafka" as Kafka
+participant "Python/Gurobi\nWorker" as Worker
+participant "Gurobi\nOptimiser" as Gurobi
+queue "OC MS Inbox" as Inbox
+participant "OC MS" as OCMS
+database "OC MS DB" as OCDB
+actor "User / OEX /\nAuthorised Platform" as Caller
+participant "OGW" as OGW
+participant "OSB MS" as OSB
+participant "NGW" as NGW
+
+== Worker Consumption ==
+
+Kafka -> Worker : 1. Consume OptimisationRequestedEvent\n(instruction = EXECUTE)
+Worker -> Worker : 2. Validate event idempotency\n& execution eligibility
+
+== Model Resolution & Solving ==
+
+Worker -> Worker : 3. Resolve runtime context\n& deterministic model binding
+Worker -> Gurobi : 4. Invoke Gurobi Optimiser
+Gurobi --> Worker : 5. Return solver output\nor failure information
+
+== Outcome Mapping & Publishing ==
+
+Worker -> Worker : 6. Map outcome to\nSUCCESS, INFEASIBLE, or FAILURE
+Worker -> Kafka : 7. Publish OptimisationCompletedEvent\nor OptimisationFailedEvent
+
+== Result Ingestion ==
+
+Kafka -> Inbox : 8. OC MS Inbox consumes worker outcome event
+Inbox -> Inbox : 9. Apply idempotency &\nstale/late-event checks
+Inbox -> OCDB : 10. Update OC MS DB with\nlifecycle & result projection
+OCDB --> Inbox : Confirmed
+
+== User Observation ==
+
+Caller -> OGW : 11. GET /optimisation/{id}
+OGW -> OSB : <mTLS + User Context JWT>
+OSB -> NGW : <mTLS + OAuth2 (system-to-system)>
+NGW -> OCMS : Route read request
+OCMS -> OCDB : Read lifecycle & result
+OCDB --> OCMS : Return record
+OCMS --> NGW : Return response
+NGW --> OSB : Return response
+OSB --> OGW : Shape response
+OGW --> Caller : Optimisation outcome\n(SUCCESS / INFEASIBLE / FAILURE)
+
+@enduml

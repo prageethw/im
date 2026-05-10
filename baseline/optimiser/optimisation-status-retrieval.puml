@@ -1,0 +1,50 @@
+@startuml
+title Optimisation Status & Result Retrieval (Read-Only Monitoring)
+
+skinparam sequenceArrowThickness 2
+skinparam roundcorner 10
+skinparam sequenceParticipantBackgroundColor #EEF2FF
+skinparam sequenceParticipantBorderColor #4F46E5
+skinparam sequenceActorBackgroundColor #EEF2FF
+skinparam sequenceActorBorderColor #4F46E5
+skinparam noteBorderColor #A5B4FC
+skinparam noteBackgroundColor #EEF2FF
+
+actor "User / OEX /\nAuthorised Platform" as Caller
+participant "OGW" as OGW
+participant "OSB MS" as OSB
+participant "NGW" as NGW
+participant "OC MS" as OCMS
+database "OC MS DB" as OCDB
+queue "OC MS Outbox" as Outbox
+queue "Kafka" as Kafka
+
+== Status / Result Request ==
+
+Caller -> OGW : 1. Request optimisation status or result
+OGW -> OSB : 2-3. Invoke OSB MS\n<mTLS + User Context JWT>
+OSB -> OSB : 4. Validate access to\nrequested optimisation view
+OSB -> NGW : 5. Forward request\n<mTLS + OAuth2 (system-to-system)>
+NGW -> OCMS : 6. Route GET /optimisation/{id}
+
+== Data Retrieval ==
+
+OCMS -> OCDB : 7. Read runtime Optimisation record
+OCDB --> OCMS : Return record
+
+== Response ==
+
+OCMS --> NGW : 8. Return lifecycleStatus, status reason,\nresult projection, failure details,\nlinks/actions where applicable
+NGW --> OSB : 9. Return response to OSB MS
+OSB --> OGW : 10. Shape user-friendly\nstatus/result model
+OGW --> Caller : 11. Current lifecycle / result state
+
+== Read-Only Boundary ==
+
+note over OCMS, Kafka
+  12. No OC MS Outbox record written.
+  No worker instruction emitted.
+  This is a read-only monitoring operation.
+end note
+
+@enduml

@@ -1,0 +1,57 @@
+@startuml
+title Optimisation Cancellation Flow
+
+skinparam sequenceArrowThickness 2
+skinparam roundcorner 10
+skinparam sequenceParticipantBackgroundColor #EEF2FF
+skinparam sequenceParticipantBorderColor #4F46E5
+skinparam sequenceActorBackgroundColor #EEF2FF
+skinparam sequenceActorBorderColor #4F46E5
+skinparam noteBorderColor #A5B4FC
+skinparam noteBackgroundColor #EEF2FF
+
+actor "User / OEX /\nAuthorised Platform" as Caller
+participant "OGW" as OGW
+participant "OSB MS" as OSB
+participant "NGW" as NGW
+participant "OC MS" as OCMS
+database "OC MS DB" as OCDB
+queue "OC MS Outbox" as Outbox
+queue "Kafka" as Kafka
+participant "Python/Gurobi\nWorker" as Worker
+
+== Cancellation Request ==
+
+Caller -> OGW : 1. POST /optimisation/{id}/cancellation\n(If-Match header)
+OGW -> OSB : 2-3. Invoke OSB MS\n<mTLS + User Context JWT>
+OSB -> OSB : 4. Validate user context & runtime state\nExpose cancellation action only if allowed
+OSB -> NGW : 5. Forward cancellation request\n<mTLS + OAuth2 (system-to-system)>
+NGW -> OCMS : 6. Route cancellation request
+
+== Validation ==
+
+OCMS -> OCDB : 7. Validate ETag (If-Match)
+OCDB --> OCMS : ETag confirmed
+OCMS -> OCDB : 8. Check lifecycleStatus is\nACKNOWLEDGED, QUEUED, or PROCESSING
+OCDB --> OCMS : Status eligible for cancellation
+
+== State Transition & Event Publishing ==
+
+OCMS -> OCDB : 9. Update lifecycleStatus = CANCELLING
+OCDB --> OCMS : Confirmed
+OCMS -> Outbox : 10. Write OptimisationRequestedEvent\n(instruction = CANCEL) — same transaction
+Outbox -> Kafka : 11. Relay publishes event to Kafka
+
+== Worker Cancellation ==
+
+Kafka -> Worker : 12. Consume CANCEL instruction
+Worker -> Worker : 13. Stop, cancel, or safely ignore\nwork where possible
+
+== Final Projection ==
+
+Worker -> Kafka : Publish cancellation outcome event
+Kafka -> OCMS : Consume outcome
+OCMS -> OCDB : 14. Project lifecycleStatus = CANCELLED\nwhen cancellation confirmed or safely resolved
+note right of OCDB : Final state is eventual —\nworker determines safe resolution
+
+@enduml
