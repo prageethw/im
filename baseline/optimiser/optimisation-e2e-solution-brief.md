@@ -21,17 +21,17 @@ The solution separates the **definition of optimisation capabilities** from the 
 - The solution provides a reusable, asynchronous optimisation platform backed by deterministic Gurobi models.
 - External-facing backend APIs are **TMF ontology-aligned** in style, resource structure, expression pattern, polymorphism fields, and extension semantics.
 - The external optimiser domain concept is **Optimisation**, not Intent.
-- A runtime `Optimisation` is a short-lived run. It completes, becomes infeasible, fails, or is cancelled. It is not a long-running desired-state intent control loop by default.
+- A runtime `Optimisation` is a short-lived run. It completes, becomes infeasible, fails, or is cancelled. It is not, by default, a long-running desired-state intent control loop.
 - The solution uses two core optimisation-domain microservices:
   - **OD MS** owns `OptimisationSpecification` and exposes the caller-facing request contract.
-  - **OC MS** owns runtime `Optimisation` lifecycle, cancellation, retrial, event integration, and result projection.
+  - **OC MS** owns the runtime `Optimisation` lifecycle, cancellation, retrial, event integration, and result projection.
 - Consumers may include **OEX**, platform services, planning tools, assurance functions, intent-management flows, or other authorised entities that need to run optimisation.
 - OEX layer:
   - **OEX UI** provides the user-facing optimisation experience.
   - **OGW** is the user-context-aware gateway that invokes OSB MS using mTLS and User Context JWT.
   - **OSB MS / Optimisation Screen Builder MS** is the context-aware OEX facade/backend-for-frontend for optimisation journeys.
   - OSB MS shapes OEX screens and actions using the User Context JWT, initially proxies runtime optimisation journeys to OC MS through NGW, and later supports governed OD MS catalogue/specification journeys through NGW.
-- Operator access to OEX is governed by the ACG approval process and Microsoft Entra ID SSO.
+- The ACG approval process governs operator access to OEX and Microsoft Entra ID SSO.
 - OGW exposes OEX APIs for the OEX UI using user-context-aware OAuth2.
 - OGW calls OSB MS using mTLS and User Context JWT.
 - OSB MS reaches backend OD MS and OC MS APIs through NGW using mTLS and OAuth2 system-to-system.
@@ -55,6 +55,12 @@ OD MS acts as the governed catalogue of optimisation capabilities. It exposes on
 OC MS acts as the runtime controller. It accepts requests, validates the request shape and request contract, creates runtime optimisation resources, manages lifecycle state, publishes worker instructions, consumes worker outcomes, and projects final results.
 
 The Python/Gurobi worker is responsible for executing the internal deterministic optimisation model. It consumes events from Kafka, executes or cancels work based on the instruction, and publishes outcome events back to Kafka.
+
+Backend optimisation API examples use platform-readable optimisation fields while preserving TMF ontology-aligned structure, expression pattern, polymorphism fields, and extension semantics. Detailed standard validation should reference the relevant TMF921 / TR292 material when a specific external API/resource/event decision is being baselined.
+
+---
+
+Non-standard additions on external/backend APIs must be labelled as approved platform extensions and must not break standard resource and operation responsibilities. Internal Kafka events and private service-to-service APIs do not need to use TMF REST representation fields.
 
 ### 3.1 Use case view:
 
@@ -374,17 +380,6 @@ Detailed flow:
 10. OC MS Inbox updates OC MS DB with lifecycle/result projection.
 11. User observes the outcome through GET /optimisation/{id}.
 ```
-
----
-
-### 3.4 Design rules and TMF ontology alignment:
-
-Backend optimisation API examples use platform-readable optimisation fields while preserving TMF ontology-aligned structure, expression pattern, polymorphism fields, and extension semantics. Detailed standard validation should reference the relevant TMF921 / TR292 material when a specific external API/resource/event decision is being baselined.
-
----
-
-Non-standard additions on external/backend APIs must be labelled as approved platform extensions and must not break standard resource and operation responsibilities. Internal Kafka events and private service-to-service APIs do not need to use TMF REST representation fields.
-
 ---
 
 ## 4. Capability matrix:
