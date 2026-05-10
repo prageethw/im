@@ -134,9 +134,9 @@ Accept: application/json
   "specCharacteristic": [
     {
       "@type": "CharacteristicSpecification",
-      "id": "targets",
-      "name": "targets",
-      "description": "Measurable runtime objectives supported by this IntentSpecification. Detailed target fields and validation rules are defined in the referenced expression-value schema.",
+      "id": "context",
+      "name": "context",
+      "description": "Top-level semantic context supported by this IntentSpecification. The context contains canonical context.targets, context.constraints, and context.preferences. Detailed field rules are defined in the expression-value schema referenced by targetEntitySchema.@schemaLocation.",
       "valueType": "object",
       "configurable": true,
       "minCardinality": 1,
@@ -147,54 +147,29 @@ Accept: application/json
           "valueType": "object",
           "isDefault": true,
           "value": {
-            "maxLatencyMs": 10,
-            "minAvailabilityPercent": 99.99,
-            "maxJitterMs": 2,
-            "maxPacketLossPercent": 0.01
-          }
-        }
-      ]
-    },
-    {
-      "@type": "CharacteristicSpecification",
-      "id": "constraints",
-      "name": "constraints",
-      "description": "Hard runtime requirements supported by this IntentSpecification. Detailed constraint fields and validation rules are defined in the referenced expression-value schema.",
-      "valueType": "object",
-      "configurable": true,
-      "minCardinality": 1,
-      "maxCardinality": 1,
-      "characteristicValueSpecification": [
-        {
-          "@type": "CharacteristicValueSpecification",
-          "valueType": "object",
-          "isDefault": true,
-          "value": {
-            "priority": "critical",
-            "redundancyRequired": true,
-            "timeWindow": {
-              "startDateTime": "2026-04-18T12:00:00+10:00"
+            "targets": {
+              "maxLatencyMs": 10,
+              "minAvailabilityPercent": 99.99,
+              "maxJitterMs": 2,
+              "maxPacketLossPercent": 0.01
+            },
+            "constraints": {
+              "location": {
+                "locationId": "AU-NSW-SYD-HOSP-001",
+                "locationType": "hospital",
+                "geographicScope": "campus"
+              },
+              "serviceType": "surgical-connectivity",
+              "serviceClass": "critical-gold",
+              "priority": "critical",
+              "redundancyRequired": true,
+              "timeWindow": {
+                "startDateTime": "2026-04-18T12:00:00+10:00"
+              }
+            },
+            "preferences": {
+              "preferredAccessTechnology": "5G"
             }
-          }
-        }
-      ]
-    },
-    {
-      "@type": "CharacteristicSpecification",
-      "id": "preferences",
-      "name": "preferences",
-      "description": "Soft runtime selection preferences supported by this IntentSpecification. Detailed preference fields and validation rules are defined in the referenced expression-value schema.",
-      "valueType": "object",
-      "configurable": true,
-      "minCardinality": 0,
-      "maxCardinality": 1,
-      "characteristicValueSpecification": [
-        {
-          "@type": "CharacteristicValueSpecification",
-          "valueType": "object",
-          "isDefault": true,
-          "value": {
-            "preferredAccessTechnology": "5G"
           }
         }
       ]
@@ -243,14 +218,22 @@ Last-Modified: Sat, 18 Apr 2026 02:00:00 GMT
   "expressionSpecification": "...same as request...",
   "targetEntitySchema": "...same as request...",
   "_links": {
-    "self": { "href": "/intentManagement/v5/intentSpecification/hospital-surgical-slice-spec-v1.19" },
-    "fullUpdate": { "href": "/intentManagement/v5/intentSpecification/hospital-surgical-slice-spec-v1.19", "method": "PUT" },
+    "self": {
+      "href": "/intentManagement/v5/intentSpecification/hospital-surgical-slice-spec-v1.19"
+    },
+    "fullUpdate": {
+      "href": "/intentManagement/v5/intentSpecification/hospital-surgical-slice-spec-v1.19",
+      "method": "PUT"
+    },
     "partialUpdate": {
       "href": "/intentManagement/v5/intentSpecification/hospital-surgical-slice-spec-v1.19",
       "method": "PATCH",
       "warning": "PATCH is supported for compatibility but discouraged. Prefer PUT for deterministic full replacement."
     },
-    "delete": { "href": "/intentManagement/v5/intentSpecification/hospital-surgical-slice-spec-v1.19", "method": "DELETE" }
+    "delete": {
+      "href": "/intentManagement/v5/intentSpecification/hospital-surgical-slice-spec-v1.19",
+      "method": "DELETE"
+    }
   }
 }
 ```
@@ -289,7 +272,9 @@ Cache-Control: private, max-age=60
     "@type": "IntentSpecification",
     "@baseType": "EntitySpecification",
     "_links": {
-      "self": { "href": "/intentManagement/v5/intentSpecification/hospital-surgical-slice-spec-v1.19" },
+      "self": {
+        "href": "/intentManagement/v5/intentSpecification/hospital-surgical-slice-spec-v1.19"
+      },
       "partialUpdate": {
         "href": "/intentManagement/v5/intentSpecification/hospital-surgical-slice-spec-v1.19",
         "method": "PATCH",
@@ -344,7 +329,9 @@ Cache-Control: private, max-age=300
   "specCharacteristic": "...bucket catalogue with example/default characteristicValueSpecification values...",
   "expressionSpecification": "...full expression schema...",
   "_links": {
-    "self": { "href": "/intentManagement/v5/intentSpecification/hospital-surgical-slice-spec-v1.19" },
+    "self": {
+      "href": "/intentManagement/v5/intentSpecification/hospital-surgical-slice-spec-v1.19"
+    },
     "partialUpdate": {
       "href": "/intentManagement/v5/intentSpecification/hospital-surgical-slice-spec-v1.19",
       "method": "PATCH",
@@ -497,7 +484,9 @@ ETag: "intent-spec-hospital-surgical-slice-spec-v1.19-v2"
   "@type": "IntentSpecification",
   "@baseType": "EntitySpecification",
   "_links": {
-    "self": { "href": "/intentManagement/v5/intentSpecification/hospital-surgical-slice-spec-v1.19" },
+    "self": {
+      "href": "/intentManagement/v5/intentSpecification/hospital-surgical-slice-spec-v1.19"
+    },
     "partialUpdate": {
       "href": "/intentManagement/v5/intentSpecification/hospital-surgical-slice-spec-v1.19",
       "method": "PATCH",
@@ -663,7 +652,9 @@ ETag: "subscription-sub-001-v1"
   "query": "eventType=IntentSpecificationStatusChangeEvent",
   "@type": "EventSubscription",
   "_links": {
-    "self": { "href": "/intentManagement/v5/intentSpecification/hub/sub-001" }
+    "self": {
+      "href": "/intentManagement/v5/intentSpecification/hub/sub-001"
+    }
   }
 }
 ```
@@ -694,7 +685,9 @@ ETag: "subscription-sub-001-v1"
   "query": "eventType=IntentSpecificationStatusChangeEvent",
   "@type": "EventSubscription",
   "_links": {
-    "self": { "href": "/intentManagement/v5/intentSpecification/hub/sub-001" }
+    "self": {
+      "href": "/intentManagement/v5/intentSpecification/hub/sub-001"
+    }
   }
 }
 ```
@@ -814,8 +807,14 @@ They are not internal fulfilment events and must not expose II MS semantic valid
       "@baseType": "EntitySpecification"
     }
   },
-  "reportingSystem": { "id": "intent-definition-ms", "name": "Intent Definition MS" },
-  "source": { "id": "intent-definition-ms", "name": "Intent Definition MS" },
+  "reportingSystem": {
+    "id": "intent-definition-ms",
+    "name": "Intent Definition MS"
+  },
+  "source": {
+    "id": "intent-definition-ms",
+    "name": "Intent Definition MS"
+  },
   "@type": "IntentSpecificationCreateEvent"
 }
 ```
@@ -851,8 +850,14 @@ They are not internal fulfilment events and must not expose II MS semantic valid
       }
     ]
   },
-  "reportingSystem": { "id": "intent-definition-ms", "name": "Intent Definition MS" },
-  "source": { "id": "intent-definition-ms", "name": "Intent Definition MS" },
+  "reportingSystem": {
+    "id": "intent-definition-ms",
+    "name": "Intent Definition MS"
+  },
+  "source": {
+    "id": "intent-definition-ms",
+    "name": "Intent Definition MS"
+  },
   "@type": "IntentSpecificationAttributeValueChangeEvent"
 }
 ```
@@ -883,8 +888,14 @@ They are not internal fulfilment events and must not expose II MS semantic valid
     "previousLifecycleStatus": "DRAFT",
     "newLifecycleStatus": "ACTIVE"
   },
-  "reportingSystem": { "id": "intent-definition-ms", "name": "Intent Definition MS" },
-  "source": { "id": "intent-definition-ms", "name": "Intent Definition MS" },
+  "reportingSystem": {
+    "id": "intent-definition-ms",
+    "name": "Intent Definition MS"
+  },
+  "source": {
+    "id": "intent-definition-ms",
+    "name": "Intent Definition MS"
+  },
   "@type": "IntentSpecificationStatusChangeEvent"
 }
 ```
@@ -913,8 +924,14 @@ They are not internal fulfilment events and must not expose II MS semantic valid
       "@baseType": "EntitySpecification"
     }
   },
-  "reportingSystem": { "id": "intent-definition-ms", "name": "Intent Definition MS" },
-  "source": { "id": "intent-definition-ms", "name": "Intent Definition MS" },
+  "reportingSystem": {
+    "id": "intent-definition-ms",
+    "name": "Intent Definition MS"
+  },
+  "source": {
+    "id": "intent-definition-ms",
+    "name": "Intent Definition MS"
+  },
   "@type": "IntentSpecificationDeleteEvent"
 }
 ```
@@ -1036,56 +1053,134 @@ The following JSON Schema is the external validation artefact referenced by `tar
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://mycsp.com.au/schemas/intentManagement/v5/intentExpression/hospital-surgical-slice-spec-v1.19.expression.schema.json",
-  "title": "Hospital Surgical Slice Intent Expression Value",
+  "title": "Hospital Surgical Slice Intent Expression Value Context Wrapper",
   "type": "object",
   "additionalProperties": false,
-  "required": ["location", "serviceType", "serviceClass", "targets", "constraints"],
+  "required": [
+    "context"
+  ],
   "properties": {
-    "location": {
+    "context": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["locationId"],
+      "required": [
+        "targets",
+        "constraints"
+      ],
       "properties": {
-        "locationId": { "type": "string", "minLength": 1 },
-        "locationType": { "type": "string", "minLength": 1 },
-        "geographicScope": { "type": "string", "minLength": 1 }
-      }
-    },
-    "serviceType": { "type": "string", "enum": ["surgical-connectivity"] },
-    "serviceClass": { "type": "string", "enum": ["critical-gold", "critical-silver"] },
-    "targets": {
-      "type": "object",
-      "additionalProperties": false,
-      "properties": {
-        "maxLatencyMs": { "type": "number", "minimum": 0 },
-        "minAvailabilityPercent": { "type": "number", "minimum": 0, "maximum": 100 },
-        "maxJitterMs": { "type": "number", "minimum": 0 },
-        "maxPacketLossPercent": { "type": "number", "minimum": 0, "maximum": 100 }
-      }
-    },
-    "constraints": {
-      "type": "object",
-      "additionalProperties": false,
-      "required": ["priority", "redundancyRequired"],
-      "properties": {
-        "priority": { "type": "string", "enum": ["critical", "high", "standard"] },
-        "redundancyRequired": { "type": "boolean" },
-        "timeWindow": {
+        "targets": {
           "type": "object",
           "additionalProperties": false,
-          "required": ["startDateTime"],
           "properties": {
-            "startDateTime": { "type": "string", "format": "date-time" },
-            "endDateTime": { "type": "string", "format": "date-time" }
+            "maxLatencyMs": {
+              "type": "number",
+              "minimum": 0
+            },
+            "minAvailabilityPercent": {
+              "type": "number",
+              "minimum": 0,
+              "maximum": 100
+            },
+            "maxJitterMs": {
+              "type": "number",
+              "minimum": 0
+            },
+            "maxPacketLossPercent": {
+              "type": "number",
+              "minimum": 0,
+              "maximum": 100
+            }
+          }
+        },
+        "constraints": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "location",
+            "serviceType",
+            "serviceClass",
+            "priority",
+            "redundancyRequired"
+          ],
+          "properties": {
+            "location": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "locationId"
+              ],
+              "properties": {
+                "locationId": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "locationType": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "geographicScope": {
+                  "type": "string",
+                  "minLength": 1
+                }
+              }
+            },
+            "serviceType": {
+              "type": "string",
+              "enum": [
+                "surgical-connectivity"
+              ]
+            },
+            "serviceClass": {
+              "type": "string",
+              "enum": [
+                "critical-gold",
+                "critical-silver"
+              ]
+            },
+            "priority": {
+              "type": "string",
+              "enum": [
+                "critical",
+                "high",
+                "standard"
+              ]
+            },
+            "redundancyRequired": {
+              "type": "boolean"
+            },
+            "timeWindow": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "startDateTime"
+              ],
+              "properties": {
+                "startDateTime": {
+                  "type": "string",
+                  "format": "date-time"
+                },
+                "endDateTime": {
+                  "type": "string",
+                  "format": "date-time"
+                }
+              }
+            }
+          }
+        },
+        "preferences": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "preferredAccessTechnology": {
+              "type": "string",
+              "enum": [
+                "5G",
+                "fibre",
+                "private-wireless"
+              ]
+            }
           }
         }
-      }
-    },
-    "preferences": {
-      "type": "object",
-      "additionalProperties": false,
-      "properties": {
-        "preferredAccessTechnology": { "type": "string", "enum": ["5G", "fibre", "private-wireless"] }
       }
     }
   }
