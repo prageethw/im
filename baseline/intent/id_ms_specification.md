@@ -12,11 +12,11 @@
 | Domain | Intent Domain |
 | Base path | `/intentManagement/v5` |
 | Primary resource | `IntentSpecification` |
-| Primary responsibility | Design-time `IntentSpecification` catalogue, lifecycle/version governance, syntax contract, and external specification events |
+| Primary responsibility | Definition-time `IntentSpecification` catalogue, lifecycle/version governance, syntax contract, and external specification events |
 
 ### Boundary statement
 
-ID MS owns design-time `IntentSpecification` contracts and subscription management for specification events.
+ID MS owns definition-time `IntentSpecification` contracts and subscription management for specification events.
 
 ID MS validates syntax/resource shape and enforces specification lifecycle/version governance. ID MS does not own runtime `Intent`, `IntentReport`, semantic validation, policy validation, network/resource feasibility, optimisation, runtime assurance, telemetry, or callback ingestion.
 
@@ -167,17 +167,133 @@ Content-Type: application/json
 ### Request
 
 ```http
-POST /intentManagement/v5/intentSpecification?fields=id,href,name,version,lifecycleStatus,@type,@baseType
+POST /intentManagement/v5/intentSpecification?fields=id,href,familyId,name,version,lifecycleStatus,isBundle,validFor,relatedParty,specCharacteristic,expressionSpecification,targetEntitySchema,@type,@baseType
 Content-Type: application/json
 Accept: application/json
 ```
 
 ```json
 {
+  "familyId": "hospital-surgical-slice-spec",
   "name": "Hospital Surgical Slice Intent Specification",
-  "description": "Design-time specification for hospital surgical slice intents. This specification defines the allowed request shape for surgical connectivity intents. It is syntax-first: ID MS validates structure and allowed fields, while II MS and the knowledge plane validate semantic meaning, policy, and fulfilment feasibility.",
+  "description": "Definition-time specification for hospital surgical slice intents. This specification defines the allowed request shape for surgical connectivity intents. It is syntax-first: ID MS validates structure and allowed fields, while II MS and the knowledge plane validate semantic meaning, policy, and fulfilment feasibility.",
   "version": "1.19",
   "lifecycleStatus": "DRAFT",
+  "isBundle": false,
+  "validFor": {
+    "startDateTime": "2026-04-18T12:00:00+10:00"
+  },
+  "relatedParty": [
+    {
+      "@type": "RelatedPartyRefOrPartyRoleRef",
+      "role": "Provider",
+      "partyOrPartyRole": {
+        "@type": "PartyRoleRef",
+        "id": "mycsp",
+        "name": "MyCSP",
+        "@referredType": "Provider"
+      }
+    }
+  ],
+  "@type": "IntentSpecification",
+  "@baseType": "EntitySpecification",
+  "@schemaLocation": "https://mycsp.com.au/schemas/intentManagement/v5/intentSpecification/hospital-surgical-slice-spec-v1.19.schema.json",
+  "specCharacteristic": [
+    {
+      "@type": "CharacteristicSpecification",
+      "id": "context",
+      "name": "context",
+      "description": "Top-level semantic context supported by this IntentSpecification. The context contains canonical context.targets, context.constraints, and context.preferences. Detailed field rules are defined in the expression-value schema referenced by targetEntitySchema.@schemaLocation.",
+      "valueType": "object",
+      "configurable": true,
+      "minCardinality": 1,
+      "maxCardinality": 1,
+      "characteristicValueSpecification": [
+        {
+          "@type": "CharacteristicValueSpecification",
+          "valueType": "object",
+          "isDefault": true,
+          "value": {
+            "targets": {
+              "maxLatencyMs": 10,
+              "minAvailabilityPercent": 99.99,
+              "maxJitterMs": 2,
+              "maxPacketLossPercent": 0.01
+            },
+            "constraints": {
+              "location": {
+                "locationId": "AU-NSW-SYD-HOSP-001",
+                "locationType": "hospital",
+                "geographicScope": "campus"
+              },
+              "serviceType": "surgical-connectivity",
+              "serviceClass": "critical-gold",
+              "priority": "critical",
+              "redundancyRequired": true,
+              "timeWindow": {
+                "startDateTime": "2026-04-18T12:00:00+10:00"
+              }
+            },
+            "preferences": {
+              "preferredAccessTechnology": "5G"
+            }
+          }
+        }
+      ]
+    }
+  ],
+  "expressionSpecification": {
+    "@type": "ExpressionSpecification",
+    "expressionLanguage": "JsonLdExpression",
+    "iri": "https://mycsp.com.au/tio/hospital-surgical-slice/v1.0"
+  },
+  "targetEntitySchema": {
+    "@type": "TargetEntitySchema",
+    "@schemaLocation": "https://mycsp.com.au/schemas/intentManagement/v5/intentExpression/hospital-surgical-slice-spec-v1.19.expression.schema.json",
+    "schemaVersion": "1.19",
+    "schemaHash": "sha256:REPLACE_WITH_PUBLISHED_SCHEMA_HASH"
+  }
+}
+```
+
+The client does not send `id`, `href`, `Location`, `ETag`, or `_links`. ID MS generates these values.
+
+### Success response
+
+```http
+HTTP/1.1 201 Created
+Location: /intentManagement/v5/intentSpecification/hospital-surgical-slice-spec-v1.19
+Content-Type: application/json
+Content-Language: en-AU
+ETag: "intent-spec-hospital-surgical-slice-spec-v1.19-v1"
+Last-Modified: Sat, 18 Apr 2026 02:00:00 GMT
+```
+
+```json
+{
+  "id": "hospital-surgical-slice-spec-v1.19",
+  "href": "/intentManagement/v5/intentSpecification/hospital-surgical-slice-spec-v1.19",
+  "familyId": "hospital-surgical-slice-spec",
+  "name": "Hospital Surgical Slice Intent Specification",
+  "description": "Definition-time specification for hospital surgical slice intents. This specification defines the allowed request shape for surgical connectivity intents. It is syntax-first: ID MS validates structure and allowed fields, while II MS and the knowledge plane validate semantic meaning, policy, and fulfilment feasibility.",
+  "version": "1.19",
+  "lifecycleStatus": "DRAFT",
+  "isBundle": false,
+  "validFor": {
+    "startDateTime": "2026-04-18T12:00:00+10:00"
+  },
+  "relatedParty": [
+    {
+      "@type": "RelatedPartyRefOrPartyRoleRef",
+      "role": "Provider",
+      "partyOrPartyRole": {
+        "@type": "PartyRoleRef",
+        "id": "mycsp",
+        "name": "MyCSP",
+        "@referredType": "Provider"
+      }
+    }
+  ],
   "@type": "IntentSpecification",
   "@baseType": "EntitySpecification",
   "@schemaLocation": "https://mycsp.com.au/schemas/intentManagement/v5/intentSpecification/hospital-surgical-slice-spec-v1.19.schema.json",
@@ -238,37 +354,6 @@ Accept: application/json
   },
   "_links": {
     "self": {
-      "href": "https://mycsp.com.au/intentManagement/v5/intentSpecification/hospital-surgical-slice-spec-v1.19"
-    }
-  }
-}
-```
-
-### Success response
-
-```http
-HTTP/1.1 201 Created
-Location: /intentManagement/v5/intentSpecification/hospital-surgical-slice-spec-v1.19
-Content-Type: application/json
-Content-Language: en-AU
-ETag: "intent-spec-hospital-surgical-slice-spec-v1.19-v1"
-Last-Modified: Sat, 18 Apr 2026 02:00:00 GMT
-```
-
-```json
-{
-  "id": "hospital-surgical-slice-spec-v1.19",
-  "href": "/intentManagement/v5/intentSpecification/hospital-surgical-slice-spec-v1.19",
-  "name": "Hospital Surgical Slice Intent Specification",
-  "version": "1.19",
-  "lifecycleStatus": "DRAFT",
-  "@type": "IntentSpecification",
-  "@baseType": "EntitySpecification",
-  "specCharacteristic": "...same as request...",
-  "expressionSpecification": "...same as request...",
-  "targetEntitySchema": "...same as request...",
-  "_links": {
-    "self": {
       "href": "/intentManagement/v5/intentSpecification/hospital-surgical-slice-spec-v1.19"
     },
     "fullUpdate": {
@@ -278,7 +363,7 @@ Last-Modified: Sat, 18 Apr 2026 02:00:00 GMT
     "partialUpdate": {
       "href": "/intentManagement/v5/intentSpecification/hospital-surgical-slice-spec-v1.19",
       "method": "PATCH",
-      "warning": "PATCH is supported for compatibility but discouraged. Prefer PUT for deterministic full replacement."
+      "warning": "PATCH is supported for compatibility but discouraged as a general update method. Prefer PUT for deterministic full replacement."
     },
     "delete": {
       "href": "/intentManagement/v5/intentSpecification/hospital-surgical-slice-spec-v1.19",
@@ -289,13 +374,12 @@ Last-Modified: Sat, 18 Apr 2026 02:00:00 GMT
 ```
 
 ---
-
 ## 5. List IntentSpecifications
 
 ### Request
 
 ```http
-GET /intentManagement/v5/intentSpecification?offset=0&limit=10&lifecycleStatus=ACTIVE&fields=id,href,name,version,lifecycleStatus,@type,@baseType
+GET /intentManagement/v5/intentSpecification?offset=0&limit=10&lifecycleStatus=ACTIVE&fields=id,href,familyId,name,version,lifecycleStatus,isBundle,validFor,relatedParty,@type,@baseType
 Accept: application/json
 ```
 
@@ -316,9 +400,26 @@ Cache-Control: private, max-age=60
   {
     "id": "hospital-surgical-slice-spec-v1.19",
     "href": "/intentManagement/v5/intentSpecification/hospital-surgical-slice-spec-v1.19",
+    "familyId": "hospital-surgical-slice-spec",
     "name": "Hospital Surgical Slice Intent Specification",
     "version": "1.19",
     "lifecycleStatus": "ACTIVE",
+    "isBundle": false,
+    "validFor": {
+      "startDateTime": "2026-04-18T12:00:00+10:00"
+    },
+    "relatedParty": [
+      {
+        "@type": "RelatedPartyRefOrPartyRoleRef",
+        "role": "Provider",
+        "partyOrPartyRole": {
+          "@type": "PartyRoleRef",
+          "id": "mycsp",
+          "name": "MyCSP",
+          "@referredType": "Provider"
+        }
+      }
+    ],
     "@type": "IntentSpecification",
     "@baseType": "EntitySpecification",
     "_links": {
@@ -328,28 +429,29 @@ Cache-Control: private, max-age=60
       "partialUpdate": {
         "href": "/intentManagement/v5/intentSpecification/hospital-surgical-slice-spec-v1.19",
         "method": "PATCH",
-        "warning": "PATCH is supported for compatibility but discouraged. Prefer PUT for deterministic full replacement."
+        "warning": "PATCH is supported for compatibility but discouraged as a general update method. Prefer PUT for deterministic full replacement."
       }
     }
   }
 ]
 ```
 
----
+The list operation returns a lightweight summary by default. It does not include full `specCharacteristic`, `expressionSpecification`, or `targetEntitySchema` unless explicitly requested through `fields`.
 
+---
 ## 6. Retrieve IntentSpecification
 
 ### Request
 
 ```http
-GET /intentManagement/v5/intentSpecification/hospital-surgical-slice-spec-v1.19?fields=id,href,name,description,version,lifecycleStatus,specCharacteristic,expressionSpecification,@type,@baseType
+GET /intentManagement/v5/intentSpecification/hospital-surgical-slice-spec-v1.19?fields=id,href,familyId,name,description,version,lifecycleStatus,isBundle,validFor,relatedParty,specCharacteristic,expressionSpecification,targetEntitySchema,@type,@baseType
 Accept: application/json
 ```
 
 ### Request with cache override
 
 ```http
-GET /intentManagement/v5/intentSpecification/hospital-surgical-slice-spec-v1.19?fields=id,href,name,description,version,lifecycleStatus,specCharacteristic,expressionSpecification,@type,@baseType
+GET /intentManagement/v5/intentSpecification/hospital-surgical-slice-spec-v1.19?fields=id,href,familyId,name,description,version,lifecycleStatus,isBundle,validFor,relatedParty,specCharacteristic,expressionSpecification,targetEntitySchema,@type,@baseType
 Accept: application/json
 Cache-Control: no-cache
 ```
@@ -370,22 +472,54 @@ Cache-Control: private, max-age=300
 {
   "id": "hospital-surgical-slice-spec-v1.19",
   "href": "/intentManagement/v5/intentSpecification/hospital-surgical-slice-spec-v1.19",
+  "familyId": "hospital-surgical-slice-spec",
   "name": "Hospital Surgical Slice Intent Specification",
-  "description": "Design-time specification for hospital surgical slice intents.",
+  "description": "Definition-time specification for hospital surgical slice intents. This specification defines the allowed request shape for surgical connectivity intents. It is syntax-first: ID MS validates structure and allowed fields, while II MS and the knowledge plane validate semantic meaning, policy, and fulfilment feasibility.",
   "version": "1.19",
   "lifecycleStatus": "ACTIVE",
+  "isBundle": false,
+  "validFor": {
+    "startDateTime": "2026-04-18T12:00:00+10:00"
+  },
+  "relatedParty": [
+    {
+      "@type": "RelatedPartyRefOrPartyRoleRef",
+      "role": "Provider",
+      "partyOrPartyRole": {
+        "@type": "PartyRoleRef",
+        "id": "mycsp",
+        "name": "MyCSP",
+        "@referredType": "Provider"
+      }
+    }
+  ],
   "@type": "IntentSpecification",
   "@baseType": "EntitySpecification",
+  "@schemaLocation": "https://mycsp.com.au/schemas/intentManagement/v5/intentSpecification/hospital-surgical-slice-spec-v1.19.schema.json",
   "specCharacteristic": "...bucket catalogue with example/default characteristicValueSpecification values...",
-  "expressionSpecification": "...full expression schema...",
+  "expressionSpecification": {
+    "@type": "ExpressionSpecification",
+    "expressionLanguage": "JsonLdExpression",
+    "iri": "https://mycsp.com.au/tio/hospital-surgical-slice/v1.0"
+  },
+  "targetEntitySchema": {
+    "@type": "TargetEntitySchema",
+    "@schemaLocation": "https://mycsp.com.au/schemas/intentManagement/v5/intentExpression/hospital-surgical-slice-spec-v1.19.expression.schema.json",
+    "schemaVersion": "1.19",
+    "schemaHash": "sha256:REPLACE_WITH_PUBLISHED_SCHEMA_HASH"
+  },
   "_links": {
     "self": {
       "href": "/intentManagement/v5/intentSpecification/hospital-surgical-slice-spec-v1.19"
     },
+    "fullUpdate": {
+      "href": "/intentManagement/v5/intentSpecification/hospital-surgical-slice-spec-v1.19",
+      "method": "PUT"
+    },
     "partialUpdate": {
       "href": "/intentManagement/v5/intentSpecification/hospital-surgical-slice-spec-v1.19",
       "method": "PATCH",
-      "warning": "PATCH is supported for compatibility but discouraged. Prefer PUT for deterministic full replacement."
+      "warning": "PATCH is supported for compatibility but discouraged as a general update method. Prefer PUT for deterministic full replacement."
     }
   }
 }
@@ -411,13 +545,14 @@ Content-Language: en-AU
 ```
 
 ---
-
 ## 7. Full update IntentSpecification
+
+`PUT` is the preferred platform extension for deterministic full replacement of an editable `DRAFT` specification.
 
 ### Request
 
 ```http
-PUT /intentManagement/v5/intentSpecification/hospital-surgical-slice-spec-v1.19?fields=id,href,name,description,version,lifecycleStatus,@type,@baseType
+PUT /intentManagement/v5/intentSpecification/hospital-surgical-slice-spec-v1.19?fields=id,href,familyId,name,description,version,lifecycleStatus,isBundle,validFor,relatedParty,specCharacteristic,expressionSpecification,targetEntitySchema,@type,@baseType
 Content-Type: application/json
 Accept: application/json
 If-Match: "intent-spec-hospital-surgical-slice-spec-v1.19-v1"
@@ -426,14 +561,53 @@ If-Match: "intent-spec-hospital-surgical-slice-spec-v1.19-v1"
 ```json
 {
   "id": "hospital-surgical-slice-spec-v1.19",
+  "href": "/intentManagement/v5/intentSpecification/hospital-surgical-slice-spec-v1.19",
+  "familyId": "hospital-surgical-slice-spec",
   "name": "Hospital Surgical Slice Intent Specification",
-  "description": "Updated draft description.",
+  "description": "Updated definition-time specification for hospital surgical slice intents. This specification defines the allowed request shape for surgical connectivity intents. It is syntax-first: ID MS validates structure and allowed fields, while II MS and the knowledge plane validate semantic meaning, policy, and fulfilment feasibility.",
   "version": "1.19",
   "lifecycleStatus": "DRAFT",
+  "isBundle": false,
+  "validFor": {
+    "startDateTime": "2026-04-18T12:00:00+10:00"
+  },
+  "relatedParty": [
+    {
+      "@type": "RelatedPartyRefOrPartyRoleRef",
+      "role": "Provider",
+      "partyOrPartyRole": {
+        "@type": "PartyRoleRef",
+        "id": "mycsp",
+        "name": "MyCSP",
+        "@referredType": "Provider"
+      }
+    }
+  ],
   "@type": "IntentSpecification",
   "@baseType": "EntitySpecification",
-  "specCharacteristic": [],
-  "expressionSpecification": {}
+  "@schemaLocation": "https://mycsp.com.au/schemas/intentManagement/v5/intentSpecification/hospital-surgical-slice-spec-v1.19.schema.json",
+  "specCharacteristic": [
+    {
+      "@type": "CharacteristicSpecification",
+      "id": "context",
+      "name": "context",
+      "valueType": "object",
+      "configurable": true,
+      "minCardinality": 1,
+      "maxCardinality": 1
+    }
+  ],
+  "expressionSpecification": {
+    "@type": "ExpressionSpecification",
+    "expressionLanguage": "JsonLdExpression",
+    "iri": "https://mycsp.com.au/tio/hospital-surgical-slice/v1.0"
+  },
+  "targetEntitySchema": {
+    "@type": "TargetEntitySchema",
+    "@schemaLocation": "https://mycsp.com.au/schemas/intentManagement/v5/intentExpression/hospital-surgical-slice-spec-v1.19.expression.schema.json",
+    "schemaVersion": "1.19",
+    "schemaHash": "sha256:REPLACE_WITH_PUBLISHED_SCHEMA_HASH"
+  }
 }
 ```
 
@@ -442,20 +616,61 @@ If-Match: "intent-spec-hospital-surgical-slice-spec-v1.19-v1"
 ```http
 HTTP/1.1 200 OK
 Content-Type: application/json
+Content-Language: en-AU
 Content-Location: /intentManagement/v5/intentSpecification/hospital-surgical-slice-spec-v1.19
 ETag: "intent-spec-hospital-surgical-slice-spec-v1.19-v2"
+Last-Modified: Sat, 18 Apr 2026 03:00:00 GMT
 ```
 
 ```json
 {
   "id": "hospital-surgical-slice-spec-v1.19",
   "href": "/intentManagement/v5/intentSpecification/hospital-surgical-slice-spec-v1.19",
+  "familyId": "hospital-surgical-slice-spec",
   "name": "Hospital Surgical Slice Intent Specification",
-  "description": "Updated draft description.",
+  "description": "Updated definition-time specification for hospital surgical slice intents. This specification defines the allowed request shape for surgical connectivity intents. It is syntax-first: ID MS validates structure and allowed fields, while II MS and the knowledge plane validate semantic meaning, policy, and fulfilment feasibility.",
   "version": "1.19",
   "lifecycleStatus": "DRAFT",
+  "isBundle": false,
+  "validFor": {
+    "startDateTime": "2026-04-18T12:00:00+10:00"
+  },
+  "relatedParty": [
+    {
+      "@type": "RelatedPartyRefOrPartyRoleRef",
+      "role": "Provider",
+      "partyOrPartyRole": {
+        "@type": "PartyRoleRef",
+        "id": "mycsp",
+        "name": "MyCSP",
+        "@referredType": "Provider"
+      }
+    }
+  ],
   "@type": "IntentSpecification",
-  "@baseType": "EntitySpecification"
+  "@baseType": "EntitySpecification",
+  "@schemaLocation": "https://mycsp.com.au/schemas/intentManagement/v5/intentSpecification/hospital-surgical-slice-spec-v1.19.schema.json",
+  "specCharacteristic": "...full replacement specCharacteristic...",
+  "expressionSpecification": "...full replacement expressionSpecification...",
+  "targetEntitySchema": "...full replacement targetEntitySchema...",
+  "_links": {
+    "self": {
+      "href": "/intentManagement/v5/intentSpecification/hospital-surgical-slice-spec-v1.19"
+    },
+    "fullUpdate": {
+      "href": "/intentManagement/v5/intentSpecification/hospital-surgical-slice-spec-v1.19",
+      "method": "PUT"
+    },
+    "partialUpdate": {
+      "href": "/intentManagement/v5/intentSpecification/hospital-surgical-slice-spec-v1.19",
+      "method": "PATCH",
+      "warning": "PATCH is supported for compatibility but discouraged as a general update method. Prefer PUT for deterministic full replacement."
+    },
+    "delete": {
+      "href": "/intentManagement/v5/intentSpecification/hospital-surgical-slice-spec-v1.19",
+      "method": "DELETE"
+    }
+  }
 }
 ```
 
@@ -464,13 +679,15 @@ ETag: "intent-spec-hospital-surgical-slice-spec-v1.19-v2"
 ```http
 HTTP/1.1 409 Conflict
 Content-Type: application/json
+Content-Language: en-AU
+Cache-Control: no-store
 ```
 
 ```json
 {
   "code": "RESOURCE_IMMUTABLE",
-  "reason": "ACTIVE_SPECIFICATION_IMMUTABLE",
-  "message": "ACTIVE IntentSpecification resources cannot be updated. Create a new versioned DRAFT specification instead.",
+  "reason": "ACTIVE_OR_RETIRED_SPECIFICATION_IMMUTABLE",
+  "message": "ACTIVE and RETIRED IntentSpecification resources cannot be materially updated. Create a new versioned DRAFT specification for material contract changes.",
   "status": 409,
   "referenceError": "https://mycsp.com.au/errors/RESOURCE_IMMUTABLE",
   "@type": "Error"
@@ -482,6 +699,8 @@ Content-Type: application/json
 ```http
 HTTP/1.1 428 Precondition Required
 Content-Type: application/json
+Content-Language: en-AU
+Cache-Control: no-store
 ```
 
 ```json
@@ -500,6 +719,8 @@ Content-Type: application/json
 ```http
 HTTP/1.1 412 Precondition Failed
 Content-Type: application/json
+Content-Language: en-AU
+Cache-Control: no-store
 ```
 
 ```json
@@ -514,13 +735,16 @@ Content-Type: application/json
 ```
 
 ---
-
 ## 8. Partial update IntentSpecification
+
+`PATCH` remains supported for TMF compatibility, but it is discouraged as a general update method. Prefer `PUT` for deterministic full replacement of editable `DRAFT` specifications. Use `PATCH` only where a TMF-compatible client cannot use `PUT` or where a tightly controlled, small targeted compatibility update is required.
+
+`PATCH` must not normally be used for material contract replacement, including `familyId`, `version`, `specCharacteristic`, `expressionSpecification`, `targetEntitySchema`, or major lifecycle/version contract identity.
 
 ### Request
 
 ```http
-PATCH /intentManagement/v5/intentSpecification/hospital-surgical-slice-spec-v1.19?fields=id,href,name,description,version,lifecycleStatus,@type,@baseType
+PATCH /intentManagement/v5/intentSpecification/hospital-surgical-slice-spec-v1.19?fields=id,href,familyId,name,description,version,lifecycleStatus,isBundle,validFor,relatedParty,@type,@baseType
 Content-Type: application/json
 Accept: application/json
 If-Match: "intent-spec-hospital-surgical-slice-spec-v1.19-v1"
@@ -537,35 +761,57 @@ If-Match: "intent-spec-hospital-surgical-slice-spec-v1.19-v1"
 ```http
 HTTP/1.1 200 OK
 Content-Type: application/json
+Content-Language: en-AU
 Content-Location: /intentManagement/v5/intentSpecification/hospital-surgical-slice-spec-v1.19
 ETag: "intent-spec-hospital-surgical-slice-spec-v1.19-v2"
+Last-Modified: Sat, 18 Apr 2026 03:00:00 GMT
 ```
 
 ```json
 {
   "id": "hospital-surgical-slice-spec-v1.19",
   "href": "/intentManagement/v5/intentSpecification/hospital-surgical-slice-spec-v1.19",
+  "familyId": "hospital-surgical-slice-spec",
   "name": "Hospital Surgical Slice Intent Specification",
   "description": "Updated draft description only.",
   "version": "1.19",
   "lifecycleStatus": "DRAFT",
+  "isBundle": false,
+  "validFor": {
+    "startDateTime": "2026-04-18T12:00:00+10:00"
+  },
+  "relatedParty": [
+    {
+      "@type": "RelatedPartyRefOrPartyRoleRef",
+      "role": "Provider",
+      "partyOrPartyRole": {
+        "@type": "PartyRoleRef",
+        "id": "mycsp",
+        "name": "MyCSP",
+        "@referredType": "Provider"
+      }
+    }
+  ],
   "@type": "IntentSpecification",
   "@baseType": "EntitySpecification",
   "_links": {
     "self": {
       "href": "/intentManagement/v5/intentSpecification/hospital-surgical-slice-spec-v1.19"
     },
+    "fullUpdate": {
+      "href": "/intentManagement/v5/intentSpecification/hospital-surgical-slice-spec-v1.19",
+      "method": "PUT"
+    },
     "partialUpdate": {
       "href": "/intentManagement/v5/intentSpecification/hospital-surgical-slice-spec-v1.19",
       "method": "PATCH",
-      "warning": "PATCH is supported for compatibility but discouraged. Prefer PUT for deterministic full replacement."
+      "warning": "PATCH is supported for compatibility but discouraged as a general update method. Prefer PUT for deterministic full replacement."
     }
   }
 }
 ```
 
 ---
-
 ## 9. Delete IntentSpecification
 
 ### Request
@@ -1231,7 +1477,7 @@ Delete events are emitted only after successful delete and show the last known l
     "changedAttributes": [
       {
         "name": "description",
-        "oldValue": "Design-time specification for hospital surgical slice intents.",
+        "oldValue": "Definition-time specification for hospital surgical slice intents.",
         "newValue": "Updated draft description only."
       }
     ]
