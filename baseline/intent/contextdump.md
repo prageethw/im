@@ -14,7 +14,7 @@ This context is only for:
 - TMF921-facing Intent APIs and resources
 - IntentSpecification / Intent lifecycle
 - Intent Controller MS
-- Intent Design MS
+- Intent Definition MS
 - Intent Intelligence MS
 - Intent Assurance MS
 - Intent Callback MS
@@ -74,7 +74,7 @@ Use the uploaded architecture/reference books only as supporting design referenc
 
 The Intent solution baseline includes:
 
-- ID MS — Intent Design MS
+- ID MS — Intent Definition MS
 - IC MS — Intent Controller MS
 - II MS — Intent Intelligence MS
 - IA MS — Intent Assurance MS
@@ -91,7 +91,7 @@ The Intent solution baseline includes:
 
 ### 5.1 ID MS / IntentSpecification
 
-ID MS owns design-time `IntentSpecification` lifecycle/governance.
+ID MS owns definition-time `IntentSpecification` lifecycle/governance.
 
 ID MS owns:
 
@@ -307,3 +307,37 @@ When the user says to baseline a new Intent decision:
 3. Update relevant Markdown specification/design files where applicable.
 4. Keep TMF-facing shapes validated against the uploaded TMF source/reference files.
 5. Do not update Optimisation artifacts unless explicitly requested.
+
+## Baseline repair — ID MS design brief rebuilt from GitHub base
+
+Baselined on 2026-05-11.
+
+`id_ms_design_brief.md` has been rebuilt using the current GitHub design brief as the structural base, preserving the detailed sections for API contract, lifecycle/versioning, caching, ETag, circuit breakers, deployment/persistence, security/access control, observability/audit, consistency sweep, and callback URL baseline. The file was then patched with the agreed baseline corrections: `intent-definition-ms` -> `intent-definition-ms`, Intent Definition MS naming, `familyId`, `isBundle`, `validFor`, `relatedParty`, `targetEntitySchema`, `fields`, `428` for missing `If-Match`, `412` for stale/mismatch, `PUT` preferred, `PATCH` supported but discouraged generally, activation as lifecycle update not `/activate`, delete only unused `DRAFT`, intentional `/intentSpecification/hub`, and external `IntentSpecification*Event` boundary.
+
+## Baseline correction — ID MS service identity
+
+Baselined on 2026-05-11.
+
+The correct ID MS service identity is Intent Definition MS / ID MS / `intent-definition-ms`. Do not use Intent Design MS / `intent-design-ms` for the ID MS service name. Apply this correction across specifications, design briefs, source/reportingSystem event metadata, logs, and context summaries.
+
+## Baseline update — ID MS `fields` query parameter
+
+Baselined on 2026-05-11.
+
+`fields` is the optional TMF-style field selection/projection query parameter for ID MS `IntentSpecification` operations. It is supported on create, list, retrieve, PUT platform-extension update, and PATCH TMF-compatible update examples. When `fields` is omitted, ID MS returns the default representation for the operation. List defaults to a lightweight summary representation. Retrieve defaults to a full single-resource representation.
+
+## Baseline update — ID MS POST create request/response sync
+
+Baselined on 2026-05-11.
+
+Fix 2 from the TMF compliance pass is applied to `POST /intentManagement/v5/intentSpecification`. The create request includes `familyId`, `isBundle: false`, `validFor.startDateTime`, lightweight provider `relatedParty`, `specCharacteristic`, `expressionSpecification`, and `targetEntitySchema`. The client does not send `id`, `href`, `Location`, `ETag`, or `_links`. ID MS generates `id`, `href`, `Location`, `ETag`, `Last-Modified`, and server `_links` in the `201 Created` response. The response mirrors the stored `IntentSpecification` representation and keeps `targetEntitySchema.@schemaLocation` as the governed expression-value schema reference for validating `Intent.expression.expressionValue`.
+
+## Baseline update — ID MS GET list/retrieve sync
+
+Baselined on 2026-05-11.
+
+Fix 3 from the TMF compliance pass is applied. `GET /intentManagement/v5/intentSpecification` returns a lightweight summary list by default, including `id`, `href`, `familyId`, `name`, `version`, `lifecycleStatus`, `isBundle`, `validFor`, `relatedParty`, `@type`, and `@baseType`. It omits full `specCharacteristic`, `expressionSpecification`, and `targetEntitySchema` unless requested via `fields`.
+
+`GET /intentManagement/v5/intentSpecification/{id}` returns the full single-resource representation by default, including `id`, `href`, `familyId`, `name`, `description`, `version`, `lifecycleStatus`, `isBundle`, `validFor`, `relatedParty`, `@type`, `@baseType`, `@schemaLocation`, `specCharacteristic`, `expressionSpecification`, `targetEntitySchema`, and server-generated `_links`.
+
+Both GET operations keep optional `fields`, `ETag`, GET-only private caching, and retrieve supports `Cache-Control: no-cache` as a fresh-read override.

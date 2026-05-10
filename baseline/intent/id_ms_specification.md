@@ -6,9 +6,9 @@
 
 | **Item** | **Baseline** |
 |---|---|
-| Full name | Intent Design MS |
+| Full name | Intent Definition MS |
 | Short name | ID MS |
-| Service name | `intent-design-ms` |
+| Service name | `intent-definition-ms` |
 | Domain | Intent Domain |
 | Base path | `/intentManagement/v5` |
 | Primary resource | `IntentSpecification` |
@@ -16,7 +16,7 @@
 
 ### Boundary statement
 
-ID MS owns design-time `IntentSpecification` contracts and subscription management for specification events.
+ID MS owns definition-time `IntentSpecification` contracts and subscription management for specification events.
 
 ID MS validates syntax/resource shape and enforces specification lifecycle/version governance. ID MS does not own runtime `Intent`, `IntentReport`, semantic validation, policy validation, network/resource feasibility, optimisation, runtime assurance, telemetry, or callback ingestion.
 
@@ -88,12 +88,12 @@ The following query parameters are supported where applicable:
 |---|---|---|
 | `offset` | List | Zero-based result offset for pagination |
 | `limit` | List | Maximum number of results returned |
-| `fields` | Create, list, retrieve, update | Optional TMF-style field selection / projection parameter |
+| `fields` | Create, list, retrieve, PUT update, PATCH update | Optional TMF-style field selection / projection parameter |
 | `lifecycleStatus` | List | Filter specifications by lifecycle state |
 | `name` | List | Filter specifications by name |
 | `version` | List | Filter specifications by version |
 
-`fields` is supported for TMF compatibility. When omitted, ID MS returns the default representation for the operation.
+`fields` is supported for TMF compatibility. When omitted, ID MS returns the default representation for the operation. The list operation returns a lightweight summary representation by default. The retrieve operation returns the full single-resource representation by default.
 
 ---
 
@@ -167,17 +167,139 @@ Content-Type: application/json
 ### Request
 
 ```http
-POST /intentManagement/v5/intentSpecification?fields=id,href,name,version,lifecycleStatus,@type,@baseType
+POST /intentManagement/v5/intentSpecification?fields=id,href,familyId,name,version,lifecycleStatus,isBundle,validFor,relatedParty,specCharacteristic,expressionSpecification,targetEntitySchema,@type,@baseType
 Content-Type: application/json
 Accept: application/json
 ```
 
 ```json
 {
+  "familyId": "hospital-surgical-slice-spec",
   "name": "Hospital Surgical Slice Intent Specification",
   "description": "Design-time specification for hospital surgical slice intents. This specification defines the allowed request shape for surgical connectivity intents. It is syntax-first: ID MS validates structure and allowed fields, while II MS and the knowledge plane validate semantic meaning, policy, and fulfilment feasibility.",
   "version": "1.19",
   "lifecycleStatus": "DRAFT",
+  "isBundle": false,
+  "validFor": {
+    "startDateTime": "2026-04-18T12:00:00+10:00"
+  },
+  "relatedParty": [
+    {
+      "@type": "RelatedPartyRefOrPartyRoleRef",
+      "role": "Provider",
+      "partyOrPartyRole": {
+        "@type": "PartyRoleRef",
+        "id": "mycsp",
+        "name": "MyCSP",
+        "@referredType": "Provider"
+      }
+    }
+  ],
+  "@type": "IntentSpecification",
+  "@baseType": "EntitySpecification",
+  "@schemaLocation": "https://mycsp.com.au/schemas/intentManagement/v5/intentSpecification/hospital-surgical-slice-spec-v1.19.schema.json",
+  "specCharacteristic": [
+    {
+      "@type": "CharacteristicSpecification",
+      "id": "context",
+      "name": "context",
+      "description": "Top-level semantic context supported by this IntentSpecification. The context contains canonical context.targets, context.constraints, and context.preferences. Detailed field rules are defined in the expression-value schema referenced by targetEntitySchema.@schemaLocation.",
+      "valueType": "object",
+      "configurable": true,
+      "minCardinality": 1,
+      "maxCardinality": 1,
+      "characteristicValueSpecification": [
+        {
+          "@type": "CharacteristicValueSpecification",
+          "valueType": "object",
+          "isDefault": true,
+          "value": {
+            "targets": {
+              "maxLatencyMs": 10,
+              "minAvailabilityPercent": 99.99,
+              "maxJitterMs": 2,
+              "maxPacketLossPercent": 0.01
+            },
+            "constraints": {
+              "location": {
+                "locationId": "AU-NSW-SYD-HOSP-001",
+                "locationType": "hospital",
+                "geographicScope": "campus"
+              },
+              "serviceType": "surgical-connectivity",
+              "serviceClass": "critical-gold",
+              "priority": "critical",
+              "redundancyRequired": true,
+              "timeWindow": {
+                "startDateTime": "2026-04-18T12:00:00+10:00"
+              }
+            },
+            "preferences": {
+              "preferredAccessTechnology": "5G"
+            }
+          }
+        }
+      ]
+    }
+  ],
+  "expressionSpecification": {
+    "@type": "ExpressionSpecification",
+    "expressionLanguage": "JsonLdExpression",
+    "iri": "https://mycsp.com.au/tio/hospital-surgical-slice/v1.0"
+  },
+  "targetEntitySchema": {
+    "@type": "TargetEntitySchema",
+    "@schemaLocation": "https://mycsp.com.au/schemas/intentManagement/v5/intentExpression/hospital-surgical-slice-spec-v1.19.expression.schema.json",
+    "schemaVersion": "1.19",
+    "schemaHash": "sha256:REPLACE_WITH_PUBLISHED_SCHEMA_HASH"
+  }
+}
+```
+
+### Create request rules
+
+- The client does not send `id`, `href`, `Location`, `ETag`, or `_links`.
+- ID MS generates `id`, `href`, `Location`, `ETag`, `Last-Modified`, and `_links`.
+- `familyId` groups versioned specifications for lifecycle governance.
+- `isBundle`, `validFor`, `relatedParty`, `specCharacteristic`, `expressionSpecification`, and `targetEntitySchema` are retained in the resource representation.
+- `targetEntitySchema.@schemaLocation` points to the governed external expression-value schema used to validate `Intent.expression.expressionValue`.
+
+### Success response
+
+```http
+HTTP/1.1 201 Created
+Location: /intentManagement/v5/intentSpecification/hospital-surgical-slice-spec-v1.19
+Content-Type: application/json
+Content-Language: en-AU
+ETag: "intent-spec-hospital-surgical-slice-spec-v1.19-v1"
+Last-Modified: Sat, 18 Apr 2026 02:00:00 GMT
+```
+
+```json
+{
+  "id": "hospital-surgical-slice-spec-v1.19",
+  "href": "/intentManagement/v5/intentSpecification/hospital-surgical-slice-spec-v1.19",
+  "familyId": "hospital-surgical-slice-spec",
+  "name": "Hospital Surgical Slice Intent Specification",
+  "description": "Design-time specification for hospital surgical slice intents. This specification defines the allowed request shape for surgical connectivity intents. It is syntax-first: ID MS validates structure and allowed fields, while II MS and the knowledge plane validate semantic meaning, policy, and fulfilment feasibility.",
+  "version": "1.19",
+  "lifecycleStatus": "DRAFT",
+  "isBundle": false,
+  "validFor": {
+    "startDateTime": "2026-04-18T12:00:00+10:00"
+  },
+  "relatedParty": [
+    {
+      "@type": "RelatedPartyRefOrPartyRoleRef",
+      "role": "Provider",
+      "partyOrPartyRole": {
+        "@type": "PartyRoleRef",
+        "id": "mycsp",
+        "name": "MyCSP",
+        "@referredType": "Provider"
+      }
+    }
+  ],
   "@type": "IntentSpecification",
   "@baseType": "EntitySpecification",
   "@schemaLocation": "https://mycsp.com.au/schemas/intentManagement/v5/intentSpecification/hospital-surgical-slice-spec-v1.19.schema.json",
@@ -238,37 +360,6 @@ Accept: application/json
   },
   "_links": {
     "self": {
-      "href": "https://mycsp.com.au/intentManagement/v5/intentSpecification/hospital-surgical-slice-spec-v1.19"
-    }
-  }
-}
-```
-
-### Success response
-
-```http
-HTTP/1.1 201 Created
-Location: /intentManagement/v5/intentSpecification/hospital-surgical-slice-spec-v1.19
-Content-Type: application/json
-Content-Language: en-AU
-ETag: "intent-spec-hospital-surgical-slice-spec-v1.19-v1"
-Last-Modified: Sat, 18 Apr 2026 02:00:00 GMT
-```
-
-```json
-{
-  "id": "hospital-surgical-slice-spec-v1.19",
-  "href": "/intentManagement/v5/intentSpecification/hospital-surgical-slice-spec-v1.19",
-  "name": "Hospital Surgical Slice Intent Specification",
-  "version": "1.19",
-  "lifecycleStatus": "DRAFT",
-  "@type": "IntentSpecification",
-  "@baseType": "EntitySpecification",
-  "specCharacteristic": "...same as request...",
-  "expressionSpecification": "...same as request...",
-  "targetEntitySchema": "...same as request...",
-  "_links": {
-    "self": {
       "href": "/intentManagement/v5/intentSpecification/hospital-surgical-slice-spec-v1.19"
     },
     "fullUpdate": {
@@ -278,7 +369,7 @@ Last-Modified: Sat, 18 Apr 2026 02:00:00 GMT
     "partialUpdate": {
       "href": "/intentManagement/v5/intentSpecification/hospital-surgical-slice-spec-v1.19",
       "method": "PATCH",
-      "warning": "PATCH is supported for compatibility but discouraged. Prefer PUT for deterministic full replacement."
+      "warning": "PATCH is supported for TMF compatibility but discouraged as a general update method. Prefer PUT for deterministic full replacement."
     },
     "delete": {
       "href": "/intentManagement/v5/intentSpecification/hospital-surgical-slice-spec-v1.19",
@@ -288,6 +379,7 @@ Last-Modified: Sat, 18 Apr 2026 02:00:00 GMT
 }
 ```
 
+
 ---
 
 ## 5. List IntentSpecifications
@@ -295,7 +387,7 @@ Last-Modified: Sat, 18 Apr 2026 02:00:00 GMT
 ### Request
 
 ```http
-GET /intentManagement/v5/intentSpecification?offset=0&limit=10&lifecycleStatus=ACTIVE&fields=id,href,name,version,lifecycleStatus,@type,@baseType
+GET /intentManagement/v5/intentSpecification?offset=0&limit=10&lifecycleStatus=ACTIVE&fields=id,href,familyId,name,version,lifecycleStatus,isBundle,validFor,relatedParty,@type,@baseType
 Accept: application/json
 ```
 
@@ -316,24 +408,52 @@ Cache-Control: private, max-age=60
   {
     "id": "hospital-surgical-slice-spec-v1.19",
     "href": "/intentManagement/v5/intentSpecification/hospital-surgical-slice-spec-v1.19",
+    "familyId": "hospital-surgical-slice-spec",
     "name": "Hospital Surgical Slice Intent Specification",
     "version": "1.19",
     "lifecycleStatus": "ACTIVE",
-    "@type": "IntentSpecification",
-    "@baseType": "EntitySpecification",
-    "_links": {
-      "self": {
-        "href": "/intentManagement/v5/intentSpecification/hospital-surgical-slice-spec-v1.19"
-      },
-      "partialUpdate": {
-        "href": "/intentManagement/v5/intentSpecification/hospital-surgical-slice-spec-v1.19",
-        "method": "PATCH",
-        "warning": "PATCH is supported for compatibility but discouraged. Prefer PUT for deterministic full replacement."
+    "isBundle": false,
+    "validFor": {
+      "startDateTime": "2026-04-18T12:00:00+10:00"
+    },
+    "relatedParty": [
+      {
+        "@type": "RelatedPartyRefOrPartyRoleRef",
+        "role": "Provider",
+        "partyOrPartyRole": {
+          "@type": "PartyRoleRef",
+          "id": "mycsp",
+          "name": "MyCSP",
+          "@referredType": "Provider"
+        }
       }
-    }
+    ],
+    "@type": "IntentSpecification",
+    "@baseType": "EntitySpecification"
   }
 ]
 ```
+
+### List representation rule
+
+The list operation returns a lightweight summary representation by default.
+
+The default list representation includes:
+
+- `id`
+- `href`
+- `familyId`
+- `name`
+- `version`
+- `lifecycleStatus`
+- `isBundle`
+- `validFor`
+- `relatedParty`
+- `@type`
+- `@baseType`
+
+The list operation does not include full `specCharacteristic`, `expressionSpecification`, or `targetEntitySchema` by default unless the client requests those fields explicitly through `fields`.
+
 
 ---
 
@@ -342,14 +462,14 @@ Cache-Control: private, max-age=60
 ### Request
 
 ```http
-GET /intentManagement/v5/intentSpecification/hospital-surgical-slice-spec-v1.19?fields=id,href,name,description,version,lifecycleStatus,specCharacteristic,expressionSpecification,@type,@baseType
+GET /intentManagement/v5/intentSpecification/hospital-surgical-slice-spec-v1.19?fields=id,href,familyId,name,description,version,lifecycleStatus,isBundle,validFor,relatedParty,specCharacteristic,expressionSpecification,targetEntitySchema,@type,@baseType
 Accept: application/json
 ```
 
 ### Request with cache override
 
 ```http
-GET /intentManagement/v5/intentSpecification/hospital-surgical-slice-spec-v1.19?fields=id,href,name,description,version,lifecycleStatus,specCharacteristic,expressionSpecification,@type,@baseType
+GET /intentManagement/v5/intentSpecification/hospital-surgical-slice-spec-v1.19?fields=id,href,familyId,name,description,version,lifecycleStatus,isBundle,validFor,relatedParty,specCharacteristic,expressionSpecification,targetEntitySchema,@type,@baseType
 Accept: application/json
 Cache-Control: no-cache
 ```
@@ -370,26 +490,125 @@ Cache-Control: private, max-age=300
 {
   "id": "hospital-surgical-slice-spec-v1.19",
   "href": "/intentManagement/v5/intentSpecification/hospital-surgical-slice-spec-v1.19",
+  "familyId": "hospital-surgical-slice-spec",
   "name": "Hospital Surgical Slice Intent Specification",
-  "description": "Design-time specification for hospital surgical slice intents.",
+  "description": "Design-time specification for hospital surgical slice intents. This specification defines the allowed request shape for surgical connectivity intents. It is syntax-first: ID MS validates structure and allowed fields, while II MS and the knowledge plane validate semantic meaning, policy, and fulfilment feasibility.",
   "version": "1.19",
   "lifecycleStatus": "ACTIVE",
+  "isBundle": false,
+  "validFor": {
+    "startDateTime": "2026-04-18T12:00:00+10:00"
+  },
+  "relatedParty": [
+    {
+      "@type": "RelatedPartyRefOrPartyRoleRef",
+      "role": "Provider",
+      "partyOrPartyRole": {
+        "@type": "PartyRoleRef",
+        "id": "mycsp",
+        "name": "MyCSP",
+        "@referredType": "Provider"
+      }
+    }
+  ],
   "@type": "IntentSpecification",
   "@baseType": "EntitySpecification",
-  "specCharacteristic": "...bucket catalogue with example/default characteristicValueSpecification values...",
-  "expressionSpecification": "...full expression schema...",
+  "@schemaLocation": "https://mycsp.com.au/schemas/intentManagement/v5/intentSpecification/hospital-surgical-slice-spec-v1.19.schema.json",
+  "specCharacteristic": [
+    {
+      "@type": "CharacteristicSpecification",
+      "id": "context",
+      "name": "context",
+      "description": "Top-level semantic context supported by this IntentSpecification. The context contains canonical context.targets, context.constraints, and context.preferences. Detailed field rules are defined in the expression-value schema referenced by targetEntitySchema.@schemaLocation.",
+      "valueType": "object",
+      "configurable": true,
+      "minCardinality": 1,
+      "maxCardinality": 1,
+      "characteristicValueSpecification": [
+        {
+          "@type": "CharacteristicValueSpecification",
+          "valueType": "object",
+          "isDefault": true,
+          "value": {
+            "targets": {
+              "maxLatencyMs": 10,
+              "minAvailabilityPercent": 99.99,
+              "maxJitterMs": 2,
+              "maxPacketLossPercent": 0.01
+            },
+            "constraints": {
+              "location": {
+                "locationId": "AU-NSW-SYD-HOSP-001",
+                "locationType": "hospital",
+                "geographicScope": "campus"
+              },
+              "serviceType": "surgical-connectivity",
+              "serviceClass": "critical-gold",
+              "priority": "critical",
+              "redundancyRequired": true,
+              "timeWindow": {
+                "startDateTime": "2026-04-18T12:00:00+10:00"
+              }
+            },
+            "preferences": {
+              "preferredAccessTechnology": "5G"
+            }
+          }
+        }
+      ]
+    }
+  ],
+  "expressionSpecification": {
+    "@type": "ExpressionSpecification",
+    "expressionLanguage": "JsonLdExpression",
+    "iri": "https://mycsp.com.au/tio/hospital-surgical-slice/v1.0"
+  },
+  "targetEntitySchema": {
+    "@type": "TargetEntitySchema",
+    "@schemaLocation": "https://mycsp.com.au/schemas/intentManagement/v5/intentExpression/hospital-surgical-slice-spec-v1.19.expression.schema.json",
+    "schemaVersion": "1.19",
+    "schemaHash": "sha256:REPLACE_WITH_PUBLISHED_SCHEMA_HASH"
+  },
   "_links": {
     "self": {
       "href": "/intentManagement/v5/intentSpecification/hospital-surgical-slice-spec-v1.19"
     },
+    "fullUpdate": {
+      "href": "/intentManagement/v5/intentSpecification/hospital-surgical-slice-spec-v1.19",
+      "method": "PUT"
+    },
     "partialUpdate": {
       "href": "/intentManagement/v5/intentSpecification/hospital-surgical-slice-spec-v1.19",
       "method": "PATCH",
-      "warning": "PATCH is supported for compatibility but discouraged. Prefer PUT for deterministic full replacement."
+      "warning": "PATCH is supported for TMF compatibility but discouraged as a general update method. Prefer PUT for deterministic full replacement."
     }
   }
 }
 ```
+
+### Retrieve representation rule
+
+The retrieve operation returns the full single-resource representation by default.
+
+It includes:
+
+- `id`
+- `href`
+- `familyId`
+- `name`
+- `description`
+- `version`
+- `lifecycleStatus`
+- `isBundle`
+- `validFor`
+- `relatedParty`
+- `@type`
+- `@baseType`
+- `@schemaLocation`
+- `specCharacteristic`
+- `expressionSpecification`
+- `targetEntitySchema`
+- `_links`
 
 ### Not found response
 
@@ -409,6 +628,7 @@ Content-Language: en-AU
   "@type": "Error"
 }
 ```
+
 
 ---
 
@@ -840,12 +1060,12 @@ They are not internal fulfilment events and must not expose II MS semantic valid
     }
   },
   "reportingSystem": {
-    "id": "intent-design-ms",
-    "name": "Intent Design MS"
+    "id": "intent-definition-ms",
+    "name": "Intent Definition MS"
   },
   "source": {
-    "id": "intent-design-ms",
-    "name": "Intent Design MS"
+    "id": "intent-definition-ms",
+    "name": "Intent Definition MS"
   },
   "@type": "IntentSpecificationStatusChangeEvent"
 }
@@ -876,12 +1096,12 @@ They are not internal fulfilment events and must not expose II MS semantic valid
     }
   },
   "reportingSystem": {
-    "id": "intent-design-ms",
-    "name": "Intent Design MS"
+    "id": "intent-definition-ms",
+    "name": "Intent Definition MS"
   },
   "source": {
-    "id": "intent-design-ms",
-    "name": "Intent Design MS"
+    "id": "intent-definition-ms",
+    "name": "Intent Definition MS"
   },
   "@type": "IntentSpecificationCreateEvent"
 }
@@ -919,12 +1139,12 @@ They are not internal fulfilment events and must not expose II MS semantic valid
     ]
   },
   "reportingSystem": {
-    "id": "intent-design-ms",
-    "name": "Intent Design MS"
+    "id": "intent-definition-ms",
+    "name": "Intent Definition MS"
   },
   "source": {
-    "id": "intent-design-ms",
-    "name": "Intent Design MS"
+    "id": "intent-definition-ms",
+    "name": "Intent Definition MS"
   },
   "@type": "IntentSpecificationAttributeValueChangeEvent"
 }
@@ -957,12 +1177,12 @@ They are not internal fulfilment events and must not expose II MS semantic valid
     "newLifecycleStatus": "ACTIVE"
   },
   "reportingSystem": {
-    "id": "intent-design-ms",
-    "name": "Intent Design MS"
+    "id": "intent-definition-ms",
+    "name": "Intent Definition MS"
   },
   "source": {
-    "id": "intent-design-ms",
-    "name": "Intent Design MS"
+    "id": "intent-definition-ms",
+    "name": "Intent Definition MS"
   },
   "@type": "IntentSpecificationStatusChangeEvent"
 }
@@ -993,12 +1213,12 @@ They are not internal fulfilment events and must not expose II MS semantic valid
     }
   },
   "reportingSystem": {
-    "id": "intent-design-ms",
-    "name": "Intent Design MS"
+    "id": "intent-definition-ms",
+    "name": "Intent Definition MS"
   },
   "source": {
-    "id": "intent-design-ms",
-    "name": "Intent Design MS"
+    "id": "intent-definition-ms",
+    "name": "Intent Definition MS"
   },
   "@type": "IntentSpecificationDeleteEvent"
 }
