@@ -107,3 +107,6 @@ The E2E logical flow must name the worker outcome event explicitly. Use:
 `Python/Gurobi Worker -> Kafka: Consumes worker instructions and emits OptimisationCompletedEvent with status COMPLETED, INFEASIBLE, or FAILED.`
 
 Do not leave the worker outcome side as the generic phrase `emits optimisation outcomes` where the event name should be clear.
+
+
+Baseline update: Created numberless heading version of optimisation-e2e-solution-brief.md using the same filename. Markdown heading markers are retained, but section number prefixes are removed from heading text.
