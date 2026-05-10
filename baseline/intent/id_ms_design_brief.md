@@ -16,32 +16,6 @@ Base path:
 /intentManagement/v5
 ```
 
-
-
-## TMF expression and external schema separation baseline:
-
-ID MS keeps the TMF-facing `IntentSpecification` payload and the detailed platform JSON Schema visibly separated in the Markdown specification.
-
-The `IntentSpecification` resource body includes only the TMF expression contract reference and the external schema reference:
-
-```json
-{
-  "expressionSpecification": {
-    "@type": "ExpressionSpecification",
-    "expressionLanguage": "JsonLdExpression",
-    "iri": "https://mycsp.com.au/tio/hospital-surgical-slice/v1.0"
-  },
-  "targetEntitySchema": {
-    "@type": "TargetEntitySchema",
-    "@schemaLocation": "https://mycsp.com.au/schemas/intentManagement/v5/intentExpression/hospital-surgical-slice-spec-v1.19.expression.schema.json",
-    "schemaVersion": "1.19",
-    "schemaHash": "sha256:REPLACE_WITH_PUBLISHED_SCHEMA_HASH"
-  }
-}
-```
-
-The full JSON Schema body is documented separately as an external schema artefact, not inline as part of the API payload example. This prevents engineers and consumers from mistaking the schema definition for runtime `Intent.expression.expressionValue` content.
-
 ## IntentSpecification resource APIs:
 
 | **Purpose** | **Method** | **Endpoint** |
@@ -1200,3 +1174,8 @@ The ID MS design brief is internally consistent for the current baseline.
 The design keeps ID MS focused on design-time `IntentSpecification` resource ownership, lifecycle/version governance, syntax/resource-shape validation, ETag/If-Match concurrency, GET-only caching, external `IntentSpecification*Event` publication, PostgreSQL-compatible persistence, and technical observability/audit.
 
 ID MS does not own semantic validation, policy validation, candidate/resource feasibility, optimisation, runtime assurance, telemetry, or callback ingestion.
+
+
+## Callback URL baseline:
+
+Callback URLs are subscriber-owned listener endpoints. Do not use TMF-specific path prefixes or TMF-owned path wording in callback URL examples. Use neutral listener paths such as `https://consumer.example.com/listener/intentSpecification/events`.
