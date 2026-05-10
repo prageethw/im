@@ -136,7 +136,7 @@ Accept: application/json
       "@type": "CharacteristicSpecification",
       "id": "targets",
       "name": "targets",
-      "description": "Measurable runtime objectives supported by this IntentSpecification. Detailed target fields and validation rules are defined by the external expression-value schema referenced from targetEntitySchema.",
+      "description": "Measurable runtime objectives supported by this IntentSpecification. Detailed target fields and validation rules are defined in the referenced expression-value schema.",
       "valueType": "object",
       "configurable": true,
       "minCardinality": 1,
@@ -159,7 +159,7 @@ Accept: application/json
       "@type": "CharacteristicSpecification",
       "id": "constraints",
       "name": "constraints",
-      "description": "Hard runtime requirements supported by this IntentSpecification. Detailed constraint fields and validation rules are defined by the external expression-value schema referenced from targetEntitySchema.",
+      "description": "Hard runtime requirements supported by this IntentSpecification. Detailed constraint fields and validation rules are defined in the referenced expression-value schema.",
       "valueType": "object",
       "configurable": true,
       "minCardinality": 1,
@@ -183,7 +183,7 @@ Accept: application/json
       "@type": "CharacteristicSpecification",
       "id": "preferences",
       "name": "preferences",
-      "description": "Soft runtime selection preferences supported by this IntentSpecification. Detailed preference fields and validation rules are defined by the external expression-value schema referenced from targetEntitySchema.",
+      "description": "Soft runtime selection preferences supported by this IntentSpecification. Detailed preference fields and validation rules are defined in the referenced expression-value schema.",
       "valueType": "object",
       "configurable": true,
       "minCardinality": 0,
@@ -239,9 +239,9 @@ Last-Modified: Sat, 18 Apr 2026 02:00:00 GMT
   "lifecycleStatus": "DRAFT",
   "@type": "IntentSpecification",
   "@baseType": "EntitySpecification",
-  "specCharacteristic": ["...same as request..."],
-  "expressionSpecification": { "...": "same as request" },
-  "targetEntitySchema": { "...": "same as request" },
+  "specCharacteristic": "...same as request...",
+  "expressionSpecification": "...same as request...",
+  "targetEntitySchema": "...same as request...",
   "_links": {
     "self": { "href": "/intentManagement/v5/intentSpecification/hospital-surgical-slice-spec-v1.19" },
     "fullUpdate": { "href": "/intentManagement/v5/intentSpecification/hospital-surgical-slice-spec-v1.19", "method": "PUT" },
@@ -341,7 +341,7 @@ Cache-Control: private, max-age=300
   "lifecycleStatus": "ACTIVE",
   "@type": "IntentSpecification",
   "@baseType": "EntitySpecification",
-  "specCharacteristic": "...full characteristic catalogue...",
+  "specCharacteristic": "...bucket catalogue with example/default characteristicValueSpecification values...",
   "expressionSpecification": "...full expression schema...",
   "_links": {
     "self": { "href": "/intentManagement/v5/intentSpecification/hospital-surgical-slice-spec-v1.19" },
@@ -395,9 +395,8 @@ If-Match: "intent-spec-hospital-surgical-slice-spec-v1.19-v1"
   "lifecycleStatus": "DRAFT",
   "@type": "IntentSpecification",
   "@baseType": "EntitySpecification",
-  "specCharacteristic": ["...full bucket characteristic catalogue..."],
-  "expressionSpecification": { "...": "TMF ExpressionSpecification reference" },
-  "targetEntitySchema": { "...": "schema reference, version, and hash" }
+  "specCharacteristic": [],
+  "expressionSpecification": {}
 }
 ```
 
@@ -680,21 +679,12 @@ GET /intentManagement/v5/intentSpecification/hub/sub-001
 Accept: application/json
 ```
 
-### Request with fresh-read override:
-
-```http
-GET /intentManagement/v5/intentSpecification/hub/sub-001
-Accept: application/json
-Cache-Control: no-cache
-```
-
 ### Success response:
 
 ```http
 HTTP/1.1 200 OK
 Content-Type: application/json
 ETag: "subscription-sub-001-v1"
-Cache-Control: private, max-age=300
 ```
 
 ```json
@@ -935,8 +925,8 @@ They are not internal fulfilment events and must not expose II MS semantic valid
 
 - `@baseType` is `EntitySpecification`, not `ResourceSpecification`.
 - `specCharacteristic` is the high-level characteristic catalogue.
-- `expressionSpecification` is the TMF expression language/model reference. The authoritative platform validation schema for `expression.expressionValue` is the external schema referenced by `targetEntitySchema.@schemaLocation`.
-- `characteristicValueSpecification` is used only for catalogue examples/defaults and OEX/UI prefill guidance; it is not the authoritative validation source.
+- `expressionSpecification` is the authoritative request-shape schema.
+- `characteristicValueSpecification` is used only for defaults, examples, or constrained allowed values where useful.
 - Numeric SLA values in `characteristicValueSpecification` are illustrative/default guidance only, not semantic enforcement.
 - ID MS validates resource shape and syntax.
 - II MS and knowledge sources own semantic/policy validation.
@@ -1038,9 +1028,9 @@ ID MS and IC MS remain TMF-aligned at the external contract level. Controlled pl
 
 ---
 
-## Appendix A — External expression-value schema artefact:
+## Appendix A — External expression-value schema artefact
 
-This schema is published as a separate immutable artefact and referenced by `IntentSpecification.targetEntitySchema.@schemaLocation`. It is not embedded inside the external `IntentSpecification` resource body and it is not embedded inside runtime `Intent.expression.expressionValue`.
+The following JSON Schema is the external validation artefact referenced by `targetEntitySchema.@schemaLocation`. It is shown here as implementation guidance only. It is not embedded inside `IntentSpecification.expressionSpecification`, `Intent.expression`, or `IntentReport.expression`.
 
 ```json
 {
@@ -1076,7 +1066,7 @@ This schema is published as a separate immutable artefact and referenced by `Int
     "constraints": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["priority"],
+      "required": ["priority", "redundancyRequired"],
       "properties": {
         "priority": { "type": "string", "enum": ["critical", "high", "standard"] },
         "redundancyRequired": { "type": "boolean" },
@@ -1095,7 +1085,7 @@ This schema is published as a separate immutable artefact and referenced by `Int
       "type": "object",
       "additionalProperties": false,
       "properties": {
-        "preferredAccessTechnology": { "type": "string", "minLength": 1 }
+        "preferredAccessTechnology": { "type": "string", "enum": ["5G", "fibre", "private-wireless"] }
       }
     }
   }
