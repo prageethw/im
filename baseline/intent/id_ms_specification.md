@@ -1,32 +1,30 @@
 # id_ms_specification.md
 
-## ID MS Specification:
+## ID MS Specification
 
-### Service identity:
+### Service identity
 
 | **Item** | **Baseline** |
 |---|---|
-| Full name | Intent Definition MS |
+| Full name | Intent Design MS |
 | Short name | ID MS |
-| Service name | `intent-definition-ms` |
+| Service name | `intent-design-ms` |
 | Domain | Intent Domain |
 | Base path | `/intentManagement/v5` |
 | Primary resource | `IntentSpecification` |
 | Primary responsibility | Design-time `IntentSpecification` catalogue, lifecycle/version governance, syntax contract, and external specification events |
 
-### Boundary statement:
+### Boundary statement
 
 ID MS owns design-time `IntentSpecification` contracts and subscription management for specification events.
 
-ID MS validates syntax/resource shape and enforces specification lifecycle/version governance.
-
-ID MS does not own runtime `Intent`, `IntentReport`, semantic validation, policy validation, network/resource feasibility, optimisation, runtime assurance, telemetry, or callback ingestion.
+ID MS validates syntax/resource shape and enforces specification lifecycle/version governance. ID MS does not own runtime `Intent`, `IntentReport`, semantic validation, policy validation, network/resource feasibility, optimisation, runtime assurance, telemetry, or callback ingestion.
 
 ---
 
-## 1. API endpoints:
+## 1. API endpoints
 
-### IntentSpecification resource APIs:
+### IntentSpecification resource APIs
 
 | **Purpose** | **Method** | **Endpoint** |
 |---|---:|---|
@@ -38,7 +36,7 @@ ID MS does not own runtime `Intent`, `IntentReport`, semantic validation, policy
 | Delete specification | `DELETE` | `/intentManagement/v5/intentSpecification/{id}` |
 | Activate specification | `PUT` / `PATCH` | `/intentManagement/v5/intentSpecification/{id}` |
 
-### Hub subscription APIs:
+### Hub subscription APIs
 
 | **Purpose** | **Method** | **Endpoint** |
 |---|---:|---|
@@ -48,9 +46,9 @@ ID MS does not own runtime `Intent`, `IntentReport`, semantic validation, policy
 
 ---
 
-## 2. Common conventions:
+## 2. Common conventions
 
-### Lifecycle values:
+### Lifecycle values
 
 ```text
 DRAFT
@@ -60,7 +58,7 @@ RETIRED
 
 There is no `DELETED` lifecycle status. Delete is an operation/outcome, not a normal lifecycle state.
 
-### Versioning rules:
+### Versioning rules
 
 - New specifications are normally created as `DRAFT`.
 - `DRAFT` specifications are editable.
@@ -71,7 +69,7 @@ There is no `DELETED` lifecycle status. Delete is an operation/outcome, not a no
 - Retired specifications must not be used for new runtime `Intent` creation.
 - Existing runtime intents that reference a retired specification may continue temporarily where safe.
 
-### Caching and ETag rules:
+### Caching and ETag rules
 
 - Caching applies only to GET responses.
 - Single-resource GET responses may use private cache with bounded TTL.
@@ -82,9 +80,24 @@ There is no `DELETED` lifecycle status. Delete is an operation/outcome, not a no
 - ETag is used only for unsafe operation concurrency through `If-Match`.
 - No caching strategy is baselined for non-GET operations.
 
+### Query parameter conventions
+
+The following query parameters are supported where applicable:
+
+| **Parameter** | **Applies to** | **Purpose** |
+|---|---|---|
+| `offset` | List | Zero-based result offset for pagination |
+| `limit` | List | Maximum number of results returned |
+| `fields` | Create, list, retrieve, update | Optional TMF-style field selection / projection parameter |
+| `lifecycleStatus` | List | Filter specifications by lifecycle state |
+| `name` | List | Filter specifications by name |
+| `version` | List | Filter specifications by version |
+
+`fields` is supported for TMF compatibility. When omitted, ID MS returns the default representation for the operation.
+
 ---
 
-## 3. Common error body:
+## 3. Common error body
 
 ```json
 {
@@ -97,7 +110,7 @@ There is no `DELETED` lifecycle status. Delete is an operation/outcome, not a no
 }
 ```
 
-### Common errors:
+### Common errors
 
 | **HTTP** | **Code** | **Scenario** |
 |---:|---|---|
@@ -105,19 +118,56 @@ There is no `DELETED` lifecycle status. Delete is an operation/outcome, not a no
 | `404` | `RESOURCE_NOT_FOUND` | Specification or subscription not found |
 | `409` | `RESOURCE_IMMUTABLE` | Attempt to update active/retired specification |
 | `409` | `VERSION_CONFLICT` | Duplicate specification/version conflict |
-| `412` | `PRECONDITION_FAILED` | Missing/mismatched `If-Match` |
+| `412` | `PRECONDITION_FAILED` | Supplied `If-Match` does not match the current resource version |
 | `422` | `VALIDATION_FAILED` | Fails expression/spec schema constraints |
+| `428` | `PRECONDITION_REQUIRED` | Required `If-Match` header is missing for an unsafe operation |
 | `503` | `SERVICE_UNAVAILABLE` | Source-of-truth DB unavailable |
 | `500` | `INTERNAL_ERROR` | Unexpected server error |
 
----
-
-## 4. Create IntentSpecification:
-
-### Request:
+### Missing If-Match response
 
 ```http
-POST /intentManagement/v5/intentSpecification
+HTTP/1.1 428 Precondition Required
+Content-Type: application/json
+```
+
+```json
+{
+  "code": "PRECONDITION_REQUIRED",
+  "reason": "IF_MATCH_REQUIRED",
+  "message": "The If-Match header is required for this operation.",
+  "status": 428,
+  "referenceError": "https://mycsp.com.au/errors/PRECONDITION_REQUIRED",
+  "@type": "Error"
+}
+```
+
+### ETag mismatch response
+
+```http
+HTTP/1.1 412 Precondition Failed
+Content-Type: application/json
+```
+
+```json
+{
+  "code": "PRECONDITION_FAILED",
+  "reason": "ETAG_MISMATCH",
+  "message": "The supplied ETag does not match the current resource version.",
+  "status": 412,
+  "referenceError": "https://mycsp.com.au/errors/PRECONDITION_FAILED",
+  "@type": "Error"
+}
+```
+
+---
+
+## 4. Create IntentSpecification
+
+### Request
+
+```http
+POST /intentManagement/v5/intentSpecification?fields=id,href,name,version,lifecycleStatus,@type,@baseType
 Content-Type: application/json
 Accept: application/json
 ```
@@ -194,7 +244,7 @@ Accept: application/json
 }
 ```
 
-### Success response:
+### Success response
 
 ```http
 HTTP/1.1 201 Created
@@ -240,16 +290,16 @@ Last-Modified: Sat, 18 Apr 2026 02:00:00 GMT
 
 ---
 
-## 5. List IntentSpecifications:
+## 5. List IntentSpecifications
 
-### Request:
+### Request
 
 ```http
-GET /intentManagement/v5/intentSpecification?offset=0&limit=10&lifecycleStatus=ACTIVE
+GET /intentManagement/v5/intentSpecification?offset=0&limit=10&lifecycleStatus=ACTIVE&fields=id,href,name,version,lifecycleStatus,@type,@baseType
 Accept: application/json
 ```
 
-### Success response:
+### Success response
 
 ```http
 HTTP/1.1 200 OK
@@ -287,24 +337,24 @@ Cache-Control: private, max-age=60
 
 ---
 
-## 6. Retrieve IntentSpecification:
+## 6. Retrieve IntentSpecification
 
-### Request:
+### Request
 
 ```http
-GET /intentManagement/v5/intentSpecification/hospital-surgical-slice-spec-v1.19
+GET /intentManagement/v5/intentSpecification/hospital-surgical-slice-spec-v1.19?fields=id,href,name,description,version,lifecycleStatus,specCharacteristic,expressionSpecification,@type,@baseType
 Accept: application/json
 ```
 
-### Request with cache override:
+### Request with cache override
 
 ```http
-GET /intentManagement/v5/intentSpecification/hospital-surgical-slice-spec-v1.19
+GET /intentManagement/v5/intentSpecification/hospital-surgical-slice-spec-v1.19?fields=id,href,name,description,version,lifecycleStatus,specCharacteristic,expressionSpecification,@type,@baseType
 Accept: application/json
 Cache-Control: no-cache
 ```
 
-### Success response:
+### Success response
 
 ```http
 HTTP/1.1 200 OK
@@ -341,7 +391,7 @@ Cache-Control: private, max-age=300
 }
 ```
 
-### Not found response:
+### Not found response
 
 ```http
 HTTP/1.1 404 Not Found
@@ -362,12 +412,12 @@ Content-Language: en-AU
 
 ---
 
-## 7. Full update IntentSpecification:
+## 7. Full update IntentSpecification
 
-### Request:
+### Request
 
 ```http
-PUT /intentManagement/v5/intentSpecification/hospital-surgical-slice-spec-v1.19
+PUT /intentManagement/v5/intentSpecification/hospital-surgical-slice-spec-v1.19?fields=id,href,name,description,version,lifecycleStatus,@type,@baseType
 Content-Type: application/json
 Accept: application/json
 If-Match: "intent-spec-hospital-surgical-slice-spec-v1.19-v1"
@@ -387,7 +437,7 @@ If-Match: "intent-spec-hospital-surgical-slice-spec-v1.19-v1"
 }
 ```
 
-### Success response:
+### Success response
 
 ```http
 HTTP/1.1 200 OK
@@ -409,7 +459,7 @@ ETag: "intent-spec-hospital-surgical-slice-spec-v1.19-v2"
 }
 ```
 
-### Immutable resource response:
+### Immutable resource response
 
 ```http
 HTTP/1.1 409 Conflict
@@ -427,7 +477,25 @@ Content-Type: application/json
 }
 ```
 
-### ETag mismatch response:
+### Missing If-Match response
+
+```http
+HTTP/1.1 428 Precondition Required
+Content-Type: application/json
+```
+
+```json
+{
+  "code": "PRECONDITION_REQUIRED",
+  "reason": "IF_MATCH_REQUIRED",
+  "message": "The If-Match header is required for this operation.",
+  "status": 428,
+  "referenceError": "https://mycsp.com.au/errors/PRECONDITION_REQUIRED",
+  "@type": "Error"
+}
+```
+
+### ETag mismatch response
 
 ```http
 HTTP/1.1 412 Precondition Failed
@@ -447,12 +515,12 @@ Content-Type: application/json
 
 ---
 
-## 8. Partial update IntentSpecification:
+## 8. Partial update IntentSpecification
 
-### Request:
+### Request
 
 ```http
-PATCH /intentManagement/v5/intentSpecification/hospital-surgical-slice-spec-v1.19
+PATCH /intentManagement/v5/intentSpecification/hospital-surgical-slice-spec-v1.19?fields=id,href,name,description,version,lifecycleStatus,@type,@baseType
 Content-Type: application/json
 Accept: application/json
 If-Match: "intent-spec-hospital-surgical-slice-spec-v1.19-v1"
@@ -464,7 +532,7 @@ If-Match: "intent-spec-hospital-surgical-slice-spec-v1.19-v1"
 }
 ```
 
-### Success response:
+### Success response
 
 ```http
 HTTP/1.1 200 OK
@@ -498,28 +566,28 @@ ETag: "intent-spec-hospital-surgical-slice-spec-v1.19-v2"
 
 ---
 
-## 9. Delete IntentSpecification:
+## 9. Delete IntentSpecification
 
-### Request:
+### Request
 
 ```http
 DELETE /intentManagement/v5/intentSpecification/hospital-surgical-slice-spec-v1.19
 If-Match: "intent-spec-hospital-surgical-slice-spec-v1.19-v1"
 ```
 
-### Success response:
+### Success response
 
 ```http
 HTTP/1.1 204 No Content
 ```
 
-### Rule:
+### Rule
 
 - Delete is allowed only for unused `DRAFT` specifications.
 - Delete is blocked for `ACTIVE` and `RETIRED` specifications.
 - Delete does not create `lifecycleStatus = DELETED`.
 
-### Delete blocked response:
+### Delete blocked response
 
 ```http
 HTTP/1.1 409 Conflict
@@ -539,7 +607,7 @@ Content-Type: application/json
 
 ---
 
-## 10. Activate IntentSpecification through lifecycle update:
+## 10. Activate IntentSpecification through lifecycle update
 
 Activation is not exposed through a custom action endpoint.
 
@@ -551,10 +619,10 @@ POST /intentManagement/v5/intentSpecification/{id}
 
 Use the existing TMF-style resource update endpoint instead.
 
-### PATCH request:
+### PATCH request
 
 ```http
-PATCH /intentManagement/v5/intentSpecification/hospital-surgical-slice-spec-v1.20
+PATCH /intentManagement/v5/intentSpecification/hospital-surgical-slice-spec-v1.20?fields=id,href,familyId,name,version,lifecycleStatus,previousActiveSpecification,@type,@baseType
 Content-Type: application/json
 Accept: application/json
 If-Match: "intent-spec-hospital-surgical-slice-spec-v1.20-v1"
@@ -566,7 +634,7 @@ If-Match: "intent-spec-hospital-surgical-slice-spec-v1.20-v1"
 }
 ```
 
-### PUT request option:
+### PUT request option
 
 `PUT` may also be used when the caller sends the full replacement representation with:
 
@@ -578,7 +646,7 @@ If-Match: "intent-spec-hospital-surgical-slice-spec-v1.20-v1"
 
 as part of the complete `IntentSpecification` resource.
 
-### Success response:
+### Success response
 
 ```http
 HTTP/1.1 200 OK
@@ -605,7 +673,7 @@ ETag: "intent-spec-hospital-surgical-slice-spec-v1.20-v2"
 }
 ```
 
-### Rules:
+### Rules
 
 - Activation is represented as a lifecycle/status update on the `IntentSpecification` resource.
 - Use `PUT` or `PATCH` against `/intentSpecification/{id}`.
@@ -616,11 +684,11 @@ ETag: "intent-spec-hospital-surgical-slice-spec-v1.20-v2"
 - ID MS refreshes its own active-spec cache through an internal no-cache/refresh path.
 - ID MS emits status-change events for the new active version and the previous retired version.
 
+---
 
+## 11. Hub create subscription
 
-## 11. Hub create subscription:
-
-### Request:
+### Request
 
 ```http
 POST /intentManagement/v5/intentSpecification/hub
@@ -636,7 +704,7 @@ Accept: application/json
 }
 ```
 
-### Success response:
+### Success response
 
 ```http
 HTTP/1.1 201 Created
@@ -661,16 +729,16 @@ ETag: "subscription-sub-001-v1"
 
 ---
 
-## 12. Hub retrieve subscription:
+## 12. Hub retrieve subscription
 
-### Request:
+### Request
 
 ```http
 GET /intentManagement/v5/intentSpecification/hub/sub-001
 Accept: application/json
 ```
 
-### Success response:
+### Success response
 
 ```http
 HTTP/1.1 200 OK
@@ -694,16 +762,16 @@ ETag: "subscription-sub-001-v1"
 
 ---
 
-## 13. Hub delete subscription:
+## 13. Hub delete subscription
 
-### Request:
+### Request
 
 ```http
 DELETE /intentManagement/v5/intentSpecification/hub/sub-001
 If-Match: "subscription-sub-001-v1"
 ```
 
-### Success response:
+### Success response
 
 ```http
 HTTP/1.1 204 No Content
@@ -711,7 +779,7 @@ HTTP/1.1 204 No Content
 
 ---
 
-## 14. DB unavailable response:
+## 14. DB unavailable response
 
 ```http
 HTTP/1.1 503 Service Unavailable
@@ -732,7 +800,7 @@ Retry-After: 30
 
 ---
 
-## 15. External event family:
+## 15. External event family
 
 ID MS emits external TMF-style resource events for `IntentSpecification` changes.
 
@@ -749,7 +817,7 @@ They are not internal fulfilment events and must not expose II MS semantic valid
 
 ---
 
-## 16. Event envelope pattern:
+## 16. Event envelope pattern
 
 ```json
 {
@@ -772,12 +840,12 @@ They are not internal fulfilment events and must not expose II MS semantic valid
     }
   },
   "reportingSystem": {
-    "id": "intent-definition-ms",
-    "name": "Intent Definition MS"
+    "id": "intent-design-ms",
+    "name": "Intent Design MS"
   },
   "source": {
-    "id": "intent-definition-ms",
-    "name": "Intent Definition MS"
+    "id": "intent-design-ms",
+    "name": "Intent Design MS"
   },
   "@type": "IntentSpecificationStatusChangeEvent"
 }
@@ -785,7 +853,7 @@ They are not internal fulfilment events and must not expose II MS semantic valid
 
 ---
 
-## 17. IntentSpecificationCreateEvent:
+## 17. IntentSpecificationCreateEvent
 
 ```json
 {
@@ -808,12 +876,12 @@ They are not internal fulfilment events and must not expose II MS semantic valid
     }
   },
   "reportingSystem": {
-    "id": "intent-definition-ms",
-    "name": "Intent Definition MS"
+    "id": "intent-design-ms",
+    "name": "Intent Design MS"
   },
   "source": {
-    "id": "intent-definition-ms",
-    "name": "Intent Definition MS"
+    "id": "intent-design-ms",
+    "name": "Intent Design MS"
   },
   "@type": "IntentSpecificationCreateEvent"
 }
@@ -821,7 +889,7 @@ They are not internal fulfilment events and must not expose II MS semantic valid
 
 ---
 
-## 18. IntentSpecificationAttributeValueChangeEvent:
+## 18. IntentSpecificationAttributeValueChangeEvent
 
 ```json
 {
@@ -851,12 +919,12 @@ They are not internal fulfilment events and must not expose II MS semantic valid
     ]
   },
   "reportingSystem": {
-    "id": "intent-definition-ms",
-    "name": "Intent Definition MS"
+    "id": "intent-design-ms",
+    "name": "Intent Design MS"
   },
   "source": {
-    "id": "intent-definition-ms",
-    "name": "Intent Definition MS"
+    "id": "intent-design-ms",
+    "name": "Intent Design MS"
   },
   "@type": "IntentSpecificationAttributeValueChangeEvent"
 }
@@ -864,7 +932,7 @@ They are not internal fulfilment events and must not expose II MS semantic valid
 
 ---
 
-## 19. IntentSpecificationStatusChangeEvent:
+## 19. IntentSpecificationStatusChangeEvent
 
 ```json
 {
@@ -889,12 +957,12 @@ They are not internal fulfilment events and must not expose II MS semantic valid
     "newLifecycleStatus": "ACTIVE"
   },
   "reportingSystem": {
-    "id": "intent-definition-ms",
-    "name": "Intent Definition MS"
+    "id": "intent-design-ms",
+    "name": "Intent Design MS"
   },
   "source": {
-    "id": "intent-definition-ms",
-    "name": "Intent Definition MS"
+    "id": "intent-design-ms",
+    "name": "Intent Design MS"
   },
   "@type": "IntentSpecificationStatusChangeEvent"
 }
@@ -902,7 +970,7 @@ They are not internal fulfilment events and must not expose II MS semantic valid
 
 ---
 
-## 20. IntentSpecificationDeleteEvent:
+## 20. IntentSpecificationDeleteEvent
 
 ```json
 {
@@ -925,12 +993,12 @@ They are not internal fulfilment events and must not expose II MS semantic valid
     }
   },
   "reportingSystem": {
-    "id": "intent-definition-ms",
-    "name": "Intent Definition MS"
+    "id": "intent-design-ms",
+    "name": "Intent Design MS"
   },
   "source": {
-    "id": "intent-definition-ms",
-    "name": "Intent Definition MS"
+    "id": "intent-design-ms",
+    "name": "Intent Design MS"
   },
   "@type": "IntentSpecificationDeleteEvent"
 }
@@ -938,7 +1006,7 @@ They are not internal fulfilment events and must not expose II MS semantic valid
 
 ---
 
-## 21. Final specification notes:
+## 21. Final specification notes
 
 - `@baseType` is `EntitySpecification`, not `ResourceSpecification`.
 - `specCharacteristic` is the high-level characteristic catalogue.
@@ -956,11 +1024,16 @@ They are not internal fulfilment events and must not expose II MS semantic valid
 - ETag is used for unsafe-operation concurrency only.
 - Caching is GET-only.
 - `If-None-Match` and `304 Not Modified` are not baselined.
+- Missing required `If-Match` returns `428 Precondition Required`.
+- Stale or mismatched `If-Match` returns `412 Precondition Failed`.
+- `fields` is supported as an optional TMF-style field selection parameter.
 - Activation is represented through PUT/PATCH lifecycle update, not a custom action endpoint.
 
-## TMF compliance and platform extension baseline:
+---
 
-### Strict TMF-facing baseline:
+## TMF compliance and platform extension baseline
+
+### Strict TMF-facing baseline
 
 For strict TMF alignment, ID MS supports the TMF-style `IntentSpecification` operations:
 
@@ -973,7 +1046,7 @@ For strict TMF alignment, ID MS supports the TMF-style `IntentSpecification` ope
 | Delete | `DELETE /intentManagement/v5/intentSpecification/{id}` | TMF-aligned |
 | Event subscription | `/hub` and `/hub/{id}` | Strict TMF route form where required |
 
-### Accepted platform extensions:
+### Accepted platform extensions
 
 Controlled platform extensions are acceptable when they are documented, non-breaking, and do not conflict with TMF semantics.
 
@@ -985,15 +1058,13 @@ For ID MS, accepted platform extensions are:
 | `/intentManagement/v5/intentSpecification/hub` | Domain-scoped event subscription route | Allowed as a clearer domain-owned route when deliberately chosen |
 | `/intentManagement/v5/intentSpecification/hub/{id}` | Domain-scoped subscription delete/retrieve route | Allowed as a clearer domain-owned route when deliberately chosen |
 
-### Update method rule:
+### Update method rule
 
 `PATCH` is the strict TMF-compatible update operation.
 
-`PUT` is the platform extension for deterministic full replacement and is preferred from the platform engineering perspective where clients support it.
+`PUT` is the platform extension for deterministic full replacement and is preferred from the platform engineering perspective where clients support it. `PATCH` remains supported for TMF compatibility but is not encouraged for ordinary edits when deterministic full replacement is available.
 
-`PATCH` remains supported for TMF compatibility but is not encouraged for ordinary edits when deterministic full replacement is available.
-
-### Lifecycle activation rule:
+### Lifecycle activation rule
 
 Activation/retirement is represented as a resource update to `IntentSpecification.lifecycleStatus`.
 
@@ -1019,7 +1090,7 @@ Do not expose custom lifecycle action endpoints such as:
 POST /intentManagement/v5/intentSpecification/{id}/activate
 ```
 
-### Hub route rule:
+### Hub route rule
 
 For strict TMF route compatibility, use:
 
@@ -1038,16 +1109,19 @@ DELETE /intentManagement/v5/intentSpecification/hub/{id}
 
 The domain-scoped route is acceptable only as a documented platform extension and must preserve the same subscription semantics.
 
-### Baseline statement:
+### Baseline statement
 
-ID MS and IC MS remain TMF-aligned at the external contract level. Controlled platform extensions are allowed when documented, non-breaking, and semantically compatible with TMF. For ID MS, `PATCH /intentSpecification/{id}` is the strict TMF update operation, while `PUT /intentSpecification/{id}` is an accepted platform extension for deterministic full replacement. TMF `/hub` routing is the strict subscription route form, while `/intentSpecification/hub` is an accepted domain-scoped platform extension when deliberately used.
+ID MS and IC MS remain TMF-aligned at the external contract level. Controlled platform extensions are allowed when documented, non-breaking, and semantically compatible with TMF. For ID MS, `PATCH /intentSpecification/{id}` is the strict TMF update operation, while `PUT /intentSpecification/{id}` is an accepted platform extension for deterministic full replacement.
 
+TMF `/hub` routing is the strict subscription route form, while `/intentSpecification/hub` is an accepted domain-scoped platform extension when deliberately used.
 
 ---
 
 ## Appendix A — External expression-value schema artefact
 
-The following JSON Schema is the external validation artefact referenced by `targetEntitySchema.@schemaLocation`. It is shown here as implementation guidance only. It is not embedded inside `IntentSpecification.expressionSpecification`, `Intent.expression`, or `IntentReport.expression`.
+The following JSON Schema is the external validation artefact referenced by `targetEntitySchema.@schemaLocation`. It is shown here as implementation guidance only.
+
+It is not embedded inside `IntentSpecification.expressionSpecification`, `Intent.expression`, or `IntentReport.expression`.
 
 ```json
 {

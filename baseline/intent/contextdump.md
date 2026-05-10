@@ -1,217 +1,309 @@
-> Baseline pack: Intent Management / Intent Enabler only  
-> Generated: 20260510_133900  
-> Scope rule: Intent Management / Intent Enabler only. Do not import other domain context unless explicitly requested later.
+# Intent / Intent Management / Intent Enabler — Clean Context Dump
 
-# Intent Baseline Context Dump
+> Working baseline context file.
+> This file replaces the previous reliance on `baseline/intent/contextdump.md`, which may be messy or stale.
+> Going forward, this file should be amended whenever a new baseline decision is agreed.
 
-## 1. Scope guard
+## 1. Scope
 
-This baseline pack is for Intent Management / Intent Enabler only.
+This context is only for:
 
-Do not import other domain architecture context into this pack unless the scope is explicitly changed later.
+- Intent
+- Intent Management
+- Intent Enabler
+- TMF921-facing Intent APIs and resources
+- IntentSpecification / Intent lifecycle
+- Intent Controller MS
+- Intent Design MS
+- Intent Intelligence MS
+- Intent Assurance MS
+- Intent Callback MS
+- Knowledge Plane configuration relevant to Intent
 
-The active domain terms are Intent, IntentSpecification, Intent lifecycle, Intent assurance, Intent callback, Intent validation, Intent resolution, and TMF921 Intent Management alignment.
+Do not bring Optimisation / OD / OC / OSB MS context into this thread unless explicitly requested.
 
-## 2. Source compliance artifacts
+## 2. Source-of-truth artifact set
 
-The following attached artifacts are the compliance validation references for external TMF facing API, resource, schema, and event shapes:
+The refreshed Intent baseline source folder is:
 
-| Artifact | Use |
-|---|---|
-| `TMF921_Intent_Management_v5.0.0_specification.pdf` | Primary TMF921 specification reference |
-| `TMF921_Intent_Management_v5.0.0_conformance.pdf` | TMF921 conformance reference |
-| `TMF921_Intent_Management_v5.0.0.oas.yaml` | OpenAPI schema and endpoint reference |
-| `TR292_TMForum_Intent_Ontology_TIO_v3.6.0.pdf` | Intent ontology and semantic alignment reference |
+`https://github.com/prageethw/im/tree/main/baseline/intent`
 
-Use these files preferentially over memory when validating compliance.
+Only Markdown files in that folder are baselined editable artifacts by default.
 
-## 3. Service names and boundaries
+### Baselined Markdown files
 
-| Short name | Service name | Boundary |
-|---|---|---|
-| ID MS | `intent-design-ms` | Owns IntentSpecification catalogue and governance |
-| IC MS | `intent-controller-ms` | Owns canonical runtime Intent resource and external TMF Intent events |
-| II MS | `intent-intelligence-ms` | Owns semantic interpretation and resolution decision input preparation |
-| IA MS | `intent-assurance-ms` | Owns assurance correlation, runtime drift/degradation interpretation, and lifecycle input back to IC MS |
-| ICB MS | `intent-callback-ms` | Owns inbound callback mediation and raw callback event publication |
+- `ia_ms_design_brief.md`
+- `ia_ms_specification.md`
+- `ic_ms_design_brief.md`
+- `ic_ms_specification.md`
+- `icb_ms_design_brief.md`
+- `icb_ms_specification.md`
+- `id_ms_design_brief.md`
+- `id_ms_specification.md`
+- `ii_ms_design_brief.md`
+- `ii_ms_specification.md`
+- `intent_internal_events_specification.md`
+- `kp_master_config.md`
 
-Important naming rule: II MS means Intent Intelligence MS and uses service name `intent-intelligence-ms`. Do not use `intent-interpreter-ms`.
+### Special handling for context dump
 
-Important callback naming rule: ICB MS means Intent Callback MS / `intent-callback-ms`. Do not use CB MS to mean the callback service. CB means circuit breaker.
+- The existing GitHub `contextdump.md` is not treated as authoritative.
+- A new clean context dump should be maintained from this point onward.
+- New baseline decisions should be appended/amended into the clean context dump when the user says to baseline them.
 
-## 4. External runtime expression baseline
+### Excluded unless explicitly requested
 
-External TMF-facing runtime Intent expression shape:
+- `.puml` files
+- `.zip` files
+- Any non-Markdown artifacts in the Intent folder
 
-```json
-{
-  "expression": {
-    "@type": "IntentExpression",
-    "expressionLanguage": "JSON",
-    "expressionValue": {
-      "context": {
-        "targets": [],
-        "constraints": [],
-        "preferences": []
-      }
-    }
-  }
-}
-```
+## 3. TMF/source reference files
 
-Rules:
+Use these attached TMF files preferentially when validating TMF-facing API, resource, schema, and event shapes:
 
-| Rule | Baseline |
-|---|---|
-| Canonical buckets | `targets`, `constraints`, `preferences` |
-| Context shape | `expression.expressionValue.context` externally |
-| Peer fields | No domain peer fields beside the three buckets inside `context` |
-| Location | Model under `context.constraints` |
-| Service type | Model under `context.constraints` |
-| Service class | Model under `context.constraints` |
-| Priority | Model under `context.constraints` |
-| Internal events | Use native JSON context without TMF wrapper, e.g. `body.expression.context.targets` |
-| Characteristic catalogue | IntentSpecification exposes one high-level `context` CharacteristicSpecification |
-| Detailed validation | External expression-value schema referenced by `targetEntitySchema.@schemaLocation` |
+- `TMF921_Intent_Management_v5.0.0_specification.pdf`
+- `TMF921_Intent_Management_v5.0.0_conformance.pdf`
+- `TMF921_Intent_Management_v5.0.0.oas.yaml`
+- `TR292_TMForum_Intent_Ontology_TIO_v3.6.0.pdf`
 
-## 5. Priority vocabulary baseline
+Use the uploaded architecture/reference books only as supporting design references where relevant.
 
-Use `critical`, `high`, and `standard`.
+## 4. Current high-level architectural baseline
 
-Do not use `clinical-critical`.
+### 4.1 Microservices
 
-Use field name `priority`, not `priority_level`.
+The Intent solution baseline includes:
 
-## 6. IntentSpecification baseline principles
+- ID MS — Intent Design MS
+- IC MS — Intent Controller MS
+- II MS — Intent Intelligence MS
+- IA MS — Intent Assurance MS
+- ICB MS — Intent Callback MS
+- Knowledge Plane / KP configuration where relevant
 
-| Topic | Baseline |
-|---|---|
-| `@baseType` | `EntitySpecification` |
-| Top-level characteristic catalogue | Use `specCharacteristic` |
-| Runtime expression validation | Use `expressionSpecification` and `targetEntitySchema` |
-| Detailed semantic inputs | Captured in `context.targets`, `context.constraints`, and `context.preferences` |
-| CharacteristicValueSpecification | Use only for defaults, examples, or constrained discovery/governance values |
-| Numeric SLA characteristics | Defaults/examples are governance and request-authoring guidance only; they are not semantic enforcement rules in ID MS |
-| Semantic validation | II MS and Knowledge Plane |
-| Runtime assurance | IA MS |
+### 4.2 Naming
 
+- Use `intent-intelligence-ms`, not `intent-interpreter-ms`.
+- Use `IntentCallbackEvent`, not `OrchestratorCallbackEvent` and not `IntentCallbackReceivedEvent`.
+- `IntentDriftOccurredEvent` is retired from the active internal event baseline.
 
-## 7. Intent lifecycle baseline
+## 5. External TMF-facing baseline
 
-Runtime Intent lifecycle states include:
+### 5.1 ID MS / IntentSpecification
 
-| State | Meaning |
-|---|---|
-| `InProgress` | Intent has been accepted and is being validated, resolved, orchestrated, or activated |
-| `Active` | A specific Intent version is currently fulfilled/effective in the network |
-| `Degraded` | Intent remains active but assurance indicates it is not meeting target quality or is at risk |
-| `Failed` | The active version has failed and requires lifecycle handling or rollback |
-| `Rejected` | The intent request failed validation or admission and will not proceed |
-| `Terminated` | The version is no longer active/effective |
+ID MS owns design-time `IntentSpecification` lifecycle/governance.
 
-## 8. Version, lifecycle, and effectiveVersion baseline
+ID MS owns:
 
-Each Intent version has its own lifecycle.
+- `/intentManagement/v5/intentSpecification`
+- `/intentManagement/v5/intentSpecification/{id}`
+- `/intentManagement/v5/intentSpecification/hub`
+- `/intentManagement/v5/intentSpecification/hub/{id}`
 
-Once a version becomes `Active`, it becomes the `effectiveVersion` even if it later becomes `Failed`.
+ID MS does not own:
 
-Rollback is not automatic network magic. If version `1.1` becomes `Active` then fails, returning version `1.0` to active service requires another orchestration cycle.
+- Runtime `Intent`
+- Runtime `IntentReport`
+- Runtime assurance
+- Runtime orchestration
+- Callback ingestion
+- Interpretation/resolution
 
-| Scenario | Version 1.0 lifecycle | Version 1.1 lifecycle | `effectiveVersion` | Required behaviour |
-|---|---|---|---|---|
-| Initial active version | `Active` | Not created | `1.0` | Version 1.0 is fulfilled in network |
-| New version submitted | `Active` or `Terminated` depending transition stage | `InProgress` | `1.0` until 1.1 activates | IC MS tracks each version lifecycle separately |
-| New version activates | `Terminated` | `Active` | `1.1` | 1.1 becomes effective version |
-| New version later fails | `Terminated` | `Failed` | `1.1` | Effective version remains 1.1 because it was the last active version |
-| Rollback requested | `InProgress` or new recovery cycle | `Failed` | `1.1` until 1.0 reactivates | IC/II/orchestration must run another cycle |
-| Rollback complete | `Active` | `Failed` or `Terminated` | `1.0` | 1.0 becomes effective again only after successful orchestration |
+For `IntentSpecification`:
 
-Persistence decision: keep versions in one logical table/collection by default, not a separate old-version table. Use version identifiers, lifecycle state, current/effective markers, audit fields, and optimistic concurrency rather than moving active/old versions to separate persistence models.
+- Use `@type: IntentSpecification`
+- Use `@baseType: EntitySpecification`
+- Use `specCharacteristic` as high-level catalogue/discovery metadata.
+- Use `expressionSpecification` as the authoritative syntax/schema for request shape.
+- Avoid duplicating nested object structure in `specCharacteristic`.
+- Use `characteristicValueSpecification` only for defaults, examples, constrained allowed values, discovery, governance, or OEX/UI prefill guidance.
 
-## 9. External and internal event ownership
+### 5.2 Runtime Intent expression shape
 
-| Event or event family | Owner | Baseline |
-|---|---|---|
-| External `IntentStatusChangeEvent` | IC MS | IC emits after updating canonical Intent resource state |
-| External `IntentAttributeValueChangeEvent` | IC MS | Design-time/declarative Intent attribute change, not runtime telemetry |
-| Internal lifecycle input from assurance | IA MS | IA emits internal lifecycle update to IC MS |
-| Internal `IntentValidatedEvent` | IC MS | Syntactic validation success handoff to II MS |
-| Internal `IntentResolvedEvent` | II MS | Emitted only when resolution work is required |
-| Internal `IntentCallbackEvent` | ICB MS | Accepted raw callback event to Kafka for IA MS |
-| Separate external `IntentDriftOccurredEvent` | Not used | Assurance event / lifecycle input covers drift and degradation |
+External runtime expression shape is:
 
-## 10. Circuit breaker baseline
+`expression.expressionValue.context`
 
-| Condition | HTTP behaviour |
-|---|---|
-| Circuit breaker triggered and no safe fallback can preserve contract meaning | `503 Service Unavailable` |
-| Circuit breaker triggered but safe degraded fallback preserves contract meaning | `200 OK` with valid degraded response body and degradation signal |
+The top-level `context` contains only canonical semantic buckets:
 
-Apply this pattern consistently across services unless specifically exempted.
+- `targets`
+- `constraints`
+- `preferences`
 
-## 11. ETag, optimistic concurrency, and caching baseline
+Domain inputs such as `location`, `serviceType`, and `serviceClass` are modelled under `context.constraints`.
 
-Use strong ETags for mutable canonical resources.
+Internally, events use native JSON without the external TMF expression wrapper, for example:
 
-Mutating operations that update or delete an existing resource require `If-Match` unless a specific endpoint is exempted.
+- `body.expression.context.targets`
+- `body.expression.context.constraints`
+- `body.expression.context.preferences`
 
-Stale or mismatched `If-Match` returns:
+## 6. Canonical semantic buckets
 
-```http
-HTTP/1.1 412 Precondition Failed
-Content-Type: application/json
-Content-Language: en-AU
-Cache-Control: no-store
-```
+Use these semantic meanings consistently end-to-end:
 
-```json
-{
-  "code": "PRECONDITION_FAILED",
-  "reason": "ETAG_MISMATCH",
-  "message": "The supplied If-Match value does not match the current resource version.",
-  "status": "412",
-  "referenceError": "https://mycsp.com.au/errors/PRECONDITION_FAILED",
-  "@type": "Error"
-}
-```
+- `targets` — measurable SLA/outcome objectives, such as `maxLatencyMs`, `minAvailabilityPercent`, `maxJitterMs`, and `maxPacketLossPercent`.
+- `constraints` — hard rules or required non-target inputs, such as `priority`, `redundancyRequired`, `timeWindow`, `location`, `serviceType`, and `serviceClass`.
+- `preferences` — soft selection guidance, such as `preferredAccessTechnology`.
 
-GET operations may use private caching with ETag/conditional requests when it does not weaken correctness.
+The same semantics must flow from:
 
-## 12. Database baseline
+`IntentSpecification -> Intent -> IntentValidatedEvent -> IntentResolvedEvent -> IntentOptimised/Network-ready flow -> IntentAssuranceEvent`
 
-Managed PostgreSQL / PostgreSQL-compatible RDBMS is the default source-of-truth database for main Intent microservices and transactional entity persistence.
+## 7. Internal event baseline
 
-Use JSONB for flexible document-shaped resource bodies where appropriate.
+### 7.1 Event structure
 
-NoSQL/document DB is not the default because lifecycle governance, versioning, ETag/If-Match, relationships, transactional outbox/inbox, auditability, query/list APIs, and operational simplicity favour an RDBMS default.
+Internal workflow events should use a common generic envelope but event-specific business bodies.
 
-Specialised non-RDBMS stores remain secondary/future options only when access patterns justify them.
+Shared envelope examples:
 
-Initial deployment may be single-region or same-region multi-AZ, but selected service must support future cross-region active-passive DR. Active-active writes and distributed SQL remain future options only if explicitly required.
+- CloudEvents headers
+- `eventType`
+- `eventVersion`
+- `source`
+- `eventTime`
+- `correlationId`
+- `references`
 
-## 13. Security baseline for platform integrations
+Do not force a fully generic business body across milestone-specific events.
 
-Any integration with database, cache, Kafka, object store, API gateway, secrets manager, or other platform infrastructure must capture:
+### 7.2 Active internal events
 
-| Control | Baseline |
-|---|---|
-| Authenticated identity | Every service uses authenticated workload identity |
-| Authorisation | Least-privilege access per service and environment |
-| Encryption | Encrypted connectivity in transit; encrypted storage at rest where supported |
-| Secrets | Approved secret/certificate management and rotation |
-| Environment scoping | Separate principals/roles per environment |
-| No broad admin | No wildcard/admin access by default |
-| Audit | Access failures, privileged operations, and policy denials are monitored |
-| Ownership | Producer/consumer/read/write ownership is documented |
-| Kafka | Topic-level producer/consumer ACLs and consumer group ownership |
-| Database | Schema/table permissions are limited to the owning service role |
+Current active internal baseline includes milestone-specific events such as:
 
-## 14. Closed-loop activity diagram baseline
+- `IntentValidatedEvent`
+- `IntentResolvedEvent`
+- `IntentNetworkReadyEvent`
+- `IntentCallbackEvent`
+- `IntentAssuranceEvent`
 
-The PlantUML activity diagram of the intent management pre-drift and post-drift loop is baselined under the title `Closed loop activity diagram`.
+### 7.3 Retired event
 
-## 15. Baseline file policy
+`IntentDriftOccurredEvent` is retired.
 
-When future baseline updates are made, append silently to the running context dump and update the relevant service file unless the user asks to see the dump.
+Drift, degradation, failure, termination confirmation, and re-optimisation triggers are represented inside:
 
-When generating downloadable artifacts, use unique filenames with timestamp/version suffixes to avoid stale download caching.
+`IntentAssuranceEvent.assuranceOutcome`
+
+Use fields such as:
+
+- `assuranceStatus`
+- `severity`
+- `reason`
+- `requiresReoptimisation`
+
+## 8. IA MS baseline
+
+IA MS owns runtime assurance interpretation and lifecycle/assurance meaning.
+
+IA MS consumes `IntentCallbackEvent`, correlates intent, maps raw orchestrator state, updates assurance/projection state, and emits `IntentAssuranceEvent`.
+
+IA MS owns:
+
+- Correlation of callback intent context
+- Mapping `orchestratorState` to assurance/lifecycle meaning
+- Skip/reject decisions for unmapped or uncorrelatable callbacks
+- Assurance outcome publication
+
+IA MS does not rely on a separate `IntentDriftOccurredEvent`.
+
+## 9. ICB MS baseline
+
+ICB MS performs inbound callback ingestion and relay.
+
+ICB MS:
+
+- Accepts callbacks from external orchestrators
+- Performs structural validation only
+- Stores accepted callbacks in its outbox
+- Publishes `IntentCallbackEvent` to Kafka
+- Does not map or interpret `orchestratorState`
+- Does not validate intent existence
+- Does not derive orchestrator type
+- Does not decide lifecycle impact
+
+`IntentCallbackEvent` baseline:
+
+- Emitted by `intent-callback-ms`
+- Topic: `t7.intent.management.events.callbacks`
+- Kafka key: `intentId`
+- Consumer: `intent-assurance-ms`
+- CloudEvents type: `au.com.mycsp.intent.callback.v1`
+
+## 10. IC MS baseline
+
+IC MS owns the runtime external TMF Intent resource and canonical runtime intent state.
+
+IC MS owns external TMF-aligned events such as:
+
+- `IntentStatusChangeEvent`
+- `IntentDeleteEvent`
+- `IntentAttributeValueChangeEvent`
+
+IC MS projects external lifecycle/status from assurance and internal workflow outcomes.
+
+IA MS provides operational lifecycle input; IC MS emits external TMF status events after updating the canonical Intent resource state.
+
+## 11. II MS baseline
+
+II MS owns interpretation/resolution after syntactic validation by IC MS.
+
+Baseline flow:
+
+- IC MS emits `IntentValidatedEvent`.
+- II MS resolves the intent.
+- II MS emits `IntentResolvedEvent` only when optimisation is required.
+- If optimisation is not required, II MS emits `IntentNetworkReadyEvent` directly.
+- II MS does not emit `IntentAppliedEvent`.
+
+`IntentResolvedEvent` may include optional `applicablePathObservations` for re-optimisation after assurance drift/degradation, using:
+
+- `pathId`
+- `observedLatencyMs`
+- `observedReliabilityPercent`
+- `observedAt`
+
+## 12. REST / persistence / reliability baseline
+
+### 12.1 ETags and concurrency
+
+Mutable resources expose ETags.
+
+State-changing operations that depend on current state require `If-Match`.
+
+- Missing required ETag: `428 Precondition Required`
+- Stale/mismatched ETag: `412 Precondition Failed`
+
+### 12.2 Cache policy
+
+Successful GET responses use:
+
+- `Cache-Control: private, max-age=300`
+- `ETag`
+
+Use request header `Cache-Control: no-cache` for explicit client cache bypass/revalidation.
+
+### 12.3 Persistence
+
+IME microservices use managed PostgreSQL / PostgreSQL-compatible RDBMS where applicable.
+
+Baseline includes:
+
+- JSONB for flexible resource bodies
+- Per-MS database boundary
+- Flyway/Liquibase migrations
+- No manual production schema changes
+- Transactional outbox/inbox where needed
+
+Runtime telemetry history is not stored in the IME entity database by default. Runtime metrics/time-series observations are most likely handled by the organisation's Prometheus SaaS / managed metrics platform.
+
+## 13. Maintenance rule
+
+When the user says to baseline a new Intent decision:
+
+1. Update memory/context.
+2. Update this clean context dump.
+3. Update relevant Markdown specification/design files where applicable.
+4. Keep TMF-facing shapes validated against the uploaded TMF source/reference files.
+5. Do not update Optimisation artifacts unless explicitly requested.
