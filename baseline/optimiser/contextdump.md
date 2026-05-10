@@ -99,3 +99,11 @@ The optimiser internal event baseline uses exactly two Kafka event types between
 - `OptimisationCompletedEvent`: emitted by the Python/Gurobi Worker to OC MS / OC MS Inbox Consumer. Carries terminal `status = COMPLETED`, `FAILED`, or `INFEASIBLE`.
 
 Do not use a separate `OptimisationFailedEvent` by default. Failed and infeasible outcomes are represented inside `OptimisationCompletedEvent.status`.
+
+## E2E logical-flow event naming baseline
+
+The E2E logical flow must name the worker outcome event explicitly. Use:
+
+`Python/Gurobi Worker -> Kafka: Consumes worker instructions and emits OptimisationCompletedEvent with status COMPLETED, INFEASIBLE, or FAILED.`
+
+Do not leave the worker outcome side as the generic phrase `emits optimisation outcomes` where the event name should be clear.

@@ -104,7 +104,7 @@ Key logical relationships:
 6. NGW -> OC MS: Uses mTLS to expose runtime Optimisation APIs.
 7. OC MS -> OD MS: Uses mTLS for internal service-to-service validation against ACTIVE OptimisationSpecification contracts.
 8. OC MS -> Kafka: Emits OptimisationRequestedEvent with instruction EXECUTE or CANCEL.
-9. Python/Gurobi Worker -> Kafka: Consumes worker instructions and emits optimisation outcomes.
+9. Python/Gurobi Worker -> Kafka: Consumes worker instructions and emits OptimisationCompletedEvent with status COMPLETED, INFEASIBLE, or FAILED.
 10. Kafka -> OC MS: OC MS consumes worker outcomes and projects lifecycle/result.
 ```
 
