@@ -56,6 +56,13 @@ OC MS acts as the runtime controller. It accepts requests, validates the request
 
 The Python/Gurobi worker is responsible for executing the internal deterministic optimisation model. It consumes events from Kafka, executes or cancels work based on the instruction, and publishes outcome events back to Kafka.
 
+
+Backend optimisation API examples use platform-readable optimisation fields while preserving TMF ontology-aligned structure, expression pattern, polymorphism fields, and extension semantics. Detailed standard validation should reference the relevant TMF921 / TR292 material when a specific external API/resource/event decision is being baselined.
+
+Runtime Optimisation requests use the canonical expression shape described in Appendix 10.10. Runtime lifecycle states, terminal outcomes, and outcome mapping are described in Appendix 10.11.
+
+Non-standard additions on external/backend APIs must be labelled as approved platform extensions and must not break standard resource and operation responsibilities. Internal Kafka events and private service-to-service APIs do not need to use TMF REST representation fields.
+
 ### 3.1 Use case view:
 
 | **No.** | **Use case** | **Actor** | **Summary** | **Outcome** |
@@ -376,17 +383,6 @@ Detailed flow:
 ```
 
 ---
-
-### 3.4 Design rules and TMF ontology alignment:
-
-Backend optimisation API examples use platform-readable optimisation fields while preserving TMF ontology-aligned structure, expression pattern, polymorphism fields, and extension semantics. Detailed standard validation should reference the relevant TMF921 / TR292 material when a specific external API/resource/event decision is being baselined.
-
-Runtime Optimisation requests use the canonical expression shape described in Appendix 10.10. Runtime lifecycle states, terminal outcomes, and outcome mapping are described in Appendix 10.11.
-
-Non-standard additions on external/backend APIs must be labelled as approved platform extensions and must not break standard resource and operation responsibilities. Internal Kafka events and private service-to-service APIs do not need to use TMF REST representation fields.
-
----
-
 ## 4. Capability matrix:
 
 | **Component** | **Responsibility** |

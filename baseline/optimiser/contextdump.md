@@ -84,3 +84,8 @@ Removed low-level OD MS field-responsibility details from the Solution summary o
 - Keep `Validation and outcome responsibility` and `Specification contract versus runtime values` embedded in section 4 Capability matrix.
 - Keep detailed canonical runtime expression and runtime lifecycle material in Appendix 10.10 and 10.11.
 - Section 3 references Appendix 10.10 / 10.11 rather than duplicating detailed examples in the main narrative.
+
+
+## Baseline update — E2E section 3 design rules placement:
+
+The former `3.4 Design rules and TMF ontology alignment` content has been merged into the opening narrative of `3. Solution elaboration` before `3.1 Use case view`. Section 3 now keeps only `3.1 Use case view`, `3.2 Logical view`, and `3.3 Process view` as subsections. The design-rules text remains in section 3 and continues to cover TMF ontology-aligned external/backend API design, approved platform extensions, internal API/event boundaries, and references to Appendix 10.10 and 10.11 for canonical runtime expression shape and runtime lifecycle baseline.
