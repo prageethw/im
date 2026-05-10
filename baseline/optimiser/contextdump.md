@@ -89,3 +89,13 @@ Removed low-level OD MS field-responsibility details from the Solution summary o
 ## Baseline update — E2E section 3 design rules placement:
 
 The former `3.4 Design rules and TMF ontology alignment` content has been merged into the opening narrative of `3. Solution elaboration` before `3.1 Use case view`. Section 3 now keeps only `3.1 Use case view`, `3.2 Logical view`, and `3.3 Process view` as subsections. The design-rules text remains in section 3 and continues to cover TMF ontology-aligned external/backend API design, approved platform extensions, internal API/event boundaries, and references to Appendix 10.10 and 10.11 for canonical runtime expression shape and runtime lifecycle baseline.
+
+
+## Optimiser internal event baseline — 2026-05-10
+
+The optimiser internal event baseline uses exactly two Kafka event types between OC MS and the Python/Gurobi worker:
+
+- `OptimisationRequestedEvent`: emitted by OC MS / OC MS Outbox Relay to the Python/Gurobi Worker. Carries `instruction = EXECUTE` or `instruction = CANCEL`.
+- `OptimisationCompletedEvent`: emitted by the Python/Gurobi Worker to OC MS / OC MS Inbox Consumer. Carries terminal `status = COMPLETED`, `FAILED`, or `INFEASIBLE`.
+
+Do not use a separate `OptimisationFailedEvent` by default. Failed and infeasible outcomes are represented inside `OptimisationCompletedEvent.status`.

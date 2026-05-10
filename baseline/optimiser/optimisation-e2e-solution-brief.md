@@ -40,7 +40,7 @@ The solution separates the **definition of optimisation capabilities** from the 
 - OD MS uses TMF-aligned structures: `specCharacteristic[]`, `expressionSpecification`, and `targetEntitySchema`.
 - OC MS validates the runtime request wrapper and the active OD MS request contract, then creates and drives runtime execution asynchronously through Kafka.
 - Kafka carries worker instructions and outcomes, with a dedicated DLQ for unprocessable events.
-- The Python/Gurobi worker consumes `EXECUTE` or `CANCEL` instructions, runs or cancels optimisation work, and returns `SUCCESS`, `INFEASIBLE`, or `FAILURE` outcomes.
+- The Python/Gurobi worker consumes `EXECUTE` or `CANCEL` instructions, runs or cancels optimisation work, and emits `OptimisationCompletedEvent` with status `COMPLETED`, `INFEASIBLE`, or `FAILED`.
 - NGW-exposed backend APIs are TMF ontology-aligned. OGW-exposed OEX APIs, private MS-to-MS APIs, private MS-to-MS events, and internal Kafka events do not need to be TMF-compliant.
 - Non-standard additions on external/backend APIs must be labelled as approved platform extensions. Current OD examples include `_links` for HATEOAS and `PUT /optimisationSpecification/{id}` for full replacement/finalisation of mutable `DRAFT` specifications.
 
@@ -75,7 +75,7 @@ Non-standard additions on external/backend APIs must be labelled as approved pla
 | 6 | Monitor optimisation | User / OEX / platform service | Read current lifecycle state and result when available. | Caller can see whether the optimisation is acknowledged, queued, processing, completed, infeasible, failed, cancelling, or cancelled. |
 | 7 | Cancel optimisation | User / OEX / platform service | Request cancellation for an eligible active optimisation. | OC MS moves the resource to `CANCELLING` and instructs the worker to cancel where safely possible. |
 | 8 | Retry failed optimisation | User / OEX / platform service | Retry a `FAILED` optimisation by creating a new linked optimisation. | A new `ACKNOWLEDGED` optimisation is created with `retrialOf` pointing to the failed one. |
-| 9 | Execute optimisation | Python/Gurobi worker | Consume worker instruction and execute the deterministic optimisation model. | Worker emits `SUCCESS`, `INFEASIBLE`, or `FAILURE` outcome. |
+| 9 | Execute optimisation | Python/Gurobi worker | Consume worker instruction and execute the deterministic optimisation model. | Worker emits `OptimisationCompletedEvent` with status `COMPLETED`, `INFEASIBLE`, or `FAILED`. |
 
 ### 3.2 Logical view:
 
@@ -251,7 +251,7 @@ Detailed flow:
 12. Python/Gurobi Worker consumes the event from Kafka.
 13. Python/Gurobi Worker resolves internal deterministic model binding.
 14. Python/Gurobi Worker invokes Gurobi Optimiser.
-15. Worker publishes OptimisationCompletedEvent or OptimisationFailedEvent back to Kafka.
+15. Worker publishes OptimisationCompletedEvent back to Kafka with status `COMPLETED`, `INFEASIBLE`, or `FAILED`.
 16. OC MS Inbox consumes the worker outcome event.
 17. OC MS Inbox updates OC MS DB with lifecycle and result projection.
 18. User polls GET /optimisation/{id} through OGW -> OSB MS(OEX API) -> NGW -> OC MS to retrieve current status/result.
@@ -374,8 +374,8 @@ Detailed flow:
 3. Worker resolves the required runtime context and internal deterministic model binding.
 4. Worker invokes Gurobi Optimiser.
 5. Gurobi Optimiser returns solver output or failure information.
-6. Worker maps the outcome to SUCCESS, INFEASIBLE, or FAILURE.
-7. Worker publishes OptimisationCompletedEvent or OptimisationFailedEvent to Kafka.
+6. Worker maps the solver outcome to OptimisationCompletedEvent status `COMPLETED`, `INFEASIBLE`, or `FAILED`.
+7. Worker publishes OptimisationCompletedEvent to Kafka.
 8. OC MS Inbox consumes the worker outcome event.
 9. OC MS Inbox applies idempotency and stale/late-event checks.
 10. OC MS Inbox updates OC MS DB with lifecycle/result projection.
@@ -400,11 +400,11 @@ Detailed flow:
 | **OC MS Outbox Relay** | Publishes persisted OC MS outbox records to Kafka after DB commit. Publishes `OptimisationRequestedEvent` with `instruction = EXECUTE` or `instruction = CANCEL`. |
 | **Kafka topic** | Main internal event stream for worker instructions and outcomes between OC MS and the Python/Gurobi worker. Uses CloudEvents-style Kafka headers. |
 | **Kafka DLQ** | Holds events that cannot be safely processed after retrial handling. Preserves original event payload and failure metadata for operational investigation and replay decisions. |
-| **Python / Gurobi Worker** | Consumes `OptimisationRequestedEvent`. For `EXECUTE`, resolves the internal deterministic model binding, resolves required data, executes optimisation, determines runtime solver outcome, and emits `SUCCESS`, `INFEASIBLE`, or `FAILURE`. For `CANCEL`, cancels/stops/ignores processing where safely possible. |
+| **Python / Gurobi Worker** | Consumes `OptimisationRequestedEvent`. For `EXECUTE`, resolves the internal deterministic model binding, resolves required data, executes optimisation, determines runtime solver outcome, and emits `OptimisationCompletedEvent` with status `COMPLETED`, `INFEASIBLE`, or `FAILED`. For `CANCEL`, cancels/stops/ignores processing where safely possible. |
 | **Internal deterministic optimisation models** | Own solver-specific logic that is not exposed externally. Encapsulate objective formulation, constraints, candidate-resource rules, model binding, solver configuration, and Gurobi formulation. |
-| **Gurobi Optimiser** | Executes the mathematical optimisation model prepared by the worker/model layer. Produces solve outcomes that the worker maps into `SUCCESS`, `INFEASIBLE`, or `FAILURE`. |
+| **Gurobi Optimiser** | Executes the mathematical optimisation model prepared by the worker/model layer. Produces raw solver output that the worker maps into `OptimisationCompletedEvent.status` values `COMPLETED`, `INFEASIBLE`, or `FAILED`. |
 | **Analytics platform/data sources** | Provides authorised datasets required by the worker/model layer, such as topology snapshots, traffic forecasts, capacity information, inventory data, or other optimisation context datasets. |
-| **OC MS Inbox Consumer** | Consumes worker outcome events, applies idempotency and stale/late-event handling, maps outcomes to lifecycle states (`SUCCESS -> COMPLETED`, `INFEASIBLE -> INFEASIBLE`, `FAILURE -> FAILED`), and projects result/failure details into the runtime `Optimisation` resource. |
+| **OC MS Inbox Consumer** | Consumes worker outcome events, applies idempotency and stale/late-event handling, maps `OptimisationCompletedEvent.status` to lifecycle states (`COMPLETED -> COMPLETED`, `INFEASIBLE -> INFEASIBLE`, `FAILED -> FAILED`), and projects result/failure details into the runtime `Optimisation` resource. |
 | **Operational support/monitoring** | Monitors service health, Kafka lag, outbox/inbox processing, worker failures, solver failures, DLQ records, retrial counts, stale/late events, and optimisation lifecycle/result trends. |
 
 ---
@@ -766,7 +766,6 @@ t7.optimisation.events.dlq
 ```text
 OptimisationRequestedEvent
 OptimisationCompletedEvent
-OptimisationFailedEvent
 ```
 
 ### 10.6 Worker instructions:
@@ -776,20 +775,20 @@ EXECUTE
 CANCEL
 ```
 
-### 10.7 Outcome values:
+### 10.7 OptimisationCompletedEvent status values:
 
 ```text
-SUCCESS
+COMPLETED
 INFEASIBLE
-FAILURE
+FAILED
 ```
 
-### 10.8 Outcome mapping:
+### 10.8 Event status to lifecycle mapping:
 
 ```text
-SUCCESS -> COMPLETED
+COMPLETED -> COMPLETED
 INFEASIBLE -> INFEASIBLE
-FAILURE -> FAILED
+FAILED -> FAILED
 ```
 
 ### 10.9 Key artifacts:
@@ -875,7 +874,7 @@ Status meanings:
 | `ACKNOWLEDGED` | OC MS accepted the runtime optimisation request and persisted it. |
 | `QUEUED` | Request is waiting for worker processing. |
 | `PROCESSING` | Python/Gurobi Worker is executing or preparing the optimisation. |
-| `COMPLETED` | Worker returned `SUCCESS`; result is available. |
+| `COMPLETED` | Worker emitted `OptimisationCompletedEvent` with status `COMPLETED`; result is available. |
 | `INFEASIBLE` | Worker/model determined no feasible solution exists. |
 | `FAILED` | Technical/runtime failure occurred. |
 | `CANCELLING` | Cancellation was requested and is being handled. |
@@ -884,9 +883,9 @@ Status meanings:
 Outcome mapping:
 
 ```text
-SUCCESS -> COMPLETED
+COMPLETED -> COMPLETED
 INFEASIBLE -> INFEASIBLE
-FAILURE -> FAILED
+FAILED -> FAILED
 ```
 
 Lifecycle transition baseline:
@@ -907,9 +906,9 @@ Transition rules:
 |---|---|---|
 | `ACKNOWLEDGED` | `QUEUED` | OC MS outbox event is ready/published for worker execution. |
 | `QUEUED` | `PROCESSING` | Worker starts or claims execution. |
-| `PROCESSING` | `COMPLETED` | Worker returns `SUCCESS`. |
+| `PROCESSING` | `COMPLETED` | Worker emits `OptimisationCompletedEvent` with status `COMPLETED`. |
 | `PROCESSING` | `INFEASIBLE` | Worker returns `INFEASIBLE`. |
-| `PROCESSING` | `FAILED` | Worker returns `FAILURE` or technical failure is projected. |
+| `PROCESSING` | `FAILED` | Worker emits `OptimisationCompletedEvent` with status `FAILED` or a technical failure is projected. |
 | `ACKNOWLEDGED` / `QUEUED` / `PROCESSING` | `CANCELLING` | User requests cancellation through `POST /optimisation/{id}/cancellation`. |
 | `CANCELLING` | `CANCELLED` | Cancellation is confirmed or safely resolved. |
 | `FAILED` | new `ACKNOWLEDGED` | User requests retrial through `POST /optimisation/{id}/retrial`; creates a new Optimisation. |
@@ -920,3 +919,15 @@ Retrial rule:
 Retrial does not move FAILED back to PROCESSING.
 Retrial creates a new runtime Optimisation resource with retrialOf pointing to the failed one.
 ```
+
+### 10.12 Internal event baseline:
+
+The optimiser platform uses exactly two internal Kafka event types between OC MS and the Python/Gurobi worker in the current baseline. These are platform-internal events and do not use TMF REST resource fields such as `@type`, `@baseType`, or `@schemaLocation`.
+
+| Event | Emitter | Consumer | Purpose | Key values |
+|---|---|---|---|---|
+| `OptimisationRequestedEvent` | OC MS Outbox Relay | Python/Gurobi Worker | Instructs the worker to execute or cancel a runtime optimisation. | `instruction = EXECUTE` or `instruction = CANCEL` |
+| `OptimisationCompletedEvent` | Python/Gurobi Worker | OC MS Inbox Consumer | Reports terminal worker outcome for lifecycle/result projection. | `status = COMPLETED`, `FAILED`, or `INFEASIBLE` |
+
+`OptimisationFailedEvent` is not used in the current baseline. Failed and infeasible outcomes are carried by `OptimisationCompletedEvent.status`.
+

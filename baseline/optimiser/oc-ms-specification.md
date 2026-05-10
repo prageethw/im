@@ -4,7 +4,7 @@
 
 Optimisation-Controller-MS (OC MS) owns the runtime `Optimisation` resource. It is a generic optimisation controller, not an intent-only controller.
 
-OC MS accepts runtime optimisation requests, validates only the wrapper and OD MS request contract, persists the request, emits a worker instruction event, then later projects worker outcomes back into the runtime resource.
+OC MS accepts runtime optimisation requests, validates only the wrapper and OD MS request contract, persists the request, emits `OptimisationRequestedEvent`, then later projects `OptimisationCompletedEvent` outcomes back into the runtime resource.
 
 ## Ownership
 
@@ -16,7 +16,7 @@ Runtime lifecycle
 Syntactic and OD-MS-contract validation
 OC MS outbox write
 Publishing worker instruction events to t7.optimisation.events
-Inbox consumption of worker outcome events
+Inbox consumption of `OptimisationCompletedEvent` worker outcomes
 Runtime result projection
 Cancellation and retrial controls
 ```
@@ -262,10 +262,10 @@ OC MS validates:
 generic REST wrapper using its static API/OpenAPI contract
 referenced OptimisationSpecification exists in OD MS
 referenced OptimisationSpecification lifecycleStatus is ACTIVE
-expression.expressionValue.context.targets[] against the ACTIVE OD MS OptimisationSpecification targetEntitySchema
-expression.expressionValue.context.constraints[] against the ACTIVE OD MS OptimisationSpecification targetEntitySchema
-expression.expressionValue.context.preferences[] against the ACTIVE OD MS OptimisationSpecification targetEntitySchema
-context object shape and cardinality against the ACTIVE OD MS OptimisationSpecification targetEntitySchema
+expression.expressionValue.context.targets[] against OD MS targetSpecifications[]
+expression.expressionValue.context.constraints[] against OD MS constraintSpecifications[]
+expression.expressionValue.context.preferences[] against OD MS preferenceSpecifications[]
+context object shape and cardinality against OD MS contextSpecifications[]
 ```
 
 OC MS does not validate:
@@ -279,7 +279,19 @@ Gurobi model validity
 resource-selection correctness
 ```
 
-After acceptance, OC MS persists the runtime resource and writes `OptimisationRequestedEvent` with `instruction = EXECUTE` to its outbox in the same transaction.
+After acceptance, OC MS persists the runtime resource and writes `OptimisationRequestedEvent` with `instruction = EXECUTE` to its outbox in the same transaction. Cancellation uses the same event type with `instruction = CANCEL`. Worker terminal outcomes are returned through `OptimisationCompletedEvent` with `status = COMPLETED`, `FAILED`, or `INFEASIBLE`.
+
+
+## Internal event baseline
+
+OC MS uses exactly two internal Kafka event types with the Python/Gurobi worker in the current baseline. These are platform-internal events, not TMF external notification events.
+
+| Event | Emitter | Consumer | Purpose | Key values |
+|---|---|---|---|---|
+| `OptimisationRequestedEvent` | OC MS / OC MS Outbox Relay | Python/Gurobi Worker | Worker instruction event for execution or cancellation. | `instruction = EXECUTE` or `instruction = CANCEL` |
+| `OptimisationCompletedEvent` | Python/Gurobi Worker | OC MS / OC MS Inbox Consumer | Terminal worker outcome event for lifecycle/result projection. | `status = COMPLETED`, `FAILED`, or `INFEASIBLE` |
+
+`OptimisationFailedEvent` is not used in the current baseline. Failed and infeasible outcomes are carried by `OptimisationCompletedEvent.status`.
 
 ## GET /optimisation/{id}
 
