@@ -78,3 +78,9 @@ Removed low-level OD MS field-responsibility details from the Solution summary o
 - OC MS row now states that OC carries accepted runtime `expression.expressionValue.context.targets[]`, `constraints[]`, and `preferences[]`, validates against the active OD `targetEntitySchema`, and uses `422 OPTIMISATION_CONTRACT_VIOLATION` for contract/cardinality failures.
 - Python/Gurobi Worker row now states that the worker/model determines `SUCCESS`, `INFEASIBLE`, or `FAILURE`.
 - OC MS Inbox Consumer row now states the outcome mapping: `SUCCESS -> COMPLETED`, `INFEASIBLE -> INFEASIBLE`, and `FAILURE -> FAILED`.
+
+## E2E solution brief cleanup — 2026-05-10:
+
+- Keep `Validation and outcome responsibility` and `Specification contract versus runtime values` embedded in section 4 Capability matrix.
+- Keep detailed canonical runtime expression and runtime lifecycle material in Appendix 10.10 and 10.11.
+- Section 3 references Appendix 10.10 / 10.11 rather than duplicating detailed examples in the main narrative.
