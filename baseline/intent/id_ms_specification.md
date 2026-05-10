@@ -6,9 +6,9 @@
 
 | **Item** | **Baseline** |
 |---|---|
-| Full name | Intent Design MS |
+| Full name | Intent Definition MS |
 | Short name | ID MS |
-| Service name | `intent-design-ms` |
+| Service name | `intent-definition-ms` |
 | Domain | Intent Domain |
 | Base path | `/intentManagement/v5` |
 | Primary resource | `IntentSpecification` |
@@ -16,7 +16,7 @@
 
 ### Boundary statement
 
-ID MS owns design-time `IntentSpecification` contracts and subscription management for specification events.
+ID MS owns definition-time `IntentSpecification` contracts and subscription management for specification events.
 
 ID MS validates syntax/resource shape and enforces specification lifecycle/version governance. ID MS does not own runtime `Intent`, `IntentReport`, semantic validation, policy validation, network/resource feasibility, optimisation, runtime assurance, telemetry, or callback ingestion.
 
@@ -840,12 +840,12 @@ They are not internal fulfilment events and must not expose II MS semantic valid
     }
   },
   "reportingSystem": {
-    "id": "intent-design-ms",
-    "name": "Intent Design MS"
+    "id": "intent-definition-ms",
+    "name": "Intent Definition MS"
   },
   "source": {
-    "id": "intent-design-ms",
-    "name": "Intent Design MS"
+    "id": "intent-definition-ms",
+    "name": "Intent Definition MS"
   },
   "@type": "IntentSpecificationStatusChangeEvent"
 }
@@ -876,12 +876,12 @@ They are not internal fulfilment events and must not expose II MS semantic valid
     }
   },
   "reportingSystem": {
-    "id": "intent-design-ms",
-    "name": "Intent Design MS"
+    "id": "intent-definition-ms",
+    "name": "Intent Definition MS"
   },
   "source": {
-    "id": "intent-design-ms",
-    "name": "Intent Design MS"
+    "id": "intent-definition-ms",
+    "name": "Intent Definition MS"
   },
   "@type": "IntentSpecificationCreateEvent"
 }
@@ -919,12 +919,12 @@ They are not internal fulfilment events and must not expose II MS semantic valid
     ]
   },
   "reportingSystem": {
-    "id": "intent-design-ms",
-    "name": "Intent Design MS"
+    "id": "intent-definition-ms",
+    "name": "Intent Definition MS"
   },
   "source": {
-    "id": "intent-design-ms",
-    "name": "Intent Design MS"
+    "id": "intent-definition-ms",
+    "name": "Intent Definition MS"
   },
   "@type": "IntentSpecificationAttributeValueChangeEvent"
 }
@@ -957,12 +957,12 @@ They are not internal fulfilment events and must not expose II MS semantic valid
     "newLifecycleStatus": "ACTIVE"
   },
   "reportingSystem": {
-    "id": "intent-design-ms",
-    "name": "Intent Design MS"
+    "id": "intent-definition-ms",
+    "name": "Intent Definition MS"
   },
   "source": {
-    "id": "intent-design-ms",
-    "name": "Intent Design MS"
+    "id": "intent-definition-ms",
+    "name": "Intent Definition MS"
   },
   "@type": "IntentSpecificationStatusChangeEvent"
 }
@@ -993,12 +993,12 @@ They are not internal fulfilment events and must not expose II MS semantic valid
     }
   },
   "reportingSystem": {
-    "id": "intent-design-ms",
-    "name": "Intent Design MS"
+    "id": "intent-definition-ms",
+    "name": "Intent Definition MS"
   },
   "source": {
-    "id": "intent-design-ms",
-    "name": "Intent Design MS"
+    "id": "intent-definition-ms",
+    "name": "Intent Definition MS"
   },
   "@type": "IntentSpecificationDeleteEvent"
 }
