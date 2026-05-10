@@ -6,9 +6,9 @@
 
 | **Item** | **Baseline** |
 |---|---|
-| Full name | Intent Design MS |
+| Full name | Intent Definition MS |
 | Short name | ID MS |
-| Service name | `intent-design-ms` |
+| Service name | `intent-definition-ms` |
 | Domain | Intent Domain |
 | Base path | `/intentManagement/v5` |
 | Primary resource | `IntentSpecification` |
@@ -1124,12 +1124,12 @@ Delete events are emitted only after successful delete and show the last known l
     "newLifecycleStatus": "ACTIVE"
   },
   "reportingSystem": {
-    "id": "intent-design-ms",
-    "name": "Intent Design MS"
+    "id": "intent-definition-ms",
+    "name": "Intent Definition MS"
   },
   "source": {
-    "id": "intent-design-ms",
-    "name": "Intent Design MS"
+    "id": "intent-definition-ms",
+    "name": "Intent Definition MS"
   },
   "@type": "IntentSpecificationStatusChangeEvent"
 }
@@ -1177,12 +1177,12 @@ Delete events are emitted only after successful delete and show the last known l
     }
   },
   "reportingSystem": {
-    "id": "intent-design-ms",
-    "name": "Intent Design MS"
+    "id": "intent-definition-ms",
+    "name": "Intent Definition MS"
   },
   "source": {
-    "id": "intent-design-ms",
-    "name": "Intent Design MS"
+    "id": "intent-definition-ms",
+    "name": "Intent Definition MS"
   },
   "@type": "IntentSpecificationCreateEvent"
 }
@@ -1237,12 +1237,12 @@ Delete events are emitted only after successful delete and show the last known l
     ]
   },
   "reportingSystem": {
-    "id": "intent-design-ms",
-    "name": "Intent Design MS"
+    "id": "intent-definition-ms",
+    "name": "Intent Definition MS"
   },
   "source": {
-    "id": "intent-design-ms",
-    "name": "Intent Design MS"
+    "id": "intent-definition-ms",
+    "name": "Intent Definition MS"
   },
   "@type": "IntentSpecificationAttributeValueChangeEvent"
 }
@@ -1292,12 +1292,12 @@ Delete events are emitted only after successful delete and show the last known l
     "newLifecycleStatus": "ACTIVE"
   },
   "reportingSystem": {
-    "id": "intent-design-ms",
-    "name": "Intent Design MS"
+    "id": "intent-definition-ms",
+    "name": "Intent Definition MS"
   },
   "source": {
-    "id": "intent-design-ms",
-    "name": "Intent Design MS"
+    "id": "intent-definition-ms",
+    "name": "Intent Definition MS"
   },
   "@type": "IntentSpecificationStatusChangeEvent"
 }
@@ -1345,12 +1345,12 @@ Delete events are emitted only after successful delete and show the last known l
     }
   },
   "reportingSystem": {
-    "id": "intent-design-ms",
-    "name": "Intent Design MS"
+    "id": "intent-definition-ms",
+    "name": "Intent Definition MS"
   },
   "source": {
-    "id": "intent-design-ms",
-    "name": "Intent Design MS"
+    "id": "intent-definition-ms",
+    "name": "Intent Definition MS"
   },
   "@type": "IntentSpecificationDeleteEvent"
 }

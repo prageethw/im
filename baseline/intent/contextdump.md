@@ -313,3 +313,9 @@ When the user says to baseline a new Intent decision:
 Baselined on 2026-05-11.
 
 Corrected the generated `id_ms_specification.md` after discovering the previous replacement failed. The current generated file now actually contains the revised DELETE, activation/retirement, hub, and external event snapshot sections. Verification markers include runtime-reference delete blocking, `/intentSpecification/{id}/activate` rejection, `428`/`412` examples, hub retrieve private caching, event snapshot metadata rules, and event snapshots with `familyId`, `isBundle`, `validFor`, and `relatedParty`.
+
+## Baseline update — ID MS service identity consistency
+
+Baselined on 2026-05-11.
+
+`id_ms_specification.md` now consistently uses `Intent Definition MS` and `intent-definition-ms` for ID MS service identity, including external event `reportingSystem` and `source` examples. Mixed `Intent Design MS` / `intent-design-ms` references are removed from the ID MS specification.
