@@ -634,10 +634,14 @@ Content-Language: en-AU
 
 ## 7. Full update IntentSpecification
 
+`PUT` is the preferred platform extension for deterministic full replacement of an editable `DRAFT` specification.
+
+`PUT` is not the strict TMF update operation. It is a deliberate platform extension. `PATCH` remains available for TMF compatibility, but `PATCH` is discouraged as a general update method.
+
 ### Request
 
 ```http
-PUT /intentManagement/v5/intentSpecification/hospital-surgical-slice-spec-v1.19?fields=id,href,name,description,version,lifecycleStatus,@type,@baseType
+PUT /intentManagement/v5/intentSpecification/hospital-surgical-slice-spec-v1.19?fields=id,href,familyId,name,description,version,lifecycleStatus,isBundle,validFor,relatedParty,specCharacteristic,expressionSpecification,targetEntitySchema,@type,@baseType
 Content-Type: application/json
 Accept: application/json
 If-Match: "intent-spec-hospital-surgical-slice-spec-v1.19-v1"
@@ -646,14 +650,86 @@ If-Match: "intent-spec-hospital-surgical-slice-spec-v1.19-v1"
 ```json
 {
   "id": "hospital-surgical-slice-spec-v1.19",
+  "href": "/intentManagement/v5/intentSpecification/hospital-surgical-slice-spec-v1.19",
+  "familyId": "hospital-surgical-slice-spec",
   "name": "Hospital Surgical Slice Intent Specification",
-  "description": "Updated draft description.",
+  "description": "Updated design-time specification for hospital surgical slice intents. This specification defines the allowed request shape for surgical connectivity intents. It is syntax-first: ID MS validates structure and allowed fields, while II MS and the knowledge plane validate semantic meaning, policy, and fulfilment feasibility.",
   "version": "1.19",
   "lifecycleStatus": "DRAFT",
+  "isBundle": false,
+  "validFor": {
+    "startDateTime": "2026-04-18T12:00:00+10:00"
+  },
+  "relatedParty": [
+    {
+      "@type": "RelatedPartyRefOrPartyRoleRef",
+      "role": "Provider",
+      "partyOrPartyRole": {
+        "@type": "PartyRoleRef",
+        "id": "mycsp",
+        "name": "MyCSP",
+        "@referredType": "Provider"
+      }
+    }
+  ],
   "@type": "IntentSpecification",
   "@baseType": "EntitySpecification",
-  "specCharacteristic": [],
-  "expressionSpecification": {}
+  "@schemaLocation": "https://mycsp.com.au/schemas/intentManagement/v5/intentSpecification/hospital-surgical-slice-spec-v1.19.schema.json",
+  "specCharacteristic": [
+    {
+      "@type": "CharacteristicSpecification",
+      "id": "context",
+      "name": "context",
+      "description": "Top-level semantic context supported by this IntentSpecification. The context contains canonical context.targets, context.constraints, and context.preferences. Detailed field rules are defined in the expression-value schema referenced by targetEntitySchema.@schemaLocation.",
+      "valueType": "object",
+      "configurable": true,
+      "minCardinality": 1,
+      "maxCardinality": 1,
+      "characteristicValueSpecification": [
+        {
+          "@type": "CharacteristicValueSpecification",
+          "valueType": "object",
+          "isDefault": true,
+          "value": {
+            "targets": {
+              "maxLatencyMs": 10,
+              "minAvailabilityPercent": 99.99,
+              "maxJitterMs": 2,
+              "maxPacketLossPercent": 0.01
+            },
+            "constraints": {
+              "location": {
+                "locationId": "AU-NSW-SYD-HOSP-001",
+                "locationType": "hospital",
+                "geographicScope": "campus"
+              },
+              "serviceType": "surgical-connectivity",
+              "serviceClass": "critical-gold",
+              "priority": "critical",
+              "redundancyRequired": true,
+              "timeWindow": {
+                "startDateTime": "2026-04-18T12:00:00+10:00"
+              }
+            },
+            "preferences": {
+              "preferredAccessTechnology": "5G"
+            }
+          }
+        }
+      ]
+    }
+  ],
+  "expressionSpecification": {
+    "@type": "ExpressionSpecification",
+    "expressionLanguage": "JsonLdExpression",
+    "iri": "https://mycsp.com.au/tio/hospital-surgical-slice/v1.0"
+  },
+  "targetEntitySchema": {
+    "@type": "TargetEntitySchema",
+    "@schemaLocation": "https://mycsp.com.au/schemas/intentManagement/v5/intentExpression/hospital-surgical-slice-spec-v1.19.expression.schema.json",
+    "schemaVersion": "1.19",
+    "schemaHash": "sha256:REPLACE_WITH_PUBLISHED_SCHEMA_HASH"
+  }
 }
 ```
 
@@ -662,35 +738,89 @@ If-Match: "intent-spec-hospital-surgical-slice-spec-v1.19-v1"
 ```http
 HTTP/1.1 200 OK
 Content-Type: application/json
+Content-Language: en-AU
 Content-Location: /intentManagement/v5/intentSpecification/hospital-surgical-slice-spec-v1.19
 ETag: "intent-spec-hospital-surgical-slice-spec-v1.19-v2"
+Last-Modified: Sat, 18 Apr 2026 03:00:00 GMT
 ```
 
 ```json
 {
   "id": "hospital-surgical-slice-spec-v1.19",
   "href": "/intentManagement/v5/intentSpecification/hospital-surgical-slice-spec-v1.19",
+  "familyId": "hospital-surgical-slice-spec",
   "name": "Hospital Surgical Slice Intent Specification",
-  "description": "Updated draft description.",
+  "description": "Updated design-time specification for hospital surgical slice intents. This specification defines the allowed request shape for surgical connectivity intents. It is syntax-first: ID MS validates structure and allowed fields, while II MS and the knowledge plane validate semantic meaning, policy, and fulfilment feasibility.",
   "version": "1.19",
   "lifecycleStatus": "DRAFT",
+  "isBundle": false,
+  "validFor": {
+    "startDateTime": "2026-04-18T12:00:00+10:00"
+  },
+  "relatedParty": [
+    {
+      "@type": "RelatedPartyRefOrPartyRoleRef",
+      "role": "Provider",
+      "partyOrPartyRole": {
+        "@type": "PartyRoleRef",
+        "id": "mycsp",
+        "name": "MyCSP",
+        "@referredType": "Provider"
+      }
+    }
+  ],
   "@type": "IntentSpecification",
-  "@baseType": "EntitySpecification"
+  "@baseType": "EntitySpecification",
+  "@schemaLocation": "https://mycsp.com.au/schemas/intentManagement/v5/intentSpecification/hospital-surgical-slice-spec-v1.19.schema.json",
+  "specCharacteristic": "...full updated specCharacteristic...",
+  "expressionSpecification": "...full updated expressionSpecification...",
+  "targetEntitySchema": "...full updated targetEntitySchema...",
+  "_links": {
+    "self": {
+      "href": "/intentManagement/v5/intentSpecification/hospital-surgical-slice-spec-v1.19"
+    },
+    "fullUpdate": {
+      "href": "/intentManagement/v5/intentSpecification/hospital-surgical-slice-spec-v1.19",
+      "method": "PUT"
+    },
+    "partialUpdate": {
+      "href": "/intentManagement/v5/intentSpecification/hospital-surgical-slice-spec-v1.19",
+      "method": "PATCH",
+      "warning": "PATCH is supported for TMF compatibility but discouraged as a general update method. Prefer PUT for deterministic full replacement."
+    },
+    "delete": {
+      "href": "/intentManagement/v5/intentSpecification/hospital-surgical-slice-spec-v1.19",
+      "method": "DELETE"
+    }
+  }
 }
 ```
+
+### PUT update rules
+
+- Only `DRAFT` specifications are editable.
+- `ACTIVE` and `RETIRED` specifications are immutable for material update.
+- `PUT` sends the full replacement resource representation.
+- `PUT` is the preferred platform extension for deterministic full replacement.
+- `If-Match` is required.
+- Missing `If-Match` returns `428 Precondition Required`.
+- Stale or mismatched `If-Match` returns `412 Precondition Failed`.
+- Immutable update attempts return `409 Conflict`.
 
 ### Immutable resource response
 
 ```http
 HTTP/1.1 409 Conflict
 Content-Type: application/json
+Content-Language: en-AU
+Cache-Control: no-store
 ```
 
 ```json
 {
   "code": "RESOURCE_IMMUTABLE",
-  "reason": "ACTIVE_SPECIFICATION_IMMUTABLE",
-  "message": "ACTIVE IntentSpecification resources cannot be updated. Create a new versioned DRAFT specification instead.",
+  "reason": "ACTIVE_OR_RETIRED_SPECIFICATION_IMMUTABLE",
+  "message": "ACTIVE and RETIRED IntentSpecification resources cannot be materially updated. Create a new versioned DRAFT specification for material contract changes.",
   "status": 409,
   "referenceError": "https://mycsp.com.au/errors/RESOURCE_IMMUTABLE",
   "@type": "Error"
@@ -702,6 +832,8 @@ Content-Type: application/json
 ```http
 HTTP/1.1 428 Precondition Required
 Content-Type: application/json
+Content-Language: en-AU
+Cache-Control: no-store
 ```
 
 ```json
@@ -720,6 +852,8 @@ Content-Type: application/json
 ```http
 HTTP/1.1 412 Precondition Failed
 Content-Type: application/json
+Content-Language: en-AU
+Cache-Control: no-store
 ```
 
 ```json
@@ -737,10 +871,14 @@ Content-Type: application/json
 
 ## 8. Partial update IntentSpecification
 
+`PATCH` remains available for TMF compatibility, but it is discouraged as a general update method. Prefer `PUT` for deterministic full replacement of editable `DRAFT` specifications.
+
+Use `PATCH` only where a TMF-compatible client cannot use `PUT`, or where a tightly controlled small compatibility update is required.
+
 ### Request
 
 ```http
-PATCH /intentManagement/v5/intentSpecification/hospital-surgical-slice-spec-v1.19?fields=id,href,name,description,version,lifecycleStatus,@type,@baseType
+PATCH /intentManagement/v5/intentSpecification/hospital-surgical-slice-spec-v1.19?fields=id,href,familyId,name,description,version,lifecycleStatus,isBundle,validFor,relatedParty,@type,@baseType
 Content-Type: application/json
 Accept: application/json
 If-Match: "intent-spec-hospital-surgical-slice-spec-v1.19-v1"
@@ -757,32 +895,76 @@ If-Match: "intent-spec-hospital-surgical-slice-spec-v1.19-v1"
 ```http
 HTTP/1.1 200 OK
 Content-Type: application/json
+Content-Language: en-AU
 Content-Location: /intentManagement/v5/intentSpecification/hospital-surgical-slice-spec-v1.19
 ETag: "intent-spec-hospital-surgical-slice-spec-v1.19-v2"
+Last-Modified: Sat, 18 Apr 2026 03:00:00 GMT
 ```
 
 ```json
 {
   "id": "hospital-surgical-slice-spec-v1.19",
   "href": "/intentManagement/v5/intentSpecification/hospital-surgical-slice-spec-v1.19",
+  "familyId": "hospital-surgical-slice-spec",
   "name": "Hospital Surgical Slice Intent Specification",
   "description": "Updated draft description only.",
   "version": "1.19",
   "lifecycleStatus": "DRAFT",
+  "isBundle": false,
+  "validFor": {
+    "startDateTime": "2026-04-18T12:00:00+10:00"
+  },
+  "relatedParty": [
+    {
+      "@type": "RelatedPartyRefOrPartyRoleRef",
+      "role": "Provider",
+      "partyOrPartyRole": {
+        "@type": "PartyRoleRef",
+        "id": "mycsp",
+        "name": "MyCSP",
+        "@referredType": "Provider"
+      }
+    }
+  ],
   "@type": "IntentSpecification",
   "@baseType": "EntitySpecification",
   "_links": {
     "self": {
       "href": "/intentManagement/v5/intentSpecification/hospital-surgical-slice-spec-v1.19"
     },
+    "fullUpdate": {
+      "href": "/intentManagement/v5/intentSpecification/hospital-surgical-slice-spec-v1.19",
+      "method": "PUT"
+    },
     "partialUpdate": {
       "href": "/intentManagement/v5/intentSpecification/hospital-surgical-slice-spec-v1.19",
       "method": "PATCH",
-      "warning": "PATCH is supported for compatibility but discouraged. Prefer PUT for deterministic full replacement."
+      "warning": "PATCH is supported for TMF compatibility but discouraged as a general update method. Prefer PUT for deterministic full replacement."
     }
   }
 }
 ```
+
+### PATCH update rules
+
+- `PATCH` is supported for TMF compatibility.
+- `PATCH` is discouraged as a general update method.
+- Prefer `PUT` for deterministic full replacement of editable `DRAFT` specifications.
+- Use `PATCH` only where a TMF-compatible client cannot use `PUT`, or where a tightly controlled small compatibility update is required.
+- Only `DRAFT` specifications are editable.
+- `ACTIVE` and `RETIRED` specifications are immutable for material update.
+- `PATCH` must not normally replace:
+  - `familyId`
+  - `version`
+  - `specCharacteristic`
+  - `expressionSpecification`
+  - `targetEntitySchema`
+  - major lifecycle/version contract identity
+- `If-Match` is required.
+- Missing `If-Match` returns `428 Precondition Required`.
+- Stale or mismatched `If-Match` returns `412 Precondition Failed`.
+- Immutable update attempts return `409 Conflict`.
+
 
 ---
 

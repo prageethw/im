@@ -341,3 +341,13 @@ Fix 3 from the TMF compliance pass is applied. `GET /intentManagement/v5/intentS
 `GET /intentManagement/v5/intentSpecification/{id}` returns the full single-resource representation by default, including `id`, `href`, `familyId`, `name`, `description`, `version`, `lifecycleStatus`, `isBundle`, `validFor`, `relatedParty`, `@type`, `@baseType`, `@schemaLocation`, `specCharacteristic`, `expressionSpecification`, `targetEntitySchema`, and server-generated `_links`.
 
 Both GET operations keep optional `fields`, `ETag`, GET-only private caching, and retrieve supports `Cache-Control: no-cache` as a fresh-read override.
+
+## Baseline update — ID MS PUT/PATCH update sync
+
+Baselined on 2026-05-11.
+
+`PUT /intentManagement/v5/intentSpecification/{id}` is the preferred platform extension for deterministic full replacement of an editable `DRAFT` specification and carries the full resource representation, including `familyId`, `isBundle`, `validFor`, `relatedParty`, `specCharacteristic`, `expressionSpecification`, and `targetEntitySchema`.
+
+`PATCH /intentManagement/v5/intentSpecification/{id}` remains available for TMF compatibility, but it is discouraged as a general update method. Use PATCH only where a TMF-compatible client cannot use PUT or where a tightly controlled small compatibility update is required. PATCH must not normally replace material contract fields such as `familyId`, `version`, `specCharacteristic`, `expressionSpecification`, `targetEntitySchema`, or lifecycle/version identity.
+
+Only `DRAFT` specifications are editable. `ACTIVE` and `RETIRED` specifications are immutable for material update. Missing `If-Match` returns `428`; stale or mismatched `If-Match` returns `412`; immutable update attempts return `409 RESOURCE_IMMUTABLE`.
