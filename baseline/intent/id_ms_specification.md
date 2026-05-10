@@ -573,34 +573,89 @@ ETag: "intent-spec-hospital-surgical-slice-spec-v1.19-v2"
 ```http
 DELETE /intentManagement/v5/intentSpecification/hospital-surgical-slice-spec-v1.19
 If-Match: "intent-spec-hospital-surgical-slice-spec-v1.19-v1"
+Accept: application/json
 ```
 
 ### Success response
 
 ```http
 HTTP/1.1 204 No Content
+Content-Language: en-AU
 ```
 
-### Rule
+No response body is returned.
 
-- Delete is allowed only for unused `DRAFT` specifications.
-- Delete is blocked for `ACTIVE` and `RETIRED` specifications.
-- Delete does not create `lifecycleStatus = DELETED`.
+### Delete rules
+
+| **Rule** | **Baseline** |
+|---|---|
+| Allowed lifecycle | `DRAFT` only |
+| Blocked lifecycle | `ACTIVE`, `RETIRED` |
+| Runtime references | Delete is blocked if the specification is referenced by runtime `Intent` resources |
+| Audit/history dependency | Delete is blocked if retention is required for audit/history |
+| ETag required | `If-Match` is required |
+| Missing `If-Match` | `428 Precondition Required` |
+| Stale/mismatched `If-Match` | `412 Precondition Failed` |
+| Delete outcome | Physical or logical removal is an implementation detail |
+| Resource lifecycle | Do not set `lifecycleStatus = DELETED` |
+| Event emitted | `IntentSpecificationDeleteEvent` after successful delete only |
 
 ### Delete blocked response
 
 ```http
 HTTP/1.1 409 Conflict
 Content-Type: application/json
+Content-Language: en-AU
+Cache-Control: no-store
 ```
 
 ```json
 {
   "code": "RESOURCE_IMMUTABLE",
   "reason": "SPECIFICATION_DELETE_NOT_ALLOWED",
-  "message": "IntentSpecification cannot be deleted because it is active, retired, or referenced by runtime resources.",
+  "message": "IntentSpecification cannot be deleted because it is active, retired, referenced by runtime resources, or retained for audit/history.",
   "status": 409,
   "referenceError": "https://mycsp.com.au/errors/RESOURCE_IMMUTABLE",
+  "@type": "Error"
+}
+```
+
+### Missing If-Match response
+
+```http
+HTTP/1.1 428 Precondition Required
+Content-Type: application/json
+Content-Language: en-AU
+Cache-Control: no-store
+```
+
+```json
+{
+  "code": "PRECONDITION_REQUIRED",
+  "reason": "IF_MATCH_REQUIRED",
+  "message": "The If-Match header is required for this operation.",
+  "status": 428,
+  "referenceError": "https://mycsp.com.au/errors/PRECONDITION_REQUIRED",
+  "@type": "Error"
+}
+```
+
+### ETag mismatch response
+
+```http
+HTTP/1.1 412 Precondition Failed
+Content-Type: application/json
+Content-Language: en-AU
+Cache-Control: no-store
+```
+
+```json
+{
+  "code": "PRECONDITION_FAILED",
+  "reason": "ETAG_MISMATCH",
+  "message": "The supplied ETag does not match the current resource version.",
+  "status": 412,
+  "referenceError": "https://mycsp.com.au/errors/PRECONDITION_FAILED",
   "@type": "Error"
 }
 ```
@@ -614,12 +669,26 @@ Activation is not exposed through a custom action endpoint.
 Do not use:
 
 ```http
-POST /intentManagement/v5/intentSpecification/{id}
+POST /intentManagement/v5/intentSpecification/{id}/activate
 ```
 
-Use the existing TMF-style resource update endpoint instead.
+Use the existing resource update endpoint instead.
 
-### PATCH request
+For strict TMF-compatible lifecycle update, use:
+
+```http
+PATCH /intentManagement/v5/intentSpecification/{id}
+```
+
+For the preferred platform extension where the caller sends the full resource representation, use:
+
+```http
+PUT /intentManagement/v5/intentSpecification/{id}
+```
+
+Although `PATCH` is discouraged as a general update method, this is an acceptable tightly controlled TMF-compatible case because activation is a small lifecycle-status transition.
+
+### PATCH activation request
 
 ```http
 PATCH /intentManagement/v5/intentSpecification/hospital-surgical-slice-spec-v1.20?fields=id,href,familyId,name,version,lifecycleStatus,previousActiveSpecification,@type,@baseType
@@ -634,25 +703,19 @@ If-Match: "intent-spec-hospital-surgical-slice-spec-v1.20-v1"
 }
 ```
 
-### PUT request option
+### PUT activation option
 
-`PUT` may also be used when the caller sends the full replacement representation with:
-
-```json
-{
-  "lifecycleStatus": "ACTIVE"
-}
-```
-
-as part of the complete `IntentSpecification` resource.
+`PUT` may also be used when the caller sends the full replacement representation with `lifecycleStatus: ACTIVE` as part of the complete `IntentSpecification` resource.
 
 ### Success response
 
 ```http
 HTTP/1.1 200 OK
 Content-Type: application/json
+Content-Language: en-AU
 Content-Location: /intentManagement/v5/intentSpecification/hospital-surgical-slice-spec-v1.20
 ETag: "intent-spec-hospital-surgical-slice-spec-v1.20-v2"
+Last-Modified: Sat, 18 Apr 2026 03:30:00 GMT
 ```
 
 ```json
@@ -665,28 +728,126 @@ ETag: "intent-spec-hospital-surgical-slice-spec-v1.20-v2"
   "lifecycleStatus": "ACTIVE",
   "previousActiveSpecification": {
     "id": "hospital-surgical-slice-spec-v1.19",
-    "lifecycleStatus": "RETIRED",
-    "href": "/intentManagement/v5/intentSpecification/hospital-surgical-slice-spec-v1.19"
+    "href": "/intentManagement/v5/intentSpecification/hospital-surgical-slice-spec-v1.19",
+    "version": "1.19",
+    "previousLifecycleStatus": "ACTIVE",
+    "newLifecycleStatus": "RETIRED"
   },
   "@type": "IntentSpecification",
-  "@baseType": "EntitySpecification"
+  "@baseType": "EntitySpecification",
+  "_links": {
+    "self": {
+      "href": "/intentManagement/v5/intentSpecification/hospital-surgical-slice-spec-v1.20"
+    },
+    "collection": {
+      "href": "/intentManagement/v5/intentSpecification"
+    },
+    "createNewVersion": {
+      "href": "/intentManagement/v5/intentSpecification",
+      "method": "POST"
+    }
+  }
 }
 ```
 
-### Rules
+### Activation rules
 
-- Activation is represented as a lifecycle/status update on the `IntentSpecification` resource.
-- Use `PUT` or `PATCH` against `/intentSpecification/{id}`.
-- `PUT` is preferred for deterministic full replacement.
-- `PATCH` is supported for TMF compatibility but is not encouraged for ordinary edits.
-- The requested target version changes from `DRAFT` to `ACTIVE`.
-- ID MS retires the previous active version in the same specification family.
-- ID MS refreshes its own active-spec cache through an internal no-cache/refresh path.
-- ID MS emits status-change events for the new active version and the previous retired version.
+| **Rule** | **Baseline** |
+|---|---|
+| Source state | Only `DRAFT` can be activated |
+| Target state | Activated version becomes `ACTIVE` |
+| Previous active | Previous `ACTIVE` version in the same `familyId` becomes `RETIRED` |
+| New runtime creation | New runtime intents must use the new `ACTIVE` version |
+| Existing runtime intents | Existing intents that reference retired specifications may continue temporarily where safe |
+| Material update after activation | Not allowed; create a new versioned `DRAFT` |
+| ETag required | `If-Match` is required |
+| Missing `If-Match` | `428 Precondition Required` |
+| Stale/mismatched `If-Match` | `412 Precondition Failed` |
+| Invalid lifecycle transition | `409 Conflict` |
+
+### Events emitted by activation
+
+Activation emits two `IntentSpecificationStatusChangeEvent` events:
+
+1. One event for the newly activated version:
+   - `DRAFT -> ACTIVE`
+
+2. One event for the previous active version in the same `familyId`:
+   - `ACTIVE -> RETIRED`
+
+### Invalid lifecycle transition response
+
+```http
+HTTP/1.1 409 Conflict
+Content-Type: application/json
+Content-Language: en-AU
+Cache-Control: no-store
+```
+
+```json
+{
+  "code": "INVALID_LIFECYCLE_TRANSITION",
+  "reason": "INTENT_SPECIFICATION_ACTIVATION_NOT_ALLOWED",
+  "message": "Only DRAFT IntentSpecification resources can be activated.",
+  "status": 409,
+  "referenceError": "https://mycsp.com.au/errors/INVALID_LIFECYCLE_TRANSITION",
+  "@type": "Error"
+}
+```
+
+### Missing If-Match response
+
+```http
+HTTP/1.1 428 Precondition Required
+Content-Type: application/json
+Content-Language: en-AU
+Cache-Control: no-store
+```
+
+```json
+{
+  "code": "PRECONDITION_REQUIRED",
+  "reason": "IF_MATCH_REQUIRED",
+  "message": "The If-Match header is required for this operation.",
+  "status": 428,
+  "referenceError": "https://mycsp.com.au/errors/PRECONDITION_REQUIRED",
+  "@type": "Error"
+}
+```
+
+### ETag mismatch response
+
+```http
+HTTP/1.1 412 Precondition Failed
+Content-Type: application/json
+Content-Language: en-AU
+Cache-Control: no-store
+```
+
+```json
+{
+  "code": "PRECONDITION_FAILED",
+  "reason": "ETAG_MISMATCH",
+  "message": "The supplied ETag does not match the current resource version.",
+  "status": 412,
+  "referenceError": "https://mycsp.com.au/errors/PRECONDITION_FAILED",
+  "@type": "Error"
+}
+```
 
 ---
 
 ## 11. Hub create subscription
+
+ID MS intentionally uses the domain-scoped hub route for `IntentSpecification` event subscriptions.
+
+The supported hub routes are:
+
+```http
+POST /intentManagement/v5/intentSpecification/hub
+GET /intentManagement/v5/intentSpecification/hub/{id}
+DELETE /intentManagement/v5/intentSpecification/hub/{id}
+```
 
 ### Request
 
@@ -710,22 +871,35 @@ Accept: application/json
 HTTP/1.1 201 Created
 Location: /intentManagement/v5/intentSpecification/hub/sub-001
 Content-Type: application/json
+Content-Language: en-AU
 ETag: "subscription-sub-001-v1"
 ```
 
 ```json
 {
   "id": "sub-001",
+  "href": "/intentManagement/v5/intentSpecification/hub/sub-001",
   "callback": "https://consumer.example.com/listener/intentSpecification/events",
   "query": "eventType=IntentSpecificationStatusChangeEvent",
   "@type": "EventSubscription",
   "_links": {
     "self": {
       "href": "/intentManagement/v5/intentSpecification/hub/sub-001"
+    },
+    "delete": {
+      "href": "/intentManagement/v5/intentSpecification/hub/sub-001",
+      "method": "DELETE"
     }
   }
 }
 ```
+
+### Hub create rules
+
+- The subscription callback is an external listener endpoint owned by the consuming system.
+- The `query` field filters delivered events.
+- ID MS hub subscriptions are for external `IntentSpecification*Event` notifications only.
+- ID MS hub subscriptions must not expose internal workflow events, KP details, runtime assurance state, telemetry, callback payloads, or internal fulfilment details.
 
 ---
 
@@ -743,18 +917,25 @@ Accept: application/json
 ```http
 HTTP/1.1 200 OK
 Content-Type: application/json
+Content-Language: en-AU
 ETag: "subscription-sub-001-v1"
+Cache-Control: private, max-age=300
 ```
 
 ```json
 {
   "id": "sub-001",
+  "href": "/intentManagement/v5/intentSpecification/hub/sub-001",
   "callback": "https://consumer.example.com/listener/intentSpecification/events",
   "query": "eventType=IntentSpecificationStatusChangeEvent",
   "@type": "EventSubscription",
   "_links": {
     "self": {
       "href": "/intentManagement/v5/intentSpecification/hub/sub-001"
+    },
+    "delete": {
+      "href": "/intentManagement/v5/intentSpecification/hub/sub-001",
+      "method": "DELETE"
     }
   }
 }
@@ -769,13 +950,74 @@ ETag: "subscription-sub-001-v1"
 ```http
 DELETE /intentManagement/v5/intentSpecification/hub/sub-001
 If-Match: "subscription-sub-001-v1"
+Accept: application/json
 ```
 
 ### Success response
 
 ```http
 HTTP/1.1 204 No Content
+Content-Language: en-AU
 ```
+
+No response body is returned.
+
+### Missing If-Match response
+
+```http
+HTTP/1.1 428 Precondition Required
+Content-Type: application/json
+Content-Language: en-AU
+Cache-Control: no-store
+```
+
+```json
+{
+  "code": "PRECONDITION_REQUIRED",
+  "reason": "IF_MATCH_REQUIRED",
+  "message": "The If-Match header is required for this operation.",
+  "status": 428,
+  "referenceError": "https://mycsp.com.au/errors/PRECONDITION_REQUIRED",
+  "@type": "Error"
+}
+```
+
+### ETag mismatch response
+
+```http
+HTTP/1.1 412 Precondition Failed
+Content-Type: application/json
+Content-Language: en-AU
+Cache-Control: no-store
+```
+
+```json
+{
+  "code": "PRECONDITION_FAILED",
+  "reason": "ETAG_MISMATCH",
+  "message": "The supplied ETag does not match the current subscription resource version.",
+  "status": 412,
+  "referenceError": "https://mycsp.com.au/errors/PRECONDITION_FAILED",
+  "@type": "Error"
+}
+```
+
+### Hub route and event scope rules
+
+| **Rule** | **Baseline** |
+|---|---|
+| Route style | Domain-scoped `/intentSpecification/hub` route is intentional |
+| Subscription target | External listener callback URL |
+| Filter | `query` filters event types |
+| Event family | ID MS external `IntentSpecification*Event` notifications only |
+| Retrieve | Supported intentionally |
+| Delete | Requires `If-Match` |
+| Missing `If-Match` | `428 Precondition Required` |
+| Stale/mismatched `If-Match` | `412 Precondition Failed` |
+| Create response | `201 Created` with `Location`, `ETag`, body, and `_links` |
+| Retrieve response | `200 OK` with `ETag` and GET-only private caching |
+| Delete response | `204 No Content` |
+| Hub must not expose | Internal workflow events, KP details, runtime assurance state, telemetry, callback payloads, or internal fulfilment details |
 
 ---
 
@@ -809,11 +1051,34 @@ ID MS emits external TMF-style resource events for `IntentSpecification` changes
 | `IntentSpecificationCreateEvent` | New `IntentSpecification` created |
 | `IntentSpecificationAttributeValueChangeEvent` | Editable draft attributes changed |
 | `IntentSpecificationStatusChangeEvent` | Lifecycle status changes, such as `DRAFT -> ACTIVE` or `ACTIVE -> RETIRED` |
-| `IntentSpecificationDeleteEvent` | Draft specification deleted |
+| `IntentSpecificationDeleteEvent` | Unused draft specification deleted after delete succeeds |
 
 These are external subscription events for the `IntentSpecification` resource.
 
 They are not internal fulfilment events and must not expose II MS semantic validation details, lightweight II MS KP details, `t7.knowledge plane` data, optimiser decisions, runtime assurance state, telemetry, callback payloads, or internal candidate/resource scoring details.
+
+Event resource snapshots should carry consistent resource metadata:
+
+- `id`
+- `href`
+- `familyId`
+- `name`
+- `version`
+- `lifecycleStatus`
+- `isBundle`
+- `validFor`
+- `relatedParty`
+- `@type`
+- `@baseType`
+
+Status-change events include lifecycle transition fields such as `previousLifecycleStatus` and `newLifecycleStatus`.
+
+Activation emits two `IntentSpecificationStatusChangeEvent` events:
+
+- one for the new version `DRAFT -> ACTIVE`
+- one for the previous active version `ACTIVE -> RETIRED`
+
+Delete events are emitted only after successful delete and show the last known lifecycle state as `DRAFT`. Delete events must not use `DELETED`.
 
 ---
 
@@ -830,14 +1095,33 @@ They are not internal fulfilment events and must not expose II MS semantic valid
   "title": "IntentSpecification status changed",
   "event": {
     "intentSpecification": {
-      "id": "hospital-surgical-slice-spec-v1.19",
-      "href": "/intentManagement/v5/intentSpecification/hospital-surgical-slice-spec-v1.19",
+      "id": "hospital-surgical-slice-spec-v1.20",
+      "href": "/intentManagement/v5/intentSpecification/hospital-surgical-slice-spec-v1.20",
+      "familyId": "hospital-surgical-slice-spec",
       "name": "Hospital Surgical Slice Intent Specification",
-      "version": "1.19",
+      "version": "1.20",
       "lifecycleStatus": "ACTIVE",
+      "isBundle": false,
+      "validFor": {
+        "startDateTime": "2026-04-18T12:00:00+10:00"
+      },
+      "relatedParty": [
+        {
+          "@type": "RelatedPartyRefOrPartyRoleRef",
+          "role": "Provider",
+          "partyOrPartyRole": {
+            "@type": "PartyRoleRef",
+            "id": "mycsp",
+            "name": "MyCSP",
+            "@referredType": "Provider"
+          }
+        }
+      ],
       "@type": "IntentSpecification",
       "@baseType": "EntitySpecification"
-    }
+    },
+    "previousLifecycleStatus": "DRAFT",
+    "newLifecycleStatus": "ACTIVE"
   },
   "reportingSystem": {
     "id": "intent-design-ms",
@@ -868,9 +1152,26 @@ They are not internal fulfilment events and must not expose II MS semantic valid
     "intentSpecification": {
       "id": "hospital-surgical-slice-spec-v1.19",
       "href": "/intentManagement/v5/intentSpecification/hospital-surgical-slice-spec-v1.19",
+      "familyId": "hospital-surgical-slice-spec",
       "name": "Hospital Surgical Slice Intent Specification",
       "version": "1.19",
       "lifecycleStatus": "DRAFT",
+      "isBundle": false,
+      "validFor": {
+        "startDateTime": "2026-04-18T12:00:00+10:00"
+      },
+      "relatedParty": [
+        {
+          "@type": "RelatedPartyRefOrPartyRoleRef",
+          "role": "Provider",
+          "partyOrPartyRole": {
+            "@type": "PartyRoleRef",
+            "id": "mycsp",
+            "name": "MyCSP",
+            "@referredType": "Provider"
+          }
+        }
+      ],
       "@type": "IntentSpecification",
       "@baseType": "EntitySpecification"
     }
@@ -904,9 +1205,26 @@ They are not internal fulfilment events and must not expose II MS semantic valid
     "intentSpecification": {
       "id": "hospital-surgical-slice-spec-v1.19",
       "href": "/intentManagement/v5/intentSpecification/hospital-surgical-slice-spec-v1.19",
+      "familyId": "hospital-surgical-slice-spec",
       "name": "Hospital Surgical Slice Intent Specification",
       "version": "1.19",
       "lifecycleStatus": "DRAFT",
+      "isBundle": false,
+      "validFor": {
+        "startDateTime": "2026-04-18T12:00:00+10:00"
+      },
+      "relatedParty": [
+        {
+          "@type": "RelatedPartyRefOrPartyRoleRef",
+          "role": "Provider",
+          "partyOrPartyRole": {
+            "@type": "PartyRoleRef",
+            "id": "mycsp",
+            "name": "MyCSP",
+            "@referredType": "Provider"
+          }
+        }
+      ],
       "@type": "IntentSpecification",
       "@baseType": "EntitySpecification"
     },
@@ -947,9 +1265,26 @@ They are not internal fulfilment events and must not expose II MS semantic valid
     "intentSpecification": {
       "id": "hospital-surgical-slice-spec-v1.20",
       "href": "/intentManagement/v5/intentSpecification/hospital-surgical-slice-spec-v1.20",
+      "familyId": "hospital-surgical-slice-spec",
       "name": "Hospital Surgical Slice Intent Specification",
       "version": "1.20",
       "lifecycleStatus": "ACTIVE",
+      "isBundle": false,
+      "validFor": {
+        "startDateTime": "2026-04-18T12:00:00+10:00"
+      },
+      "relatedParty": [
+        {
+          "@type": "RelatedPartyRefOrPartyRoleRef",
+          "role": "Provider",
+          "partyOrPartyRole": {
+            "@type": "PartyRoleRef",
+            "id": "mycsp",
+            "name": "MyCSP",
+            "@referredType": "Provider"
+          }
+        }
+      ],
       "@type": "IntentSpecification",
       "@baseType": "EntitySpecification"
     },
@@ -985,9 +1320,26 @@ They are not internal fulfilment events and must not expose II MS semantic valid
     "intentSpecification": {
       "id": "hospital-surgical-slice-spec-v1.18-draft",
       "href": "/intentManagement/v5/intentSpecification/hospital-surgical-slice-spec-v1.18-draft",
+      "familyId": "hospital-surgical-slice-spec",
       "name": "Hospital Surgical Slice Intent Specification",
       "version": "1.18-draft",
       "lifecycleStatus": "DRAFT",
+      "isBundle": false,
+      "validFor": {
+        "startDateTime": "2026-04-18T12:00:00+10:00"
+      },
+      "relatedParty": [
+        {
+          "@type": "RelatedPartyRefOrPartyRoleRef",
+          "role": "Provider",
+          "partyOrPartyRole": {
+            "@type": "PartyRoleRef",
+            "id": "mycsp",
+            "name": "MyCSP",
+            "@referredType": "Provider"
+          }
+        }
+      ],
       "@type": "IntentSpecification",
       "@baseType": "EntitySpecification"
     }
@@ -1003,6 +1355,7 @@ They are not internal fulfilment events and must not expose II MS semantic valid
   "@type": "IntentSpecificationDeleteEvent"
 }
 ```
+
 
 ---
 

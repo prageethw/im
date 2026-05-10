@@ -307,3 +307,9 @@ When the user says to baseline a new Intent decision:
 3. Update relevant Markdown specification/design files where applicable.
 4. Keep TMF-facing shapes validated against the uploaded TMF source/reference files.
 5. Do not update Optimisation artifacts unless explicitly requested.
+
+## Baseline update — corrected ID MS spec patch actually applied
+
+Baselined on 2026-05-11.
+
+Corrected the generated `id_ms_specification.md` after discovering the previous replacement failed. The current generated file now actually contains the revised DELETE, activation/retirement, hub, and external event snapshot sections. Verification markers include runtime-reference delete blocking, `/intentSpecification/{id}/activate` rejection, `428`/`412` examples, hub retrieve private caching, event snapshot metadata rules, and event snapshots with `familyId`, `isBundle`, `validFor`, and `relatedParty`.
