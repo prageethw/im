@@ -24,7 +24,7 @@ The solution separates the **definition of optimisation capabilities** from the 
 - A runtime `Optimisation` is a short-lived run. It completes, becomes infeasible, fails, or is cancelled. It is not a long-running desired-state intent control loop by default.
 - The solution uses two core optimisation-domain microservices:
   - **OD MS** owns `OptimisationSpecification` and exposes the caller-facing request contract.
-  - **OC MS** owns the runtime `Optimisation` lifecycle, cancellation, retrial, event integration, and result projection.
+  - **OC MS** owns runtime `Optimisation` lifecycle, cancellation, retrial, event integration, and result projection.
 - Consumers may include **OEX**, platform services, planning tools, assurance functions, intent-management flows, or other authorised entities that need to run optimisation.
 - OEX layer:
   - **OEX UI** provides the user-facing optimisation experience.
@@ -55,8 +55,6 @@ OD MS acts as the governed catalogue of optimisation capabilities. It exposes on
 OC MS acts as the runtime controller. It accepts requests, validates the request shape and request contract, creates runtime optimisation resources, manages lifecycle state, publishes worker instructions, consumes worker outcomes, and projects final results.
 
 The Python/Gurobi worker is responsible for executing the internal deterministic optimisation model. It consumes events from Kafka, executes or cancels work based on the instruction, and publishes outcome events back to Kafka.
-
-Backend optimisation API examples use platform-readable optimisation fields while preserving TMF ontology-aligned structure, expression pattern, polymorphism fields, and extension semantics. Detailed standard validation should reference the relevant TMF921 / TR292 material when a specific external API/resource/event decision is being baselined.
 
 ### 3.1 Use case view:
 
@@ -379,59 +377,13 @@ Detailed flow:
 
 ---
 
+### 3.4 Design rules and TMF ontology alignment:
+
+Backend optimisation API examples use platform-readable optimisation fields while preserving TMF ontology-aligned structure, expression pattern, polymorphism fields, and extension semantics. Detailed standard validation should reference the relevant TMF921 / TR292 material when a specific external API/resource/event decision is being baselined.
+
+---
+
 Non-standard additions on external/backend APIs must be labelled as approved platform extensions and must not break standard resource and operation responsibilities. Internal Kafka events and private service-to-service APIs do not need to use TMF REST representation fields.
-
-### 3.5 Validation and outcome responsibility:
-
-The active design distinguishes request-contract validation from optimiser outcome.
-
-```text
-OC MS validates:
-- required fields
-- enum/value-type rules
-- Request contract shape
-- cardinality rules such as candidateResources minItems = 2 where specified by the active targetEntitySchema
-- expression.expressionValue.context.targets[] / constraints[] / preferences[] against OD MS targetEntitySchema
-
-OC MS does not evaluate:
-- solver feasibility
-- candidate ranking
-- metric-vs-constraint fit
-- objective trade-offs
-
-Worker/model returns:
-- SUCCESS
-- INFEASIBLE
-- FAILURE
-```
-
-Use `422 OPTIMISATION_CONTRACT_VIOLATION` for contract/cardinality failures, such as fewer than 2 candidate resources for a selection optimisation.
-
-Use `INFEASIBLE` only when the request is valid, and the worker/model determines that no feasible solution exists.
-
----
-
-### 3.6 Specification contract versus runtime values:
-
-OD MS defines the optimisation request contract using TMF-aligned specification structures:
-
-```text
-specCharacteristic[]      = catalogue/discovery / UI guidance
-expressionSpecification   = expression language + ontology IRI
-targetEntitySchema        = authoritative runtime expressionValue validation schema
-```
-
-OC MS carries the actual runtime request instance using:
-
-```text
-expression.expressionValue.context.targets[]
-expression.expressionValue.context.constraints[]
-expression.expressionValue.context.preferences[]
-```
-
-This keeps the design clear: OD MS defines what is allowed; OC MS stores and returns what was accepted at runtime.
-
----
 
 ---
 
@@ -445,18 +397,18 @@ This keeps the design clear: OD MS defines what is allowed; OC MS stores and ret
 | **OEX UI** | Provides the user/operator-facing experience for discovering optimisation capabilities, submitting requests, monitoring state, cancelling, retrying, and viewing results. |
 | **OSB MS** | Builds and orchestrates the OEX screen/backend experience. Integrates with NGW using mTLS and OAuth2 system-to-system to call backend optimisation APIs, north-bound protected with mTLS and user context tokens. |
 | **NGW** | NAAS Gateway exposing backend optimisation domain APIs for OD MS and OC MS. Provides the controlled backend API entry point for OSB MS and other authorised system consumers. NGW-exposed backend APIs are TMF ontology-aligned. |
-| **OD MS** | Owns the definition side of the optimisation platform through `OptimisationSpecification`. Publishes caller-facing request contracts, manages `DRAFT`, `ACTIVE`, and `RETIRED` specification lifecycle, and ensures only one `ACTIVE` specification exists per specification family. Does not expose solver/model internals. |
+| **OD MS** | Owns the definition side of the optimisation platform through `OptimisationSpecification`. Publishes caller-facing request contracts, manages `DRAFT`, `ACTIVE`, and `RETIRED` specification lifecycle, and ensures only one `ACTIVE` specification exists per specification family. Defines what is allowed through `specCharacteristic[]` for catalogue/discovery/UI guidance, `expressionSpecification` for expression language and ontology IRI, and `targetEntitySchema` as the authoritative runtime `expressionValue` validation schema. Does not carry runtime values, evaluate solver feasibility, rank candidates, assess objective trade-offs, or expose solver/model internals. |
 | **OD MS Database** | Stores `OptimisationSpecification` records, version metadata, lifecycle state, request contracts, timestamps, ETag/revision data, and retained retired specifications for audit/history. |
-| **OC MS** | Owns runtime `Optimisation` resources. Accepts requests, validates the generic wrapper and OD MS request contract, manages lifecycle, cancellation, retrial, outbox/inbox integration, and result projection. Performs syntactic and contract validation only. |
+| **OC MS** | Owns runtime `Optimisation` resources. Accepts requests, validates the generic wrapper and OD MS request contract, manages lifecycle, cancellation, retrial, outbox/inbox integration, and result projection. Carries the accepted runtime values in `expression.expressionValue.context.targets[]`, `constraints[]`, and `preferences[]`. Validates required fields, enum/value-type rules, request-contract shape, cardinality rules, and runtime context against the active OD MS `targetEntitySchema`. Performs syntactic and contract validation only; it does not evaluate solver feasibility, candidate ranking, metric-vs-constraint fit, or objective trade-offs. Contract/cardinality failures use `422 OPTIMISATION_CONTRACT_VIOLATION`; `INFEASIBLE` is used only after a valid request is assessed by the worker/model and no feasible solution exists. |
 | **OC MS Database** | Stores runtime `Optimisation` resources, accepted expression context, optional `sourceContext`, lifecycle state, status reasons, result projections, retrial links, timestamps, ETag/revision data, outbox records, and inbox records. |
 | **OC MS Outbox Relay** | Publishes persisted OC MS outbox records to Kafka after DB commit. Publishes `OptimisationRequestedEvent` with `instruction = EXECUTE` or `instruction = CANCEL`. |
 | **Kafka topic** | Main internal event stream for worker instructions and outcomes between OC MS and the Python/Gurobi worker. Uses CloudEvents-style Kafka headers. |
 | **Kafka DLQ** | Holds events that cannot be safely processed after retrial handling. Preserves original event payload and failure metadata for operational investigation and replay decisions. |
-| **Python / Gurobi Worker** | Consumes `OptimisationRequestedEvent`. For `EXECUTE`, it resolves the internal deterministic model binding, resolves required data, executes optimisation, and emits an outcome. For `CANCEL`, cancels/stops/ignores processing where safely possible. |
+| **Python / Gurobi Worker** | Consumes `OptimisationRequestedEvent`. For `EXECUTE`, resolves the internal deterministic model binding, resolves required data, executes optimisation, determines runtime solver outcome, and emits `SUCCESS`, `INFEASIBLE`, or `FAILURE`. For `CANCEL`, cancels/stops/ignores processing where safely possible. |
 | **Internal deterministic optimisation models** | Own solver-specific logic that is not exposed externally. Encapsulate objective formulation, constraints, candidate-resource rules, model binding, solver configuration, and Gurobi formulation. |
 | **Gurobi Optimiser** | Executes the mathematical optimisation model prepared by the worker/model layer. Produces solve outcomes that the worker maps into `SUCCESS`, `INFEASIBLE`, or `FAILURE`. |
 | **Analytics platform/data sources** | Provides authorised datasets required by the worker/model layer, such as topology snapshots, traffic forecasts, capacity information, inventory data, or other optimisation context datasets. |
-| **OC MS Inbox Consumer** | Consumes worker outcome events, applies idempotency and stale/late-event handling, maps outcomes to lifecycle states, and projects result/failure details into the runtime `Optimisation` resource. |
+| **OC MS Inbox Consumer** | Consumes worker outcome events, applies idempotency and stale/late-event handling, maps outcomes to lifecycle states (`SUCCESS -> COMPLETED`, `INFEASIBLE -> INFEASIBLE`, `FAILURE -> FAILED`), and projects result/failure details into the runtime `Optimisation` resource. |
 | **Operational support/monitoring** | Monitors service health, Kafka lag, outbox/inbox processing, worker failures, solver failures, DLQ records, retrial counts, stale/late events, and optimisation lifecycle/result trends. |
 
 ---

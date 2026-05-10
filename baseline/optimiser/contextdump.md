@@ -68,3 +68,13 @@ The `optimisation-e2e-solution-brief.md` use case view now includes a `No.` colu
 ## E2E solution brief summary cleanup — 2026-05-09
 
 Removed low-level OD MS field-responsibility details from the Solution summary of `optimisation-e2e-solution-brief.md`. Detailed OD MS contract responsibilities remain in the elaboration/appendix sections and OD MS specification.
+
+## E2E baseline update — embed validation/contract sections in capability matrix
+
+- Current GitHub-main E2E baseline remains the source of truth for the E2E solution brief.
+- Standalone sections `3.5 Validation and outcome responsibility` and `3.6 Specification contract versus runtime values` are removed from the E2E brief.
+- Their content is embedded into section `4. Capability matrix` because validation responsibility, outcome ownership, and contract-vs-runtime-value separation are component responsibilities.
+- OD MS row now states that OD defines what is allowed using `specCharacteristic[]`, `expressionSpecification`, and `targetEntitySchema`, but does not carry runtime values or decide solver outcomes.
+- OC MS row now states that OC carries accepted runtime `expression.expressionValue.context.targets[]`, `constraints[]`, and `preferences[]`, validates against the active OD `targetEntitySchema`, and uses `422 OPTIMISATION_CONTRACT_VIOLATION` for contract/cardinality failures.
+- Python/Gurobi Worker row now states that the worker/model determines `SUCCESS`, `INFEASIBLE`, or `FAILURE`.
+- OC MS Inbox Consumer row now states the outcome mapping: `SUCCESS -> COMPLETED`, `INFEASIBLE -> INFEASIBLE`, and `FAILURE -> FAILED`.
