@@ -332,3 +332,9 @@ IC MS may provide an internal-only governed `IntentReport` delete/purge capabili
 No separate `IntentReport` lifecycle is baselined for ordinary consumer use because delete/purge is a governed administrative operation, not a normal report lifecycle transition.
 
 `IntentReportDeleteEvent` remains part of the external TMF-style event vocabulary. IC MS emits `IntentReportDeleteEvent` only after successful governed internal/admin removal where notification is allowed by policy. It is not emitted from ordinary external consumer delete because ordinary external consumer delete is not exposed.
+
+## Baseline update — IC MS design expression-shape cleanup
+
+Baselined on 2026-05-11.
+
+Cleaned up `ic_ms_design_brief.md` so the shared semantic bucket example no longer shows the older flat runtime expression shape. The design now consistently uses the ID MS external runtime expression baseline: `Intent.expression.expressionValue.context.targets`, `context.constraints`, and `context.preferences`. `location`, `serviceType`, and `serviceClass` are under `context.constraints`, not peers beside the semantic buckets. IC MS preserves the TMF expression wrapper externally and emits internal `IntentValidatedEvent` using native JSON buckets without the external wrapper.

@@ -1272,35 +1272,41 @@ Secrets must not be stored in application images or source files.
 
 ## Shared semantic bucket design baseline
 
-IC MS accepts and projects runtime Intent resources using the shared semantic buckets.
+IC MS accepts and projects runtime `Intent` resources using the shared semantic buckets defined by ID MS.
 
-Complete expression shape:
+External runtime `Intent.expression` uses the TMF expression wrapper. The domain payload sits inside `expression.expressionValue.context`:
 
 ```json
 {
   "expression": {
-    "location": {
-      "locationId": "AU-NSW-SYD-HOSP-001",
-      "locationType": "hospital",
-      "geographicScope": "campus"
-    },
-    "serviceType": "surgical-connectivity",
-    "serviceClass": "critical-gold",
-    "targets": {
-      "maxLatencyMs": 10,
-      "minAvailabilityPercent": 99.99,
-      "maxJitterMs": 2,
-      "maxPacketLossPercent": 0.01
-    },
-    "constraints": {
-      "priority": "critical",
-      "redundancyRequired": true,
-      "timeWindow": {
-        "startDateTime": "2026-04-18T12:00:00+10:00"
+    "@type": "JsonLdExpression",
+    "iri": "https://mycsp.com.au/tio/hospital-surgical-slice/v1.0",
+    "expressionValue": {
+      "context": {
+        "targets": {
+          "maxLatencyMs": 10,
+          "minAvailabilityPercent": 99.99,
+          "maxJitterMs": 2,
+          "maxPacketLossPercent": 0.01
+        },
+        "constraints": {
+          "location": {
+            "locationId": "AU-NSW-SYD-HOSP-001",
+            "locationType": "hospital",
+            "geographicScope": "campus"
+          },
+          "serviceType": "surgical-connectivity",
+          "serviceClass": "critical-gold",
+          "priority": "critical",
+          "redundancyRequired": true,
+          "timeWindow": {
+            "startDateTime": "2026-04-18T12:00:00+10:00"
+          }
+        },
+        "preferences": {
+          "preferredAccessTechnology": "5G"
+        }
       }
-    },
-    "preferences": {
-      "preferredAccessTechnology": "5G"
     }
   }
 }
@@ -1308,8 +1314,10 @@ Complete expression shape:
 
 Design rules:
 
-- IC MS validates syntactic shape against the active ID MS `expressionSpecification`.
-- IC MS emits `IntentValidatedEvent` with the admitted expression using the same `targets`, `constraints`, and `preferences` buckets.
+- IC MS validates syntactic shape against the active ID MS `IntentSpecification.expressionSpecification` and `targetEntitySchema` contract.
+- IC MS preserves the external TMF expression wrapper on TMF-facing `Intent` resources.
+- IC MS emits `IntentValidatedEvent` with the admitted expression as internal native JSON using the same canonical `targets`, `constraints`, and `preferences` buckets, without the external TMF expression wrapper.
+- `location`, `serviceType`, and `serviceClass` sit under `context.constraints`; they are not peer fields beside `targets`, `constraints`, and `preferences`.
 - IC MS does not perform semantic/KP validation.
 - IC MS does not invent optimiser categories; it preserves the bucketed expression for II MS.
 
@@ -1328,7 +1336,6 @@ preferences
 `location`, `serviceType`, and `serviceClass` are not peer fields beside those buckets. They sit under `context.constraints` because they restrict what and where the intent must fulfil.
 
 Internal `IntentValidatedEvent.body.expression` carries the admitted expression as native JSON using the same canonical buckets, without the external TMF expression wrapper.
-
 
 ## TMF fields and precondition response alignment
 
