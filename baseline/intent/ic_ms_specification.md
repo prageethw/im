@@ -1163,7 +1163,9 @@ If an implementation must expose the TMF delete route for compatibility, it shou
 
 ### Event posture:
 
-`IntentReportDeleteEvent` is not emitted in the normal external event family because ordinary `IntentReport` delete is not exposed by default.
+`IntentReportDeleteEvent` remains part of the external TMF-style event vocabulary for `IntentReport` alignment, but it is not emitted as the result of an ordinary external consumer delete because ordinary `IntentReport` delete is not exposed.
+
+`IntentReportDeleteEvent` may be emitted only for governed platform/internal retention purge, administrative removal, legal deletion, or approved data-correction handling where such removal is permitted by retention policy. No separate `IntentReport` lifecycle is baselined for ordinary consumer use.
 
 ---
 
@@ -1233,7 +1235,10 @@ IntentStatusChangeEvent
 IntentDeleteEvent
 IntentReportCreateEvent
 IntentReportAttributeValueChangeEvent
+IntentReportDeleteEvent
 ```
+
+`IntentReportDeleteEvent` is included in the subscription vocabulary for TMF alignment, but is emitted only for governed internal/admin retention or deletion scenarios, not ordinary external consumer delete.
 
 ---
 
@@ -1556,8 +1561,9 @@ IC MS emits external TMF-style resource events for `IntentReport` projection cha
 |---|---|
 | `IntentReportCreateEvent` | New `IntentReport` projection created |
 | `IntentReportAttributeValueChangeEvent` | Existing `IntentReport` projection updated |
+| `IntentReportDeleteEvent` | Governed platform/internal retention purge, administrative removal, legal deletion, or approved data-correction handling |
 
-`IntentReportDeleteEvent` is not part of the normal external event family because ordinary external `IntentReport` delete is not exposed by default. Reports are retained as read-only curated projection/audit history and are archived or purged only through governed internal retention policy where required.
+`IntentReportDeleteEvent` is part of the external TMF-style event vocabulary for `IntentReport` alignment. It is not emitted as the result of ordinary external consumer delete because ordinary external `IntentReport` delete is not exposed by default. Reports remain read-only curated projection/audit history for ordinary consumers and may be archived or purged only through governed internal retention or administrative policy where required.
 
 ---
 
