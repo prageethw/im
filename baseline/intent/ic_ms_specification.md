@@ -1147,25 +1147,32 @@ Cache-Control: private, max-age=300
 
 ---
 
-## 11A. IntentReport delete posture:
+## 11A. IntentReport delete posture
 
-IC MS does not expose ordinary external `DELETE /intentManagement/v5/intent/{intentId}/intentReport/{id}` by default.
+IC MS does not expose ordinary external `DELETE /intentManagement/v5/intent/{intentId}/intentReport/{id}` through NGW or public TMF-facing consumer APIs by default.
 
-`IntentReport` is a read-only curated report/projection/audit resource. It represents externalised assurance and lifecycle reporting history derived from IA MS assurance truth, not a mutable business resource with an independent lifecycle.
+External consumers can list and retrieve `IntentReport` records only. `IntentReport` is a read-only curated report/projection/audit resource for ordinary consumers. It represents externalised assurance and lifecycle reporting history derived from IA MS assurance truth, not a mutable business resource with an independent lifecycle.
 
-Because reports are retained for audit, traceability, lifecycle history, and operational investigation, ordinary API consumers cannot delete reports. Report archival or purge, if required, is handled by governed internal retention policy or administrative tooling outside the normal consumer-facing API.
+IC MS may provide an internal-only governed delete/purge capability for `IntentReport` records. This internal capability is not routed through NGW, not advertised as a public consumer API, and not available to normal external consumers. It is restricted to retention purge, legal deletion, platform administration, approved data-correction workflows, or policy-governed cleanup.
 
-### TMF posture:
+### TMF posture
 
-TMF921 includes an `IntentReport` delete operation in the API surface. IC MS intentionally does not expose that operation for ordinary consumers because deleting reports would remove audit/projection history and would require introducing a separate report lifecycle such as `Archived` or `Deleted`. That lifecycle is deliberately not baselined.
+TMF921 includes an `IntentReport` delete operation and `IntentReportDeleteEvent` in the API/event model. IC MS intentionally does not expose the delete operation to ordinary external consumers because deleting reports as a normal consumer action would remove audit/projection history and would require introducing a separate report lifecycle such as `Archived` or `Deleted`.
 
-If an implementation must expose the TMF delete route for compatibility, it should be restricted/admin-only or return a policy error for ordinary consumers, for example `403 Forbidden` or `405 Method Not Allowed` depending on gateway/API policy.
+No separate `IntentReport` lifecycle is baselined for ordinary consumer use. Delete/purge is treated as a governed administrative operation, not a normal report lifecycle transition.
 
-### Event posture:
+If an implementation must expose the TMF report delete route for compatibility, it must be restricted/admin-only or return a policy error such as `403 Forbidden` or `405 Method Not Allowed` for ordinary consumers, depending on gateway/API policy.
 
-`IntentReportDeleteEvent` remains part of the external TMF-style event vocabulary for `IntentReport` alignment, but it is not emitted as the result of an ordinary external consumer delete because ordinary `IntentReport` delete is not exposed.
+### Event posture
 
-`IntentReportDeleteEvent` may be emitted only for governed platform/internal retention purge, administrative removal, legal deletion, or approved data-correction handling where such removal is permitted by retention policy. No separate `IntentReport` lifecycle is baselined for ordinary consumer use.
+`IntentReportDeleteEvent` remains part of the external TMF-style event vocabulary for `IntentReport` alignment.
+
+IC MS emits `IntentReportDeleteEvent` only after successful governed internal/admin removal, where notification is allowed by policy. Valid trigger examples include retention purge, legal deletion, platform administration, approved data correction, or policy-governed cleanup.
+
+`IntentReportDeleteEvent` is not emitted as the result of ordinary external consumer delete because ordinary external consumer delete is not exposed.
+
+---
+
 
 ---
 

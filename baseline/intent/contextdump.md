@@ -320,3 +320,15 @@ Applied IC MS compliance improvements from the current GitHub baseline rather th
 Baselined on 2026-05-11.
 
 IC MS does not expose ordinary external `DELETE /intentManagement/v5/intent/{intentId}/intentReport/{id}` for normal API consumers. `IntentReport` remains a read-only curated report/projection/audit resource and no separate `IntentReport` lifecycle is baselined for ordinary consumer use. However, `IntentReportDeleteEvent` remains part of the external TMF-style event vocabulary for `IntentReport` alignment. It is emitted only for governed platform/internal retention purge, administrative removal, legal deletion, or approved data-correction handling where such removal is permitted by retention policy; it is not emitted as the result of ordinary external consumer delete.
+
+## Baseline update — IC MS internal-only IntentReport delete/purge
+
+Baselined on 2026-05-11.
+
+IC MS does not expose ordinary external `DELETE /intentManagement/v5/intent/{intentId}/intentReport/{id}` through NGW or public TMF-facing consumer APIs. External consumers can list and retrieve `IntentReport` records only.
+
+IC MS may provide an internal-only governed `IntentReport` delete/purge capability. This capability is not routed through NGW, not advertised as a public consumer API, and not available to normal external consumers. It is restricted to retention purge, legal deletion, platform administration, approved data-correction workflows, or policy-governed cleanup.
+
+No separate `IntentReport` lifecycle is baselined for ordinary consumer use because delete/purge is a governed administrative operation, not a normal report lifecycle transition.
+
+`IntentReportDeleteEvent` remains part of the external TMF-style event vocabulary. IC MS emits `IntentReportDeleteEvent` only after successful governed internal/admin removal where notification is allowed by policy. It is not emitted from ordinary external consumer delete because ordinary external consumer delete is not exposed.

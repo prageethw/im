@@ -247,13 +247,20 @@ IntentReport should not expose raw telemetry dumps, raw callback payloads, raw o
 
 ### IntentReport delete posture
 
-`IntentReport` is read-only from ordinary external API consumers. IC MS does not expose ordinary external `DELETE /intentManagement/v5/intent/{intentId}/intentReport/{id}` by default.
+`IntentReport` is read-only from ordinary external API consumers. IC MS does not expose ordinary external `DELETE /intentManagement/v5/intent/{intentId}/intentReport/{id}` through NGW or public TMF-facing consumer APIs by default.
+
+External consumers can list and retrieve `IntentReport` records only.
 
 Reason: `IntentReport` is a curated assurance/lifecycle report projection and audit/history record. Deleting it as a normal consumer operation would remove traceability and would require a separate report lifecycle such as `Archived` or `Deleted`, which is deliberately not baselined.
 
-Report archival or purge, if required, is handled by governed internal retention policy or administrative tooling outside the normal consumer-facing API. If a deployment must expose the TMF report delete route for compatibility, it must be restricted/admin-only or return a policy error such as `403 Forbidden` or `405 Method Not Allowed` for ordinary consumers.
+IC MS may provide an internal-only governed `IntentReport` delete/purge capability. This capability is not routed through NGW, not advertised as a public consumer API, and not available to normal external consumers. It is restricted to retention purge, legal deletion, platform administration, approved data-correction workflows, or policy-governed cleanup.
 
-`IntentReportDeleteEvent` remains part of the external TMF-style event vocabulary for `IntentReport` alignment, but it is not emitted as the result of ordinary external consumer delete because ordinary report delete is not exposed. It may be emitted only for governed platform/internal retention purge, administrative removal, legal deletion, or approved data-correction handling where such removal is permitted by retention policy. No separate `IntentReport` lifecycle is baselined for ordinary consumer use.
+If a deployment must expose the TMF report delete route for compatibility, it must be restricted/admin-only or return a policy error such as `403 Forbidden` or `405 Method Not Allowed` for ordinary consumers.
+
+`IntentReportDeleteEvent` remains part of the external TMF-style event vocabulary for `IntentReport` alignment. It may be emitted only after successful governed internal/admin removal where notification is allowed by policy. It is not emitted as the result of ordinary external consumer delete because ordinary report delete is not exposed.
+
+No separate `IntentReport` lifecycle is baselined for ordinary consumer use because delete/purge is a governed administrative operation, not a normal report lifecycle transition.
+
 
 ## TMF compliance and platform extension rule:
 
