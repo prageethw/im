@@ -223,11 +223,52 @@ Do not use string placeholders for array/object fields.
 | `404` | `RESOURCE_NOT_FOUND` | Intent, IntentReport, or subscription not found |
 | `409` | `INVALID_STATE_TRANSITION` | Requested lifecycle/version transition is not allowed |
 | `409` | `RESOURCE_CONFLICT` | Runtime update conflicts with current projection state |
-| `412` | `PRECONDITION_FAILED` | Missing/mismatched `If-Match` on unsafe operation |
+| `412` | `PRECONDITION_FAILED` | Supplied `If-Match` does not match the current resource version |
 | `422` | `VALIDATION_FAILED` | Runtime Intent fails request-shape/spec validation |
 | `422` | `INTENT_SPECIFICATION_NOT_ACTIVE` | Referenced IntentSpecification is not active |
+| `428` | `PRECONDITION_REQUIRED` | Required `If-Match` header is missing for an unsafe operation |
 | `503` | `SERVICE_UNAVAILABLE` | IC MS DB unavailable or active spec cannot be confirmed |
 | `500` | `INTERNAL_ERROR` | Unexpected server error |
+
+### Missing If-Match response:
+
+```http
+HTTP/1.1 428 Precondition Required
+Content-Type: application/json
+Content-Language: en-AU
+Cache-Control: no-store
+```
+
+```json
+{
+  "code": "PRECONDITION_REQUIRED",
+  "reason": "IF_MATCH_REQUIRED",
+  "message": "The If-Match header is required for this operation.",
+  "status": 428,
+  "referenceError": "https://mycsp.com.au/errors/PRECONDITION_REQUIRED",
+  "@type": "Error"
+}
+```
+
+### ETag mismatch response:
+
+```http
+HTTP/1.1 412 Precondition Failed
+Content-Type: application/json
+Content-Language: en-AU
+Cache-Control: no-store
+```
+
+```json
+{
+  "code": "PRECONDITION_FAILED",
+  "reason": "ETAG_MISMATCH",
+  "message": "The supplied ETag does not match the current resource version.",
+  "status": 412,
+  "referenceError": "https://mycsp.com.au/errors/PRECONDITION_FAILED",
+  "@type": "Error"
+}
+```
 
 ---
 
@@ -236,7 +277,7 @@ Do not use string placeholders for array/object fields.
 ### Request:
 
 ```http
-POST /intentManagement/v5/intent
+POST /intentManagement/v5/intent?fields=id,href,name,version,lifecycleStatus,statusReason,statusChangeDate,intentSpecification,expression,validFor,isBundle,priority,relatedParty,@type,@baseType
 Content-Type: application/json
 Accept: application/json
 ```
@@ -249,11 +290,33 @@ Accept: application/json
   "intentSpecification": {
     "id": "hospital-surgical-slice-spec-v1.20"
   },
+  "isBundle": false,
+  "priority": "critical",
+  "relatedParty": [
+    {
+      "@type": "RelatedPartyRefOrPartyRoleRef",
+      "role": "requester",
+      "partyOrPartyRole": {
+        "@type": "PartyRoleRef",
+        "id": "hospital-ops",
+        "name": "Hospital Operations",
+        "@referredType": "Customer"
+      }
+    }
+  ],
   "expression": {
     "@type": "JsonLdExpression",
     "@baseType": "Expression",
     "iri": "https://mycsp.com.au/tio/hospital-surgical-slice/v1.0",
     "expressionValue": {
+      "context": {
+        "targets": {
+          "maxLatencyMs": 10,
+          "minAvailabilityPercent": 99.99,
+          "maxJitterMs": 2,
+          "maxPacketLossPercent": 0.01
+        },
+        "constraints": {
           "location": {
             "locationId": "AU-NSW-SYD-HOSP-001",
             "locationType": "hospital",
@@ -261,23 +324,16 @@ Accept: application/json
           },
           "serviceType": "surgical-connectivity",
           "serviceClass": "critical-gold",
-          "targets": {
-            "maxLatencyMs": 10,
-            "minAvailabilityPercent": 99.99,
-            "maxJitterMs": 2,
-            "maxPacketLossPercent": 0.01
-          },
-          "constraints": {
-            "priority": "critical",
-            "redundancyRequired": true,
-            "timeWindow": {
-              "startDateTime": "2026-04-18T12:00:00+10:00"
-            }
-          },
-          "preferences": {
-            "preferredAccessTechnology": "5G"
+          "priority": "critical",
+          "redundancyRequired": true,
+          "timeWindow": {
+            "startDateTime": "2026-04-18T12:00:00+10:00"
           }
-  
+        },
+        "preferences": {
+          "preferredAccessTechnology": "5G"
+        }
+      }
     }
   },
   "validFor": {
@@ -314,11 +370,33 @@ Last-Modified: Sat, 18 Apr 2026 02:00:00 GMT
     "id": "hospital-surgical-slice-spec-v1.20",
     "href": "/intentManagement/v5/intentSpecification/hospital-surgical-slice-spec-v1.20"
   },
+  "isBundle": false,
+  "priority": "critical",
+  "relatedParty": [
+    {
+      "@type": "RelatedPartyRefOrPartyRoleRef",
+      "role": "requester",
+      "partyOrPartyRole": {
+        "@type": "PartyRoleRef",
+        "id": "hospital-ops",
+        "name": "Hospital Operations",
+        "@referredType": "Customer"
+      }
+    }
+  ],
   "expression": {
     "@type": "JsonLdExpression",
     "@baseType": "Expression",
     "iri": "https://mycsp.com.au/tio/hospital-surgical-slice/v1.0",
     "expressionValue": {
+      "context": {
+        "targets": {
+          "maxLatencyMs": 10,
+          "minAvailabilityPercent": 99.99,
+          "maxJitterMs": 2,
+          "maxPacketLossPercent": 0.01
+        },
+        "constraints": {
           "location": {
             "locationId": "AU-NSW-SYD-HOSP-001",
             "locationType": "hospital",
@@ -326,23 +404,16 @@ Last-Modified: Sat, 18 Apr 2026 02:00:00 GMT
           },
           "serviceType": "surgical-connectivity",
           "serviceClass": "critical-gold",
-          "targets": {
-            "maxLatencyMs": 10,
-            "minAvailabilityPercent": 99.99,
-            "maxJitterMs": 2,
-            "maxPacketLossPercent": 0.01
-          },
-          "constraints": {
-            "priority": "critical",
-            "redundancyRequired": true,
-            "timeWindow": {
-              "startDateTime": "2026-04-18T12:00:00+10:00"
-            }
-          },
-          "preferences": {
-            "preferredAccessTechnology": "5G"
+          "priority": "critical",
+          "redundancyRequired": true,
+          "timeWindow": {
+            "startDateTime": "2026-04-18T12:00:00+10:00"
           }
-  
+        },
+        "preferences": {
+          "preferredAccessTechnology": "5G"
+        }
+      }
     }
   },
   "validFor": {
@@ -379,14 +450,14 @@ IC MS emits `IntentValidatedEvent` after syntactic validation succeeds and the e
 ### Request:
 
 ```http
-GET /intentManagement/v5/intent?offset=0&limit=10&lifecycleStatus=Active
+GET /intentManagement/v5/intent?offset=0&limit=10&lifecycleStatus=Active&fields=id,href,name,version,lifecycleStatus,statusReason,statusChangeDate,intentSpecification,@type,@baseType
 Accept: application/json
 ```
 
 ### Request with fresh-read override:
 
 ```http
-GET /intentManagement/v5/intent?offset=0&limit=10&lifecycleStatus=Active
+GET /intentManagement/v5/intent?offset=0&limit=10&lifecycleStatus=Active&fields=id,href,name,version,lifecycleStatus,statusReason,statusChangeDate,intentSpecification,@type,@baseType
 Accept: application/json
 Cache-Control: no-cache
 ```
@@ -428,6 +499,7 @@ Cache-Control: private, max-age=60
 |---|---|
 | `offset` | Zero-based start position |
 | `limit` | Maximum number of records |
+| `fields` | Optional TMF-style field selection / projection parameter |
 | `lifecycleStatus` | Filter by projected external lifecycle status |
 | `version` | Filter by projected runtime version |
 | `intentSpecification.id` | Filter by concrete IntentSpecification ID |
@@ -439,14 +511,14 @@ Cache-Control: private, max-age=60
 ### Request:
 
 ```http
-GET /intentManagement/v5/intent/INT-HOSP-2026-001
+GET /intentManagement/v5/intent/INT-HOSP-2026-001?fields=id,href,name,description,humanExpression,version,lifecycleStatus,statusReason,statusChangeDate,intentSpecification,expression,validFor,isBundle,priority,relatedParty,@type,@baseType
 Accept: application/json
 ```
 
 ### Request with fresh-read override:
 
 ```http
-GET /intentManagement/v5/intent/INT-HOSP-2026-001
+GET /intentManagement/v5/intent/INT-HOSP-2026-001?fields=id,href,name,description,humanExpression,version,lifecycleStatus,statusReason,statusChangeDate,intentSpecification,expression,validFor,isBundle,priority,relatedParty,@type,@baseType
 Accept: application/json
 Cache-Control: no-cache
 ```
@@ -478,11 +550,33 @@ Cache-Control: private, max-age=300
     "id": "hospital-surgical-slice-spec-v1.20",
     "href": "/intentManagement/v5/intentSpecification/hospital-surgical-slice-spec-v1.20"
   },
+  "isBundle": false,
+  "priority": "critical",
+  "relatedParty": [
+    {
+      "@type": "RelatedPartyRefOrPartyRoleRef",
+      "role": "requester",
+      "partyOrPartyRole": {
+        "@type": "PartyRoleRef",
+        "id": "hospital-ops",
+        "name": "Hospital Operations",
+        "@referredType": "Customer"
+      }
+    }
+  ],
   "expression": {
     "@type": "JsonLdExpression",
     "@baseType": "Expression",
     "iri": "https://mycsp.com.au/tio/hospital-surgical-slice/v1.0",
     "expressionValue": {
+      "context": {
+        "targets": {
+          "maxLatencyMs": 8,
+          "minAvailabilityPercent": 99.99,
+          "maxJitterMs": 2,
+          "maxPacketLossPercent": 0.01
+        },
+        "constraints": {
           "location": {
             "locationId": "AU-NSW-SYD-HOSP-001",
             "locationType": "hospital",
@@ -490,23 +584,16 @@ Cache-Control: private, max-age=300
           },
           "serviceType": "surgical-connectivity",
           "serviceClass": "critical-gold",
-          "targets": {
-            "maxLatencyMs": 8,
-            "minAvailabilityPercent": 99.99,
-            "maxJitterMs": 2,
-            "maxPacketLossPercent": 0.01
-          },
-          "constraints": {
-            "priority": "critical",
-            "redundancyRequired": true,
-            "timeWindow": {
-              "startDateTime": "2026-04-18T12:00:00+10:00"
-            }
-          },
-          "preferences": {
-            "preferredAccessTechnology": "5G"
+          "priority": "critical",
+          "redundancyRequired": true,
+          "timeWindow": {
+            "startDateTime": "2026-04-18T12:00:00+10:00"
           }
-  
+        },
+        "preferences": {
+          "preferredAccessTechnology": "5G"
+        }
+      }
     }
   },
   "validFor": {
@@ -551,7 +638,7 @@ Content-Language: en-AU
 ### Request:
 
 ```http
-PUT /intentManagement/v5/intent/INT-HOSP-2026-001
+PUT /intentManagement/v5/intent/INT-HOSP-2026-001?fields=id,href,name,description,humanExpression,version,lifecycleStatus,statusReason,statusChangeDate,intentSpecification,expression,validFor,isBundle,priority,relatedParty,@type,@baseType
 Content-Type: application/json
 Accept: application/json
 If-Match: "intent-INT-HOSP-2026-001-v3"
@@ -566,11 +653,33 @@ If-Match: "intent-INT-HOSP-2026-001-v3"
   "intentSpecification": {
     "id": "hospital-surgical-slice-spec-v1.20"
   },
+  "isBundle": false,
+  "priority": "critical",
+  "relatedParty": [
+    {
+      "@type": "RelatedPartyRefOrPartyRoleRef",
+      "role": "requester",
+      "partyOrPartyRole": {
+        "@type": "PartyRoleRef",
+        "id": "hospital-ops",
+        "name": "Hospital Operations",
+        "@referredType": "Customer"
+      }
+    }
+  ],
   "expression": {
     "@type": "JsonLdExpression",
     "@baseType": "Expression",
     "iri": "https://mycsp.com.au/tio/hospital-surgical-slice/v1.0",
     "expressionValue": {
+      "context": {
+        "targets": {
+          "maxLatencyMs": 8,
+          "minAvailabilityPercent": 99.99,
+          "maxJitterMs": 2,
+          "maxPacketLossPercent": 0.01
+        },
+        "constraints": {
           "location": {
             "locationId": "AU-NSW-SYD-HOSP-001",
             "locationType": "hospital",
@@ -578,23 +687,16 @@ If-Match: "intent-INT-HOSP-2026-001-v3"
           },
           "serviceType": "surgical-connectivity",
           "serviceClass": "critical-gold",
-          "targets": {
-            "maxLatencyMs": 8,
-            "minAvailabilityPercent": 99.99,
-            "maxJitterMs": 2,
-            "maxPacketLossPercent": 0.01
-          },
-          "constraints": {
-            "priority": "critical",
-            "redundancyRequired": true,
-            "timeWindow": {
-              "startDateTime": "2026-04-18T12:00:00+10:00"
-            }
-          },
-          "preferences": {
-            "preferredAccessTechnology": "5G"
+          "priority": "critical",
+          "redundancyRequired": true,
+          "timeWindow": {
+            "startDateTime": "2026-04-18T12:00:00+10:00"
           }
-  
+        },
+        "preferences": {
+          "preferredAccessTechnology": "5G"
+        }
+      }
     }
   },
   "@type": "Intent",
@@ -617,7 +719,7 @@ ETag: "intent-INT-HOSP-2026-001-v4"
   "href": "/intentManagement/v5/intent/INT-HOSP-2026-001",
   "name": "Sydney Hospital Surgical Connection Intent",
   "description": "Updated surgical connection request with lower latency target.",
-  "humanExpression": "I need a surgical connection in Sydney Hospital with latency less than or equal to 10 ms and availability at least 99.99%.",
+  "humanExpression": "I need a surgical connection in Sydney Hospital with latency less than or equal to 8 ms and availability at least 99.99%.",
   "version": "v4",
   "lifecycleStatus": "Acknowledged",
   "statusReason": "Updated intent version accepted for semantic validation and fulfilment.",
@@ -626,11 +728,21 @@ ETag: "intent-INT-HOSP-2026-001-v4"
     "id": "hospital-surgical-slice-spec-v1.20",
     "href": "/intentManagement/v5/intentSpecification/hospital-surgical-slice-spec-v1.20"
   },
+  "isBundle": false,
+  "priority": "critical",
   "expression": {
     "@type": "JsonLdExpression",
     "@baseType": "Expression",
     "iri": "https://mycsp.com.au/tio/hospital-surgical-slice/v1.0",
     "expressionValue": {
+      "context": {
+        "targets": {
+          "maxLatencyMs": 8,
+          "minAvailabilityPercent": 99.99,
+          "maxJitterMs": 2,
+          "maxPacketLossPercent": 0.01
+        },
+        "constraints": {
           "location": {
             "locationId": "AU-NSW-SYD-HOSP-001",
             "locationType": "hospital",
@@ -638,23 +750,16 @@ ETag: "intent-INT-HOSP-2026-001-v4"
           },
           "serviceType": "surgical-connectivity",
           "serviceClass": "critical-gold",
-          "targets": {
-            "maxLatencyMs": 8,
-            "minAvailabilityPercent": 99.99,
-            "maxJitterMs": 2,
-            "maxPacketLossPercent": 0.01
-          },
-          "constraints": {
-            "priority": "critical",
-            "redundancyRequired": true,
-            "timeWindow": {
-              "startDateTime": "2026-04-18T12:00:00+10:00"
-            }
-          },
-          "preferences": {
-            "preferredAccessTechnology": "5G"
+          "priority": "critical",
+          "redundancyRequired": true,
+          "timeWindow": {
+            "startDateTime": "2026-04-18T12:00:00+10:00"
           }
-  
+        },
+        "preferences": {
+          "preferredAccessTechnology": "5G"
+        }
+      }
     }
   },
   "validFor": {
@@ -691,7 +796,7 @@ If meaningful runtime content changes, IC MS creates a new runtime Intent versio
 ### Request:
 
 ```http
-PATCH /intentManagement/v5/intent/INT-HOSP-2026-001
+PATCH /intentManagement/v5/intent/INT-HOSP-2026-001?fields=id,href,name,version,lifecycleStatus,statusReason,statusChangeDate,intentSpecification,expression,validFor,isBundle,priority,@type,@baseType
 Content-Type: application/json
 Accept: application/json
 If-Match: "intent-INT-HOSP-2026-001-v4"
@@ -707,6 +812,11 @@ If-Match: "intent-INT-HOSP-2026-001-v4"
     "@baseType": "Expression",
     "iri": "https://mycsp.com.au/tio/hospital-surgical-slice/v1.0",
     "expressionValue": {
+      "context": {
+        "targets": {
+          "maxLatencyMs": 7
+        },
+        "constraints": {
           "location": {
             "locationId": "AU-NSW-SYD-HOSP-001",
             "locationType": "hospital",
@@ -714,20 +824,16 @@ If-Match: "intent-INT-HOSP-2026-001-v4"
           },
           "serviceType": "surgical-connectivity",
           "serviceClass": "critical-gold",
-          "targets": {
-            "maxLatencyMs": 7
-          },
-          "constraints": {
-            "priority": "critical",
-            "redundancyRequired": true,
-            "timeWindow": {
-              "startDateTime": "2026-04-18T12:00:00+10:00"
-            }
-          },
-          "preferences": {
-            "preferredAccessTechnology": "5G"
+          "priority": "critical",
+          "redundancyRequired": true,
+          "timeWindow": {
+            "startDateTime": "2026-04-18T12:00:00+10:00"
           }
-  
+        },
+        "preferences": {
+          "preferredAccessTechnology": "5G"
+        }
+      }
     }
   }
 }
@@ -757,11 +863,21 @@ ETag: "intent-INT-HOSP-2026-001-v5"
     "id": "hospital-surgical-slice-spec-v1.20",
     "href": "/intentManagement/v5/intentSpecification/hospital-surgical-slice-spec-v1.20"
   },
+  "isBundle": false,
+  "priority": "critical",
   "expression": {
     "@type": "JsonLdExpression",
     "@baseType": "Expression",
     "iri": "https://mycsp.com.au/tio/hospital-surgical-slice/v1.0",
     "expressionValue": {
+      "context": {
+        "targets": {
+          "maxLatencyMs": 7,
+          "minAvailabilityPercent": 99.99,
+          "maxJitterMs": 2,
+          "maxPacketLossPercent": 0.01
+        },
+        "constraints": {
           "location": {
             "locationId": "AU-NSW-SYD-HOSP-001",
             "locationType": "hospital",
@@ -769,23 +885,16 @@ ETag: "intent-INT-HOSP-2026-001-v5"
           },
           "serviceType": "surgical-connectivity",
           "serviceClass": "critical-gold",
-          "targets": {
-            "maxLatencyMs": 7,
-            "minAvailabilityPercent": 99.99,
-            "maxJitterMs": 2,
-            "maxPacketLossPercent": 0.01
-          },
-          "constraints": {
-            "priority": "critical",
-            "redundancyRequired": true,
-            "timeWindow": {
-              "startDateTime": "2026-04-18T12:00:00+10:00"
-            }
-          },
-          "preferences": {
-            "preferredAccessTechnology": "5G"
+          "priority": "critical",
+          "redundancyRequired": true,
+          "timeWindow": {
+            "startDateTime": "2026-04-18T12:00:00+10:00"
           }
-  
+        },
+        "preferences": {
+          "preferredAccessTechnology": "5G"
+        }
+      }
     }
   },
   "validFor": {
@@ -830,9 +939,10 @@ If-Match: "intent-INT-HOSP-2026-001-v5"
 ### Success response:
 
 ```http
-HTTP/1.1 200 OK
+HTTP/1.1 202 Accepted
 Content-Type: application/json
-Content-Location: /intentManagement/v5/intent/INT-HOSP-2026-001
+Content-Language: en-AU
+Location: /intentManagement/v5/intent/INT-HOSP-2026-001
 ETag: "intent-INT-HOSP-2026-001-v6"
 ```
 
@@ -840,14 +950,9 @@ ETag: "intent-INT-HOSP-2026-001-v6"
 {
   "id": "INT-HOSP-2026-001",
   "href": "/intentManagement/v5/intent/INT-HOSP-2026-001",
-  "name": "Sydney Hospital Surgical Connection Intent",
-  "version": "v4",
   "lifecycleStatus": "Terminated",
   "statusReason": "Intent termination requested and accepted.",
   "statusChangeDate": "2026-04-18T13:00:00+10:00",
-  "intentSpecification": {
-    "id": "hospital-surgical-slice-spec-v1.20"
-  },
   "@type": "Intent",
   "@baseType": "Entity"
 }
@@ -859,6 +964,8 @@ ETag: "intent-INT-HOSP-2026-001-v6"
 
 The retained Intent record remains available for audit, reporting, lifecycle history, and traceability.
 
+`202 Accepted` is used for TMF-aligned delete/termination acceptance. Callers can use `GET /intent/{id}` to retrieve the retained terminated projection after the termination request is accepted.
+
 ---
 
 ## 10. List IntentReports:
@@ -866,14 +973,14 @@ The retained Intent record remains available for audit, reporting, lifecycle his
 ### Request:
 
 ```http
-GET /intentManagement/v5/intent/INT-HOSP-2026-001/intentReport
+GET /intentManagement/v5/intent/INT-HOSP-2026-001/intentReport?fields=id,href,creationDate,name,intent,expression,@type,@baseType
 Accept: application/json
 ```
 
 ### Request with fresh-read override:
 
 ```http
-GET /intentManagement/v5/intent/INT-HOSP-2026-001/intentReport
+GET /intentManagement/v5/intent/INT-HOSP-2026-001/intentReport?fields=id,href,creationDate,name,intent,expression,@type,@baseType
 Accept: application/json
 Cache-Control: no-cache
 ```
@@ -946,14 +1053,14 @@ Cache-Control: private, max-age=60
 ### Request:
 
 ```http
-GET /intentManagement/v5/intent/INT-HOSP-2026-001/intentReport/IR-INT-HOSP-2026-001-003
+GET /intentManagement/v5/intent/INT-HOSP-2026-001/intentReport/IR-INT-HOSP-2026-001-003?fields=id,href,creationDate,name,intent,expression,@type,@baseType
 Accept: application/json
 ```
 
 ### Request with fresh-read override:
 
 ```http
-GET /intentManagement/v5/intent/INT-HOSP-2026-001/intentReport/IR-INT-HOSP-2026-001-003
+GET /intentManagement/v5/intent/INT-HOSP-2026-001/intentReport/IR-INT-HOSP-2026-001-003?fields=id,href,creationDate,name,intent,expression,@type,@baseType
 Accept: application/json
 Cache-Control: no-cache
 ```
@@ -1040,6 +1147,26 @@ Cache-Control: private, max-age=300
 
 ---
 
+## 11A. IntentReport delete posture:
+
+IC MS does not expose ordinary external `DELETE /intentManagement/v5/intent/{intentId}/intentReport/{id}` by default.
+
+`IntentReport` is a read-only curated report/projection/audit resource. It represents externalised assurance and lifecycle reporting history derived from IA MS assurance truth, not a mutable business resource with an independent lifecycle.
+
+Because reports are retained for audit, traceability, lifecycle history, and operational investigation, ordinary API consumers cannot delete reports. Report archival or purge, if required, is handled by governed internal retention policy or administrative tooling outside the normal consumer-facing API.
+
+### TMF posture:
+
+TMF921 includes an `IntentReport` delete operation in the API surface. IC MS intentionally does not expose that operation for ordinary consumers because deleting reports would remove audit/projection history and would require introducing a separate report lifecycle such as `Archived` or `Deleted`. That lifecycle is deliberately not baselined.
+
+If an implementation must expose the TMF delete route for compatibility, it should be restricted/admin-only or return a policy error for ordinary consumers, for example `403 Forbidden` or `405 Method Not Allowed` depending on gateway/API policy.
+
+### Event posture:
+
+`IntentReportDeleteEvent` is not emitted in the normal external event family because ordinary `IntentReport` delete is not exposed by default.
+
+---
+
 ## 12. Hub create subscription:
 
 ### Strict TMF route request:
@@ -1106,7 +1233,6 @@ IntentStatusChangeEvent
 IntentDeleteEvent
 IntentReportCreateEvent
 IntentReportAttributeValueChangeEvent
-IntentReportDeleteEvent
 ```
 
 ---
@@ -1430,7 +1556,8 @@ IC MS emits external TMF-style resource events for `IntentReport` projection cha
 |---|---|
 | `IntentReportCreateEvent` | New `IntentReport` projection created |
 | `IntentReportAttributeValueChangeEvent` | Existing `IntentReport` projection updated |
-| `IntentReportDeleteEvent` | `IntentReport` projection removed where retention policy allows |
+
+`IntentReportDeleteEvent` is not part of the normal external event family because ordinary external `IntentReport` delete is not exposed by default. Reports are retained as read-only curated projection/audit history and are archived or purged only through governed internal retention policy where required.
 
 ---
 
@@ -1517,42 +1644,6 @@ IC MS emits external TMF-style resource events for `IntentReport` projection cha
 
 ---
 
-## 24. IntentReportDeleteEvent:
-
-```json
-{
-  "eventId": "evt-intent-report-delete-001",
-  "eventTime": "2026-04-18T13:30:00+10:00",
-  "eventType": "IntentReportDeleteEvent",
-  "correlationId": "corr-intent-report-delete-001",
-  "description": "IntentReport projection removed.",
-  "priority": "Normal",
-  "title": "IntentReport deleted",
-  "event": {
-    "intentReport": {
-      "id": "IR-INT-HOSP-2026-001-003",
-      "href": "/intentManagement/v5/intent/INT-HOSP-2026-001/intentReport/IR-INT-HOSP-2026-001-003",
-      "intent": {
-        "id": "INT-HOSP-2026-001"
-      },
-      "@type": "IntentReport",
-      "@baseType": "Entity"
-    }
-  },
-  "reportingSystem": {
-    "id": "intent-controller-ms",
-    "name": "Intent Controller MS"
-  },
-  "source": {
-    "id": "intent-controller-ms",
-    "name": "Intent Controller MS"
-  },
-  "@type": "IntentReportDeleteEvent"
-}
-```
-
----
-
 ## 25. Internal event publication note:
 
 IC MS publishes `IntentValidatedEvent` internally after syntactic validation and admission.
@@ -1579,12 +1670,32 @@ Current primary consumer is II MS / `intent-intelligence-ms`, but the event may 
 - Clients may request a fresh GET using `Cache-Control: no-cache`.
 - `IntentDeleteEvent` represents termination acceptance, not physical deletion.
 - External `Intent*Event` and `IntentReport*Event` payloads are curated projection events and must not expose raw telemetry, raw callback payloads, raw optimiser details, raw knowledge-plane data, or internal candidate scoring.
+- IC MS does not expose ordinary external `DELETE /intent/{intentId}/intentReport/{id}` by default; IntentReport is read-only audit/projection history and is retained unless governed internal retention policy archives or purges it.
 
 ## Shared semantic bucket baseline
 
 ### Runtime Intent expression
 
-IC MS accepts and projects runtime Intent resources using the shared semantic buckets `targets`, `constraints`, and `preferences`.
+IC MS accepts and projects runtime Intent resources using the external runtime expression shape baselined by ID MS:
+
+```json
+{
+  "expression": {
+    "@type": "JsonLdExpression",
+    "@baseType": "Expression",
+    "iri": "https://mycsp.com.au/tio/hospital-surgical-slice/v1.0",
+    "expressionValue": {
+      "context": {
+        "targets": {},
+        "constraints": {},
+        "preferences": {}
+      }
+    }
+  }
+}
+```
+
+`location`, `serviceType`, and `serviceClass` are not peer fields beside `targets`, `constraints`, and `preferences`. They are modelled under `expression.expressionValue.context.constraints` because they restrict what and where the intent must fulfil.
 
 ### Complete POST /intent request body example
 
@@ -1601,6 +1712,14 @@ IC MS accepts and projects runtime Intent resources using the shared semantic bu
     "@baseType": "Expression",
     "iri": "https://mycsp.com.au/tio/hospital-surgical-slice/v1.0",
     "expressionValue": {
+      "context": {
+        "targets": {
+          "maxLatencyMs": 10,
+          "minAvailabilityPercent": 99.99,
+          "maxJitterMs": 2,
+          "maxPacketLossPercent": 0.01
+        },
+        "constraints": {
           "location": {
             "locationId": "AU-NSW-SYD-HOSP-001",
             "locationType": "hospital",
@@ -1608,23 +1727,16 @@ IC MS accepts and projects runtime Intent resources using the shared semantic bu
           },
           "serviceType": "surgical-connectivity",
           "serviceClass": "critical-gold",
-          "targets": {
-            "maxLatencyMs": 10,
-            "minAvailabilityPercent": 99.99,
-            "maxJitterMs": 2,
-            "maxPacketLossPercent": 0.01
-          },
-          "constraints": {
-            "priority": "critical",
-            "redundancyRequired": true,
-            "timeWindow": {
-              "startDateTime": "2026-04-18T12:00:00+10:00"
-            }
-          },
-          "preferences": {
-            "preferredAccessTechnology": "5G"
+          "priority": "critical",
+          "redundancyRequired": true,
+          "timeWindow": {
+            "startDateTime": "2026-04-18T12:00:00+10:00"
           }
-  
+        },
+        "preferences": {
+          "preferredAccessTechnology": "5G"
+        }
+      }
     }
   },
   "validFor": {
@@ -1648,28 +1760,30 @@ IC MS accepts and projects runtime Intent resources using the shared semantic bu
       "id": "hospital-surgical-slice-spec-v1.20"
     },
     "expression": {
-      "location": {
-        "locationId": "AU-NSW-SYD-HOSP-001",
-        "locationType": "hospital",
-        "geographicScope": "campus"
-      },
-      "serviceType": "surgical-connectivity",
-      "serviceClass": "critical-gold",
-      "targets": {
-        "maxLatencyMs": 10,
-        "minAvailabilityPercent": 99.99,
-        "maxJitterMs": 2,
-        "maxPacketLossPercent": 0.01
-      },
-      "constraints": {
-        "priority": "critical",
-        "redundancyRequired": true,
-        "timeWindow": {
-          "startDateTime": "2026-04-18T12:00:00+10:00"
+      "context": {
+        "targets": {
+          "maxLatencyMs": 10,
+          "minAvailabilityPercent": 99.99,
+          "maxJitterMs": 2,
+          "maxPacketLossPercent": 0.01
+        },
+        "constraints": {
+          "location": {
+            "locationId": "AU-NSW-SYD-HOSP-001",
+            "locationType": "hospital",
+            "geographicScope": "campus"
+          },
+          "serviceType": "surgical-connectivity",
+          "serviceClass": "critical-gold",
+          "priority": "critical",
+          "redundancyRequired": true,
+          "timeWindow": {
+            "startDateTime": "2026-04-18T12:00:00+10:00"
+          }
+        },
+        "preferences": {
+          "preferredAccessTechnology": "5G"
         }
-      },
-      "preferences": {
-        "preferredAccessTechnology": "5G"
       }
     },
     "references": {
@@ -1689,8 +1803,9 @@ IC MS accepts and projects runtime Intent resources using the shared semantic bu
 
 ### Baseline rules
 
-- `/intent.expression` uses `targets`, `constraints`, and `preferences`.
-- `IntentValidatedEvent.expression` carries the same semantic buckets.
-- IC MS validates syntactic shape against the active ID MS `expressionSpecification`.
+- External runtime `Intent.expression.expressionValue` uses the `context` wrapper.
+- `context` contains only `targets`, `constraints`, and `preferences`.
+- `location`, `serviceType`, and `serviceClass` sit under `context.constraints`.
+- `IntentValidatedEvent.body.expression` carries the same canonical semantic buckets internally without the external TMF expression wrapper.
+- IC MS validates syntactic shape against the active ID MS `expressionSpecification` and `targetEntitySchema`.
 - IC MS does not perform semantic/KP validation, optimisation, orchestration, or assurance.
-

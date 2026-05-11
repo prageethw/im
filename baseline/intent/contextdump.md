@@ -14,7 +14,7 @@ This context is only for:
 - TMF921-facing Intent APIs and resources
 - IntentSpecification / Intent lifecycle
 - Intent Controller MS
-- Intent Definition MS
+- Intent Design MS
 - Intent Intelligence MS
 - Intent Assurance MS
 - Intent Callback MS
@@ -74,7 +74,7 @@ Use the uploaded architecture/reference books only as supporting design referenc
 
 The Intent solution baseline includes:
 
-- ID MS — Intent Definition MS
+- ID MS — Intent Design MS
 - IC MS — Intent Controller MS
 - II MS — Intent Intelligence MS
 - IA MS — Intent Assurance MS
@@ -91,7 +91,7 @@ The Intent solution baseline includes:
 
 ### 5.1 ID MS / IntentSpecification
 
-ID MS owns definition-time `IntentSpecification` lifecycle/governance.
+ID MS owns design-time `IntentSpecification` lifecycle/governance.
 
 ID MS owns:
 
@@ -308,15 +308,9 @@ When the user says to baseline a new Intent decision:
 4. Keep TMF-facing shapes validated against the uploaded TMF source/reference files.
 5. Do not update Optimisation artifacts unless explicitly requested.
 
-## Baseline update — corrected ID MS spec patch actually applied
+
+## Baseline update — IC MS TMF compliance and ID MS expression alignment
 
 Baselined on 2026-05-11.
 
-Corrected the generated `id_ms_specification.md` after discovering the previous replacement failed. The current generated file now actually contains the revised DELETE, activation/retirement, hub, and external event snapshot sections. Verification markers include runtime-reference delete blocking, `/intentSpecification/{id}/activate` rejection, `428`/`412` examples, hub retrieve private caching, event snapshot metadata rules, and event snapshots with `familyId`, `isBundle`, `validFor`, and `relatedParty`.
-
-
-## Baseline update — ID MS fresh GitHub spec/design compliance patch
-
-Baselined on 2026-05-11.
-
-Fresh copies of `id_ms_specification.md` and `id_ms_design_brief.md` have been patched to use `Intent Definition MS` / `intent-definition-ms` consistently. The ID MS specification early resource examples were aligned with the existing design brief and TMF-facing baseline: POST create now includes `familyId`, `isBundle`, `validFor`, `relatedParty`, `specCharacteristic`, `expressionSpecification`, and `targetEntitySchema`, and excludes client-supplied `_links`; GET list returns the lightweight summary metadata; GET retrieve returns the full single-resource metadata including `targetEntitySchema`; PUT carries the full replacement representation; PATCH remains supported for TMF compatibility but is discouraged as a general update method. Later DELETE, activation, hub, and event snapshot baselines remain in place.
+Applied IC MS compliance improvements from the current GitHub baseline rather than replacing the whole artifact. IC MS now aligns runtime `Intent.expression.expressionValue` with the ID MS baseline: external expression value uses `context.targets`, `context.constraints`, and `context.preferences`, with `location`, `serviceType`, and `serviceClass` under `context.constraints`. Internal `IntentValidatedEvent.body.expression` carries the same semantic buckets without the external TMF wrapper. IC MS supports optional TMF-style `fields` on Intent and IntentReport operations where applicable. Missing required `If-Match` returns `428`; stale or mismatched `If-Match` returns `412`. `DELETE /intent/{id}` remains termination, not physical deletion, and uses `202 Accepted` for accepted termination. `IntentReport` remains read-only for ordinary external API consumers; ordinary `DELETE /intent/{intentId}/intentReport/{id}` is not exposed by default because reports are retained audit/projection history. Report archive/purge is governed internal retention/admin policy, so no separate IntentReport lifecycle is baselined and `IntentReportDeleteEvent` is not part of the normal external event family.

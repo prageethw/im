@@ -242,6 +242,17 @@ IntentReport uses the TMF expression wrapper. Curated report facts are carried i
 
 IntentReport should not expose raw telemetry dumps, raw callback payloads, raw optimiser details, raw KP data, internal candidate scoring, internal Kafka payloads, or implementation-only details unless deliberately curated and approved for external reporting.
 
+
+### IntentReport delete posture
+
+`IntentReport` is read-only from ordinary external API consumers. IC MS does not expose ordinary external `DELETE /intentManagement/v5/intent/{intentId}/intentReport/{id}` by default.
+
+Reason: `IntentReport` is a curated assurance/lifecycle report projection and audit/history record. Deleting it as a normal consumer operation would remove traceability and would require a separate report lifecycle such as `Archived` or `Deleted`, which is deliberately not baselined.
+
+Report archival or purge, if required, is handled by governed internal retention policy or administrative tooling outside the normal consumer-facing API. If a deployment must expose the TMF report delete route for compatibility, it must be restricted/admin-only or return a policy error such as `403 Forbidden` or `405 Method Not Allowed` for ordinary consumers.
+
+`IntentReportDeleteEvent` is not emitted in the normal external event family because ordinary external report delete is not exposed by default.
+
 ## TMF compliance and platform extension rule:
 
 IC MS remains TMF-aligned at the external contract level, but controlled platform extensions are acceptable when documented, non-breaking, and semantically compatible with TMF.
@@ -1293,3 +1304,27 @@ Design rules:
 - IC MS does not perform semantic/KP validation.
 - IC MS does not invent optimiser categories; it preserves the bucketed expression for II MS.
 
+
+
+## Runtime expression context alignment with ID MS
+
+IC MS must use the ID MS external runtime expression baseline for runtime Intent create/update/retrieve examples. External `Intent.expression.expressionValue` contains a single `context` object. The `context` object contains only the canonical semantic buckets:
+
+```text
+targets
+constraints
+preferences
+```
+
+`location`, `serviceType`, and `serviceClass` are not peer fields beside those buckets. They sit under `context.constraints` because they restrict what and where the intent must fulfil.
+
+Internal `IntentValidatedEvent.body.expression` carries the admitted expression as native JSON using the same canonical buckets, without the external TMF expression wrapper.
+
+
+## TMF fields and precondition response alignment
+
+IC MS supports the optional TMF-style `fields` query parameter on create/list/retrieve/update operations where applicable, including `IntentReport` list/retrieve projections.
+
+Unsafe operations requiring optimistic concurrency use `If-Match`. Missing required `If-Match` returns `428 Precondition Required`. Stale or mismatched `If-Match` returns `412 Precondition Failed`.
+
+`DELETE /intent/{id}` remains termination, not physical deletion. The preferred TMF-aligned response for accepted termination is `202 Accepted`; callers can retrieve the retained terminated projection using `GET /intent/{id}`.
