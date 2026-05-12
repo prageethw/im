@@ -39,7 +39,8 @@ It is responsible for:
 | Policy validation | II MS + lightweight II MS KP + `t7.knowledge plane` |
 | Knowledge resolution | II MS + `t7.knowledge plane` |
 | Optimisation | `t7.optimiser` |
-| Network apply | IA MS + `t7.orchestrator` |
+| Network apply / orchestration execution | Orchestration layer / network orchestrator |
+| Apply outcome interpretation | IA MS |
 | Runtime assurance truth | IA MS |
 | Real-time telemetry | `t7.telemetry` consumed by IA MS |
 | Callback ingestion | ICB MS |

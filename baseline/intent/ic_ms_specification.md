@@ -27,11 +27,14 @@ IC MS does not own:
 - semantic validation
 - policy validation
 - optimisation
-- network apply
+- network apply / orchestration execution
+- apply outcome interpretation
 - runtime assurance truth
 - real-time telemetry
 - callback ingestion
 - raw orchestrator callback interpretation
+
+Network apply/orchestration execution is owned by the orchestration layer / network orchestrator. IA MS interprets apply outcomes and owns runtime assurance truth; IC MS only projects the resulting lifecycle/status changes.
 
 ---
 
