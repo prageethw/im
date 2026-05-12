@@ -858,8 +858,10 @@ Rules:
 
 ## 15. Contract summary
 
-II MS consumes `IntentValidatedEvent`, validates and resolves the admitted expression using Knowledge Plane/domain knowledge, preserves `expression.context.targets`, `expression.context.constraints`, and `expression.context.preferences`, and emits either `IntentRejectedEvent` or `IntentResolvedEvent`.
+II MS consumes `IntentValidatedEvent`, validates and resolves the admitted expression using Knowledge Plane/domain knowledge, preserves `expression.context.targets`, `expression.context.constraints`, and `expression.context.preferences`, and emits `IntentRejectedEvent`, `IntentResolvedEvent`, or `IntentNetworkReadyEvent` depending on the resolved milestone.
 
-The `IntentResolvedEvent` is the downstream-ready canonical handoff. It carries canonical service context and the full valid resource set for downstream consideration.
+`IntentRejectedEvent` is the semantic/policy/capability rejection handoff. IC MS consumes it and projects the external runtime `Intent` lifecycle accordingly.
 
-The `IntentRejectedEvent` is the semantic/policy/capability rejection handoff. IC MS consumes it and projects the external runtime `Intent` lifecycle accordingly.
+`IntentResolvedEvent` is the candidate-level semantic-resolution handoff. It carries canonical service context and the full valid resource set for downstream consideration; it is not the final service-ready/apply-ready handoff.
+
+`IntentNetworkReadyEvent` is the service-ready preparation handoff to IA MS. It carries the prepared orchestration and observation configuration through `serviceConfiguration.orchestratorConfiguration` and `serviceConfiguration.observerConfiguration`, and it does not mean network apply has succeeded.
