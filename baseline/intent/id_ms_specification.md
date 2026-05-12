@@ -20,6 +20,10 @@ ID MS owns definition-time `IntentSpecification` contracts and subscription mana
 
 ID MS validates syntax/resource shape and enforces specification lifecycle/version governance. ID MS does not own runtime `Intent`, `IntentReport`, semantic validation, policy validation, network/resource feasibility, optimisation, runtime assurance, telemetry, or callback ingestion.
 
+### TMF deployment path note
+
+The examples in this specification use the platform base path `/intentManagement/v5`. A strict TMF deployment may expose the same API through `/tmf-api/intentManagement/v5`; the API gateway may map between the deployment prefix and the platform-owned service path without changing resource semantics.
+
 ---
 
 ## 1. API endpoints
@@ -1085,9 +1089,9 @@ Cache-Control: no-store
 
 ## 11. Hub create subscription
 
-ID MS intentionally uses the domain-scoped hub route for `IntentSpecification` event subscriptions.
+ID MS intentionally uses the domain-scoped hub route for `IntentSpecification` event subscriptions. Strict TMF hub compatibility is based on the generic `/hub` subscription model; the `/intentSpecification/hub` route family is an approved platform extension that keeps subscription ownership explicit for the `IntentSpecification` domain.
 
-The supported hub routes are:
+The supported platform hub routes are:
 
 ```http
 POST /intentManagement/v5/intentSpecification/hub
@@ -1150,6 +1154,8 @@ ETag: "subscription-sub-001-v1"
 ---
 
 ## 12. Hub retrieve subscription
+
+`GET /intentManagement/v5/intentSpecification/hub/{id}` is a platform extension for operational convenience. It is not required by the strict TMF generic hub route shape, but is retained because it gives operators and consumers a safe way to inspect an ID MS-owned subscription without exposing internal workflow state.
 
 ### Request
 
@@ -1330,10 +1336,13 @@ Delete events are emitted only after successful delete and show the last known l
 
 ## 16. Event envelope pattern
 
+External TMF-facing event examples populate both `eventTime` and `timeOcurred` with the same canonical event occurrence timestamp. `timeOcurred` preserves the TMF921 example spelling used by TMF event payload examples, while `eventTime` remains the platform's primary event timestamp field.
+
 ```json
 {
   "eventId": "evt-intent-spec-001",
   "eventTime": "2026-04-18T12:00:00+10:00",
+  "timeOcurred": "2026-04-18T12:00:00+10:00",
   "eventType": "IntentSpecificationStatusChangeEvent",
   "correlationId": "corr-intent-spec-001",
   "description": "IntentSpecification lifecycle status changed.",
@@ -1389,6 +1398,7 @@ Delete events are emitted only after successful delete and show the last known l
 {
   "eventId": "evt-intent-spec-create-001",
   "eventTime": "2026-04-18T12:00:00+10:00",
+  "timeOcurred": "2026-04-18T12:00:00+10:00",
   "eventType": "IntentSpecificationCreateEvent",
   "correlationId": "corr-intent-spec-create-001",
   "description": "IntentSpecification created.",
@@ -1442,6 +1452,7 @@ Delete events are emitted only after successful delete and show the last known l
 {
   "eventId": "evt-intent-spec-attr-001",
   "eventTime": "2026-04-18T12:05:00+10:00",
+  "timeOcurred": "2026-04-18T12:05:00+10:00",
   "eventType": "IntentSpecificationAttributeValueChangeEvent",
   "correlationId": "corr-intent-spec-attr-001",
   "description": "IntentSpecification draft attributes changed.",
@@ -1502,6 +1513,7 @@ Delete events are emitted only after successful delete and show the last known l
 {
   "eventId": "evt-intent-spec-status-001",
   "eventTime": "2026-04-18T12:10:00+10:00",
+  "timeOcurred": "2026-04-18T12:10:00+10:00",
   "eventType": "IntentSpecificationStatusChangeEvent",
   "correlationId": "corr-intent-spec-status-001",
   "description": "IntentSpecification lifecycle status changed.",
@@ -1557,6 +1569,7 @@ Delete events are emitted only after successful delete and show the last known l
 {
   "eventId": "evt-intent-spec-delete-001",
   "eventTime": "2026-04-18T12:20:00+10:00",
+  "timeOcurred": "2026-04-18T12:20:00+10:00",
   "eventType": "IntentSpecificationDeleteEvent",
   "correlationId": "corr-intent-spec-delete-001",
   "description": "Unused draft IntentSpecification deleted.",
@@ -1627,6 +1640,8 @@ Delete events are emitted only after successful delete and show the last known l
 - Stale or mismatched `If-Match` returns `412 Precondition Failed`.
 - `fields` is supported as an optional TMF-style field selection parameter.
 - Activation is represented through PUT/PATCH lifecycle update, not a custom action endpoint.
+- External TMF-facing events include both `eventTime` and `timeOcurred` with the same canonical event occurrence timestamp.
+- `timeOcurred` intentionally preserves the TMF921 example spelling for compatibility with TMF event payload examples.
 
 ---
 
@@ -1643,7 +1658,7 @@ For strict TMF alignment, ID MS supports the TMF-style `IntentSpecification` ope
 | Retrieve | `GET /intentManagement/v5/intentSpecification/{id}` | TMF-aligned |
 | Partial update | `PATCH /intentManagement/v5/intentSpecification/{id}` | TMF-aligned |
 | Delete | `DELETE /intentManagement/v5/intentSpecification/{id}` | TMF-aligned |
-| Event subscription | `/hub` and `/hub/{id}` | Strict TMF route form where required |
+| Event subscription | `POST /hub`, `DELETE /hub/{id}` | Strict TMF route form where required |
 
 ### Accepted platform extensions
 
@@ -1655,7 +1670,13 @@ For ID MS, accepted platform extensions are:
 |---|---|---|
 | `PUT /intentManagement/v5/intentSpecification/{id}` | Deterministic full replacement | Preferred platform update method where supported |
 | `/intentManagement/v5/intentSpecification/hub` | Domain-scoped event subscription route | Allowed as a clearer domain-owned route when deliberately chosen |
-| `/intentManagement/v5/intentSpecification/hub/{id}` | Domain-scoped subscription delete/retrieve route | Allowed as a clearer domain-owned route when deliberately chosen |
+| `GET /intentManagement/v5/intentSpecification/hub/{id}` | Subscription inspection | Platform convenience operation; not required by strict TMF generic hub shape |
+| `DELETE /intentManagement/v5/intentSpecification/hub/{id}` | Domain-scoped subscription removal | Allowed as a clearer domain-owned route when deliberately chosen |
+| `familyId` | Specification-family grouping across versions | Platform governance field; does not replace TMF `id` or `version` |
+| `_links` | Lifecycle-aware navigation and operation hints | Platform HATEOAS extension; clients must not require it for strict TMF compatibility |
+| `previousActiveSpecification` | Activation outcome trace | Platform governance projection showing the version retired during activation |
+| Strong `ETag` / `If-Match` governance | Unsafe-operation concurrency control | Platform concurrency policy applied consistently to mutable operations |
+| `428 Precondition Required` | Missing precondition response | Platform concurrency policy for unsafe operations that require `If-Match` |
 
 ### Update method rule
 
@@ -1706,7 +1727,15 @@ GET /intentManagement/v5/intentSpecification/hub/{id}
 DELETE /intentManagement/v5/intentSpecification/hub/{id}
 ```
 
-The domain-scoped route is acceptable only as a documented platform extension and must preserve the same subscription semantics.
+The domain-scoped route is acceptable only as a documented platform extension and must preserve the same subscription semantics. `GET /intentManagement/v5/intentSpecification/hub/{id}` is also a platform extension for safe subscription inspection and is not part of the strict TMF generic hub route minimum.
+
+### External event timestamp rule
+
+For external TMF-facing resource events, ID MS populates both `eventTime` and `timeOcurred` with the same canonical event occurrence timestamp. The `timeOcurred` spelling is retained deliberately for compatibility with TMF921 event payload examples. Internal events remain separate and continue to use the platform CloudEvents/header model plus the relevant internal body timestamp fields.
+
+### Route prefix rule
+
+The examples in this specification use `/intentManagement/v5` as the platform service base path. A strict TMF API gateway may expose the same operations under `/tmf-api/intentManagement/v5`; this is a deployment mapping concern and must not change resource ownership, payload semantics, or lifecycle governance.
 
 ### Baseline statement
 
