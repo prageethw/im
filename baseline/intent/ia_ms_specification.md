@@ -24,8 +24,6 @@ IA MS consumes internal events, uses `IntentNetworkReadyEvent.serviceConfigurati
 IC MS consumes `IntentAssuranceEvent` and projects the external TMF-facing `Intent.lifecycleStatus` and `IntentReport.expression.expressionValue`.
 
 IA MS does not own external TMF APIs, runtime `Intent` resources, design-time `IntentSpecification`, semantic interpretation, optimisation decisions, callback ingestion, or network orchestration/apply execution.
-IA MS consumes optimisation, network-ready, callback, and observation/telemetry facts only.
-
 
 ---
 
@@ -46,7 +44,7 @@ IA MS uses the active internal event style:
 
 Internal IA events must not use external TMF `IntentExpression` wrappers. Those wrappers are used only in external IC MS REST resources and external TMF-style events.
 
-Internal events may still use a plain internal `context` object when carrying resolved targets, constraints, and preferences. This is an internal event convention, not the external TMF `Intent.expression` wrapper.
+Internal events may use a plain internal `context` object when carrying resolved targets, constraints, and preferences. This is an internal event convention, not the external TMF `Intent.expression` wrapper.
 
 ---
 
@@ -110,14 +108,21 @@ content-type: application/json
         "roles": ["primary"],
         "resourceType": "networkPath",
         "resourceClass": "critical-gold-access",
-        "accessTechnology": "fibre",
-        "metrics": {
-          "benchmark": {
-            "latencyMs": 7,
-            "availabilityPercent": 99.996,
-            "jitterMs": 1.1,
-            "packetLossPercent": 0.004
+        "resourceAttributes": {
+          "accessTechnology": "fibre",
+          "locationId": "AU-NSW-SYD-HOSP-001"
+        },
+        "relationships": [
+          {
+            "type": "pairedSecondary",
+            "targetResourceId": "SYD-SEC-01"
           }
+        ],
+        "metrics": {
+          "latencyBenchmarkMs": 7,
+          "availabilityBenchmarkPercent": 99.996,
+          "jitterBenchmarkMs": 1.1,
+          "packetLossBenchmarkPercent": 0.004
         }
       },
       {
@@ -125,71 +130,27 @@ content-type: application/json
         "roles": ["secondary"],
         "resourceType": "networkPath",
         "resourceClass": "critical-gold-access",
-        "accessTechnology": "5G",
-        "metrics": {
-          "benchmark": {
-            "latencyMs": 10,
-            "availabilityPercent": 99.994,
-            "jitterMs": 1.8,
-            "packetLossPercent": 0.006
+        "resourceAttributes": {
+          "accessTechnology": "5G",
+          "locationId": "AU-NSW-SYD-HOSP-001"
+        },
+        "relationships": [
+          {
+            "type": "protects",
+            "targetResourceId": "SYD-PRI-01"
           }
+        ],
+        "metrics": {
+          "latencyBenchmarkMs": 10,
+          "availabilityBenchmarkPercent": 99.994,
+          "jitterBenchmarkMs": 1.8,
+          "packetLossBenchmarkPercent": 0.006
         }
       }
     ],
     "optimisationRun": {
       "status": "COMPLETED",
       "statusReason": "Optimisation completed and selected a feasible primary/secondary resource set."
-    },
-    "evaluations": {
-      "targets": [
-        {
-          "name": "latency",
-          "status": "COMPLETED",
-          "target": 10,
-          "benchmarkValue": 7,
-          "unit": "ms"
-        },
-        {
-          "name": "availability",
-          "status": "COMPLETED",
-          "target": 99.99,
-          "benchmarkValue": 99.996,
-          "unit": "percent"
-        },
-        {
-          "name": "jitter",
-          "status": "COMPLETED",
-          "target": 2,
-          "benchmarkValue": 1.1,
-          "unit": "ms"
-        },
-        {
-          "name": "packetLoss",
-          "status": "COMPLETED",
-          "target": 0.01,
-          "benchmarkValue": 0.004,
-          "unit": "percent"
-        }
-      ],
-      "constraints": [
-        {
-          "name": "priority",
-          "status": "COMPLETED",
-          "statusReason": "Critical priority was accepted as an optimisation constraint."
-        },
-        {
-          "name": "redundancyRequired",
-          "status": "COMPLETED",
-          "statusReason": "Selected resources include primary and secondary roles."
-        }
-      ],
-      "preferences": [
-        {
-          "name": "preferredAccessTechnology",
-          "status": "COMPLETED",
-          "statusReason": "Selected secondary resource uses preferred access technology."
-        }
-      ]
     },
     "references": {
       "correlationId": "corr-intent-create-001",
@@ -214,7 +175,6 @@ content-type: application/json
 - KP/rules may support mapping and evaluation policy, but IA must not query KP as the source of truth for every assurance decision by default.
 - Do not expose optimiser scoring or solver internals.
 - Do not add `provider` to IA state events or `IntentAssuranceEvent` outputs.
-- If optimisation status is `INFEASIBLE` or `FAILED`, IA may publish a lifecycle-driving `IntentAssuranceEvent` with `lifecycleStatus: Failed` only when IA is the service responsible for projecting that outcome in the specific workflow. Otherwise, the optimiser failure remains an optimiser outcome consumed by the appropriate workflow owner.
 
 ---
 
@@ -222,7 +182,7 @@ content-type: application/json
 
 IA MS consumes `IntentNetworkReadyEvent` to learn the apply plan and the observer scope.
 
-`IntentNetworkReadyEvent` is consumed by IA MS. It is not emitted by IA MS. In the active baseline the source is II MS unless a later workflow assigns this event to a different publisher.
+`IntentNetworkReadyEvent` is produced by `intent-intelligence-ms`. IA MS currently consumes it, but consumer identity is not part of the event ownership rule. IA MS must not emit `IntentNetworkReadyEvent`.
 
 #### Example headers
 
@@ -348,28 +308,9 @@ content-type: application/json
 }
 ```
 
-#### Example body — apply failure callback
-
-```json
-{
-  "body": {
-    "eventType": "IntentCallbackEvent",
-    "eventVersion": "1.0",
-    "source": "intent-callback-ms",
-    "eventTime": "2026-04-18T12:18:00+10:00",
-    "correlationId": "corr-intent-callback-002",
-    "intentId": "INT-HOSP-2026-003",
-    "orchestratorState": "APPLY_FAILED",
-    "orchestratorSource": "t7-network-orchestrator",
-    "orchestratorTimestamp": "2026-04-18T12:17:55+10:00"
-  }
-}
-```
-
 #### IA handling rules
 
 - Validate/correlate `intentId` against IA state and platform context.
-- If `intentId` is unknown or not correlatable, record dead-letter/operational outcome according to IA policy.
 - Derive orchestrator type from IA/platform context, not from ICB MS.
 - Map raw `orchestratorState` into IA lifecycle/assurance meaning.
 - Do not expose raw callback payloads in `IntentAssuranceEvent`.
@@ -379,30 +320,9 @@ content-type: application/json
 
 ### 4.4 Metrics collection through observation endpoints
 
-IA MS does not consume a separately named observation snapshot event in the active baseline. IA MS obtains runtime metrics from observability/observation endpoints that are selected or informed by the `IntentNetworkReadyEvent.serviceConfiguration.observerConfiguration` block.
+IA MS does not consume a separately named observation snapshot event in the active baseline.
 
-`IntentNetworkReadyEvent` provides the observer scope, for example:
-
-```json
-{
-  "serviceConfiguration": {
-    "observerConfiguration": {
-      "target": "t7-observability-platform",
-      "profile": "critical-gold-assurance-observation-v1",
-      "resourceIds": [
-        "SYD-PRI-01",
-        "SYD-PRI-02",
-        "SYD-SEC-01",
-        "SYD-SEC-02"
-      ]
-    }
-  }
-}
-```
-
-IA MS uses this observer configuration to query or subscribe to platform observation endpoints for current metrics for the listed resources.
-
-The exact observation endpoint API is owned by the observability platform and is not baselined in this IA MS specification.
+IA MS obtains runtime metrics from observability/observation endpoints that are selected or informed by `IntentNetworkReadyEvent.serviceConfiguration.observerConfiguration`.
 
 #### Logical metrics returned to IA MS
 
@@ -412,7 +332,7 @@ The exact observation endpoint API is owned by the observability platform and is
   "resourceMetrics": [
     {
       "resourceId": "SYD-PRI-01",
-      "role": "primary",
+      "roles": ["primary"],
       "metrics": {
         "latencyMs": 18,
         "availabilityPercent": 99.992,
@@ -422,7 +342,7 @@ The exact observation endpoint API is owned by the observability platform and is
     },
     {
       "resourceId": "SYD-SEC-01",
-      "role": "secondary",
+      "roles": ["secondary"],
       "metrics": {
         "latencyMs": 12,
         "availabilityPercent": 99.994,
@@ -433,17 +353,6 @@ The exact observation endpoint API is owned by the observability platform and is
   ]
 }
 ```
-
-#### IA handling rules
-
-- Use `IntentNetworkReadyEvent.serviceConfiguration.observerConfiguration.target` and `.profile` to identify the observation capability/profile to use.
-- Use `observerConfiguration.resourceIds` as the monitoring scope for runtime assurance.
-- Query or subscribe to observability platform endpoints according to platform integration design.
-- Use returned metric facts to evaluate current runtime behaviour against resolved runtime targets and the IA stored applied assurance baseline.
-- Do not publish raw telemetry dumps.
-- Curate `observations` in `IntentAssuranceEvent` to what IC MS needs for external lifecycle/report projection.
-- Healthy/active assurance events should normally include selected/applied resources only.
-- Degraded/failed/recovery-supporting assurance events may include all monitored resources in observer scope.
 
 ---
 
@@ -478,7 +387,35 @@ ce-subject: INT-HOSP-2026-001
 content-type: application/json
 ```
 
-### 6.2 Active outcome
+### 6.2 Generic payload model
+
+`IntentAssuranceEvent` uses the generic assurance model below.
+
+| **Field / area** | **Purpose** |
+|---|---|
+| `body.context` | Resolved runtime context with targets, constraints, and preferences where relevant |
+| `body.current.evaluations` | Curated current assurance evaluations |
+| `body.current.resources` | Currently selected/applied/observed resources |
+| `body.candidates` | Complete valid candidate resource set known for the assurance/re-decision context at emission time, after scope/policy filtering |
+| `body.references` | Correlation and resource references |
+
+Reusable resource entries use:
+
+- `roles`
+- `resourceId`
+- `resourceType`
+- `resourceClass`
+- `resourceAttributes`
+- `relationships`
+- `metrics`
+
+Current runtime metric names use `latencyMs` and `reliabilityPercent`. Benchmark context may use `latencyBenchmarkMs` and `reliabilityBenchmarkPercent`.
+
+Do not duplicate `resourceId` into `resourceAttributes.pathId` when they are identical.
+
+`requiresReoptimisation` is not included by default. II MS or other authorised decision logic reads the assurance event state and decides whether re-interpretation, re-optimisation, or no action is required.
+
+### 6.3 Active outcome
 
 ```json
 {
@@ -488,50 +425,133 @@ content-type: application/json
     "lifecycleStatus": "Active",
     "statusReason": "Selected resources are operating within resolved runtime targets.",
     "context": {
+      "targets": {
+        "maxLatencyMs": 10,
+        "minAvailabilityPercent": 99.99,
+        "maxJitterMs": 2,
+        "maxPacketLossPercent": 0.01
+      },
       "constraints": {
         "location": {
           "locationId": "AU-NSW-SYD-HOSP-001",
           "displayName": "Sydney-Main-Hospital"
         },
         "serviceType": "surgical-connectivity",
-        "serviceClass": "critical-gold"
+        "serviceClass": "critical-gold",
+        "priority": "critical",
+        "redundancyRequired": true
       },
-      "targets": {
-        "maxLatencyMs": 10,
-        "minAvailabilityPercent": 99.99,
-        "maxJitterMs": 2,
-        "maxPacketLossPercent": 0.01
+      "preferences": {
+        "preferredAccessTechnology": "5G"
       }
     },
-    "resources": [
-      {
-        "role": "primary",
-        "resourceId": "SYD-PRI-01"
-      },
-      {
-        "role": "secondary",
-        "resourceId": "SYD-SEC-01"
-      }
-    ],
-    "observations": [
+    "current": {
+      "evaluations": [
+        {
+          "name": "latency",
+          "status": "SATISFIED",
+          "target": 10,
+          "observedValue": 8,
+          "unit": "ms"
+        },
+        {
+          "name": "availability",
+          "status": "SATISFIED",
+          "target": 99.99,
+          "observedValue": 99.995,
+          "unit": "percent"
+        }
+      ],
+      "resources": [
+        {
+          "resourceId": "SYD-PRI-01",
+          "roles": ["primary"],
+          "resourceType": "networkPath",
+          "resourceClass": "critical-gold-access",
+          "resourceAttributes": {
+            "accessTechnology": "fibre",
+            "locationId": "AU-NSW-SYD-HOSP-001"
+          },
+          "relationships": [
+            {
+              "type": "pairedSecondary",
+              "targetResourceId": "SYD-SEC-01"
+            }
+          ],
+          "metrics": {
+            "latencyMs": 8,
+            "availabilityPercent": 99.995,
+            "jitterMs": 1.5,
+            "packetLossPercent": 0.005
+          }
+        },
+        {
+          "resourceId": "SYD-SEC-01",
+          "roles": ["secondary"],
+          "resourceType": "networkPath",
+          "resourceClass": "critical-gold-access",
+          "resourceAttributes": {
+            "accessTechnology": "5G",
+            "locationId": "AU-NSW-SYD-HOSP-001"
+          },
+          "relationships": [
+            {
+              "type": "protects",
+              "targetResourceId": "SYD-PRI-01"
+            }
+          ],
+          "metrics": {
+            "latencyMs": 10,
+            "availabilityPercent": 99.994,
+            "jitterMs": 1.8,
+            "packetLossPercent": 0.006
+          }
+        }
+      ]
+    },
+    "candidates": [
       {
         "resourceId": "SYD-PRI-01",
-        "role": "primary",
+        "roles": ["primary"],
+        "resourceType": "networkPath",
+        "resourceClass": "critical-gold-access",
+        "resourceAttributes": {
+          "accessTechnology": "fibre",
+          "locationId": "AU-NSW-SYD-HOSP-001"
+        },
+        "relationships": [
+          {
+            "type": "pairedSecondary",
+            "targetResourceId": "SYD-SEC-01"
+          }
+        ],
         "metrics": {
-          "latencyMs": 8,
-          "availabilityPercent": 99.995,
-          "jitterMs": 1.5,
-          "packetLossPercent": 0.005
+          "latencyBenchmarkMs": 7,
+          "availabilityBenchmarkPercent": 99.996,
+          "jitterBenchmarkMs": 1.1,
+          "packetLossBenchmarkPercent": 0.004
         }
       },
       {
-        "resourceId": "SYD-SEC-01",
-        "role": "secondary",
+        "resourceId": "SYD-PRI-02",
+        "roles": ["primary"],
+        "resourceType": "networkPath",
+        "resourceClass": "critical-gold-access",
+        "resourceAttributes": {
+          "accessTechnology": "5G",
+          "locationId": "AU-NSW-SYD-HOSP-001"
+        },
+        "relationships": [
+          {
+            "type": "pairedSecondary",
+            "targetResourceId": "SYD-SEC-02"
+          }
+        ],
         "metrics": {
-          "latencyMs": 10,
-          "availabilityPercent": 99.994,
-          "jitterMs": 1.8,
-          "packetLossPercent": 0.006
+          "latencyBenchmarkMs": 8,
+          "availabilityBenchmarkPercent": 99.995,
+          "jitterBenchmarkMs": 1.5,
+          "packetLossBenchmarkPercent": 0.005
         }
       }
     ],
@@ -550,7 +570,7 @@ content-type: application/json
 }
 ```
 
-### 6.3 Degraded outcome
+### 6.4 Degraded outcome
 
 ```json
 {
@@ -558,159 +578,105 @@ content-type: application/json
     "intentId": "INT-HOSP-2026-001",
     "version": "v1",
     "lifecycleStatus": "Degraded",
-    "statusReason": "Selected resources are outside resolved runtime targets.",
+    "statusReason": "Primary path latency is outside resolved runtime targets.",
     "context": {
+      "targets": {
+        "maxLatencyMs": 10,
+        "minAvailabilityPercent": 99.99,
+        "maxJitterMs": 2,
+        "maxPacketLossPercent": 0.01
+      },
       "constraints": {
         "location": {
           "locationId": "AU-NSW-SYD-HOSP-001",
           "displayName": "Sydney-Main-Hospital"
         },
         "serviceType": "surgical-connectivity",
-        "serviceClass": "critical-gold"
-      },
-      "targets": {
-        "maxLatencyMs": 10,
-        "minAvailabilityPercent": 99.99,
-        "maxJitterMs": 2,
-        "maxPacketLossPercent": 0.01
+        "serviceClass": "critical-gold",
+        "priority": "critical",
+        "redundancyRequired": true
       }
     },
-    "resources": [
-      {
-        "role": "primary",
-        "resourceId": "SYD-PRI-01"
-      },
-      {
-        "role": "secondary",
-        "resourceId": "SYD-SEC-01"
-      }
-    ],
-    "observations": [
+    "current": {
+      "evaluations": [
+        {
+          "name": "latency",
+          "status": "VIOLATED",
+          "target": 10,
+          "observedValue": 18,
+          "unit": "ms",
+          "reasonCode": "LATENCY_TARGET_VIOLATED"
+        }
+      ],
+      "resources": [
+        {
+          "resourceId": "SYD-PRI-01",
+          "roles": ["primary"],
+          "resourceType": "networkPath",
+          "resourceClass": "critical-gold-access",
+          "resourceAttributes": {
+            "accessTechnology": "fibre",
+            "locationId": "AU-NSW-SYD-HOSP-001"
+          },
+          "relationships": [
+            {
+              "type": "pairedSecondary",
+              "targetResourceId": "SYD-SEC-01"
+            }
+          ],
+          "metrics": {
+            "latencyMs": 18,
+            "availabilityPercent": 99.992,
+            "jitterMs": 1.8,
+            "packetLossPercent": 0.006
+          }
+        }
+      ]
+    },
+    "candidates": [
       {
         "resourceId": "SYD-PRI-01",
-        "role": "primary",
+        "roles": ["primary"],
+        "resourceType": "networkPath",
+        "resourceClass": "critical-gold-access",
+        "resourceAttributes": {
+          "accessTechnology": "fibre",
+          "locationId": "AU-NSW-SYD-HOSP-001"
+        },
+        "relationships": [
+          {
+            "type": "pairedSecondary",
+            "targetResourceId": "SYD-SEC-01"
+          }
+        ],
         "metrics": {
-          "latencyMs": 18,
-          "availabilityPercent": 99.992,
-          "jitterMs": 1.8,
-          "packetLossPercent": 0.006
+          "latencyBenchmarkMs": 7,
+          "availabilityBenchmarkPercent": 99.996
         }
       },
       {
-        "resourceId": "SYD-SEC-01",
-        "role": "secondary",
+        "resourceId": "SYD-PRI-02",
+        "roles": ["primary"],
+        "resourceType": "networkPath",
+        "resourceClass": "critical-gold-access",
+        "resourceAttributes": {
+          "accessTechnology": "5G",
+          "locationId": "AU-NSW-SYD-HOSP-001"
+        },
+        "relationships": [
+          {
+            "type": "pairedSecondary",
+            "targetResourceId": "SYD-SEC-02"
+          }
+        ],
         "metrics": {
-          "latencyMs": 12,
-          "availabilityPercent": 99.994,
-          "jitterMs": 1.8,
-          "packetLossPercent": 0.006
+          "latencyBenchmarkMs": 8,
+          "availabilityBenchmarkPercent": 99.995
         }
       }
     ],
     "references": {
       "correlationId": "corr-intent-assurance-002",
-      "intent": {
-        "id": "INT-HOSP-2026-001",
-        "href": "/intentManagement/v5/intent/INT-HOSP-2026-001"
-      },
-      "intentSpecification": {
-        "id": "hospital-surgical-slice-spec-v1.20",
-        "href": "/intentManagement/v5/intentSpecification/hospital-surgical-slice-spec-v1.20"
-      }
-    }
-  }
-}
-```
-
-### 6.4 Failed outcome from callback
-
-```json
-{
-  "body": {
-    "intentId": "INT-HOSP-2026-003",
-    "version": "v1",
-    "lifecycleStatus": "Failed",
-    "statusReason": "Network orchestrator reported apply failure for the selected resource configuration.",
-    "context": {
-      "constraints": {
-        "location": {
-          "locationId": "AU-NSW-SYD-HOSP-001",
-          "displayName": "Sydney-Main-Hospital"
-        },
-        "serviceType": "surgical-connectivity",
-        "serviceClass": "critical-gold"
-      },
-      "targets": {
-        "maxLatencyMs": 10,
-        "minAvailabilityPercent": 99.99,
-        "maxJitterMs": 2,
-        "maxPacketLossPercent": 0.01
-      }
-    },
-    "resources": [
-      {
-        "role": "primary",
-        "resourceId": "SYD-PRI-01"
-      },
-      {
-        "role": "secondary",
-        "resourceId": "SYD-SEC-01"
-      }
-    ],
-    "observations": [],
-    "references": {
-      "correlationId": "corr-intent-callback-002",
-      "intent": {
-        "id": "INT-HOSP-2026-003",
-        "href": "/intentManagement/v5/intent/INT-HOSP-2026-003"
-      },
-      "intentSpecification": {
-        "id": "hospital-surgical-slice-spec-v1.20",
-        "href": "/intentManagement/v5/intentSpecification/hospital-surgical-slice-spec-v1.20"
-      }
-    }
-  }
-}
-```
-
-### 6.5 Terminated outcome
-
-```json
-{
-  "body": {
-    "intentId": "INT-HOSP-2026-001",
-    "version": "v1",
-    "lifecycleStatus": "Terminated",
-    "statusReason": "Network orchestrator confirmed termination of the applied service configuration.",
-    "context": {
-      "constraints": {
-        "location": {
-          "locationId": "AU-NSW-SYD-HOSP-001",
-          "displayName": "Sydney-Main-Hospital"
-        },
-        "serviceType": "surgical-connectivity",
-        "serviceClass": "critical-gold"
-      },
-      "targets": {
-        "maxLatencyMs": 10,
-        "minAvailabilityPercent": 99.99,
-        "maxJitterMs": 2,
-        "maxPacketLossPercent": 0.01
-      }
-    },
-    "resources": [
-      {
-        "role": "primary",
-        "resourceId": "SYD-PRI-01"
-      },
-      {
-        "role": "secondary",
-        "resourceId": "SYD-SEC-01"
-      }
-    ],
-    "observations": [],
-    "references": {
-      "correlationId": "corr-intent-terminate-001",
       "intent": {
         "id": "INT-HOSP-2026-001",
         "href": "/intentManagement/v5/intent/INT-HOSP-2026-001"
@@ -737,8 +703,9 @@ IA MS emits enough curated facts for IC MS to build the external report expressi
 | `lifecycleStatus` | `IntentReport.expression.expressionValue.lifecycleStatus` |
 | `statusReason` | `IntentReport.expression.expressionValue.statusReason` |
 | `context.constraints.location`, `context.constraints.serviceType`, `context.constraints.serviceClass` | `serviceSummary` |
-| `resources` | `resourceSummary` |
-| `context.targets` + `observations` | fact-only `targetSummary` and `observationSummary` |
+| `current.resources` | `resourceSummary` |
+| `context.targets` + `current.evaluations` + `current.resources.metrics` | fact-only `targetSummary` and `observationSummary` |
+| `candidates` | Internal/authorised decision support where exposed by policy, not default public report detail |
 
 IntentReport remains fact-only by default. It does not require separate `degradationSummary`, `reoptimisationSummary`, aggregate compliance `result`, or per-target `status` fields.
 
@@ -749,16 +716,16 @@ IntentReport remains fact-only by default. It does not require separate `degrada
 - `IntentAssuranceEvent` is the single IA-owned runtime assurance outcome event.
 - `IntentDriftOccurredEvent` is retired and must not be used by default.
 - Use `lifecycleStatus` and `statusReason` for state narrative.
-- Include `context.targets` so consumers can understand which runtime objectives observations relate to.
-- Include selected/applied `resources`.
-- Include `observations[].metrics` for observed telemetry.
+- Use internal `context` where the event carries resolved runtime targets, constraints, and preferences.
+- Use `current.evaluations` for curated assurance evaluations.
+- Use `current.resources` for selected/applied/observed resources.
+- Use `candidates` for the complete valid candidate resource set known in the assurance/re-decision context at emission time, after scope/policy filtering.
 - Do not include raw callback payloads.
 - Do not include raw telemetry dumps.
 - Do not include optimiser scoring or solver internals.
 - Do not include `provider`.
 - Do not include external TMF `IntentExpression` wrappers in internal events.
-- Do not include `context.constraints` or `context.preferences` by default unless a future control-loop use case explicitly needs them.
-- Do not include a default `requiresReoptimisation` flag; downstream consumers derive next action from lifecycle, reason, targets, and observations.
+- Do not include a default `requiresReoptimisation` flag. II MS or another authorised decision component reads the assurance event state and decides whether re-interpretation or re-optimisation is required.
 
 ---
 
@@ -791,67 +758,9 @@ IA MS owns its own PostgreSQL-compatible persistence boundary.
 
 ---
 
-## 11. Idempotency and ordering
+## 11. Final baseline statement
 
-- IA MS must process internal events idempotently.
-- Deduplicate using `ce-id` / event id.
-- Keep intent-scoped ordering where the event backbone supports keying by `intentId`.
-- Ignore stale callbacks or observations when a newer IA state has already superseded them.
-- Persist callback mapping decisions for auditability.
-- Publish `IntentAssuranceEvent` through IA-owned transactional outbox.
-
----
-
-## 12. Security
-
-IA MS is internal only.
-
-Baseline security rules:
-
-- consume only from trusted internal event topics/integrations
-- use workload identity for platform dependency access
-- do not expose external user/business authorisation decisions
-- do not store or emit secrets, credentials, or raw internal stack traces
-- do not expose raw callback payloads in assurance events
-- do not expose raw telemetry dumps in assurance events
-- audit callback mapping, unknown intent handling, and lifecycle-driving assurance state changes
-
----
-
-## 13. Observability
-
-IA MS emits:
-
-- structured logs with `correlationId`, `intentId`, `eventId`, and source event type
-- callback mapping metrics
-- observation evaluation metrics
-- assurance lifecycle transition metrics
-- outbox pending/publish-failure metrics
-- duplicate event counters
-- dead-letter/skip counters
-
-Recommended metrics:
-
-```text
-ia_ms_callback_consumed_count
-ia_ms_callback_unknown_intent_count
-ia_ms_callback_unmapped_state_count
-ia_ms_assurance_active_count
-ia_ms_assurance_degraded_count
-ia_ms_assurance_failed_count
-ia_ms_assurance_terminated_count
-ia_ms_observation_snapshot_count
-ia_ms_observation_gap_count
-ia_ms_outbox_pending_count
-ia_ms_outbox_publish_failure_count
-ia_ms_duplicate_event_count
-```
-
----
-
-## 14. Final baseline statement
-
-IA MS is the internal runtime assurance truth service. It consumes optimisation, network-ready, callback, and telemetry/observation facts; normalises callback and runtime state; updates IA-owned assurance state; and emits curated `IntentAssuranceEvent` outcomes.
+IA MS is the internal runtime assurance truth service. It consumes optimisation, network-ready, callback, and telemetry/observation facts; normalises callback and runtime state; updates IA-owned assurance state; and emits curated generic `IntentAssuranceEvent` outcomes.
 
 IC MS consumes these outcomes to project external TMF-facing `Intent` and `IntentReport` resources.
 

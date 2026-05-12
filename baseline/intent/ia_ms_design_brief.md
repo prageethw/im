@@ -4,10 +4,7 @@
 
 Intent Assurance MS, referred to as IA MS, owns runtime assurance evaluation, callback state normalisation, assurance state updates, and assurance event publication for IME runtime intents.
 
-IA MS is the runtime assurance truth for IME. IC MS remains the owner of the externally visible runtime `Intent` lifecycle projection.
-
-IA MS consumes optimisation, network-ready, callback, and observation/telemetry facts only.
-
+IA MS is the runtime assurance truth for IME. IC MS remains the owner of the externally visible runtime `Intent` lifecycle projection. IA MS consumes optimisation, network-ready, callback, and observation/telemetry facts only.
 
 ## Service Identity
 
@@ -22,28 +19,23 @@ IA MS consumes optimisation, network-ready, callback, and observation/telemetry 
 | Main event output | `IntentAssuranceEvent` |
 | Retired event | `IntentDriftOccurredEvent` is not used in the active baseline |
 | Event style | Internal CloudEvents headers with plain JSON `body` |
-| Source-of-truth persistence | Managed PostgreSQL / PostgreSQL-compatible RDBMS |
 | External TMF API owner | No — IC MS owns external lifecycle projection |
 
 ## Core Responsibilities
 
 | **Responsibility** | **Detail** |
 |---|---|
-| Runtime assurance truth | Owns current assurance/projection state used to determine whether an intent is healthy, degraded, failed, terminated, or requires re-optimisation |
+| Runtime assurance truth | Owns current assurance/projection state used to determine whether an intent is healthy, degraded, failed, or terminated |
 | Callback consumption | Consumes raw `IntentCallbackEvent` from the dedicated callback topic |
 | Intent correlation | Validates/correlates `intentId` using IA state and platform context |
-| Unknown intent handling | Owns dead-letter/reject/operational handling decision for unknown or non-correlatable `intentId` |
-| Orchestrator type derivation | Derives `orchestratorType` from IA/platform context, not from ICB MS |
 | Raw state mapping | Maps raw `orchestratorState` into platform lifecycle/assurance meaning |
-| Skip/unmapped handling | Handles unmapped/skip callback states with logging/audit as required |
 | Assurance state update | Updates current assurance/projection state when actionable events are received |
-| Drift/degradation detection | Detects runtime drift/degradation against resolved runtime targets and the IA stored applied assurance baseline |
+| Degradation detection | Detects runtime degradation against resolved runtime targets and the IA stored applied assurance baseline |
 | Assurance event publication | Publishes `IntentAssuranceEvent` to `t7.intent.management.events` |
 | Runtime assurance trigger | Uses callback outcomes and observation metrics obtained through observability endpoints informed by `IntentNetworkReadyEvent.serviceConfiguration.observerConfiguration` |
 | IA outbox ownership | Owns IA outbox and relay for reliable event publication |
-| Idempotency tracking | Tracks consumed events and/or correlation keys where required |
 
-KP/rules may support mapping and evaluation policy, but IA does not treat KP as the per-decision source of truth for every assurance decision.
+`requiresReoptimisation` is not included by default in `IntentAssuranceEvent`. II MS or another authorised decision component reads the assurance event state and decides whether re-interpretation, re-optimisation, or no action is required.
 
 ## IA MS Does Not Own
 
@@ -56,7 +48,7 @@ KP/rules may support mapping and evaluation policy, but IA does not treat KP as 
 | Callback outbox persistence | ICB MS |
 | Network apply/orchestration execution | Orchestration layer / network orchestrator |
 | Intent interpretation/resolution | II MS |
-| Optimisation decision | IO MS |
+| Optimisation decision | Optimiser / IO context |
 | Knowledge Plane config CRUD/governance | Knowledge Plane operating model |
 | OEX user experience | OEX layer |
 
@@ -65,35 +57,32 @@ KP/rules may support mapping and evaluation policy, but IA does not treat KP as 
 | **Input** | **Source** | **Purpose** |
 |---|---|---|
 | `IntentCallbackEvent` | ICB MS via `t7.intent.management.events.callbacks` | Raw orchestrator callback state for IA-owned mapping |
-| `IntentNetworkReadyEvent` | II MS via main internal topic | Network-ready configuration and observability scope |
+| `IntentNetworkReadyEvent` | `intent-intelligence-ms` via main internal topic | Network-ready configuration and observability scope |
 | `IntentOptimisedEvent` | Optimiser via main internal topic | Selected resources, resolved targets, resolved constraints, preferences, and optimisation outcome |
 | Runtime metrics from observation endpoints | Observability platform endpoints informed by `IntentNetworkReadyEvent.serviceConfiguration.observerConfiguration` | Runtime metrics such as latency, availability, packet loss, and jitter for observer-scope resources |
-| Knowledge Plane config | KP / governed config source | Mapping rules, evaluation policy, assurance rules, and observability policy where required |
 | IA state | IA MS DB | Correlation, current assurance/projection state, idempotency |
 
 ## Internal context structure alignment
 
-`IntentOptimisedEvent` consumed by IA uses:
+Internal events may use a plain `body.context` object where they carry resolved runtime targets, constraints, and preferences.
+
+For IA and optimisation assurance flows, use:
 
 - `body.context.targets`
 - `body.context.constraints`
 - `body.context.preferences`
 
-This keeps the end-to-end targets/constraints/preferences structure aligned across ID, IC, II, optimiser, and IA.
-
-This is an internal plain JSON event shape, not the external TMF `Intent.expression` wrapper.
+This keeps the end-to-end targets/constraints/preferences structure aligned across ID, IC, II, optimiser, and IA. This is an internal plain JSON event shape, not the external TMF `Intent.expression` wrapper.
 
 ## IntentNetworkReadyEvent source rule
 
-`IntentNetworkReadyEvent` is consumed by IA MS. It must not show `ce-source: intent-assurance-ms`.
+`IntentNetworkReadyEvent` is produced by `intent-intelligence-ms`.
 
-In the active baseline, use:
+IA MS currently consumes it, but consumer identity is not part of the event ownership rule. IA MS must not show `ce-source: intent-assurance-ms` for `IntentNetworkReadyEvent`.
 
 ```http
 ce-source: intent-intelligence-ms
 ```
-
-unless a later baseline assigns this event to a different publisher.
 
 ## Callback handling baseline
 
@@ -111,43 +100,35 @@ unless a later baseline assigns this event to a different publisher.
 | Skip/unmapped callback handling | IA MS |
 | Assurance/lifecycle event publication | IA MS |
 
-The canonical `IntentCallbackEvent` fields consumed by IA are `orchestratorState`, `orchestratorSource`, and `orchestratorTimestamp`. Older names such as `callbackSource`, `callbackTimestamp`, and `sourceState.state` are not the active baseline.
+The canonical `IntentCallbackEvent` fields consumed by IA are `orchestratorState`, `orchestratorSource`, and `orchestratorTimestamp`.
 
-## IntentCallbackEvent Consumption Flow
+## IntentAssuranceEvent baseline
 
-| **Step** | **Action** |
-|---|---|
-| 1 | IA MS consumes `IntentCallbackEvent` from `t7.intent.management.events.callbacks` |
-| 2 | IA MS checks idempotency/correlation where required |
-| 3 | IA MS validates/correlates `intentId` using IA state/platform context |
-| 4 | If unknown or not correlatable, IA MS records reject/dead-letter/operational handling outcome |
-| 5 | If known, IA MS derives `orchestratorType` from IA/platform context |
-| 6 | IA MS maps raw `orchestratorState` into lifecycle/assurance meaning |
-| 7 | If unmapped/skip state, IA MS records skip outcome with audit/logging as required |
-| 8 | If mapped/actionable, IA MS updates current assurance/projection state |
-| 9 | IA MS writes IA outbox record for `IntentAssuranceEvent` |
-| 10 | IA relay publishes `IntentAssuranceEvent` to `t7.intent.management.events` |
+`IntentAssuranceEvent` is the single IA-owned runtime assurance event.
 
-## IntentAssuranceEvent Baseline
+It carries curated assurance facts using the internal event contract, not the external TMF expression wrapper.
 
-`IntentAssuranceEvent` is the single IA-owned runtime assurance event. It carries curated assurance facts using the internal event contract, not the external TMF expression wrapper.
-
-The active default body shape uses:
+The active generic body shape uses:
 
 | **Field / area** | **Purpose** |
 |---|---|
 | `lifecycleStatus` | Lifecycle-driving state that IC MS projects externally |
 | `statusReason` | Human-readable reason for the current assurance outcome |
-| `context.constraints.location` | Canonical location context |
-| `context.constraints.serviceType` / `context.constraints.serviceClass` | Canonical service context |
 | `context.targets` | Runtime targets used to interpret observations |
-| `resources` | Selected/applied resources where relevant |
-| `observations` | Curated observed metrics for selected or observer-scope resources |
+| `context.constraints` | Location/service/priority/redundancy context where needed |
+| `context.preferences` | Preference context where useful for downstream decisions |
+| `current.evaluations` | Curated assurance evaluations |
+| `current.resources` | Selected/applied/observed resources |
+| `candidates` | Complete valid candidate resource set known in the assurance/re-decision context at emission time, after scope/policy filtering |
 | `references` | Correlation and external resource references |
 
-IA MS does not emit `IntentDriftOccurredEvent` in the active baseline. Drift/degradation is represented through `IntentAssuranceEvent.lifecycleStatus`, `statusReason`, `context.targets`, and `observations`.
+Reusable resource entries use `roles`, `resourceId`, `resourceType`, `resourceClass`, `resourceAttributes`, `relationships`, and `metrics`.
 
-IA MS does not include raw callback payloads, raw telemetry dumps, optimiser scoring, solver internals, or `provider` in `IntentAssuranceEvent`.
+Current runtime metric names use `latencyMs` and `reliabilityPercent`. Benchmark contexts may use `latencyBenchmarkMs` and `reliabilityBenchmarkPercent`.
+
+IA MS does not emit `IntentDriftOccurredEvent` in the active baseline. Drift/degradation is represented through `IntentAssuranceEvent.lifecycleStatus`, `statusReason`, `context`, `current.evaluations`, `current.resources`, and optionally `candidates`.
+
+IA MS does not include raw callback payloads, raw telemetry dumps, optimiser scoring, solver internals, `provider`, or default `requiresReoptimisation` in `IntentAssuranceEvent`.
 
 ## Observation endpoint baseline
 
@@ -157,6 +138,6 @@ IA evaluates returned metric facts against resolved runtime targets and the IA s
 
 ## Final baseline statement
 
-IA MS is the runtime assurance truth service. It consumes callback, network-ready, optimisation, and observation facts; maps raw callback state; evaluates runtime observations against resolved runtime targets and the stored applied assurance baseline; and emits curated `IntentAssuranceEvent` outcomes.
+IA MS is the runtime assurance truth service. It consumes callback, network-ready, optimisation, and observation facts; maps raw callback state; evaluates runtime observations against resolved runtime targets and the stored applied assurance baseline; and emits curated generic `IntentAssuranceEvent` outcomes.
 
 IC MS consumes `IntentAssuranceEvent` to project external TMF-facing `Intent` lifecycle and `IntentReport` resources.
