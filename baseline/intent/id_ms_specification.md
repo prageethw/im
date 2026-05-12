@@ -1336,13 +1336,13 @@ Delete events are emitted only after successful delete and show the last known l
 
 ## 16. Event envelope pattern
 
-External TMF-facing event examples populate both `eventTime` and `timeOcurred` with the same canonical event occurrence timestamp. `timeOcurred` preserves the TMF921 example spelling used by TMF event payload examples, while `eventTime` remains the platform's primary event timestamp field.
+External TMF-facing event examples populate both `eventTime` and `timeOccurred` with the same canonical event occurrence timestamp. `timeOccurred` is the platform-corrected spelling used consistently across ID MS and IC MS external event examples. TMF921 examples contain the misspelled `timeOcurred`; this baseline intentionally uses the corrected spelling while preserving the same timestamp semantics.
 
 ```json
 {
   "eventId": "evt-intent-spec-001",
   "eventTime": "2026-04-18T12:00:00+10:00",
-  "timeOcurred": "2026-04-18T12:00:00+10:00",
+  "timeOccurred": "2026-04-18T12:00:00+10:00",
   "eventType": "IntentSpecificationStatusChangeEvent",
   "correlationId": "corr-intent-spec-001",
   "description": "IntentSpecification lifecycle status changed.",
@@ -1398,7 +1398,7 @@ External TMF-facing event examples populate both `eventTime` and `timeOcurred` w
 {
   "eventId": "evt-intent-spec-create-001",
   "eventTime": "2026-04-18T12:00:00+10:00",
-  "timeOcurred": "2026-04-18T12:00:00+10:00",
+  "timeOccurred": "2026-04-18T12:00:00+10:00",
   "eventType": "IntentSpecificationCreateEvent",
   "correlationId": "corr-intent-spec-create-001",
   "description": "IntentSpecification created.",
@@ -1452,7 +1452,7 @@ External TMF-facing event examples populate both `eventTime` and `timeOcurred` w
 {
   "eventId": "evt-intent-spec-attr-001",
   "eventTime": "2026-04-18T12:05:00+10:00",
-  "timeOcurred": "2026-04-18T12:05:00+10:00",
+  "timeOccurred": "2026-04-18T12:05:00+10:00",
   "eventType": "IntentSpecificationAttributeValueChangeEvent",
   "correlationId": "corr-intent-spec-attr-001",
   "description": "IntentSpecification draft attributes changed.",
@@ -1513,7 +1513,7 @@ External TMF-facing event examples populate both `eventTime` and `timeOcurred` w
 {
   "eventId": "evt-intent-spec-status-001",
   "eventTime": "2026-04-18T12:10:00+10:00",
-  "timeOcurred": "2026-04-18T12:10:00+10:00",
+  "timeOccurred": "2026-04-18T12:10:00+10:00",
   "eventType": "IntentSpecificationStatusChangeEvent",
   "correlationId": "corr-intent-spec-status-001",
   "description": "IntentSpecification lifecycle status changed.",
@@ -1569,7 +1569,7 @@ External TMF-facing event examples populate both `eventTime` and `timeOcurred` w
 {
   "eventId": "evt-intent-spec-delete-001",
   "eventTime": "2026-04-18T12:20:00+10:00",
-  "timeOcurred": "2026-04-18T12:20:00+10:00",
+  "timeOccurred": "2026-04-18T12:20:00+10:00",
   "eventType": "IntentSpecificationDeleteEvent",
   "correlationId": "corr-intent-spec-delete-001",
   "description": "Unused draft IntentSpecification deleted.",
@@ -1640,8 +1640,8 @@ External TMF-facing event examples populate both `eventTime` and `timeOcurred` w
 - Stale or mismatched `If-Match` returns `412 Precondition Failed`.
 - `fields` is supported as an optional TMF-style field selection parameter.
 - Activation is represented through PUT/PATCH lifecycle update, not a custom action endpoint.
-- External TMF-facing events include both `eventTime` and `timeOcurred` with the same canonical event occurrence timestamp.
-- `timeOcurred` intentionally preserves the TMF921 example spelling for compatibility with TMF event payload examples.
+- External TMF-facing events include both `eventTime` and `timeOccurred` with the same canonical event occurrence timestamp.
+- `timeOccurred` is the platform-corrected spelling used consistently across ID MS and IC MS external event examples. TMF921 examples contain the misspelled `timeOcurred`; this baseline intentionally uses the corrected spelling while preserving the same timestamp semantics.
 
 ---
 
@@ -1731,7 +1731,7 @@ The domain-scoped route is acceptable only as a documented platform extension an
 
 ### External event timestamp rule
 
-For external TMF-facing resource events, ID MS populates both `eventTime` and `timeOcurred` with the same canonical event occurrence timestamp. The `timeOcurred` spelling is retained deliberately for compatibility with TMF921 event payload examples. Internal events remain separate and continue to use the platform CloudEvents/header model plus the relevant internal body timestamp fields.
+For external TMF-facing resource events, ID MS populates both `eventTime` and `timeOccurred` with the same canonical event occurrence timestamp. `timeOccurred` is the platform-corrected spelling used consistently across ID MS and IC MS external event examples. TMF921 examples contain the misspelled `timeOcurred`; this baseline intentionally uses the corrected spelling while preserving the same timestamp semantics. Internal events remain separate and continue to use the platform CloudEvents/header model plus the relevant internal body timestamp fields.
 
 ### Route prefix rule
 
