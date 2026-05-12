@@ -24,6 +24,8 @@ IA MS consumes internal events, uses `IntentNetworkReadyEvent.serviceConfigurati
 IC MS consumes `IntentAssuranceEvent` and projects the external TMF-facing `Intent.lifecycleStatus` and `IntentReport.expression.expressionValue`.
 
 IA MS does not own external TMF APIs, runtime `Intent` resources, design-time `IntentSpecification`, semantic interpretation, optimisation decisions, callback ingestion, or network orchestration/apply execution.
+IA MS consumes optimisation, network-ready, callback, and observation/telemetry facts only.
+
 
 ---
 

@@ -6,6 +6,9 @@ Intent Assurance MS, referred to as IA MS, owns runtime assurance evaluation, ca
 
 IA MS is the runtime assurance truth for IME. IC MS remains the owner of the externally visible runtime `Intent` lifecycle projection.
 
+IA MS consumes optimisation, network-ready, callback, and observation/telemetry facts only.
+
+
 ## Service Identity
 
 | **Attribute** | **Value** |
@@ -15,8 +18,7 @@ IA MS is the runtime assurance truth for IME. IC MS remains the owner of the ext
 | Short name | IA MS |
 | Main responsibility | Runtime assurance, callback state normalisation, drift/degradation detection, assurance event publication |
 | Primary event input | `IntentCallbackEvent` from `t7.intent.management.events.callbacks` |
-| Other event input | `IntentNetworkReadyEvent`, `IntentOptimisedEvent`, and related workflow events where required |
-| Optional/contextual input | `IntentResolvedEvent`, only where a future workflow explicitly requires IA to consume it directly |
+| Other event input | `IntentNetworkReadyEvent` and `IntentOptimisedEvent` |
 | Main event output | `IntentAssuranceEvent` |
 | Retired event | `IntentDriftOccurredEvent` is not used in the active baseline |
 | Event style | Internal CloudEvents headers with plain JSON `body` |
@@ -68,8 +70,6 @@ KP/rules may support mapping and evaluation policy, but IA does not treat KP as 
 | Runtime metrics from observation endpoints | Observability platform endpoints informed by `IntentNetworkReadyEvent.serviceConfiguration.observerConfiguration` | Runtime metrics such as latency, availability, packet loss, and jitter for observer-scope resources |
 | Knowledge Plane config | KP / governed config source | Mapping rules, evaluation policy, assurance rules, and observability policy where required |
 | IA state | IA MS DB | Correlation, current assurance/projection state, idempotency |
-
-`IntentResolvedEvent` is optional/contextual for IA. It is not the primary active IA input unless a workflow explicitly requires IA to consume resolved intent context directly.
 
 ## Internal context structure alignment
 
