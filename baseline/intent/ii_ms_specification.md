@@ -8,8 +8,8 @@
 | Short name | II MS |
 | Service name | `intent-intelligence-ms` |
 | Domain | Intent Domain |
-| Primary responsibility | Semantic interpretation, KP-backed validation, and optimisation-ready resolution |
-| External API | None by default |
+| Primary responsibility | Semantic interpretation, Knowledge Plane-backed validation, and downstream-ready canonical resolution |
+| External API | None |
 | Primary input event | `IntentValidatedEvent` |
 | Output events | `IntentRejectedEvent`, `IntentResolvedEvent` |
 
@@ -20,17 +20,21 @@ II MS consumes syntactically admitted runtime intent facts from IC MS and perfor
 II MS emits either:
 
 - `IntentRejectedEvent` when the intent cannot be semantically, policy, or capability resolved
-- `IntentResolvedEvent` when the intent can proceed to optimisation
+- `IntentResolvedEvent` when the intent can proceed to the next internal fulfilment stage
 
-II MS does not own runtime `Intent` REST APIs, external lifecycle projection, optimisation decisions, assurance truth, callback ingestion, orchestration execution, or KP governance.
+II MS does not own runtime `Intent` REST APIs, external lifecycle projection, downstream selection/fulfilment decisions, assurance truth, callback ingestion, orchestration execution, or KP governance.
 
 ---
 
 ## 1. External API
 
-II MS has no external TMF-facing API in the active baseline.
+II MS has no external TMF-facing API and no consumer-facing REST contract in the active baseline.
 
-Platform/internal endpoints only:
+II MS is not exposed through NGW, OEX, public API gateways, or partner-facing API channels.
+
+Operational probes such as health, readiness, and metrics are platform-internal only. They are for Kubernetes/platform operations and must not be treated as external product APIs or TMF921 resource APIs.
+
+Example internal-only platform probes:
 
 ```http
 GET /health
@@ -38,7 +42,7 @@ GET /ready
 GET /metrics
 ```
 
-No consumer-facing REST contract is baselined for II MS.
+These endpoints, if implemented, are restricted to the platform/runtime network plane and are not externally exposed.
 
 ---
 
@@ -66,7 +70,7 @@ intent-intelligence-ms
 
 `IntentValidatedEvent` means IC MS has admitted a runtime Intent after syntactic validation.
 
-It does not mean semantic feasibility, policy acceptance, service availability, or optimisation success.
+It does not mean semantic feasibility, policy acceptance, service availability, or downstream fulfilment success.
 
 ### Example headers
 
@@ -93,29 +97,31 @@ content-type: application/json
       "id": "hospital-surgical-slice-spec-v1.20"
     },
     "expression": {
-      "location": {
-        "locationId": "AU-NSW-SYD-HOSP-001",
-        "locationType": "hospital",
-        "geographicScope": "campus"
-      },
-      "serviceType": "surgical-connectivity",
-      "serviceClass": "critical-gold",
-      "targets": {
-        "maxLatencyMs": 10,
-        "minAvailabilityPercent": 99.99,
-        "maxJitterMs": 2,
-        "maxPacketLossPercent": 0.01
-      },
-      "constraints": {
-        "priority": "critical",
-        "redundancyRequired": true,
-        "timeWindow": {
-          "startDateTime": "2026-04-18T12:00:00+10:00",
-          "endDateTime": "2026-04-18T14:00:00+10:00"
+      "context": {
+        "targets": {
+          "maxLatencyMs": 10,
+          "minAvailabilityPercent": 99.99,
+          "maxJitterMs": 2,
+          "maxPacketLossPercent": 0.01
+        },
+        "constraints": {
+          "location": {
+            "locationId": "AU-NSW-SYD-HOSP-001",
+            "locationType": "hospital",
+            "geographicScope": "campus"
+          },
+          "serviceType": "surgical-connectivity",
+          "serviceClass": "critical-gold",
+          "priority": "critical",
+          "redundancyRequired": true,
+          "timeWindow": {
+            "startDateTime": "2026-04-18T12:00:00+10:00",
+            "endDateTime": "2026-04-18T14:00:00+10:00"
+          }
+        },
+        "preferences": {
+          "preferredAccessTechnology": "5G"
         }
-      },
-      "preferences": {
-        "preferredAccessTechnology": "5G"
       }
     },
     "references": {
@@ -142,15 +148,16 @@ II MS expects:
 | `body.intentId` | Required |
 | `body.version` | Required where versioned runtime intent is used |
 | `body.intentSpecification.id` | Required |
-| `body.expression.location.locationId` | Required |
-| `body.expression.serviceType` | Required |
-| `body.expression.serviceClass` | Required |
-| `body.expression.targets` | Required for optimisation-capable intents |
-| `body.expression.constraints` | Required when hard constraints exist |
-| `body.expression.preferences` | Optional |
+| `body.expression.context` | Required |
+| `body.expression.context.constraints.location.locationId` | Required |
+| `body.expression.context.constraints.serviceType` | Required |
+| `body.expression.context.constraints.serviceClass` | Required |
+| `body.expression.context.targets` | Required for downstream-capable intents |
+| `body.expression.context.constraints` | Required when hard constraints exist |
+| `body.expression.context.preferences` | Optional |
 | `body.references.correlationId` | Required |
 
-II MS does not expect the external TMF `Intent.expression` wrapper in internal events. Internal events carry native JSON directly.
+II MS does not expect the external TMF `Intent.expression` wrapper in internal events. Internal events carry native JSON under `body.expression`, but that native expression must preserve the canonical `context.targets`, `context.constraints`, and `context.preferences` grouping established by ID MS and IC MS.
 
 ---
 
@@ -160,13 +167,13 @@ II MS does not expect the external TMF `Intent.expression` wrapper in internal e
 |---|---|
 | 1 | Consume `IntentValidatedEvent` |
 | 2 | Check idempotency using CloudEvents `ce-id` and intent identity |
-| 3 | Parse admitted internal expression |
-| 4 | Resolve location from KP |
-| 5 | Resolve service type and service class from KP |
+| 3 | Parse admitted internal `expression.context` |
+| 4 | Resolve `context.constraints.location` from KP |
+| 5 | Resolve `context.constraints.serviceType` and `context.constraints.serviceClass` from KP |
 | 6 | Validate service capability/status |
 | 7 | Validate hard constraints, including priority, redundancy, and time window where present |
 | 8 | Validate requested targets are supported for the service class |
-| 9 | Preserve preferences for optimiser guidance |
+| 9 | Preserve preferences for downstream selection guidance |
 | 10 | Resolve valid resource set from KP after scope/policy filtering |
 | 11 | Emit `IntentRejectedEvent` or `IntentResolvedEvent` through II outbox |
 
@@ -187,9 +194,7 @@ maxJitterMs
 maxPacketLossPercent
 ```
 
-II MS validates that target names and value types are supported for the requested service/service class.
-
-II MS preserves target names and values in `IntentResolvedEvent.targets`.
+II MS validates that target names and value types are supported for the requested service/service class. II MS preserves target names and values under `expression.context.targets`.
 
 ### Constraints
 
@@ -198,10 +203,15 @@ Constraints are hard runtime requirements.
 Supported baseline constraint fields:
 
 ```text
+location
+serviceType
+serviceClass
 priority
 redundancyRequired
 timeWindow
 ```
+
+`location`, `serviceType`, and `serviceClass` are part of `expression.context.constraints`, not sibling fields beside `targets`, `constraints`, and `preferences`.
 
 When `constraints.timeWindow` is present:
 
@@ -219,22 +229,32 @@ Supported baseline preference fields:
 preferredAccessTechnology
 ```
 
-II MS preserves preferences for optimiser use. II MS does not reject the intent only because a preference cannot be satisfied unless policy later promotes that preference into a hard constraint.
+II MS preserves preferences for downstream selection guidance.
+
+II MS does not reject the intent only because a preference cannot be satisfied unless policy later promotes that preference into a hard constraint.
 
 ---
 
 ## 5. Rejection reason codes
 
+II MS reason codes must be expressed as intent-domain semantic, policy, capability, or processing issues. II MS must not expose downstream implementation vocabulary or use downstream-selection-specific reason codes.
+
 | Reason code | Meaning |
 |---|---|
-| `LOCATION_NOT_FOUND` | Requested location cannot be resolved in KP |
-| `SERVICE_NOT_AVAILABLE` | Requested service/service class is not available at the location |
-| `UNSUPPORTED_SERVICE_CLASS` | Service class is not supported |
-| `TARGET_NOT_SUPPORTED` | Requested target is not supported for this service |
-| `CONSTRAINT_NOT_SATISFIABLE` | Hard constraint cannot be satisfied from KP/domain rules |
-| `REDUNDANCY_NOT_AVAILABLE` | `redundancyRequired = true`, but KP does not show redundant capability |
-| `POLICY_NOT_ALLOWED` | Policy rejects the request |
-| `SEMANTIC_INTERPRETATION_FAILED` | II cannot interpret the admitted expression into canonical terms |
+| `SEMANTIC_LOCATION_UNSUPPORTED` | Requested location cannot be resolved or is unsupported for this intent domain |
+| `SEMANTIC_LOCATION_TYPE_UNSUPPORTED` | Requested location type is not supported |
+| `SEMANTIC_SERVICE_CLASS_UNSUPPORTED` | Requested service class is not supported |
+| `SEMANTIC_REQUIRED_CONTEXT_MISSING` | Required `expression.context` information is missing |
+| `SEMANTIC_EXPRESSION_UNSUPPORTED` | The admitted expression cannot be interpreted into canonical domain terms |
+| `SEMANTIC_INTENT_CONTRADICTORY` | Requested targets/constraints are contradictory in the intent domain |
+| `POLICY_LOCATION_NOT_ALLOWED` | Policy rejects the requested location |
+| `POLICY_SERVICE_CLASS_NOT_ALLOWED` | Policy rejects the requested service class |
+| `POLICY_PRIORITY_NOT_ALLOWED` | Policy rejects the requested priority |
+| `POLICY_TIME_WINDOW_NOT_ALLOWED` | Policy rejects the requested time window |
+| `KNOWLEDGE_LOOKUP_ERROR` | KP lookup failed or returned insufficient trusted information |
+| `PROCESSING_ERROR` | II MS failed due to an internal processing error |
+
+Capability/resource shortfall must be expressed as an intent-domain semantic or policy issue, not as a downstream-selection-specific issue.
 
 ---
 
@@ -274,7 +294,7 @@ ce-subject: INT-HOSP-2026-002
 content-type: application/json
 ```
 
-### Example body — service unavailable
+### Example body — service class unsupported
 
 ```json
 {
@@ -282,14 +302,20 @@ content-type: application/json
     "intentId": "INT-HOSP-2026-002",
     "version": "v1",
     "lifecycleStatus": "Rejected",
-    "reasonCode": "SERVICE_NOT_AVAILABLE",
-    "statusReason": "Surgical critical-gold connectivity is not currently available at the requested location.",
-    "location": {
-      "locationId": "AU-QLD-BNE-HOSP-201",
-      "displayName": "Brisbane-Main-Hospital"
+    "reasonCode": "SEMANTIC_SERVICE_CLASS_UNSUPPORTED",
+    "statusReason": "Surgical critical-gold connectivity is not supported for the requested location and service context.",
+    "expression": {
+      "context": {
+        "constraints": {
+          "location": {
+            "locationId": "AU-QLD-BNE-HOSP-201",
+            "displayName": "Brisbane-Main-Hospital"
+          },
+          "serviceType": "surgical-connectivity",
+          "serviceClass": "critical-gold"
+        }
+      }
     },
-    "serviceType": "surgical-connectivity",
-    "serviceClass": "critical-gold",
     "references": {
       "correlationId": "corr-intent-create-002",
       "intent": {
@@ -309,7 +335,7 @@ content-type: application/json
 }
 ```
 
-### Example body — redundancy unavailable
+### Example body — redundancy capability unsupported
 
 ```json
 {
@@ -317,17 +343,21 @@ content-type: application/json
     "intentId": "INT-HOSP-2026-003",
     "version": "v1",
     "lifecycleStatus": "Rejected",
-    "reasonCode": "REDUNDANCY_NOT_AVAILABLE",
-    "statusReason": "Redundancy was required by the intent, but redundant capability is not available for the resolved location and service class.",
-    "location": {
-      "locationId": "AU-QLD-BNE-HOSP-201",
-      "displayName": "Brisbane-Main-Hospital"
-    },
-    "serviceType": "surgical-connectivity",
-    "serviceClass": "critical-gold",
-    "constraints": {
-      "priority": "critical",
-      "redundancyRequired": true
+    "reasonCode": "SEMANTIC_INTENT_CONTRADICTORY",
+    "statusReason": "Redundancy was required by the intent, but the resolved domain context cannot satisfy the requested redundant capability.",
+    "expression": {
+      "context": {
+        "constraints": {
+          "location": {
+            "locationId": "AU-QLD-BNE-HOSP-201",
+            "displayName": "Brisbane-Main-Hospital"
+          },
+          "serviceType": "surgical-connectivity",
+          "serviceClass": "critical-gold",
+          "priority": "critical",
+          "redundancyRequired": true
+        }
+      }
     },
     "references": {
       "correlationId": "corr-intent-create-003",
@@ -352,12 +382,12 @@ content-type: application/json
 
 - Use `lifecycleStatus: Rejected`.
 - Include `reasonCode` and `statusReason`.
-- Include direct `location`, `serviceType`, and `serviceClass` when resolved or partially resolved.
-- Include `constraints` only when needed to explain the rejection, such as redundancy failure.
-- Do not include optimiser details.
+- Include resolved or partially resolved semantic context under `expression.context`.
+- Include `expression.context.constraints` when needed to explain the rejection, such as redundancy failure.
+- Do not include downstream selection details.
 - Do not include assurance details.
 - Do not include raw KP payloads.
-- Do not use a generic `context` wrapper.
+- Preserve the canonical `context.targets`, `context.constraints`, and `context.preferences` grouping when expression details are included.
 
 ---
 
@@ -383,7 +413,7 @@ intent-optimiser-ms
 
 ### Meaning
 
-II MS emits `IntentResolvedEvent` when the admitted intent has been semantically resolved into a canonical handoff that can be optimised.
+II MS emits `IntentResolvedEvent` when the admitted intent has been semantically resolved into a canonical handoff that can proceed to the next internal fulfilment stage.
 
 ### Example headers
 
@@ -405,28 +435,32 @@ content-type: application/json
     "intentId": "INT-HOSP-2026-001",
     "version": "v1",
     "lifecycleStatus": "InProgress",
-    "location": {
-      "locationId": "AU-NSW-SYD-HOSP-001",
-      "displayName": "Sydney-Main-Hospital"
-    },
-    "serviceType": "surgical-connectivity",
-    "serviceClass": "critical-gold",
-    "targets": {
-      "maxLatencyMs": 10,
-      "minAvailabilityPercent": 99.99,
-      "maxJitterMs": 2,
-      "maxPacketLossPercent": 0.01
-    },
-    "constraints": {
-      "priority": "critical",
-      "redundancyRequired": true,
-      "timeWindow": {
-        "startDateTime": "2026-04-18T12:00:00+10:00",
-        "endDateTime": "2026-04-18T14:00:00+10:00"
+    "expression": {
+      "context": {
+        "targets": {
+          "maxLatencyMs": 10,
+          "minAvailabilityPercent": 99.99,
+          "maxJitterMs": 2,
+          "maxPacketLossPercent": 0.01
+        },
+        "constraints": {
+          "location": {
+            "locationId": "AU-NSW-SYD-HOSP-001",
+            "displayName": "Sydney-Main-Hospital"
+          },
+          "serviceType": "surgical-connectivity",
+          "serviceClass": "critical-gold",
+          "priority": "critical",
+          "redundancyRequired": true,
+          "timeWindow": {
+            "startDateTime": "2026-04-18T12:00:00+10:00",
+            "endDateTime": "2026-04-18T14:00:00+10:00"
+          }
+        },
+        "preferences": {
+          "preferredAccessTechnology": "5G"
+        }
       }
-    },
-    "preferences": {
-      "preferredAccessTechnology": "5G"
     },
     "references": {
       "correlationId": "corr-intent-create-001",
@@ -468,29 +502,6 @@ content-type: application/json
         ]
       },
       {
-        "resourceId": "SYD-PRI-02",
-        "resourceType": "networkPath",
-        "resourceClass": "critical-gold-access",
-        "roles": [
-          "primary"
-        ],
-        "accessTechnology": "5G",
-        "metrics": {
-          "benchmark": {
-            "latencyMs": 8,
-            "availabilityPercent": 99.995,
-            "jitterMs": 1.5,
-            "packetLossPercent": 0.005
-          }
-        },
-        "relationships": [
-          {
-            "type": "pairedSecondary",
-            "resourceId": "SYD-SEC-02"
-          }
-        ]
-      },
-      {
         "resourceId": "SYD-SEC-01",
         "resourceType": "networkPath",
         "resourceClass": "critical-gold-access",
@@ -512,29 +523,6 @@ content-type: application/json
             "resourceId": "SYD-PRI-01"
           }
         ]
-      },
-      {
-        "resourceId": "SYD-SEC-02",
-        "resourceType": "networkPath",
-        "resourceClass": "critical-gold-access",
-        "roles": [
-          "secondary"
-        ],
-        "accessTechnology": "fibre",
-        "metrics": {
-          "benchmark": {
-            "latencyMs": 9,
-            "availabilityPercent": 99.997,
-            "jitterMs": 1.2,
-            "packetLossPercent": 0.003
-          }
-        },
-        "relationships": [
-          {
-            "type": "protects",
-            "resourceId": "SYD-PRI-02"
-          }
-        ]
       }
     ]
   }
@@ -549,27 +537,31 @@ content-type: application/json
     "intentId": "INT-HOSP-2026-004",
     "version": "v1",
     "lifecycleStatus": "InProgress",
-    "location": {
-      "locationId": "AU-VIC-MEL-HOSP-101",
-      "displayName": "Melbourne-Main-Hospital"
-    },
-    "serviceType": "surgical-connectivity",
-    "serviceClass": "critical-gold",
-    "targets": {
-      "maxLatencyMs": 12,
-      "minAvailabilityPercent": 99.99,
-      "maxJitterMs": 2,
-      "maxPacketLossPercent": 0.01
-    },
-    "constraints": {
-      "priority": "critical",
-      "redundancyRequired": true,
-      "timeWindow": {
-        "startDateTime": "2026-04-18T12:00:00+10:00"
+    "expression": {
+      "context": {
+        "targets": {
+          "maxLatencyMs": 12,
+          "minAvailabilityPercent": 99.99,
+          "maxJitterMs": 2,
+          "maxPacketLossPercent": 0.01
+        },
+        "constraints": {
+          "location": {
+            "locationId": "AU-VIC-MEL-HOSP-101",
+            "displayName": "Melbourne-Main-Hospital"
+          },
+          "serviceType": "surgical-connectivity",
+          "serviceClass": "critical-gold",
+          "priority": "critical",
+          "redundancyRequired": true,
+          "timeWindow": {
+            "startDateTime": "2026-04-18T12:00:00+10:00"
+          }
+        },
+        "preferences": {
+          "preferredAccessTechnology": "fibre"
+        }
       }
-    },
-    "preferences": {
-      "preferredAccessTechnology": "fibre"
     },
     "references": {
       "correlationId": "corr-intent-create-004",
@@ -609,75 +601,6 @@ content-type: application/json
             "resourceId": "MEL-SEC-01"
           }
         ]
-      },
-      {
-        "resourceId": "MEL-PRI-02",
-        "resourceType": "networkPath",
-        "resourceClass": "critical-gold-access",
-        "roles": [
-          "primary"
-        ],
-        "accessTechnology": "5G",
-        "metrics": {
-          "benchmark": {
-            "latencyMs": 10,
-            "availabilityPercent": 99.994,
-            "jitterMs": 1.6,
-            "packetLossPercent": 0.006
-          }
-        },
-        "relationships": [
-          {
-            "type": "pairedSecondary",
-            "resourceId": "MEL-SEC-02"
-          }
-        ]
-      },
-      {
-        "resourceId": "MEL-SEC-01",
-        "resourceType": "networkPath",
-        "resourceClass": "critical-gold-access",
-        "roles": [
-          "secondary"
-        ],
-        "accessTechnology": "5G",
-        "metrics": {
-          "benchmark": {
-            "latencyMs": 12,
-            "availabilityPercent": 99.993,
-            "jitterMs": 1.9,
-            "packetLossPercent": 0.007
-          }
-        },
-        "relationships": [
-          {
-            "type": "protects",
-            "resourceId": "MEL-PRI-01"
-          }
-        ]
-      },
-      {
-        "resourceId": "MEL-SEC-02",
-        "resourceType": "networkPath",
-        "resourceClass": "critical-gold-access",
-        "roles": [
-          "secondary"
-        ],
-        "accessTechnology": "fibre",
-        "metrics": {
-          "benchmark": {
-            "latencyMs": 11,
-            "availabilityPercent": 99.996,
-            "jitterMs": 1.3,
-            "packetLossPercent": 0.004
-          }
-        },
-        "relationships": [
-          {
-            "type": "protects",
-            "resourceId": "MEL-PRI-02"
-          }
-        ]
       }
     ]
   }
@@ -686,14 +609,14 @@ content-type: application/json
 
 ### Event-specific rules
 
-- Use direct `location`, `serviceType`, and `serviceClass` fields.
-- Preserve `targets`, `constraints`, and `preferences` as first-class semantic buckets.
-- Do not include a generic `context` wrapper.
+- Preserve resolved semantic context under `expression.context`.
+- Preserve `targets`, `constraints`, and `preferences` as first-class semantic buckets under `expression.context`.
+- Do not flatten `location`, `serviceType`, or `serviceClass` into top-level event fields.
 - Do not include direct top-level `priority`, `preferredAccessTechnology`, or `redundancyRequired` outside the buckets.
 - Do not include `provider` by default.
-- Do not include optimiser-selected resources; all resources in `IntentResolvedEvent.resources` are optimiser candidates, not optimiser output.
-- For initial optimisation handoff, use `metrics.benchmark`.
-- For future re-optimisation handoff based on live degradation, use `metrics.telemetry` and omit `metrics.benchmark` by default unless explicitly needed.
+- Do not include downstream-selected resources; all resources in `IntentResolvedEvent.resources` are valid candidate resources known for downstream consideration, not final selected output.
+- For initial handoff, use `metrics.benchmark`.
+- For future re-resolution based on live degradation, use `metrics.telemetry` and omit `metrics.benchmark` by default unless explicitly needed.
 
 ---
 
@@ -707,9 +630,9 @@ II MS maps KP data into event-facing resource entries.
 | `resourceType` | Include as `resourceType` |
 | `resourceClass` | Include as `resourceClass` |
 | `resourceRoles` | Map to `roles` |
-| `accessTechnology` | Include if useful to optimiser/preference handling |
-| `metrics.benchmark` | Include under `metrics.benchmark` for first-pass optimisation |
-| `relationships` | Include only optimiser-relevant relationships |
+| `accessTechnology` | Include if useful to preference handling |
+| `metrics.benchmark` | Include under `metrics.benchmark` for first-pass fulfilment handoff |
+| `relationships` | Include only downstream-relevant relationships |
 | `provider` | Do not include by default; KP inventory metadata only |
 
 ---
@@ -750,7 +673,7 @@ Suggested tables:
 | KP unavailable | Fail closed for semantic resolution and retry/dead-letter according to policy |
 | Kafka unavailable | Use outbox relay retry; do not lose resolved/rejected outcome |
 | Cache unavailable | Bypass cache and use KP/source where safe |
-| Optimiser unavailable | Not an II MS dependency for emitting `IntentResolvedEvent` |
+| Downstream fulfilment stage unavailable | Not an II MS dependency for emitting `IntentResolvedEvent` |
 
 ---
 
@@ -781,6 +704,8 @@ Rules:
 
 - consume only from trusted internal event backbone
 - use workload identity for KP access
+- expose no public, NGW, OEX, partner, or consumer-facing REST API
+- restrict any platform probes to the internal runtime/network plane
 - no external user/business authorisation in II MS
 - do not include secrets, tokens, credentials, or raw stack traces in event payloads
 - audit semantic and policy rejections where required
@@ -789,8 +714,8 @@ Rules:
 
 ## 14. Contract summary
 
-II MS consumes `IntentValidatedEvent`, validates and resolves the admitted expression using Knowledge Plane/domain knowledge, preserves `targets`, `constraints`, and `preferences`, and emits either `IntentRejectedEvent` or `IntentResolvedEvent`.
+II MS consumes `IntentValidatedEvent`, validates and resolves the admitted expression using Knowledge Plane/domain knowledge, preserves `expression.context.targets`, `expression.context.constraints`, and `expression.context.preferences`, and emits either `IntentRejectedEvent` or `IntentResolvedEvent`.
 
-The `IntentResolvedEvent` is the optimiser handoff. It carries canonical service context and the full valid resource set for optimiser consideration.
+The `IntentResolvedEvent` is the downstream-ready canonical handoff. It carries canonical service context and the full valid resource set for downstream consideration.
 
 The `IntentRejectedEvent` is the semantic/policy/capability rejection handoff. IC MS consumes it and projects the external runtime `Intent` lifecycle accordingly.

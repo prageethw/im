@@ -308,33 +308,12 @@ When the user says to baseline a new Intent decision:
 4. Keep TMF-facing shapes validated against the uploaded TMF source/reference files.
 5. Do not update Optimisation artifacts unless explicitly requested.
 
+## Baseline update — II MS context expression and domain reason-code alignment
 
-## Baseline update — IC MS TMF compliance and ID MS expression alignment
+Baselined on 2026-05-12.
 
-Baselined on 2026-05-11.
+II MS internal events now preserve the same canonical semantic grouping as ID MS and IC MS: `expression.context.targets`, `expression.context.constraints`, and `expression.context.preferences`. Domain inputs such as `location`, `serviceType`, and `serviceClass` are carried under `expression.context.constraints`. II MS must not flatten these buckets into unrelated top-level event fields.
 
-Applied IC MS compliance improvements from the current GitHub baseline rather than replacing the whole artifact. IC MS now aligns runtime `Intent.expression.expressionValue` with the ID MS baseline: external expression value uses `context.targets`, `context.constraints`, and `context.preferences`, with `location`, `serviceType`, and `serviceClass` under `context.constraints`. Internal `IntentValidatedEvent.body.expression` carries the same semantic buckets without the external TMF wrapper. IC MS supports optional TMF-style `fields` on Intent and IntentReport operations where applicable. Missing required `If-Match` returns `428`; stale or mismatched `If-Match` returns `412`. `DELETE /intent/{id}` remains termination, not physical deletion, and uses `202 Accepted` for accepted termination. `IntentReport` remains read-only for ordinary external API consumers; ordinary `DELETE /intent/{intentId}/intentReport/{id}` is not exposed by default because reports are retained audit/projection history. Report archive/purge is governed internal retention/admin policy, so no separate IntentReport lifecycle is baselined and `IntentReportDeleteEvent` is not part of the normal external event family.
+II MS has no external TMF-facing API and no consumer-facing REST contract. It is not exposed through NGW, OEX, public API gateways, or partner-facing API channels. Operational probes such as `/health`, `/ready`, and `/metrics`, if implemented, are platform-internal only and restricted to Kubernetes/platform operations; they are not external service APIs.
 
-## Baseline update — IC MS IntentReportDeleteEvent posture
-
-Baselined on 2026-05-11.
-
-IC MS does not expose ordinary external `DELETE /intentManagement/v5/intent/{intentId}/intentReport/{id}` for normal API consumers. `IntentReport` remains a read-only curated report/projection/audit resource and no separate `IntentReport` lifecycle is baselined for ordinary consumer use. However, `IntentReportDeleteEvent` remains part of the external TMF-style event vocabulary for `IntentReport` alignment. It is emitted only for governed platform/internal retention purge, administrative removal, legal deletion, or approved data-correction handling where such removal is permitted by retention policy; it is not emitted as the result of ordinary external consumer delete.
-
-## Baseline update — IC MS internal-only IntentReport delete/purge
-
-Baselined on 2026-05-11.
-
-IC MS does not expose ordinary external `DELETE /intentManagement/v5/intent/{intentId}/intentReport/{id}` through NGW or public TMF-facing consumer APIs. External consumers can list and retrieve `IntentReport` records only.
-
-IC MS may provide an internal-only governed `IntentReport` delete/purge capability. This capability is not routed through NGW, not advertised as a public consumer API, and not available to normal external consumers. It is restricted to retention purge, legal deletion, platform administration, approved data-correction workflows, or policy-governed cleanup.
-
-No separate `IntentReport` lifecycle is baselined for ordinary consumer use because delete/purge is a governed administrative operation, not a normal report lifecycle transition.
-
-`IntentReportDeleteEvent` remains part of the external TMF-style event vocabulary. IC MS emits `IntentReportDeleteEvent` only after successful governed internal/admin removal where notification is allowed by policy. It is not emitted from ordinary external consumer delete because ordinary external consumer delete is not exposed.
-
-## Baseline update — IC MS design expression-shape cleanup
-
-Baselined on 2026-05-11.
-
-Cleaned up `ic_ms_design_brief.md` so the shared semantic bucket example no longer shows the older flat runtime expression shape. The design now consistently uses the ID MS external runtime expression baseline: `Intent.expression.expressionValue.context.targets`, `context.constraints`, and `context.preferences`. `location`, `serviceType`, and `serviceClass` are under `context.constraints`, not peers beside the semantic buckets. IC MS preserves the TMF expression wrapper externally and emits internal `IntentValidatedEvent` using native JSON buckets without the external wrapper.
+II MS reason codes must be intent-domain semantic, policy, capability, or processing reasons. II MS must not expose downstream implementation or selection vocabulary in reason codes. Do not use optimisation-specific reason codes such as `OPTIMISATION_NO_VALID_CANDIDATES` or `OPTIMISATION_RELIABILITY_UNSATISFIABLE` in II MS events. Capability/resource shortfall is expressed as an intent-domain semantic or policy issue such as `SEMANTIC_SERVICE_CLASS_UNSUPPORTED`, `SEMANTIC_INTENT_CONTRADICTORY`, `SEMANTIC_REQUIRED_CONTEXT_MISSING`, `POLICY_SERVICE_CLASS_NOT_ALLOWED`, `KNOWLEDGE_LOOKUP_ERROR`, or `PROCESSING_ERROR`, depending on cause.
