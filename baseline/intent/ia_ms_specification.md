@@ -25,7 +25,9 @@ IA MS consumes only:
 - `IntentCallbackEvent`
 - runtime metrics / observation facts from observability endpoints
 
-IA MS does **not** consume `IntentOptimisedEvent` in the active baseline. Optimisation output may influence the service-ready configuration produced upstream, but IA receives its assurance/apply context through `IntentNetworkReadyEvent.serviceConfiguration` and IA stored/applied assurance state.
+IA MS does **not** consume `IntentOptimisedEvent` in the active baseline.
+
+Optimisation output may influence the service-ready configuration produced upstream, but IA receives its assurance/apply context through `IntentNetworkReadyEvent.serviceConfiguration` and IA stored/applied assurance state.
 
 IC MS consumes `IntentAssuranceEvent` and projects the external TMF-facing `Intent.lifecycleStatus` and `IntentReport.expression.expressionValue`.
 
@@ -56,9 +58,7 @@ Internal IA events must not use external TMF `IntentExpression` wrappers. Those 
 
 ### 4.1 IntentNetworkReadyEvent input
 
-IA MS consumes `IntentNetworkReadyEvent` to learn the apply plan and observer scope.
-
-`IntentNetworkReadyEvent` is produced by `intent-intelligence-ms`. IA MS must not emit `IntentNetworkReadyEvent`.
+IA MS consumes `IntentNetworkReadyEvent` to learn the apply plan and observer scope. `IntentNetworkReadyEvent` is produced by `intent-intelligence-ms`. IA MS must not emit `IntentNetworkReadyEvent`.
 
 #### Example headers
 
@@ -108,23 +108,59 @@ content-type: application/json
         "profile": "hospital-surgical-slice-apply-v1",
         "resources": [
           {
-            "role": "primary",
-            "resourceId": "SYD-PRI-01"
+            "resourceId": "SYD-PRI-01",
+            "resourceType": "networkPath",
+            "resourceClass": "critical-gold-access",
+            "roles": [
+              "primary"
+            ]
           },
           {
-            "role": "secondary",
-            "resourceId": "SYD-SEC-01"
+            "resourceId": "SYD-SEC-01",
+            "resourceType": "networkPath",
+            "resourceClass": "critical-gold-access",
+            "roles": [
+              "secondary"
+            ]
           }
         ]
       },
       "observerConfiguration": {
         "target": "t7-observability-platform",
-        "profile": "critical-gold-assurance-observation-v1",
-        "resourceIds": [
-          "SYD-PRI-01",
-          "SYD-PRI-02",
-          "SYD-SEC-01",
-          "SYD-SEC-02"
+        "profile": "surgical-critical-gold-observe",
+        "resources": [
+          {
+            "resourceId": "SYD-PRI-01",
+            "resourceType": "networkPath",
+            "resourceClass": "critical-gold-access",
+            "roles": [
+              "primary"
+            ],
+            "metrics": {
+              "benchmark": {
+                "latencyMs": 7,
+                "availabilityPercent": 99.996,
+                "jitterMs": 1.1,
+                "packetLossPercent": 0.004
+              }
+            }
+          },
+          {
+            "resourceId": "SYD-SEC-01",
+            "resourceType": "networkPath",
+            "resourceClass": "critical-gold-access",
+            "roles": [
+              "secondary"
+            ],
+            "metrics": {
+              "benchmark": {
+                "latencyMs": 10,
+                "availabilityPercent": 99.994,
+                "jitterMs": 1.8,
+                "packetLossPercent": 0.006
+              }
+            }
+          }
         ]
       }
     },
@@ -147,7 +183,7 @@ content-type: application/json
 
 - Treat `IntentNetworkReadyEvent` as service configuration prepared for apply, not as apply success.
 - Store selected apply resources from `serviceConfiguration.orchestratorConfiguration.resources`.
-- Store monitored resource scope from `serviceConfiguration.observerConfiguration.resourceIds`.
+- Store monitored resource scope from `serviceConfiguration.observerConfiguration.resources`.
 - Store resolved runtime `body.context` as the assurance context.
 - Do not emit `Active` solely because `IntentNetworkReadyEvent` was consumed.
 - Active state requires apply/callback confirmation and/or runtime observations according to the workflow.
@@ -213,9 +249,7 @@ content-type: application/json
 
 ### 4.3 Metrics collection through observation endpoints
 
-IA MS does not consume a separately named observation snapshot event in the active baseline.
-
-IA MS obtains runtime metrics from observability/observation endpoints that are selected or informed by `IntentNetworkReadyEvent.serviceConfiguration.observerConfiguration`.
+IA MS does not consume a separately named observation snapshot event in the active baseline. IA MS obtains runtime metrics from observability/observation endpoints that are selected or informed by `IntentNetworkReadyEvent.serviceConfiguration.observerConfiguration`.
 
 #### Logical metrics returned to IA MS
 
@@ -301,9 +335,7 @@ Reusable resource entries use:
 - `relationships`
 - `metrics`
 
-Current runtime metric names use `latencyMs`, `availabilityPercent`, `jitterMs`, and `packetLossPercent`.
-
-Benchmark context may use `latencyBenchmarkMs`, `availabilityBenchmarkPercent`, `jitterBenchmarkMs`, and `packetLossBenchmarkPercent`.
+Current runtime metric names use `latencyMs`, `availabilityPercent`, `jitterMs`, and `packetLossPercent`. Benchmark context may use `latencyBenchmarkMs`, `availabilityBenchmarkPercent`, `jitterBenchmarkMs`, and `packetLossBenchmarkPercent`.
 
 Do not duplicate `resourceId` into `resourceAttributes.pathId` when they are identical.
 
@@ -313,9 +345,7 @@ For `Active`, `body.current.resources` is acceptable because there is no re-deci
 
 ### 6.3 Active outcome
 
-For `Active`, IA MS may use `body.current.resources` because there is no re-decision pressure. The event remains fact-based: lifecycle/status reason plus resource metrics.
-
-Do not include `current.evaluations` or `body.evaluations` by default.
+For `Active`, IA MS may use `body.current.resources` because there is no re-decision pressure. The event remains fact-based: lifecycle/status reason plus resource metrics. Do not include `current.evaluations` or `body.evaluations` by default.
 
 ```json
 {
@@ -394,9 +424,7 @@ Do not include `current.evaluations` or `body.evaluations` by default.
 
 ### 6.4 Degraded outcome
 
-For `Degraded`, IA MS does not include a separate `current` block by default.
-
-The degraded/current resource and all applicable alternatives are represented together in `body.candidates`. This shape lets II MS or another authorised decision component inspect the current degraded resource, available alternatives, and their metrics without needing a separate `requiresReoptimisation` flag or a separate evaluations block.
+For `Degraded`, IA MS does not include a separate `current` block by default. The degraded/current resource and all applicable alternatives are represented together in `body.candidates`. This shape lets II MS or another authorised decision component inspect the current degraded resource, available alternatives, and their metrics without needing a separate `requiresReoptimisation` flag or a separate evaluations block.
 
 ```json
 {

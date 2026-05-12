@@ -694,9 +694,8 @@ content-type: application/json
     },
     "serviceConfiguration": {
       "orchestratorConfiguration": {
-        "orchestratorId": "t7-network-orchestrator",
-        "orchestratorProfile": "surgical-critical-gold-apply",
-        "applyMode": "controlled",
+        "target": "t7-network-orchestrator",
+        "profile": "surgical-critical-gold-apply",
         "resources": [
           {
             "resourceId": "SYD-PRI-01",
@@ -717,8 +716,8 @@ content-type: application/json
         ]
       },
       "observerConfiguration": {
-        "observerId": "intent-assurance-ms",
-        "observerProfile": "surgical-critical-gold-observe",
+        "target": "t7-observability-platform",
+        "profile": "surgical-critical-gold-observe",
         "resources": [
           {
             "resourceId": "SYD-PRI-01",
