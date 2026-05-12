@@ -17,9 +17,7 @@
 
 ICB MS owns callback submission ingestion only.
 
-ICB MS performs technical authorisation, structural validation, idempotent durable persistence, and raw callback event publication.
-
-ICB MS does not interpret lifecycle, assurance, degradation, failure, termination, or optimisation meaning. IA MS owns callback state interpretation and emits lifecycle-driving `IntentAssuranceEvent` outcomes.
+ICB MS performs technical authorisation, structural validation, idempotent durable persistence, and raw callback event publication. ICB MS does not interpret lifecycle, assurance, degradation, failure, termination, or optimisation meaning. IA MS owns callback state interpretation and emits lifecycle-driving `IntentAssuranceEvent` outcomes.
 
 ## API endpoints:
 
@@ -50,7 +48,7 @@ Indicative examples:
 ```http
 X-Authenticated-Client-ID: external-orchestrator-001
 X-Authenticated-Client-Name: External Network Orchestrator
-X-Authenticated-Claims: <gateway-signed-or-platform-trusted-claims>
+X-Authenticated-Claims: 
 ```
 
 ICB MS must not trust caller-supplied identity headers unless they are injected or signed by API Gateway according to platform security policy.
@@ -71,16 +69,16 @@ Idempotency-Key: cb-EXT-ORCH-001-INT-HOSP-2026-001-0001
 {
   "intentId": "INT-HOSP-2026-001",
   "callbackType": "APPLY_COMPLETED",
-  "orchestratorState": "COMPLETED",
-  "orchestratorReference": {
+  "callbackSource": "external-orchestrator-001",
+  "callbackTimestamp": "2026-04-18T12:18:00+10:00",
+  "sourceState": {
+    "state": "APPLIED",
+    "reason": "Network apply completed successfully."
+  },
+  "sourceReference": {
     "id": "orch-job-9001",
     "href": "https://orchestrator.example.com/jobs/orch-job-9001"
   },
-  "sourceSystem": {
-    "id": "external-orchestrator-001",
-    "name": "External Network Orchestrator"
-  },
-  "occurredAt": "2026-04-18T12:18:00+10:00",
   "details": {
     "message": "Network apply completed successfully.",
     "appliedResources": [
@@ -141,16 +139,16 @@ Idempotency-Key: cb-EXT-ORCH-001-INT-HOSP-2026-003-0001
 {
   "intentId": "INT-HOSP-2026-003",
   "callbackType": "APPLY_FAILED",
-  "orchestratorState": "FAILED",
-  "orchestratorReference": {
+  "callbackSource": "external-orchestrator-001",
+  "callbackTimestamp": "2026-04-18T12:22:00+10:00",
+  "sourceState": {
+    "state": "APPLY_FAILED",
+    "reason": "Network apply failed in orchestration layer."
+  },
+  "sourceReference": {
     "id": "orch-job-9003",
     "href": "https://orchestrator.example.com/jobs/orch-job-9003"
   },
-  "sourceSystem": {
-    "id": "external-orchestrator-001",
-    "name": "External Network Orchestrator"
-  },
-  "occurredAt": "2026-04-18T12:22:00+10:00",
   "details": {
     "message": "Network apply failed in orchestration layer.",
     "errorCode": "ORCH_APPLY_TIMEOUT"
@@ -246,16 +244,16 @@ content-type: application/json
     "callbackId": "cb-sub-0001",
     "intentId": "INT-HOSP-2026-001",
     "callbackType": "APPLY_COMPLETED",
-    "orchestratorState": "COMPLETED",
-    "orchestratorReference": {
+    "callbackSource": "external-orchestrator-001",
+    "callbackTimestamp": "2026-04-18T12:18:00+10:00",
+    "sourceState": {
+      "state": "APPLIED",
+      "reason": "Network apply completed successfully."
+    },
+    "sourceReference": {
       "id": "orch-job-9001",
       "href": "https://orchestrator.example.com/jobs/orch-job-9001"
     },
-    "sourceSystem": {
-      "id": "external-orchestrator-001",
-      "name": "External Network Orchestrator"
-    },
-    "occurredAt": "2026-04-18T12:18:00+10:00",
     "receivedAt": "2026-04-18T12:18:03+10:00",
     "details": {
       "message": "Network apply completed successfully.",
@@ -289,16 +287,16 @@ content-type: application/json
     "callbackId": "cb-sub-0003",
     "intentId": "INT-HOSP-2026-003",
     "callbackType": "APPLY_FAILED",
-    "orchestratorState": "FAILED",
-    "orchestratorReference": {
+    "callbackSource": "external-orchestrator-001",
+    "callbackTimestamp": "2026-04-18T12:22:00+10:00",
+    "sourceState": {
+      "state": "APPLY_FAILED",
+      "reason": "Network apply failed in orchestration layer."
+    },
+    "sourceReference": {
       "id": "orch-job-9003",
       "href": "https://orchestrator.example.com/jobs/orch-job-9003"
     },
-    "sourceSystem": {
-      "id": "external-orchestrator-001",
-      "name": "External Network Orchestrator"
-    },
-    "occurredAt": "2026-04-18T12:22:00+10:00",
     "receivedAt": "2026-04-18T12:22:03+10:00",
     "details": {
       "message": "Network apply failed in orchestration layer.",
@@ -322,7 +320,7 @@ content-type: application/json
 - Do not include `assuranceStatus` in `IntentCallbackEvent`.
 - Do not include `targets`, `constraints`, `preferences`, optimiser scoring, solver internals, or KP internals.
 - Do not use TMF expression wrappers inside internal callback events.
-- IA MS owns mapping from `orchestratorState` to lifecycle-driving `IntentAssuranceEvent` outcomes.
+- IA MS owns mapping from `sourceState.state` to lifecycle-driving `IntentAssuranceEvent` outcomes.
 
 ## Structural validation rules:
 
@@ -332,9 +330,9 @@ Required request fields:
 |---|---|
 | `intentId` | Required, non-empty string |
 | `callbackType` | Required, non-empty string |
-| `orchestratorState` | Required, non-empty string; interpreted by IA MS, not ICB MS |
-| `sourceSystem.id` | Required when source system block is present; gateway identity remains authoritative |
-| `occurredAt` | Required ISO-8601 date-time |
+| `callbackSource` | Required, non-empty string; gateway identity remains authoritative |
+| `callbackTimestamp` | Required ISO-8601 date-time |
+| `sourceState.state` | Required, non-empty string; interpreted by IA MS, not ICB MS |
 | `@type` | Required, normally `IntentCallbackSubmission` |
 | `Idempotency-Key` | Strongly recommended for external retry safety; may be required by platform policy |
 
@@ -379,7 +377,7 @@ Content-Type: application/json
 {
   "code": "VALIDATION_FAILED",
   "reason": "CALLBACK_REQUEST_INVALID",
-  "message": "Callback submission is missing required field orchestratorState.",
+  "message": "Callback submission is missing required field sourceState.state.",
   "status": 422,
   "referenceError": "https://mycsp.com.au/errors/VALIDATION_FAILED",
   "@type": "Error"

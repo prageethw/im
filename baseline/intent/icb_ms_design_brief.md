@@ -2,9 +2,7 @@
 
 ## Purpose:
 
-Intent Callback MS, referred to as ICB MS, owns thin callback ingestion for external orchestration/apply systems.
-
-ICB MS accepts callback submissions from trusted external systems through the API Gateway, performs technical authorisation and structural validation, durably records the callback fact through an outbox pattern, and publishes a raw internal `IntentCallbackEvent` to the callback Kafka topic for IA MS.
+Intent Callback MS, referred to as ICB MS, owns thin callback ingestion for external orchestration/apply systems. ICB MS accepts callback submissions from trusted external systems through the API Gateway, performs technical authorisation and structural validation, durably records the callback fact through an outbox pattern, and publishes a raw internal `IntentCallbackEvent` to the callback Kafka topic for IA MS.
 
 ICB MS does not interpret lifecycle, assurance, degradation, optimisation, or service meaning.
 
@@ -35,7 +33,7 @@ External system -> API Gateway -> ICB MS -> Outbox DB -> Kafka callback topic ->
 | ICB MS | Authorises callback submission, validates structure, and writes a durable outbox record |
 | Outbox DB | Stores callback submission and pending internal callback event durably |
 | Kafka callback topic | Carries raw callback facts to IA MS |
-| IA MS | Correlates `intentId`, maps raw `orchestratorState`, and emits `IntentAssuranceEvent` |
+| IA MS | Correlates `intentId`, maps raw `sourceState.state`, and emits `IntentAssuranceEvent` |
 
 ## Boundary statement:
 
@@ -79,10 +77,10 @@ Typical callback facts include:
 
 - `intentId`
 - `callbackType`
-- `orchestratorState`
-- `orchestratorReference`
-- `occurredAt`
-- source system identifiers
+- `callbackSource`
+- `callbackTimestamp`
+- `sourceState.state`
+- `sourceReference`
 - raw or structured detail payload where safe
 
 ICB MS validates that these fields are present and structurally valid. It does not validate that `intentId` is known to IA MS or decide what the raw state means.
@@ -99,12 +97,12 @@ Idempotency-Key: cb-EXT-ORCH-001-INT-HOSP-2026-001-0001
 
 ICB MS should also use stable callback fields to protect against duplicates where available, such as:
 
-- source system
+- callback source
 - source callback identifier
 - `intentId`
-- `orchestratorReference`
+- `sourceReference`
 - `callbackType`
-- `occurredAt`
+- `callbackTimestamp`
 
 Duplicate submissions should not create duplicate internal `IntentCallbackEvent` facts.
 
@@ -127,11 +125,7 @@ Suggested tables:
 
 ICB MS must write the accepted callback submission and callback outbox record in the same DB transaction.
 
-The API returns success only after DB and outbox write succeed.
-
-Kafka publication is asynchronous through the outbox relay.
-
-If Kafka is unavailable, the API may still return success when DB/outbox commit succeeded, and the relay retries publication later.
+The API returns success only after DB and outbox write succeed. Kafka publication is asynchronous through the outbox relay. If Kafka is unavailable, the API may still return success when DB/outbox commit succeeded, and the relay retries publication later.
 
 ## Dependency behaviour:
 
@@ -169,7 +163,7 @@ No secrets, tokens, credentials, or raw internal stack traces are written into c
 
 ICB MS must emit:
 
-- structured logs with `correlationId`, `callbackId`, `intentId`, and source system where available
+- structured logs with `correlationId`, `callbackId`, `intentId`, and callback source where available
 - request metrics
 - validation failure metrics
 - duplicate callback metrics
