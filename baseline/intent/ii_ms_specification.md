@@ -11,16 +11,17 @@
 | Primary responsibility | Semantic interpretation, Knowledge Plane-backed validation, and downstream-ready canonical resolution |
 | External API | None |
 | Primary input event | `IntentValidatedEvent` |
-| Output events | `IntentRejectedEvent`, `IntentResolvedEvent` |
+| Output events | `IntentRejectedEvent`, `IntentResolvedEvent`, `IntentNetworkReadyEvent` |
 
 ## Boundary statement
 
 II MS consumes syntactically admitted runtime intent facts from IC MS and performs semantic interpretation and Knowledge Plane-backed resolution.
 
-II MS emits either:
+II MS emits:
 
 - `IntentRejectedEvent` when the intent cannot be semantically, policy, or capability resolved
-- `IntentResolvedEvent` when the intent can proceed to the next internal fulfilment stage
+- `IntentResolvedEvent` when the intent can proceed to the next internal fulfilment stage as a candidate-level semantic-resolution handoff
+- `IntentNetworkReadyEvent` when service-ready preparation has produced the concrete orchestration and observation configuration required by IA MS
 
 II MS does not own runtime `Intent` REST APIs, external lifecycle projection, downstream selection/fulfilment decisions, assurance truth, callback ingestion, orchestration execution, or KP governance.
 
@@ -175,7 +176,7 @@ II MS does not expect the external TMF `Intent.expression` wrapper in internal e
 | 8 | Validate requested targets are supported for the service class |
 | 9 | Preserve preferences for downstream selection guidance |
 | 10 | Resolve valid resource set from KP after scope/policy filtering |
-| 11 | Emit `IntentRejectedEvent` or `IntentResolvedEvent` through II outbox |
+| 11 | Emit `IntentRejectedEvent`, `IntentResolvedEvent`, or `IntentNetworkReadyEvent` through the II outbox, depending on the resolved milestone |
 
 ---
 
@@ -620,7 +621,149 @@ content-type: application/json
 
 ---
 
-## 8. KP mapping rules
+## 8. Event output: IntentNetworkReadyEvent
+
+### Topic
+
+```text
+t7.intent.management.events
+```
+
+### Producer
+
+```text
+intent-intelligence-ms
+```
+
+### Current primary consumer
+
+```text
+intent-assurance-ms
+```
+
+### Meaning
+
+II MS emits `IntentNetworkReadyEvent` after semantic resolution and service-ready preparation have produced the concrete orchestration and observation configuration required by IA MS.
+
+`IntentNetworkReadyEvent` does not mean network apply has succeeded. It means the service configuration/resource set has been prepared for orchestration/apply and assurance observation.
+
+### Example headers
+
+```http
+ce-specversion: 1.0
+ce-type: IntentNetworkReadyEvent
+ce-source: intent-intelligence-ms
+ce-id: evt-intent-network-ready-001
+ce-time: 2026-04-18T12:04:00+10:00
+ce-subject: INT-HOSP-2026-001
+content-type: application/json
+```
+
+### Example body — network ready for orchestration and assurance
+
+```json
+{
+  "body": {
+    "intentId": "INT-HOSP-2026-001",
+    "version": "v1",
+    "lifecycleStatus": "InProgress",
+    "serviceConfiguration": {
+      "orchestratorConfiguration": {
+        "orchestratorId": "t7-network-orchestrator",
+        "orchestratorProfile": "surgical-critical-gold-apply",
+        "applyMode": "controlled",
+        "resources": [
+          {
+            "resourceId": "SYD-PRI-01",
+            "resourceType": "networkPath",
+            "resourceClass": "critical-gold-access",
+            "roles": [
+              "primary"
+            ]
+          },
+          {
+            "resourceId": "SYD-SEC-01",
+            "resourceType": "networkPath",
+            "resourceClass": "critical-gold-access",
+            "roles": [
+              "secondary"
+            ]
+          }
+        ]
+      },
+      "observerConfiguration": {
+        "observerId": "intent-assurance-ms",
+        "observerProfile": "surgical-critical-gold-observe",
+        "resources": [
+          {
+            "resourceId": "SYD-PRI-01",
+            "resourceType": "networkPath",
+            "resourceClass": "critical-gold-access",
+            "roles": [
+              "primary"
+            ],
+            "metrics": {
+              "benchmark": {
+                "latencyMs": 7,
+                "availabilityPercent": 99.996,
+                "jitterMs": 1.1,
+                "packetLossPercent": 0.004
+              }
+            }
+          },
+          {
+            "resourceId": "SYD-SEC-01",
+            "resourceType": "networkPath",
+            "resourceClass": "critical-gold-access",
+            "roles": [
+              "secondary"
+            ],
+            "metrics": {
+              "benchmark": {
+                "latencyMs": 10,
+                "availabilityPercent": 99.994,
+                "jitterMs": 1.8,
+                "packetLossPercent": 0.006
+              }
+            }
+          }
+        ]
+      }
+    },
+    "references": {
+      "correlationId": "corr-intent-create-001",
+      "intent": {
+        "id": "INT-HOSP-2026-001",
+        "href": "/intentManagement/v5/intent/INT-HOSP-2026-001"
+      },
+      "intentSpecification": {
+        "id": "hospital-surgical-slice-spec-v1.20",
+        "href": "/intentManagement/v5/intentSpecification/hospital-surgical-slice-spec-v1.20"
+      },
+      "knowledgePlane": {
+        "configId": "hospital-surgical-slice-kp-v1",
+        "version": "1.0"
+      }
+    }
+  }
+}
+```
+
+### Event-specific rules
+
+- `IntentNetworkReadyEvent` is produced by `intent-intelligence-ms`.
+- `IntentNetworkReadyEvent` is consumed by `intent-assurance-ms`.
+- Consumer identity does not change producer ownership.
+- IA MS consumes this event; IA MS must not produce it.
+- `IntentNetworkReadyEvent` means service configuration is ready for orchestration/apply, not that apply has succeeded.
+- Use `serviceConfiguration.orchestratorConfiguration` for apply/orchestration details.
+- Use `serviceConfiguration.observerConfiguration` for assurance/monitoring details.
+- Do not include `applyOutcome`.
+- Do not use this event as a substitute for `IntentAssuranceEvent`; IA MS remains responsible for apply outcome interpretation and runtime assurance truth.
+
+---
+
+## 9. KP mapping rules
 
 II MS maps KP data into event-facing resource entries.
 
@@ -637,7 +780,7 @@ II MS maps KP data into event-facing resource entries.
 
 ---
 
-## 9. Idempotency and ordering
+## 10. Idempotency and ordering
 
 II MS must support at-least-once event delivery.
 
@@ -645,12 +788,12 @@ Rules:
 
 - Deduplicate consumed `IntentValidatedEvent` by `ce-id` / event id.
 - Store semantic decision state per `intentId` and runtime version.
-- Avoid emitting duplicate `IntentRejectedEvent` or `IntentResolvedEvent` for the same input event.
+- Avoid emitting duplicate `IntentRejectedEvent`, `IntentResolvedEvent`, or `IntentNetworkReadyEvent` for the same input event or milestone.
 - If a newer runtime intent version exists, stale events must not overwrite newer resolution state.
 
 ---
 
-## 10. Persistence
+## 11. Persistence
 
 Suggested tables:
 
@@ -659,13 +802,13 @@ Suggested tables:
 | `intent_resolution_state` | Current semantic resolution state per intent/version |
 | `intent_resolution_idempotency` | Consumed event deduplication |
 | `intent_resolution_audit` | KP lookup, policy, semantic, and rejection decision trail |
-| `intent_resolution_outbox` | Reliable publication of II-owned events |
+| `intent_resolution_outbox` | Reliable publication of II-owned events, including `IntentRejectedEvent`, `IntentResolvedEvent`, and `IntentNetworkReadyEvent` |
 | `intent_resolution_dead_letter` | Optional failed/unprocessable event handling |
 | `shedlock` | Relay coordination if clustered outbox relay is used |
 
 ---
 
-## 11. Dependency behaviour
+## 12. Dependency behaviour
 
 | Dependency | Behaviour |
 |---|---|
@@ -673,17 +816,18 @@ Suggested tables:
 | KP unavailable | Fail closed for semantic resolution and retry/dead-letter according to policy |
 | Kafka unavailable | Use outbox relay retry; do not lose resolved/rejected outcome |
 | Cache unavailable | Bypass cache and use KP/source where safe |
-| Downstream fulfilment stage unavailable | Not an II MS dependency for emitting `IntentResolvedEvent` |
+| Downstream fulfilment stage unavailable | Not an II MS dependency for emitting `IntentResolvedEvent`; service-ready preparation must complete before emitting `IntentNetworkReadyEvent` |
 
 ---
 
-## 12. Observability
+## 13. Observability
 
 Recommended logs and metrics:
 
 ```text
 ii_ms_intent_validated_consumed_count
 ii_ms_intent_resolved_count
+ii_ms_intent_network_ready_count
 ii_ms_intent_rejected_count
 ii_ms_kp_lookup_error_count
 ii_ms_resolution_failure_count
@@ -696,7 +840,7 @@ All logs and traces must include `correlationId` and `intentId` where available.
 
 ---
 
-## 13. Security
+## 14. Security
 
 II MS is internal only.
 
@@ -712,7 +856,7 @@ Rules:
 
 ---
 
-## 14. Contract summary
+## 15. Contract summary
 
 II MS consumes `IntentValidatedEvent`, validates and resolves the admitted expression using Knowledge Plane/domain knowledge, preserves `expression.context.targets`, `expression.context.constraints`, and `expression.context.preferences`, and emits either `IntentRejectedEvent` or `IntentResolvedEvent`.
 
