@@ -1,13 +1,3 @@
-
-# Why TM Forum Needs Both specCharacteristic and specExpression
-
-**Document Type:** Technical Architecture Framework (TAF) Position Paper  
-**Domain:** TM Forum Open APIs — Catalogue and Intent Models  
-**Audience:** Solution Architects and API Designers  
-**Language:** Australian English  
-
----
-
 ## Overview
 
 Within TM Forum's Open API framework, two constructs are commonly encountered when 
@@ -127,4 +117,49 @@ retaining `specCharacteristic`:
 ## The Complementary Architecture
 
 The two constructs form a layered architecture:
+
+┌────────────────────────────────────────────────────┐ │              Specification Layer                   │ │                                                    │ │  specCharacteristic  →  Defines the DATA SCHEMA    │ │  (names, types, values, constraints, cardinality)  │ │                                                    │ │  specExpression      →  Defines the LOGIC          │ │  (rules, formulas, intent, derived values)         │ │                                                    │ │  specExpression DEPENDS ON specCharacteristic      │ │  for its variable vocabulary                       │ └────────────────────────────────────────────────────┘
+
+
+
+This layered approach enables two key architectural qualities:
+
+- **Separation of Concerns:** Data structure is managed independently of behavioural logic. 
+  Teams can evolve the data model without rewriting expression rules, and vice versa.
+- **Reusability:** The same `specCharacteristic` definitions can be referenced by multiple 
+  `specExpression` entries, and reused across many specification types without duplication.
+
+---
+
+## Design Recommendation
+
+Both constructs must be retained and used together in any TM Forum-compliant architecture:
+
+- Use `specCharacteristic` to define all named attributes of a specification — their types, 
+  cardinality, allowed values, and configurability.
+- Use `specExpression` when there is logic that goes beyond a simple value list: conditional 
+  constraints, derived values, and — critically — when implementing TM Forum intent 
+  management.
+- Never attempt to encode complex behavioural logic inside a `specCharacteristic` entry. 
+  This conflates structure with behaviour, producing unmaintainable models.
+- Never attempt to use `specExpression` as a substitute for `specCharacteristic`. The 
+  Expression Engine requires a formally declared data vocabulary to operate correctly.
+
+---
+
+## References
+
+- [TM Forum — Specification Characteristic Data Model (Common)](https://datamodel.tmforum.org/en/master/Common/SpecificationCharacteristic/)
+- [TM Forum — Specification Characteristic Value Data Model](https://datamodel.tmforum.org/en/latest/Common/SpecificationCharacteristicValue/)
+- [TM Forum — Product Specification Characteristic Data Model (TMF620)](https://datamodel.tmforum.org/en/latest/Product/ProductSpecificationCharacteristic/)
+- [TM Forum — Product Specification Characteristic Value Use Data Model](https://datamodel.tmforum.org/en/master/Product/ProductSpecificationCharacteristicValueUse/)
+- [TM Forum — Resource Spec Characteristic Data Model (TMF634)](https://datamodel.tmforum.org/en/latest/Resource/ResourceSpecCharacteristic/)
+- [TM Forum — TMF921B Intent Management Conformance Profile](https://tmf-open-api-table-documents.s3.eu-west-1.amazonaws.com/OpenApiTable/TMF921_Intent/4.0.0/conformance/TMF921_Intent_Management_Conformance_Profile_v4.0.0.pdf)
+- [TM Forum — Intent Common Model v3.8.0 (TR290)](https://www.tmforum.org/resources/introductory-guide/intent-common-model-v3-8-0-tr290/)
+- [TM Forum — Intent Common Model — Intent Expression v3.6.0 (TR290A)](https://www.tmforum.org/resources/introductory-guide/intent-common-model-intent-expression-v3-6-0-tr290a/)
+- [Amartus — How to Effectively Design TMF Open API Integration Interfaces](https://amartus.com/tmf-openapi-integration-design/)
+- [ServiceNow Community — How to Define a Characteristic Specification as Defined by TMF633 and TMF620](https://www.servicenow.com/community/telecom-forum/how-to-define-a-characteristic-specification-as-defined-by/td-p/2832236)
+- [TM Forum Engage — Validation Rule for Characteristic Specification](https://engage.tmforum.org/discussion/validation-rule-for-characteristic-specification)
+- [TM Forum Engage — featureSpecification vs resourceSpecCharacteristic](https://engage.tmforum.org/discussion/featurespecification-vs-resourcespeccharacteristic)
+
 
