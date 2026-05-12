@@ -338,9 +338,8 @@ IA MS reports curated assurance/apply/runtime outcome truth. IC MS consumes this
 `IntentAssuranceEvent` uses a top-level `body` object with:
 
 - `context`
-- `current.evaluations`
-- `current.resources`
-- `candidates`
+- `current.evaluations` and `current.resources` for normal/active states
+- `evaluations` and `candidates` for degraded/failed re-decision states
 - `references`
 
 Reusable resource entries use:
@@ -353,7 +352,9 @@ Reusable resource entries use:
 - `relationships`
 - `metrics`
 
-`candidates` represents the complete valid candidate resource set known in the assurance/re-decision context at emission time, after applicable scope/policy filtering.
+For `Degraded` and `Failed`, `candidates` represents all applicable available resources known in the assurance/re-decision context at emission time, after applicable scope/policy filtering. This includes the currently used/degraded resource and available alternatives. Candidate-level `selectionStatus` and `assuranceStatus` identify current, available, healthy, degraded, failed, or unavailable resources.
+
+For `Active`, `current.resources` remains acceptable because there is no re-decision pressure. For `Terminated`, candidates are normally not needed unless reporting final resources.
 
 `requiresReoptimisation` is not included by default. II MS or another authorised decision component derives the next action from the assurance event state.
 

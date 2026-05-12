@@ -117,9 +117,10 @@ The active generic body shape uses:
 | `context.targets` | Runtime targets used to interpret observations |
 | `context.constraints` | Location/service/priority/redundancy context where needed |
 | `context.preferences` | Preference context where useful for downstream decisions |
-| `current.evaluations` | Curated assurance evaluations |
-| `current.resources` | Selected/applied/observed resources |
-| `candidates` | Complete valid candidate resource set known in the assurance/re-decision context at emission time, after scope/policy filtering |
+| `current.evaluations` | Curated assurance evaluations for normal/active states |
+| `current.resources` | Selected/applied/observed resources for normal/active states |
+| `evaluations` | Curated violated/satisfied assurance checks for degraded/failed re-decision states |
+| `candidates` | All applicable available resources for degraded/failed re-decision states, including the current resource and alternatives, with metrics and status indicators |
 | `references` | Correlation and external resource references |
 
 Reusable resource entries use `roles`, `resourceId`, `resourceType`, `resourceClass`, `resourceAttributes`, `relationships`, and `metrics`.
@@ -129,6 +130,8 @@ Current runtime metric names use `latencyMs` and `reliabilityPercent`. Benchmark
 IA MS does not emit `IntentDriftOccurredEvent` in the active baseline. Drift/degradation is represented through `IntentAssuranceEvent.lifecycleStatus`, `statusReason`, `context`, `current.evaluations`, `current.resources`, and optionally `candidates`.
 
 IA MS does not include raw callback payloads, raw telemetry dumps, optimiser scoring, solver internals, `provider`, or default `requiresReoptimisation` in `IntentAssuranceEvent`.
+
+For `Active`, `current.resources` remains acceptable because there is no re-decision pressure. For `Degraded` and `Failed`, IA MS should not include a separate `current` block by default. Instead, it should put the current affected resource and all applicable alternatives together in `candidates`, using candidate-level `selectionStatus` and `assuranceStatus` to identify current, available, healthy, degraded, failed, or unavailable resources. Each candidate carries its own runtime metrics and benchmark metrics where available. For `Terminated`, candidates are normally not needed unless reporting final resources.
 
 ## Observation endpoint baseline
 

@@ -394,9 +394,10 @@ content-type: application/json
 | **Field / area** | **Purpose** |
 |---|---|
 | `body.context` | Resolved runtime context with targets, constraints, and preferences where relevant |
-| `body.current.evaluations` | Curated current assurance evaluations |
-| `body.current.resources` | Currently selected/applied/observed resources |
-| `body.candidates` | Complete valid candidate resource set known for the assurance/re-decision context at emission time, after scope/policy filtering |
+| `body.current.evaluations` | Curated current assurance evaluations for normal/active states |
+| `body.current.resources` | Currently selected/applied/observed resources for normal/active states |
+| `body.evaluations` | Curated violated/satisfied assurance evaluations for degraded/failed re-decision states |
+| `body.candidates` | All applicable available resources for degraded/failed re-decision states, including the currently used resource and alternatives, each with metrics and status indicators |
 | `body.references` | Correlation and resource references |
 
 Reusable resource entries use:
@@ -413,7 +414,9 @@ Current runtime metric names use `latencyMs` and `reliabilityPercent`. Benchmark
 
 Do not duplicate `resourceId` into `resourceAttributes.pathId` when they are identical.
 
-`requiresReoptimisation` is not included by default. II MS or other authorised decision logic reads the assurance event state and decides whether re-interpretation, re-optimisation, or no action is required.
+`requiresReoptimisation` is not included by default. II MS or other authorised decision logic reads the assurance event state, evaluations, and candidates, then decides whether re-interpretation, re-optimisation, reselection, or no action is required.
+
+For `Active`, `body.current.resources` is acceptable because there is no re-decision pressure. For `Degraded` and `Failed`, do not include a separate `current` block by default; instead place the current resource and alternatives together in `body.candidates`, using candidate-level `selectionStatus` and `assuranceStatus` to make the current/degraded resource explicit. For `Terminated`, candidates are normally not required unless reporting final resources.
 
 ### 6.3 Active outcome
 
@@ -572,13 +575,17 @@ Do not duplicate `resourceId` into `resourceAttributes.pathId` when they are ide
 
 ### 6.4 Degraded outcome
 
+For `Degraded`, IA MS does not include a separate `current` block by default. The degraded/current resource and all applicable alternatives are represented together in `body.candidates`.
+
+This shape lets II MS or another authorised decision component inspect the current degraded resource, available alternatives, and their metrics without needing a separate `requiresReoptimisation` flag.
+
 ```json
 {
   "body": {
     "intentId": "INT-HOSP-2026-001",
     "version": "v1",
     "lifecycleStatus": "Degraded",
-    "statusReason": "Primary path latency is outside resolved runtime targets.",
+    "statusReason": "Current primary path latency is outside resolved runtime targets.",
     "context": {
       "targets": {
         "maxLatencyMs": 10,
@@ -595,48 +602,28 @@ Do not duplicate `resourceId` into `resourceAttributes.pathId` when they are ide
         "serviceClass": "critical-gold",
         "priority": "critical",
         "redundancyRequired": true
+      },
+      "preferences": {
+        "preferredAccessTechnology": "5G"
       }
     },
-    "current": {
-      "evaluations": [
-        {
-          "name": "latency",
-          "status": "VIOLATED",
-          "target": 10,
-          "observedValue": 18,
-          "unit": "ms",
-          "reasonCode": "LATENCY_TARGET_VIOLATED"
-        }
-      ],
-      "resources": [
-        {
-          "resourceId": "SYD-PRI-01",
-          "roles": ["primary"],
-          "resourceType": "networkPath",
-          "resourceClass": "critical-gold-access",
-          "resourceAttributes": {
-            "accessTechnology": "fibre",
-            "locationId": "AU-NSW-SYD-HOSP-001"
-          },
-          "relationships": [
-            {
-              "type": "pairedSecondary",
-              "targetResourceId": "SYD-SEC-01"
-            }
-          ],
-          "metrics": {
-            "latencyMs": 18,
-            "availabilityPercent": 99.992,
-            "jitterMs": 1.8,
-            "packetLossPercent": 0.006
-          }
-        }
-      ]
-    },
+    "evaluations": [
+      {
+        "name": "latency",
+        "status": "VIOLATED",
+        "target": 10,
+        "observedValue": 18,
+        "unit": "ms",
+        "reasonCode": "LATENCY_TARGET_VIOLATED",
+        "resourceId": "SYD-PRI-01"
+      }
+    ],
     "candidates": [
       {
         "resourceId": "SYD-PRI-01",
-        "roles": ["primary"],
+        "roles": ["primary", "current"],
+        "selectionStatus": "CURRENT",
+        "assuranceStatus": "DEGRADED",
         "resourceType": "networkPath",
         "resourceClass": "critical-gold-access",
         "resourceAttributes": {
@@ -650,13 +637,49 @@ Do not duplicate `resourceId` into `resourceAttributes.pathId` when they are ide
           }
         ],
         "metrics": {
+          "latencyMs": 18,
+          "availabilityPercent": 99.992,
+          "jitterMs": 1.8,
+          "packetLossPercent": 0.006,
           "latencyBenchmarkMs": 7,
-          "availabilityBenchmarkPercent": 99.996
+          "availabilityBenchmarkPercent": 99.996,
+          "jitterBenchmarkMs": 1.1,
+          "packetLossBenchmarkPercent": 0.004
+        }
+      },
+      {
+        "resourceId": "SYD-SEC-01",
+        "roles": ["secondary", "current"],
+        "selectionStatus": "CURRENT",
+        "assuranceStatus": "HEALTHY",
+        "resourceType": "networkPath",
+        "resourceClass": "critical-gold-access",
+        "resourceAttributes": {
+          "accessTechnology": "5G",
+          "locationId": "AU-NSW-SYD-HOSP-001"
+        },
+        "relationships": [
+          {
+            "type": "protects",
+            "targetResourceId": "SYD-PRI-01"
+          }
+        ],
+        "metrics": {
+          "latencyMs": 10,
+          "availabilityPercent": 99.994,
+          "jitterMs": 1.8,
+          "packetLossPercent": 0.006,
+          "latencyBenchmarkMs": 10,
+          "availabilityBenchmarkPercent": 99.994,
+          "jitterBenchmarkMs": 1.8,
+          "packetLossBenchmarkPercent": 0.006
         }
       },
       {
         "resourceId": "SYD-PRI-02",
-        "roles": ["primary"],
+        "roles": ["primary", "candidate"],
+        "selectionStatus": "AVAILABLE",
+        "assuranceStatus": "HEALTHY",
         "resourceType": "networkPath",
         "resourceClass": "critical-gold-access",
         "resourceAttributes": {
@@ -670,8 +693,42 @@ Do not duplicate `resourceId` into `resourceAttributes.pathId` when they are ide
           }
         ],
         "metrics": {
+          "latencyMs": 8,
+          "availabilityPercent": 99.995,
+          "jitterMs": 1.5,
+          "packetLossPercent": 0.005,
           "latencyBenchmarkMs": 8,
-          "availabilityBenchmarkPercent": 99.995
+          "availabilityBenchmarkPercent": 99.995,
+          "jitterBenchmarkMs": 1.5,
+          "packetLossBenchmarkPercent": 0.005
+        }
+      },
+      {
+        "resourceId": "SYD-SEC-02",
+        "roles": ["secondary", "candidate"],
+        "selectionStatus": "AVAILABLE",
+        "assuranceStatus": "HEALTHY",
+        "resourceType": "networkPath",
+        "resourceClass": "critical-gold-access",
+        "resourceAttributes": {
+          "accessTechnology": "fibre",
+          "locationId": "AU-NSW-SYD-HOSP-001"
+        },
+        "relationships": [
+          {
+            "type": "protects",
+            "targetResourceId": "SYD-PRI-02"
+          }
+        ],
+        "metrics": {
+          "latencyMs": 9,
+          "availabilityPercent": 99.995,
+          "jitterMs": 1.4,
+          "packetLossPercent": 0.004,
+          "latencyBenchmarkMs": 9,
+          "availabilityBenchmarkPercent": 99.995,
+          "jitterBenchmarkMs": 1.4,
+          "packetLossBenchmarkPercent": 0.004
         }
       }
     ],
@@ -689,6 +746,8 @@ Do not duplicate `resourceId` into `resourceAttributes.pathId` when they are ide
   }
 }
 ```
+
+
 
 ---
 
@@ -717,9 +776,9 @@ IntentReport remains fact-only by default. It does not require separate `degrada
 - `IntentDriftOccurredEvent` is retired and must not be used by default.
 - Use `lifecycleStatus` and `statusReason` for state narrative.
 - Use internal `context` where the event carries resolved runtime targets, constraints, and preferences.
-- Use `current.evaluations` for curated assurance evaluations.
-- Use `current.resources` for selected/applied/observed resources.
-- Use `candidates` for the complete valid candidate resource set known in the assurance/re-decision context at emission time, after scope/policy filtering.
+- Use `current.evaluations` and `current.resources` for normal/active-state current assurance facts where there is no immediate re-decision pressure.
+- For `Degraded` and `Failed`, prefer no separate `current` block by default. Use `evaluations` plus `candidates`.
+- In degraded/failed states, `candidates` includes all applicable available resources, including the current degraded/failed resource and alternatives, with candidate-level `selectionStatus`, `assuranceStatus`, runtime metrics, and benchmark metrics.
 - Do not include raw callback payloads.
 - Do not include raw telemetry dumps.
 - Do not include optimiser scoring or solver internals.

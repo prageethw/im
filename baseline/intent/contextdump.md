@@ -11,3 +11,13 @@ Internal events may use a plain internal `body.context` object when carrying res
 `requiresReoptimisation` is not included by default in `IntentAssuranceEvent`. II MS or another authorised decision component reads the assurance event state and decides whether re-interpretation, re-optimisation, or no action is required.
 
 `IntentAssuranceEvent` now uses the more generic assurance model with `body.context`, `body.current.evaluations`, `body.current.resources`, `body.candidates`, and `body.references`. Reusable resource entries use `roles`, `resourceId`, `resourceType`, `resourceClass`, `resourceAttributes`, `relationships`, and `metrics`. `candidates` represents the complete valid candidate resource set known in the assurance/re-decision context at emission time, after applicable scope/policy filtering.
+
+## Baseline update — IA MS degraded assurance candidates model
+
+Baselined on 2026-05-12.
+
+For `Degraded` and similar re-decision states in `IntentAssuranceEvent`, do not include a separate `current` block by default. Instead, include all applicable available resources in `body.candidates`, including the currently used/degraded resource. Candidate entries carry their own runtime metrics and benchmark metrics where available, and use fields such as `roles`, `selectionStatus`, and `assuranceStatus` to identify current, available, degraded, healthy, failed, or unavailable resources.
+
+`body.evaluations` may carry violated/satisfied assurance checks and reference the affected `resourceId`. `requiresReoptimisation` remains omitted by default; II MS or another authorised decision component reads the event state, evaluations, and candidates to decide whether re-interpretation, re-optimisation, reselection, or no action is required.
+
+For `Active`, `current.resources` remains acceptable because there is no re-decision pressure. For `Terminated`, candidates are normally not needed unless reporting final resources.
