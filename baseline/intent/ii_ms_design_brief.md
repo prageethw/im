@@ -2,9 +2,11 @@
 
 ## Purpose
 
-Intent Intelligence MS, referred to as II MS, owns semantic interpretation and resolution for admitted runtime intents.
+Intent Intelligence MS, referred to as II MS, owns semantic interpretation, Knowledge Plane-backed validation, and semantic/service-ready preparation for admitted runtime intents. II MS receives syntactically admitted intent facts from IC MS, interprets and validates them against Knowledge Plane/domain knowledge, and emits one of the II-owned internal outcome events:
 
-II MS receives syntactically admitted intent facts from IC MS, interprets and validates them against Knowledge Plane/domain knowledge, and emits either a semantic rejection event or a downstream-ready canonical resolution event.
+- `IntentRejectedEvent` for semantic, policy, or capability rejection
+- `IntentResolvedEvent` for candidate-level semantic resolution
+- `IntentNetworkReadyEvent` for service-ready preparation to IA MS
 
 II MS is internal only. It does not expose a TMF-facing REST API and is not exposed through NGW, OEX, public API gateways, or partner-facing API channels.
 
@@ -16,9 +18,9 @@ II MS is internal only. It does not expose a TMF-facing REST API and is not expo
 | Service name | `intent-intelligence-ms` |
 | Short name | II MS |
 | Domain | Intent Domain |
-| Main responsibility | Semantic interpretation, Knowledge Plane-backed validation, canonical resolution |
+| Main responsibility | Semantic interpretation, Knowledge Plane-backed validation, canonical resolution, and service-ready preparation |
 | Primary event input | `IntentValidatedEvent` |
-| Main event outputs | `IntentRejectedEvent`, `IntentResolvedEvent` |
+| Main event outputs | `IntentRejectedEvent`, `IntentResolvedEvent`, `IntentNetworkReadyEvent` |
 | Event style | Internal CloudEvents headers with plain JSON `body` |
 | Source-of-truth persistence | Managed PostgreSQL / PostgreSQL-compatible RDBMS |
 | External TMF API owner | No |
@@ -28,7 +30,7 @@ II MS is internal only. It does not expose a TMF-facing REST API and is not expo
 II MS answers this question:
 
 ```text
-Can this admitted intent be semantically understood and resolved into a canonical downstream-ready handoff?
+Can this admitted intent be semantically understood, resolved into a canonical candidate-level handoff, and, where applicable, prepared into a service-ready configuration for IA MS?
 ```
 
 II MS does this after IC MS has already performed syntactic admission validation.
@@ -41,11 +43,12 @@ II MS owns:
 | KP-backed validation | Uses Knowledge Plane data to validate location, service, service class, capability, policy, and resource availability |
 | Canonicalisation | Normalises admitted values into canonical internal location, service, target, constraint, preference, and resource terms |
 | Rejection decision | Emits `IntentRejectedEvent` when semantic/policy/capability validation fails |
-| Resolution decision | Emits `IntentResolvedEvent` when the intent can be handed to the next internal fulfilment stage |
+| Resolution decision | Emits `IntentResolvedEvent` when the intent can be handed to the next internal fulfilment stage as a candidate-level semantic-resolution handoff |
+| Service-ready preparation | Emits `IntentNetworkReadyEvent` when orchestration and observation configuration has been prepared for IA MS |
 | Candidate resource handoff | Provides the full valid resource set known for the resolved context after scope/policy filtering |
 | Outbox publication | Publishes II-owned events reliably through the II outbox |
 | Idempotency | Deduplicates consumed events and avoids duplicate semantic outcomes |
-| Audit | Records semantic interpretation, KP lookup, rejection, and resolution decisions where required |
+| Audit | Records semantic interpretation, KP lookup, rejection, resolution, and service-ready preparation decisions where required |
 
 ## II MS does not own
 
@@ -56,7 +59,7 @@ II MS owns:
 | Runtime `IntentReport` REST API | IC MS |
 | External TMF lifecycle/status projection | IC MS |
 | External event subscriptions | IC MS / ID MS depending on resource |
-| Downstream selection or fulfilment decision | Downstream fulfilment/selection service |
+| Downstream optimisation or fulfilment execution | Downstream fulfilment/selection/optimisation component where applicable |
 | Assurance/apply/runtime truth | IA MS |
 | Callback ingestion | ICB MS |
 | Raw network apply/orchestration execution | Orchestration layer / network orchestrator |
@@ -84,7 +87,8 @@ Domain inputs such as `location`, `serviceType`, and `serviceClass` are carried 
 | Output | Condition | Purpose |
 |---|---|---|
 | `IntentRejectedEvent` | Semantic, policy, or capability validation fails | Tells IC MS the admitted intent must be externally projected as rejected |
-| `IntentResolvedEvent` | Semantic/capability resolution succeeds and downstream fulfilment/selection is required | Provides downstream-ready canonical context and available resource set |
+| `IntentResolvedEvent` | Semantic/capability resolution succeeds and downstream fulfilment/selection is required | Provides candidate-level canonical context and the valid resource set for downstream consideration |
+| `IntentNetworkReadyEvent` | Service-ready preparation succeeds after resolution | Provides IA MS with prepared orchestration and observation configuration; it does not mean apply succeeded |
 
 ## Processing stages
 
@@ -98,7 +102,7 @@ Domain inputs such as `location`, `serviceType`, and `serviceClass` are carried 
 | Policy validation | Validate hard constraints such as priority and redundancy against KP/domain policy |
 | Canonicalisation | Normalise values into canonical internal terms |
 | Resource discovery | Resolve available KP resources for the resolved domain context |
-| Outcome selection | Emit either `IntentRejectedEvent` or `IntentResolvedEvent` |
+| Outcome selection | Emit `IntentRejectedEvent`, `IntentResolvedEvent`, or `IntentNetworkReadyEvent` depending on the resolved milestone |
 | Durable publication | Write event to II outbox and publish through relay |
 | Audit | Record semantic/KP decision trail where required |
 
@@ -112,7 +116,7 @@ II MS preserves the canonical semantic bucket model.
 | `context.constraints` | Validates hard requirements such as `location`, `serviceType`, `serviceClass`, `priority`, `redundancyRequired`, and `timeWindow` |
 | `context.preferences` | Preserves soft selection guidance such as `preferredAccessTechnology` for downstream selection guidance |
 
-II MS must not flatten the buckets into unrelated top-level fields in `IntentResolvedEvent`.
+II MS must not flatten the buckets into unrelated top-level fields in `IntentResolvedEvent` or `IntentNetworkReadyEvent`.
 
 II MS may normalise values only where the semantic meaning is preserved and traceable.
 
@@ -131,13 +135,11 @@ II MS uses the Knowledge Plane as governed domain knowledge.
 | `redundancyAvailable` | Validate redundancy requirements |
 | logical target references | Resolve downstream target names where needed by downstream events |
 
-II MS must not dump raw KP into events.
-
-It curates only the information required by the next stage. `provider` remains KP/resource-inventory metadata only and is not included by default in event-facing resource entries.
+II MS must not dump raw KP into events. It curates only the information required by the next stage. `provider` remains KP/resource-inventory metadata only and is not included by default in event-facing resource entries.
 
 ## Resolution rule
 
-II MS emits `IntentResolvedEvent` only when the admitted intent can be semantically understood and resolved into a downstream-ready canonical context.
+II MS emits `IntentResolvedEvent` only when the admitted intent can be semantically understood and resolved into a candidate-level canonical context.
 
 A successful resolution implies:
 
@@ -146,11 +148,25 @@ A successful resolution implies:
 - the requested service is available or supported for the resolved location
 - hard constraints are semantically valid
 - the resource set is known and valid for downstream consideration after scope/policy filtering
-- the intent can proceed to the next internal fulfilment stage
+- the intent can proceed to the next internal fulfilment/preparation stage
 
-`IntentResolvedEvent.resources` contains the full valid resource set known in KP for the resolved context after applicable scope/policy filtering.
+`IntentResolvedEvent.resources` contains the full valid resource set known in KP for the resolved context after applicable scope/policy filtering. It is not the final selected/applied resource set and it is not the service-ready/apply-ready handoff.
 
-It is not the final selected/applied resource set.
+## Service-ready preparation rule
+
+II MS emits `IntentNetworkReadyEvent` when service-ready preparation has produced the concrete orchestration and observation configuration required by IA MS.
+
+`IntentNetworkReadyEvent`:
+
+- is produced by `intent-intelligence-ms`
+- is consumed by `intent-assurance-ms`
+- carries the resolved runtime `body.context`
+- carries apply/orchestration details under `serviceConfiguration.orchestratorConfiguration`
+- carries assurance/monitoring details under `serviceConfiguration.observerConfiguration`
+- does not mean network apply has succeeded
+- is not a substitute for `IntentAssuranceEvent`
+
+IA MS consumes this event and must not produce it.
 
 ## Rejection rule
 
@@ -184,7 +200,8 @@ II MS emits lifecycle-driving internal facts:
 | II outcome | IC MS typical projection |
 |---|---|
 | `IntentRejectedEvent.lifecycleStatus = Rejected` | `Intent.lifecycleStatus = Rejected` |
-| `IntentResolvedEvent.lifecycleStatus = InProgress` | `Intent.lifecycleStatus = InProgress` while downstream fulfilment continues |
+| `IntentResolvedEvent.lifecycleStatus = InProgress` | `Intent.lifecycleStatus = InProgress` while downstream fulfilment/preparation continues |
+| `IntentNetworkReadyEvent.lifecycleStatus = InProgress` | `Intent.lifecycleStatus = InProgress` while apply/assurance continues |
 
 IC MS owns the external projection and external TMF event publication.
 
@@ -205,9 +222,7 @@ Internal II events do not use the TMF external `Intent.expression` wrapper, but 
 
 ## API stance
 
-II MS has no external TMF-facing API and no consumer-facing REST contract.
-
-It is not exposed through NGW, OEX, public API gateways, or partner-facing API channels.
+II MS has no external TMF-facing API and no consumer-facing REST contract. It is not exposed through NGW, OEX, public API gateways, or partner-facing API channels.
 
 Operational probes such as `/health`, `/ready`, and `/metrics`, if implemented, are platform-internal only. They are for Kubernetes/platform operations and must not be presented as TMF921 resource APIs or externally exposed service APIs.
 
@@ -245,7 +260,7 @@ Indicative tables:
 | KP unavailable | Fail closed for semantic resolution; retry or dead-letter according to operational policy |
 | Kafka/event broker unavailable | Consumed event state must not be lost; II outbox relay retries publication |
 | Cache unavailable | Bypass cache and use KP/source where safe |
-| Downstream fulfilment stage unavailable | Not II MS concern; II only emits `IntentResolvedEvent` |
+| Downstream fulfilment/preparation stage unavailable | Not an external caller concern; II emits only the milestone it has actually reached |
 
 ## Security baseline
 
@@ -279,6 +294,7 @@ Recommended metrics:
 ```text
 ii_ms_intent_validated_consumed_count
 ii_ms_intent_resolved_count
+ii_ms_intent_network_ready_count
 ii_ms_intent_rejected_count
 ii_ms_kp_lookup_error_count
 ii_ms_resolution_failure_count
@@ -289,8 +305,6 @@ ii_ms_duplicate_event_count
 
 ## Design baseline statement
 
-II MS is the internal semantic interpretation and resolution service.
+II MS is the internal semantic interpretation, resolution, and service-ready preparation service.
 
-It consumes `IntentValidatedEvent`, validates and resolves the admitted expression using Knowledge Plane/domain knowledge, preserves the canonical `expression.context.targets`, `expression.context.constraints`, and `expression.context.preferences` buckets, and emits either `IntentRejectedEvent` or `IntentResolvedEvent`.
-
-II MS does not own external TMF APIs, runtime Intent lifecycle projection, downstream fulfilment/selection, assurance truth, callback ingestion, or KP governance.
+It consumes `IntentValidatedEvent`, validates and resolves the admitted expression using Knowledge Plane/domain knowledge, preserves the canonical `expression.context.targets`, `expression.context.constraints`, and `expression.context.preferences` buckets, and emits `IntentRejectedEvent`, `IntentResolvedEvent`, or `IntentNetworkReadyEvent` depending on the resolved milestone. II MS does not own external TMF APIs, runtime Intent lifecycle projection, downstream apply execution, assurance truth, callback ingestion, or KP governance.

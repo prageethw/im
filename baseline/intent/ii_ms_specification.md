@@ -8,7 +8,7 @@
 | Short name | II MS |
 | Service name | `intent-intelligence-ms` |
 | Domain | Intent Domain |
-| Primary responsibility | Semantic interpretation, Knowledge Plane-backed validation, and downstream-ready canonical resolution |
+| Primary responsibility | Semantic interpretation, Knowledge Plane-backed validation, candidate-level semantic resolution, and service-ready preparation |
 | External API | None |
 | Primary input event | `IntentValidatedEvent` |
 | Output events | `IntentRejectedEvent`, `IntentResolvedEvent`, `IntentNetworkReadyEvent` |
@@ -667,6 +667,31 @@ content-type: application/json
     "intentId": "INT-HOSP-2026-001",
     "version": "v1",
     "lifecycleStatus": "InProgress",
+    "context": {
+      "targets": {
+        "maxLatencyMs": 10,
+        "minAvailabilityPercent": 99.99,
+        "maxJitterMs": 2,
+        "maxPacketLossPercent": 0.01
+      },
+      "constraints": {
+        "location": {
+          "locationId": "AU-NSW-SYD-HOSP-001",
+          "displayName": "Sydney-Main-Hospital"
+        },
+        "serviceType": "surgical-connectivity",
+        "serviceClass": "critical-gold",
+        "priority": "critical",
+        "redundancyRequired": true,
+        "timeWindow": {
+          "startDateTime": "2026-04-18T12:00:00+10:00",
+          "endDateTime": "2026-04-18T14:00:00+10:00"
+        }
+      },
+      "preferences": {
+        "preferredAccessTechnology": "5G"
+      }
+    },
     "serviceConfiguration": {
       "orchestratorConfiguration": {
         "orchestratorId": "t7-network-orchestrator",
@@ -756,6 +781,7 @@ content-type: application/json
 - Consumer identity does not change producer ownership.
 - IA MS consumes this event; IA MS must not produce it.
 - `IntentNetworkReadyEvent` means service configuration is ready for orchestration/apply, not that apply has succeeded.
+- Carry the resolved runtime `body.context` with `targets`, `constraints`, and `preferences`; IA MS stores this as assurance context.
 - Use `serviceConfiguration.orchestratorConfiguration` for apply/orchestration details.
 - Use `serviceConfiguration.observerConfiguration` for assurance/monitoring details.
 - Do not include `applyOutcome`.
