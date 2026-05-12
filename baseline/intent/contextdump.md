@@ -21,3 +21,15 @@ For `Degraded` and similar re-decision states in `IntentAssuranceEvent`, do not 
 `body.evaluations` may carry violated/satisfied assurance checks and reference the affected `resourceId`. `requiresReoptimisation` remains omitted by default; II MS or another authorised decision component reads the event state, evaluations, and candidates to decide whether re-interpretation, re-optimisation, reselection, or no action is required.
 
 For `Active`, `current.resources` remains acceptable because there is no re-decision pressure. For `Terminated`, candidates are normally not needed unless reporting final resources.
+
+## Baseline update — IA MS metrics-first IntentAssuranceEvent
+
+Baselined on 2026-05-12.
+
+`IntentAssuranceEvent` is metrics-first by default. Do not include `current.evaluations` or `body.evaluations` by default. Use `lifecycleStatus` and `statusReason` to explain the outcome, and use resource-level `metrics`, `selectionStatus`, and `assuranceStatus` to show the current health/state of each resource.
+
+For `Active`, `body.current.resources` is acceptable because there is no re-decision pressure. Each current resource carries runtime metrics and benchmark metrics where available.
+
+For `Degraded` and `Failed`, do not include a separate `current` block by default. Use `body.candidates` to include the current degraded/failed resource and all applicable alternatives. Each candidate carries `roles`, `selectionStatus`, `assuranceStatus`, `resourceType`, `resourceClass`, `resourceAttributes`, `relationships`, and `metrics`.
+
+`requiresReoptimisation` remains omitted by default. II MS or another authorised decision component reads `lifecycleStatus`, `statusReason`, metrics, and candidates to decide the next action.

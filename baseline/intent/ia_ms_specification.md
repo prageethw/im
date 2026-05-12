@@ -394,9 +394,7 @@ content-type: application/json
 | **Field / area** | **Purpose** |
 |---|---|
 | `body.context` | Resolved runtime context with targets, constraints, and preferences where relevant |
-| `body.current.evaluations` | Curated current assurance evaluations for normal/active states |
 | `body.current.resources` | Currently selected/applied/observed resources for normal/active states |
-| `body.evaluations` | Curated violated/satisfied assurance evaluations for degraded/failed re-decision states |
 | `body.candidates` | All applicable available resources for degraded/failed re-decision states, including the currently used resource and alternatives, each with metrics and status indicators |
 | `body.references` | Correlation and resource references |
 
@@ -414,11 +412,13 @@ Current runtime metric names use `latencyMs` and `reliabilityPercent`. Benchmark
 
 Do not duplicate `resourceId` into `resourceAttributes.pathId` when they are identical.
 
-`requiresReoptimisation` is not included by default. II MS or other authorised decision logic reads the assurance event state, evaluations, and candidates, then decides whether re-interpretation, re-optimisation, reselection, or no action is required.
+`requiresReoptimisation` is not included by default. II MS or other authorised decision logic reads lifecycleStatus, statusReason, resource metrics, and candidates, then decides whether re-interpretation, re-optimisation, reselection, or no action is required.
 
-For `Active`, `body.current.resources` is acceptable because there is no re-decision pressure. For `Degraded` and `Failed`, do not include a separate `current` block by default; instead place the current resource and alternatives together in `body.candidates`, using candidate-level `selectionStatus` and `assuranceStatus` to make the current/degraded resource explicit. For `Terminated`, candidates are normally not required unless reporting final resources.
+For `Active`, `body.current.resources` is acceptable because there is no re-decision pressure. For `Degraded` and `Failed`, do not include a separate `current` block by default; instead place the current resource and alternatives together in `body.candidates`, using candidate-level `selectionStatus`, `assuranceStatus`, and resource metrics to make the current/degraded resource explicit. For `Terminated`, candidates are normally not required unless reporting final resources.
 
 ### 6.3 Active outcome
+
+For `Active`, IA MS may use `body.current.resources` because there is no re-decision pressure. The event remains fact-based: lifecycle/status reason plus resource metrics. Do not include a separate `current.evaluations` block by default.
 
 ```json
 {
@@ -449,26 +449,12 @@ For `Active`, `body.current.resources` is acceptable because there is no re-deci
       }
     },
     "current": {
-      "evaluations": [
-        {
-          "name": "latency",
-          "status": "SATISFIED",
-          "target": 10,
-          "observedValue": 8,
-          "unit": "ms"
-        },
-        {
-          "name": "availability",
-          "status": "SATISFIED",
-          "target": 99.99,
-          "observedValue": 99.995,
-          "unit": "percent"
-        }
-      ],
       "resources": [
         {
           "resourceId": "SYD-PRI-01",
-          "roles": ["primary"],
+          "roles": ["primary", "current"],
+          "selectionStatus": "CURRENT",
+          "assuranceStatus": "HEALTHY",
           "resourceType": "networkPath",
           "resourceClass": "critical-gold-access",
           "resourceAttributes": {
@@ -485,12 +471,18 @@ For `Active`, `body.current.resources` is acceptable because there is no re-deci
             "latencyMs": 8,
             "availabilityPercent": 99.995,
             "jitterMs": 1.5,
-            "packetLossPercent": 0.005
+            "packetLossPercent": 0.005,
+            "latencyBenchmarkMs": 7,
+            "availabilityBenchmarkPercent": 99.996,
+            "jitterBenchmarkMs": 1.1,
+            "packetLossBenchmarkPercent": 0.004
           }
         },
         {
           "resourceId": "SYD-SEC-01",
-          "roles": ["secondary"],
+          "roles": ["secondary", "current"],
+          "selectionStatus": "CURRENT",
+          "assuranceStatus": "HEALTHY",
           "resourceType": "networkPath",
           "resourceClass": "critical-gold-access",
           "resourceAttributes": {
@@ -507,59 +499,17 @@ For `Active`, `body.current.resources` is acceptable because there is no re-deci
             "latencyMs": 10,
             "availabilityPercent": 99.994,
             "jitterMs": 1.8,
-            "packetLossPercent": 0.006
+            "packetLossPercent": 0.006,
+            "latencyBenchmarkMs": 10,
+            "availabilityBenchmarkPercent": 99.994,
+            "jitterBenchmarkMs": 1.8,
+            "packetLossBenchmarkPercent": 0.006
           }
         }
       ]
     },
-    "candidates": [
-      {
-        "resourceId": "SYD-PRI-01",
-        "roles": ["primary"],
-        "resourceType": "networkPath",
-        "resourceClass": "critical-gold-access",
-        "resourceAttributes": {
-          "accessTechnology": "fibre",
-          "locationId": "AU-NSW-SYD-HOSP-001"
-        },
-        "relationships": [
-          {
-            "type": "pairedSecondary",
-            "targetResourceId": "SYD-SEC-01"
-          }
-        ],
-        "metrics": {
-          "latencyBenchmarkMs": 7,
-          "availabilityBenchmarkPercent": 99.996,
-          "jitterBenchmarkMs": 1.1,
-          "packetLossBenchmarkPercent": 0.004
-        }
-      },
-      {
-        "resourceId": "SYD-PRI-02",
-        "roles": ["primary"],
-        "resourceType": "networkPath",
-        "resourceClass": "critical-gold-access",
-        "resourceAttributes": {
-          "accessTechnology": "5G",
-          "locationId": "AU-NSW-SYD-HOSP-001"
-        },
-        "relationships": [
-          {
-            "type": "pairedSecondary",
-            "targetResourceId": "SYD-SEC-02"
-          }
-        ],
-        "metrics": {
-          "latencyBenchmarkMs": 8,
-          "availabilityBenchmarkPercent": 99.995,
-          "jitterBenchmarkMs": 1.5,
-          "packetLossBenchmarkPercent": 0.005
-        }
-      }
-    ],
     "references": {
-      "correlationId": "corr-intent-assurance-001",
+      "correlationId": "corr-intent-assurance-active-001",
       "intent": {
         "id": "INT-HOSP-2026-001",
         "href": "/intentManagement/v5/intent/INT-HOSP-2026-001"
@@ -577,7 +527,7 @@ For `Active`, `body.current.resources` is acceptable because there is no re-deci
 
 For `Degraded`, IA MS does not include a separate `current` block by default. The degraded/current resource and all applicable alternatives are represented together in `body.candidates`.
 
-This shape lets II MS or another authorised decision component inspect the current degraded resource, available alternatives, and their metrics without needing a separate `requiresReoptimisation` flag.
+This shape lets II MS or another authorised decision component inspect the current degraded resource, available alternatives, and their metrics without needing a separate `requiresReoptimisation` flag or a separate evaluations block.
 
 ```json
 {
@@ -607,17 +557,6 @@ This shape lets II MS or another authorised decision component inspect the curre
         "preferredAccessTechnology": "5G"
       }
     },
-    "evaluations": [
-      {
-        "name": "latency",
-        "status": "VIOLATED",
-        "target": 10,
-        "observedValue": 18,
-        "unit": "ms",
-        "reasonCode": "LATENCY_TARGET_VIOLATED",
-        "resourceId": "SYD-PRI-01"
-      }
-    ],
     "candidates": [
       {
         "resourceId": "SYD-PRI-01",
@@ -733,7 +672,7 @@ This shape lets II MS or another authorised decision component inspect the curre
       }
     ],
     "references": {
-      "correlationId": "corr-intent-assurance-002",
+      "correlationId": "corr-intent-assurance-degraded-001",
       "intent": {
         "id": "INT-HOSP-2026-001",
         "href": "/intentManagement/v5/intent/INT-HOSP-2026-001"
@@ -776,8 +715,9 @@ IntentReport remains fact-only by default. It does not require separate `degrada
 - `IntentDriftOccurredEvent` is retired and must not be used by default.
 - Use `lifecycleStatus` and `statusReason` for state narrative.
 - Use internal `context` where the event carries resolved runtime targets, constraints, and preferences.
-- Use `current.evaluations` and `current.resources` for normal/active-state current assurance facts where there is no immediate re-decision pressure.
-- For `Degraded` and `Failed`, prefer no separate `current` block by default. Use `evaluations` plus `candidates`.
+- Use `current.resources` for normal/active-state resource facts where there is no immediate re-decision pressure.
+- Do not include `current.evaluations` or `body.evaluations` by default.
+- For `Degraded` and `Failed`, prefer no separate `current` block by default. Use `candidates`.
 - In degraded/failed states, `candidates` includes all applicable available resources, including the current degraded/failed resource and alternatives, with candidate-level `selectionStatus`, `assuranceStatus`, runtime metrics, and benchmark metrics.
 - Do not include raw callback payloads.
 - Do not include raw telemetry dumps.

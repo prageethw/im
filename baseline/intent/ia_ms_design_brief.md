@@ -117,9 +117,7 @@ The active generic body shape uses:
 | `context.targets` | Runtime targets used to interpret observations |
 | `context.constraints` | Location/service/priority/redundancy context where needed |
 | `context.preferences` | Preference context where useful for downstream decisions |
-| `current.evaluations` | Curated assurance evaluations for normal/active states |
 | `current.resources` | Selected/applied/observed resources for normal/active states |
-| `evaluations` | Curated violated/satisfied assurance checks for degraded/failed re-decision states |
 | `candidates` | All applicable available resources for degraded/failed re-decision states, including the current resource and alternatives, with metrics and status indicators |
 | `references` | Correlation and external resource references |
 
@@ -131,7 +129,7 @@ IA MS does not emit `IntentDriftOccurredEvent` in the active baseline. Drift/deg
 
 IA MS does not include raw callback payloads, raw telemetry dumps, optimiser scoring, solver internals, `provider`, or default `requiresReoptimisation` in `IntentAssuranceEvent`.
 
-For `Active`, `current.resources` remains acceptable because there is no re-decision pressure. For `Degraded` and `Failed`, IA MS should not include a separate `current` block by default. Instead, it should put the current affected resource and all applicable alternatives together in `candidates`, using candidate-level `selectionStatus` and `assuranceStatus` to identify current, available, healthy, degraded, failed, or unavailable resources. Each candidate carries its own runtime metrics and benchmark metrics where available. For `Terminated`, candidates are normally not needed unless reporting final resources.
+For `Active`, `current.resources` remains acceptable because there is no re-decision pressure. For `Degraded` and `Failed`, IA MS should not include a separate `current` block by default. Instead, it should put the current affected resource and all applicable alternatives together in `candidates`, using candidate-level `selectionStatus`, `assuranceStatus`, and metrics to identify current, available, healthy, degraded, failed, or unavailable resources. Each candidate carries its own runtime metrics and benchmark metrics where available. For `Terminated`, candidates are normally not needed unless reporting final resources.
 
 ## Observation endpoint baseline
 
@@ -144,3 +142,8 @@ IA evaluates returned metric facts against resolved runtime targets and the IA s
 IA MS is the runtime assurance truth service. It consumes callback, network-ready, optimisation, and observation facts; maps raw callback state; evaluates runtime observations against resolved runtime targets and the stored applied assurance baseline; and emits curated generic `IntentAssuranceEvent` outcomes.
 
 IC MS consumes `IntentAssuranceEvent` to project external TMF-facing `Intent` lifecycle and `IntentReport` resources.
+
+
+## Metrics-first IntentAssuranceEvent refinement
+
+`IntentAssuranceEvent` is metrics-first by default. Do not include `current.evaluations` or `body.evaluations` unless a future policy explicitly requires derived evaluation objects. `lifecycleStatus` and `statusReason` explain the outcome; resource-level `metrics`, `selectionStatus`, and `assuranceStatus` provide the facts needed by IC MS, II MS, and authorised decision components.

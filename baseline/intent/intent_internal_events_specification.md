@@ -338,8 +338,8 @@ IA MS reports curated assurance/apply/runtime outcome truth. IC MS consumes this
 `IntentAssuranceEvent` uses a top-level `body` object with:
 
 - `context`
-- `current.evaluations` and `current.resources` for normal/active states
-- `evaluations` and `candidates` for degraded/failed re-decision states
+- `current.resources` for normal/active states
+- `candidates` for degraded/failed re-decision states
 - `references`
 
 Reusable resource entries use:
@@ -356,7 +356,7 @@ For `Degraded` and `Failed`, `candidates` represents all applicable available re
 
 For `Active`, `current.resources` remains acceptable because there is no re-decision pressure. For `Terminated`, candidates are normally not needed unless reporting final resources.
 
-`requiresReoptimisation` is not included by default. II MS or another authorised decision component derives the next action from the assurance event state.
+`requiresReoptimisation` is not included by default. II MS or another authorised decision component derives the next action from lifecycleStatus, statusReason, resource metrics, and candidates.
 
 ### Event-specific rules
 
@@ -397,3 +397,8 @@ Accepted raw orchestrator callback relayed to the internal event backbone.
 - Do not use older callback fields such as `callbackSource`, `callbackTimestamp`, or `sourceState.state`.
 - ICB MS owns callback ingestion and raw callback event publication.
 - IA MS owns callback meaning/lifecycle mapping.
+
+
+### Metrics-first assurance rule
+
+`IntentAssuranceEvent` does not include `current.evaluations` or `body.evaluations` by default. Use `lifecycleStatus`, `statusReason`, resource-level `metrics`, `selectionStatus`, and `assuranceStatus` as the default fact model.
