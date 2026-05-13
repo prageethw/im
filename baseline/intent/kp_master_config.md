@@ -30,7 +30,7 @@
           "maxJitterMs": 2,
           "maxPacketLossPercent": 0.01
         },
-        "resourceRoles": [
+        "roles": [
           "primary",
           "secondary"
         ],
@@ -65,7 +65,7 @@
           "maxJitterMs": 2,
           "maxPacketLossPercent": 0.01
         },
-        "resourceRoles": [
+        "roles": [
           "primary",
           "secondary"
         ],
@@ -95,9 +95,9 @@
     "resources": {
       "SYD-PRI-01": {
         "resourceId": "SYD-PRI-01",
-        "resourceType": "networkPath",
-        "resourceClass": "critical-gold-access",
-        "resourceRoles": [
+        "resourceType": "deliveryResource",
+        "resourceClass": "critical-gold",
+        "roles": [
           "primary"
         ],
         "accessTechnology": "fibre",
@@ -119,9 +119,9 @@
       },
       "SYD-PRI-02": {
         "resourceId": "SYD-PRI-02",
-        "resourceType": "networkPath",
-        "resourceClass": "critical-gold-access",
-        "resourceRoles": [
+        "resourceType": "deliveryResource",
+        "resourceClass": "critical-gold",
+        "roles": [
           "primary"
         ],
         "accessTechnology": "5G",
@@ -143,9 +143,9 @@
       },
       "SYD-SEC-01": {
         "resourceId": "SYD-SEC-01",
-        "resourceType": "networkPath",
-        "resourceClass": "critical-gold-access",
-        "resourceRoles": [
+        "resourceType": "deliveryResource",
+        "resourceClass": "critical-gold",
+        "roles": [
           "secondary"
         ],
         "accessTechnology": "5G",
@@ -167,9 +167,9 @@
       },
       "SYD-SEC-02": {
         "resourceId": "SYD-SEC-02",
-        "resourceType": "networkPath",
-        "resourceClass": "critical-gold-access",
-        "resourceRoles": [
+        "resourceType": "deliveryResource",
+        "resourceClass": "critical-gold",
+        "roles": [
           "secondary"
         ],
         "accessTechnology": "fibre",
@@ -191,9 +191,9 @@
       },
       "MEL-PRI-01": {
         "resourceId": "MEL-PRI-01",
-        "resourceType": "networkPath",
-        "resourceClass": "critical-gold-access",
-        "resourceRoles": [
+        "resourceType": "deliveryResource",
+        "resourceClass": "critical-gold",
+        "roles": [
           "primary"
         ],
         "accessTechnology": "fibre",
@@ -215,9 +215,9 @@
       },
       "MEL-PRI-02": {
         "resourceId": "MEL-PRI-02",
-        "resourceType": "networkPath",
-        "resourceClass": "critical-gold-access",
-        "resourceRoles": [
+        "resourceType": "deliveryResource",
+        "resourceClass": "critical-gold",
+        "roles": [
           "primary"
         ],
         "accessTechnology": "5G",
@@ -239,9 +239,9 @@
       },
       "MEL-SEC-01": {
         "resourceId": "MEL-SEC-01",
-        "resourceType": "networkPath",
-        "resourceClass": "critical-gold-access",
-        "resourceRoles": [
+        "resourceType": "deliveryResource",
+        "resourceClass": "critical-gold",
+        "roles": [
           "secondary"
         ],
         "accessTechnology": "5G",
@@ -263,9 +263,9 @@
       },
       "MEL-SEC-02": {
         "resourceId": "MEL-SEC-02",
-        "resourceType": "networkPath",
-        "resourceClass": "critical-gold-access",
-        "resourceRoles": [
+        "resourceType": "deliveryResource",
+        "resourceClass": "critical-gold",
+        "roles": [
           "secondary"
         ],
         "accessTechnology": "fibre",
@@ -428,6 +428,7 @@
 ```
 
 ## Baseline notes
+- KP uses shared resource vocabulary where meaning is not lost: resource entries use `resourceType: "deliveryResource"`, `resourceClass: "critical-gold"`, and `roles`. KP-native reference/capability terminology remains valid for resource `metrics.benchmark.*`, location/service `benchmarks.*`, and `optimiserTarget: "t7-gurobi-optimiser"`.
 
 - KP contains current available knowledge, not optimiser/orchestrator execution logic.
 - `locationBasedServices` entries are keyed by canonical `locationId` for direct lookup.
@@ -439,7 +440,7 @@
 - `resourceIds` identify resources currently known for a location-based service.
 - Resource entries do not repeat `locationId`; location-resource association is derived from `locationBasedServices[locationId].resourceIds`.
 - `capabilityStatus` uses `available` or `unknown`.
-- KP uses `redundancyAvailable` to describe current redundant resource capability. Human/NLP input may map `redundancyRequired`, but II MS validates it against `redundancyAvailable` and `resourceRoles`.
+- KP uses `redundancyAvailable` to describe current redundant resource capability. Human/NLP input may map `redundancyRequired`, but II MS validates it against `redundancyAvailable` and `roles`.
 - Logical references such as `optimiserTarget`, `optimiserModel`, `orchestratorTarget`, `orchestratorProfile`, `observerTarget`, and `observerProfile` are names only, not endpoint/payload/credential details.
 - Events may map these logical references into nested event-specific configuration structures such as `serviceConfiguration.orchestratorConfiguration.target/profile` and `serviceConfiguration.observerConfiguration.target/profile`.
 - KP does not include `semanticProfile`, `assuranceProfiles`, optimiser objective rules, hops, or service attributes by default.
