@@ -16,6 +16,44 @@ ID MS owns definition-time `IntentSpecification` contracts and subscription mana
 
 ID MS does not validate runtime semantic feasibility, policy fulfilment, network topology, optimisation, assurance, telemetry, orchestration callbacks, or runtime intent lifecycle truth.
 
+
+## TMF compliance and platform extension baseline:
+
+ID MS follows the TMF921 `IntentSpecification` resource responsibility boundary while retaining a small set of approved platform extensions.
+
+Deployment path convention:
+
+- examples in this design brief use `/intentManagement/v5`
+- strict TMF gateway exposure may use `/tmf-api/intentManagement/v5`
+- NGW/API gateway routing may map between the external TMF deployment prefix and the internal service path
+
+Strict TMF-compatible operations remain:
+
+| **Area** | **Strict TMF-compatible operation** |
+|---|---|
+| Create specification | `POST /intentManagement/v5/intentSpecification` |
+| List specifications | `GET /intentManagement/v5/intentSpecification` |
+| Retrieve specification | `GET /intentManagement/v5/intentSpecification/{id}` |
+| Partial update specification | `PATCH /intentManagement/v5/intentSpecification/{id}` |
+| Delete specification | `DELETE /intentManagement/v5/intentSpecification/{id}` |
+| Generic hub create/delete | `/hub` exposure where strict TMF gateway routing is required |
+
+Approved platform extensions are:
+
+| **Extension** | **Reason** |
+|---|---|
+| `PUT /intentManagement/v5/intentSpecification/{id}` | Deterministic full replacement of editable `DRAFT` specifications |
+| Domain-scoped `/intentSpecification/hub` routes | Keeps ID MS subscriptions scoped to `IntentSpecification*Event` notifications |
+| `GET /intentSpecification/hub/{id}` | Operational convenience for retrieving a domain-scoped subscription |
+| `familyId` | Version-family governance across related specification versions |
+| `_links` | Platform navigation affordance |
+| `previousActiveSpecification` | Activation/retirement traceability during active-version promotion |
+| Strong `ETag` / `If-Match` rules | Optimistic concurrency for unsafe operations |
+| `428 Precondition Required` | Explicit stale-write prevention when `If-Match` is missing |
+
+External `IntentSpecification*Event` envelopes should populate both `eventTime` and `timeOccurred` with the same canonical event occurrence timestamp. `timeOccurred` is the platform-corrected spelling used consistently for external event examples.
+
+
 ## IntentSpecification resource APIs:
 
 | **Purpose** | **Method** | **Endpoint** |
@@ -33,7 +71,7 @@ ID MS does not validate runtime semantic feasibility, policy fulfilment, network
 
 ## Hub subscription APIs:
 
-ID MS intentionally uses domain-scoped hub routes.
+ID MS intentionally uses domain-scoped hub routes for `IntentSpecification*Event` subscriptions. Strict TMF exposure may use the generic root `/hub` route at the gateway layer; `/intentSpecification/hub` and `GET /intentSpecification/hub/{id}` are approved platform extensions for domain-owned operational clarity.
 
 | **Purpose** | **Method** | **Endpoint** |
 |---|---:|---|
@@ -1306,9 +1344,12 @@ Trace data must not include secrets or sensitive token contents.
 
 ### Notes requiring attention:
 
-- Domain-scoped `/intentSpecification/hub` route is intentional.
-- `PUT` full replacement is intentional platform extension.
+- Examples use `/intentManagement/v5`; strict TMF gateway exposure may use `/tmf-api/intentManagement/v5`.
+- Domain-scoped `/intentSpecification/hub` route is intentional; strict TMF generic `/hub` exposure can be handled by NGW/API gateway routing when required.
+- `GET /intentSpecification/hub/{id}` is an approved platform extension for subscription retrieval.
+- `PUT` full replacement is an intentional platform extension.
 - `PATCH` remains supported for TMF compatibility, but is discouraged generally.
+- External `IntentSpecification*Event` envelopes should populate both `eventTime` and `timeOccurred` with the same canonical occurrence timestamp.
 - `targetEntitySchema` is retained as the governed runtime expression-value schema reference.
 - `familyId` is retained for version-family governance.
 
