@@ -38,7 +38,7 @@ It is responsible for:
 | Semantic validation | II MS |
 | Policy validation | II MS + lightweight II MS KP + `t7.knowledge plane` |
 | Knowledge resolution | II MS + `t7.knowledge plane` |
-| Optimisation | `t7.optimiser` |
+| Optimisation | `optimiser-controller-ms` using optimiser backends such as `t7-gurobi-optimiser` where relevant |
 | Network apply / orchestration execution | Orchestration layer / network orchestrator |
 | Apply outcome interpretation | IA MS |
 | Runtime assurance truth | IA MS |
@@ -47,6 +47,22 @@ It is responsible for:
 | Raw orchestrator callback interpretation | IA MS |
 
 ## IC MS API surface:
+
+### Deployment path convention:
+
+Examples in this design brief use the platform route prefix:
+
+```http
+/intentManagement/v5
+```
+
+Strict TMF gateway exposure may use:
+
+```http
+/tmf-api/intentManagement/v5
+```
+
+The API gateway may map between the external TMF deployment prefix and the internal platform route prefix without changing IC MS resource ownership or operation semantics.
 
 ### Intent resource APIs:
 
@@ -82,6 +98,8 @@ Accepted domain-scoped platform extension:
 | Create intent event subscription | `POST` | `/intentManagement/v5/intent/hub` |
 | Retrieve intent event subscription | `GET` | `/intentManagement/v5/intent/hub/{id}` |
 | Delete intent event subscription | `DELETE` | `/intentManagement/v5/intent/hub/{id}` |
+
+Strict TMF hub routes are rooted at `/intentManagement/v5/hub`. IC MS also supports the domain-scoped `/intentManagement/v5/intent/hub` route family as an approved platform extension for Intent and IntentReport event subscriptions. `GET /intentManagement/v5/intent/hub/{id}` is an operational convenience extension and is not part of the strict minimum TMF hub operation set.
 
 ## IC MS validation responsibility:
 
@@ -219,6 +237,10 @@ IntentReportDeleteEvent
 
 `IntentReportDeleteEvent` is retained in this vocabulary for TMF alignment and governed internal/admin deletion or retention purge scenarios only; it is not emitted for ordinary external consumer delete because that operation is not exposed by default.
 
+### External event timestamp rule:
+
+External TMF-facing event examples and emitted event envelopes populate both `eventTime` and `timeOccurred` with the same canonical event occurrence timestamp. `timeOccurred` is the corrected platform spelling used consistently across IC MS and ID MS external event examples.
+
 These events are external projection/resource events only.
 
 They must not expose raw telemetry, raw optimiser decisions, raw `t7.knowledge plane` data, raw callback payloads, internal candidate scoring, internal Kafka event payloads, or full internal `IntentAssuranceEvent` body unless deliberately curated into `IntentReport`.
@@ -263,26 +285,34 @@ If a deployment must expose the TMF report delete route for compatibility, it mu
 No separate `IntentReport` lifecycle is baselined for ordinary consumer use because delete/purge is a governed administrative operation, not a normal report lifecycle transition.
 
 
-## TMF compliance and platform extension rule:
+## TMF compliance and platform extension baseline:
 
-IC MS remains TMF-aligned at the external contract level, but controlled platform extensions are acceptable when documented, non-breaking, and semantically compatible with TMF.
+IC MS remains TMF-aligned at the external contract level, while retaining documented, non-breaking platform extensions for deterministic update, domain-scoped subscription management, concurrency, and retained projection governance.
 
-Strict TMF-compatible update operation:
+Strict TMF-compatible external operations:
 
-```http
-PATCH /intentManagement/v5/intent/{id}
-```
+| **Resource area** | **Strict TMF-compatible operations** |
+|---|---|
+| `Intent` | `POST /intentManagement/v5/intent`, `GET /intentManagement/v5/intent`, `GET /intentManagement/v5/intent/{id}`, `PATCH /intentManagement/v5/intent/{id}`, `DELETE /intentManagement/v5/intent/{id}` |
+| `IntentReport` | `GET /intentManagement/v5/intent/{intentId}/intentReport`, `GET /intentManagement/v5/intent/{intentId}/intentReport/{id}` |
+| Hub subscription | `POST /intentManagement/v5/hub`, `DELETE /intentManagement/v5/hub/{id}` |
 
-Accepted platform extension:
+Approved IC MS platform extensions:
 
-```http
-PUT /intentManagement/v5/intent/{id}
-```
+| **Extension** | **Purpose / boundary** |
+|---|---|
+| `PUT /intentManagement/v5/intent/{id}` | Deterministic full replacement where supported; `PATCH` remains available for strict TMF-compatible clients. |
+| `/intentManagement/v5/intent/hub` | Domain-scoped subscription route for IC-owned `Intent*Event` and `IntentReport*Event` notifications. |
+| `GET /intentManagement/v5/intent/hub/{id}` | Operational convenience for retrieving a domain-scoped subscription. Not part of the strict minimum TMF hub operation set. |
+| `ETag` / `If-Match` with `428 Precondition Required` and `412 Precondition Failed` | Platform optimistic-concurrency policy for unsafe operations. |
+| Termination-retention behaviour for `DELETE /intent/{id}` | `DELETE` is treated as termination of the retained runtime `Intent` projection, not physical deletion by default. |
+| Governed/admin-only `IntentReport` delete posture | Ordinary external consumers list/retrieve reports only; internal/admin purge may emit `IntentReportDeleteEvent` where policy allows. |
 
 Platform preference:
 
 - `PUT` is preferred for deterministic full replacement where supported.
 - `PATCH` is supported for TMF compatibility but not encouraged for ordinary edits.
+- Strict TMF clients can use `PATCH` and root `/hub` routes; platform-aware clients can use the documented IC domain-scoped routes and `PUT` extension where allowed.
 
 ## IC MS boundary statement:
 
