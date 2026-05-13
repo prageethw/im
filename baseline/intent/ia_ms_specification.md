@@ -58,7 +58,9 @@ Internal IA events must not use external TMF `IntentExpression` wrappers. Those 
 
 ### 4.1 IntentNetworkReadyEvent input
 
-IA MS consumes `IntentNetworkReadyEvent` to learn the apply plan and observer scope. `IntentNetworkReadyEvent` is produced by `intent-intelligence-ms`. IA MS must not emit `IntentNetworkReadyEvent`.
+IA MS consumes `IntentNetworkReadyEvent` to learn the apply plan and observer scope.
+
+`IntentNetworkReadyEvent` is produced by `intent-intelligence-ms`. IA MS must not emit `IntentNetworkReadyEvent`.
 
 #### Example headers
 
@@ -109,19 +111,15 @@ content-type: application/json
         "resources": [
           {
             "resourceId": "SYD-PRI-01",
-            "resourceType": "networkPath",
-            "resourceClass": "critical-gold-access",
-            "roles": [
-              "primary"
-            ]
+            "resourceType": "deliveryResource",
+            "resourceClass": "critical-gold",
+            "roles": ["primary"]
           },
           {
             "resourceId": "SYD-SEC-01",
-            "resourceType": "networkPath",
-            "resourceClass": "critical-gold-access",
-            "roles": [
-              "secondary"
-            ]
+            "resourceType": "deliveryResource",
+            "resourceClass": "critical-gold",
+            "roles": ["secondary"]
           }
         ]
       },
@@ -131,11 +129,9 @@ content-type: application/json
         "resources": [
           {
             "resourceId": "SYD-PRI-01",
-            "resourceType": "networkPath",
-            "resourceClass": "critical-gold-access",
-            "roles": [
-              "primary"
-            ],
+            "resourceType": "deliveryResource",
+            "resourceClass": "critical-gold",
+            "roles": ["primary"],
             "metrics": {
               "benchmark": {
                 "latencyMs": 7,
@@ -147,11 +143,9 @@ content-type: application/json
           },
           {
             "resourceId": "SYD-SEC-01",
-            "resourceType": "networkPath",
-            "resourceClass": "critical-gold-access",
-            "roles": [
-              "secondary"
-            ],
+            "resourceType": "deliveryResource",
+            "resourceClass": "critical-gold",
+            "roles": ["secondary"],
             "metrics": {
               "benchmark": {
                 "latencyMs": 10,
@@ -249,7 +243,9 @@ content-type: application/json
 
 ### 4.3 Metrics collection through observation endpoints
 
-IA MS does not consume a separately named observation snapshot event in the active baseline. IA MS obtains runtime metrics from observability/observation endpoints that are selected or informed by `IntentNetworkReadyEvent.serviceConfiguration.observerConfiguration`.
+IA MS does not consume a separately named observation snapshot event in the active baseline.
+
+IA MS obtains runtime metrics from observability/observation endpoints that are selected or informed by `IntentNetworkReadyEvent.serviceConfiguration.observerConfiguration`.
 
 #### Logical metrics returned to IA MS
 
@@ -322,7 +318,7 @@ content-type: application/json
 |---|---|
 | `body.context` | Resolved runtime context with targets, constraints, and preferences where relevant |
 | `body.current.resources` | Currently selected/applied/observed resources for normal/active states |
-| `body.candidates` | All applicable available resources for degraded/failed re-decision states, including the currently used resource and alternatives, each with metrics and status indicators |
+| `body.candidates` | All applicable available resources for degraded/failed re-decision states, including the currently used resource and alternatives, each with metrics |
 | `body.references` | Correlation and resource references |
 
 Reusable resource entries use:
@@ -335,17 +331,33 @@ Reusable resource entries use:
 - `relationships`
 - `metrics`
 
-Current runtime metric names use `latencyMs`, `availabilityPercent`, `jitterMs`, and `packetLossPercent`. Benchmark context may use `latencyBenchmarkMs`, `availabilityBenchmarkPercent`, `jitterBenchmarkMs`, and `packetLossBenchmarkPercent`.
+Controlled vocabulary baseline:
+
+- `roles`: `primary`, `secondary`
+- `resourceType`: `deliveryResource`, `computeResource`, `storageResource`, `securityResource`, `platformResource`
+- `resourceClass`: `critical-gold`, `critical-silver`, `standard`, `best-effort`
+
+Do not use resource-level `selectionStatus` or `assuranceStatus` by default. The interpreted assurance outcome is represented by `lifecycleStatus` and `statusReason`. Current-versus-candidate meaning is derived from the payload structure: `body.current.resources` for normal/active current resources, and `body.candidates` for degraded/failed re-decision facts.
+
+Current runtime metric names use `latencyMs`, `availabilityPercent`, `jitterMs`, and `packetLossPercent`.
+
+Resource-level `metrics` must contain observed/current live data only. Do not include benchmark or threshold metrics such as `latencyBenchmarkMs`, `availabilityBenchmarkPercent`, `jitterBenchmarkMs`, or `packetLossBenchmarkPercent` in resource metric lists by default. Target and benchmark thresholds belong in the resolved intent, IC projected `IntentReport` target/current comparison, or IA internal evaluation logic.
 
 Do not duplicate `resourceId` into `resourceAttributes.pathId` when they are identical.
 
 `requiresReoptimisation` is not included by default. II MS or another authorised decision component reads lifecycleStatus, statusReason, resource metrics, and candidates, then decides whether re-interpretation, re-optimisation, reselection, or no action is required.
 
-For `Active`, `body.current.resources` is acceptable because there is no re-decision pressure. For `Degraded` and `Failed`, do not include a separate `current` block by default; instead place the current resource and alternatives together in `body.candidates`, using candidate-level `selectionStatus`, `assuranceStatus`, and resource metrics to make the current/degraded resource explicit. For `Terminated`, candidates are normally not required unless reporting final resources.
+For `Active`, `body.current.resources` is acceptable because there is no re-decision pressure.
+
+For `Degraded` and `Failed`, do not include a separate `current` block by default; instead place the current resource and alternatives together in `body.candidates`. Candidate entries remain fact-only and use metrics plus lifecycleStatus/statusReason at event level to explain the outcome.
+
+For `Terminated`, candidates are normally not required unless reporting final resources.
 
 ### 6.3 Active outcome
 
-For `Active`, IA MS may use `body.current.resources` because there is no re-decision pressure. The event remains fact-based: lifecycle/status reason plus resource metrics. Do not include `current.evaluations` or `body.evaluations` by default.
+For `Active`, IA MS may use `body.current.resources` because there is no re-decision pressure. The event remains fact-based: lifecycle/status reason plus resource metrics.
+
+Do not include `current.evaluations` or `body.evaluations` by default.
 
 ```json
 {
@@ -379,11 +391,9 @@ For `Active`, IA MS may use `body.current.resources` because there is no re-deci
       "resources": [
         {
           "resourceId": "SYD-PRI-01",
-          "roles": ["primary", "current"],
-          "selectionStatus": "CURRENT",
-          "assuranceStatus": "HEALTHY",
-          "resourceType": "networkPath",
-          "resourceClass": "critical-gold-access",
+          "roles": ["primary"],
+          "resourceType": "deliveryResource",
+          "resourceClass": "critical-gold",
           "resourceAttributes": {
             "accessTechnology": "fibre",
             "locationId": "AU-NSW-SYD-HOSP-001"
@@ -398,11 +408,7 @@ For `Active`, IA MS may use `body.current.resources` because there is no re-deci
             "latencyMs": 8,
             "availabilityPercent": 99.995,
             "jitterMs": 1.5,
-            "packetLossPercent": 0.005,
-            "latencyBenchmarkMs": 7,
-            "availabilityBenchmarkPercent": 99.996,
-            "jitterBenchmarkMs": 1.1,
-            "packetLossBenchmarkPercent": 0.004
+            "packetLossPercent": 0.005
           }
         }
       ]
@@ -424,7 +430,9 @@ For `Active`, IA MS may use `body.current.resources` because there is no re-deci
 
 ### 6.4 Degraded outcome
 
-For `Degraded`, IA MS does not include a separate `current` block by default. The degraded/current resource and all applicable alternatives are represented together in `body.candidates`. This shape lets II MS or another authorised decision component inspect the current degraded resource, available alternatives, and their metrics without needing a separate `requiresReoptimisation` flag or a separate evaluations block.
+For `Degraded`, IA MS does not include a separate `current` block by default.
+
+The degraded/current resource and all applicable alternatives are represented together in `body.candidates`. This shape lets II MS or another authorised decision component inspect the degraded resource, available alternatives, and their metrics without needing a separate `requiresReoptimisation` flag, a separate evaluations block, or resource-level status fields.
 
 ```json
 {
@@ -457,11 +465,9 @@ For `Degraded`, IA MS does not include a separate `current` block by default. Th
     "candidates": [
       {
         "resourceId": "SYD-PRI-01",
-        "roles": ["primary", "current"],
-        "selectionStatus": "CURRENT",
-        "assuranceStatus": "DEGRADED",
-        "resourceType": "networkPath",
-        "resourceClass": "critical-gold-access",
+        "roles": ["primary"],
+        "resourceType": "deliveryResource",
+        "resourceClass": "critical-gold",
         "resourceAttributes": {
           "accessTechnology": "fibre",
           "locationId": "AU-NSW-SYD-HOSP-001"
@@ -476,11 +482,7 @@ For `Degraded`, IA MS does not include a separate `current` block by default. Th
           "latencyMs": 18,
           "availabilityPercent": 99.992,
           "jitterMs": 1.8,
-          "packetLossPercent": 0.006,
-          "latencyBenchmarkMs": 7,
-          "availabilityBenchmarkPercent": 99.996,
-          "jitterBenchmarkMs": 1.1,
-          "packetLossBenchmarkPercent": 0.004
+          "packetLossPercent": 0.006
         }
       }
     ],
@@ -513,7 +515,7 @@ IA MS emits enough curated facts for IC MS to build the external report expressi
 | `statusReason` | `IntentReport.expression.expressionValue.statusReason` |
 | `context.constraints.location`, `context.constraints.serviceType`, `context.constraints.serviceClass` | `serviceSummary` |
 | `current.resources` | `resourceSummary` |
-| `context.targets` + `current.resources.metrics` + resource-level `selectionStatus` / `assuranceStatus` | fact-only `targetSummary` and `observationSummary` |
+| `context.targets` + `current.resources.metrics` | fact-only `targetSummary` and `observationSummary` |
 | `candidates` | Internal/authorised decision support where exposed by policy, not default public report detail |
 
 IntentReport remains fact-only by default. It does not require separate `degradationSummary`, `reoptimisationSummary`, aggregate compliance `result`, or per-target `status` fields.
@@ -529,7 +531,8 @@ IntentReport remains fact-only by default. It does not require separate `degrada
 - Use `current.resources` for normal/active-state resource facts where there is no immediate re-decision pressure.
 - Do not include `current.evaluations` or `body.evaluations` by default.
 - For `Degraded` and `Failed`, prefer no separate `current` block by default. Use `candidates`.
-- In degraded/failed states, `candidates` includes all applicable available resources, including the current degraded/failed resource and alternatives, with candidate-level `selectionStatus`, `assuranceStatus`, runtime metrics, and benchmark metrics.
+- In degraded/failed states, `candidates` includes all applicable available resources, including the current degraded/failed resource and alternatives, with observed/current runtime metrics only.
+- Do not include resource-level `selectionStatus` or `assuranceStatus` by default; derive interpreted state from `lifecycleStatus` and `statusReason`.
 - Do not include raw callback payloads.
 - Do not include raw telemetry dumps.
 - Do not include optimiser scoring or solver internals.
