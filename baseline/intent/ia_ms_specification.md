@@ -132,24 +132,48 @@ content-type: application/json
             "resourceType": "deliveryResource",
             "resourceClass": "critical-gold",
             "roles": ["primary"],
-            "metrics": {
-              "latencyMs": 7,
-              "availabilityPercent": 99.996,
-              "jitterMs": 1.1,
-              "packetLossPercent": 0.004
-            }
+            "metrics": [
+              "latencyMs",
+              "availabilityPercent",
+              "jitterMs",
+              "packetLossPercent"
+            ]
+          },
+          {
+            "resourceId": "SYD-PRI-02",
+            "resourceType": "deliveryResource",
+            "resourceClass": "critical-gold",
+            "roles": ["primary"],
+            "metrics": [
+              "latencyMs",
+              "availabilityPercent",
+              "jitterMs",
+              "packetLossPercent"
+            ]
           },
           {
             "resourceId": "SYD-SEC-01",
             "resourceType": "deliveryResource",
             "resourceClass": "critical-gold",
             "roles": ["secondary"],
-            "metrics": {
-              "latencyMs": 10,
-              "availabilityPercent": 99.994,
-              "jitterMs": 1.8,
-              "packetLossPercent": 0.006
-            }
+            "metrics": [
+              "latencyMs",
+              "availabilityPercent",
+              "jitterMs",
+              "packetLossPercent"
+            ]
+          },
+          {
+            "resourceId": "SYD-SEC-02",
+            "resourceType": "deliveryResource",
+            "resourceClass": "critical-gold",
+            "roles": ["secondary"],
+            "metrics": [
+              "latencyMs",
+              "availabilityPercent",
+              "jitterMs",
+              "packetLossPercent"
+            ]
           }
         ]
       }
@@ -173,7 +197,7 @@ content-type: application/json
 
 - Treat `IntentNetworkReadyEvent` as service configuration prepared for apply, not as apply success.
 - Store selected apply resources from `serviceConfiguration.orchestratorConfiguration.resources`.
-- Store monitored resource scope from `serviceConfiguration.observerConfiguration.resources`.
+- Store monitored resource scope from `serviceConfiguration.observerConfiguration.resources`; later `IntentAssuranceEvent.body.current.resources[]` mirrors that observer scope when reporting observed resource metrics.
 - Store resolved runtime `body.context` as the assurance context.
 - Do not emit `Active` solely because `IntentNetworkReadyEvent` was consumed.
 - Active state requires apply/callback confirmation and/or runtime observations according to the workflow.
@@ -260,6 +284,16 @@ IA MS obtains runtime metrics from observability/observation endpoints that are 
       }
     },
     {
+      "resourceId": "SYD-PRI-02",
+      "roles": ["primary"],
+      "metrics": {
+        "latencyMs": 14,
+        "availabilityPercent": 99.993,
+        "jitterMs": 1.7,
+        "packetLossPercent": 0.006
+      }
+    },
+    {
       "resourceId": "SYD-SEC-01",
       "roles": ["secondary"],
       "metrics": {
@@ -267,6 +301,16 @@ IA MS obtains runtime metrics from observability/observation endpoints that are 
         "availabilityPercent": 99.994,
         "jitterMs": 1.8,
         "packetLossPercent": 0.006
+      }
+    },
+    {
+      "resourceId": "SYD-SEC-02",
+      "roles": ["secondary"],
+      "metrics": {
+        "latencyMs": 13,
+        "availabilityPercent": 99.993,
+        "jitterMs": 1.9,
+        "packetLossPercent": 0.007
       }
     }
   ]
@@ -334,7 +378,7 @@ Controlled vocabulary baseline:
 
 Do not use resource-level `selectionStatus` or `assuranceStatus` by default. The interpreted assurance outcome is represented by `lifecycleStatus` and `statusReason`.
 
-`body.current.resources` carries the full observed resource/path set for `Active`, `Degraded`, and `Failed` assurance outcomes. It is not limited to the currently active primary path. When IA receives multiple observing paths from `IntentNetworkReadyEvent`, IA reports metrics for the whole observed set so downstream consumers can see the affected path and all monitored alternatives in the same event.
+`body.current.resources` carries the full observed resource/path set for `Active`, `Degraded`, and `Failed` assurance outcomes. It is not limited to the currently active primary path. When IA receives multiple observing paths from `IntentNetworkReadyEvent.serviceConfiguration.observerConfiguration.resources[]`, IA reports metrics for the same observed set so downstream consumers can see the affected path and all monitored alternatives in the same event.
 
 Metric names stay neutral and describe the measurement itself, such as `latencyMs`, `availabilityPercent`, `jitterMs`, and `packetLossPercent`.
 
@@ -405,6 +449,28 @@ Do not include `current.evaluations` or `body.evaluations` by default.
           }
         },
         {
+          "resourceId": "SYD-PRI-02",
+          "roles": ["primary"],
+          "resourceType": "deliveryResource",
+          "resourceClass": "critical-gold",
+          "resourceAttributes": {
+            "accessTechnology": "fibre",
+            "locationId": "AU-NSW-SYD-HOSP-001"
+          },
+          "relationships": [
+            {
+              "type": "pairedSecondary",
+              "targetResourceId": "SYD-SEC-02"
+            }
+          ],
+          "metrics": {
+            "latencyMs": 8,
+            "availabilityPercent": 99.995,
+            "jitterMs": 1.5,
+            "packetLossPercent": 0.005
+          }
+        },
+        {
           "resourceId": "SYD-SEC-01",
           "roles": ["secondary"],
           "resourceType": "deliveryResource",
@@ -424,6 +490,28 @@ Do not include `current.evaluations` or `body.evaluations` by default.
             "availabilityPercent": 99.994,
             "jitterMs": 1.7,
             "packetLossPercent": 0.006
+          }
+        },
+        {
+          "resourceId": "SYD-SEC-02",
+          "roles": ["secondary"],
+          "resourceType": "deliveryResource",
+          "resourceClass": "critical-gold",
+          "resourceAttributes": {
+            "accessTechnology": "fibre",
+            "locationId": "AU-NSW-SYD-HOSP-001"
+          },
+          "relationships": [
+            {
+              "type": "alternativeTo",
+              "targetResourceId": "SYD-PRI-02"
+            }
+          ],
+          "metrics": {
+            "latencyMs": 9,
+            "availabilityPercent": 99.997,
+            "jitterMs": 1.2,
+            "packetLossPercent": 0.003
           }
         }
       ]
@@ -502,6 +590,28 @@ This shape lets II MS or another authorised decision component inspect the affec
           }
         },
         {
+          "resourceId": "SYD-PRI-02",
+          "roles": ["primary"],
+          "resourceType": "deliveryResource",
+          "resourceClass": "critical-gold",
+          "resourceAttributes": {
+            "accessTechnology": "fibre",
+            "locationId": "AU-NSW-SYD-HOSP-001"
+          },
+          "relationships": [
+            {
+              "type": "pairedSecondary",
+              "targetResourceId": "SYD-SEC-02"
+            }
+          ],
+          "metrics": {
+            "latencyMs": 14,
+            "availabilityPercent": 99.993,
+            "jitterMs": 1.7,
+            "packetLossPercent": 0.006
+          }
+        },
+        {
           "resourceId": "SYD-SEC-01",
           "roles": ["secondary"],
           "resourceType": "deliveryResource",
@@ -529,13 +639,13 @@ This shape lets II MS or another authorised decision component inspect the affec
           "resourceType": "deliveryResource",
           "resourceClass": "critical-gold",
           "resourceAttributes": {
-            "accessTechnology": "microwave",
+            "accessTechnology": "fibre",
             "locationId": "AU-NSW-SYD-HOSP-001"
           },
           "relationships": [
             {
               "type": "alternativeTo",
-              "targetResourceId": "SYD-PRI-01"
+              "targetResourceId": "SYD-PRI-02"
             }
           ],
           "metrics": {
@@ -543,28 +653,6 @@ This shape lets II MS or another authorised decision component inspect the affec
             "availabilityPercent": 99.993,
             "jitterMs": 1.9,
             "packetLossPercent": 0.007
-          }
-        },
-        {
-          "resourceId": "SYD-SEC-03",
-          "roles": ["secondary"],
-          "resourceType": "deliveryResource",
-          "resourceClass": "critical-gold",
-          "resourceAttributes": {
-            "accessTechnology": "satellite",
-            "locationId": "AU-NSW-SYD-HOSP-001"
-          },
-          "relationships": [
-            {
-              "type": "alternativeTo",
-              "targetResourceId": "SYD-PRI-01"
-            }
-          ],
-          "metrics": {
-            "latencyMs": 16,
-            "availabilityPercent": 99.991,
-            "jitterMs": 2.1,
-            "packetLossPercent": 0.008
           }
         }
       ]
