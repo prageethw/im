@@ -313,8 +313,7 @@ content-type: application/json
 | **Field / area** | **Purpose** |
 |---|---|
 | `body.context` | Resolved runtime context with targets, constraints, and preferences where relevant |
-| `body.current.resources` | Currently selected/applied/observed resources for normal/active states |
-| `body.candidates` | All applicable available resources for degraded/failed re-decision states, including the currently used resource and alternatives, each with metrics |
+| `body.current.resources` | Full observed resource/path set within the assurance scope, including primary and all secondary/alternative resources supplied through `IntentNetworkReadyEvent.serviceConfiguration.observerConfiguration.resources` |
 | `body.references` | Correlation and resource references |
 
 Reusable resource entries use:
@@ -333,7 +332,9 @@ Controlled vocabulary baseline:
 - `resourceType`: `deliveryResource`, `computeResource`, `storageResource`, `securityResource`, `platformResource`
 - `resourceClass`: `critical-gold`, `critical-silver`, `standard`, `best-effort`
 
-Do not use resource-level `selectionStatus` or `assuranceStatus` by default. The interpreted assurance outcome is represented by `lifecycleStatus` and `statusReason`. Current-versus-candidate meaning is derived from the payload structure: `body.current.resources` for normal/active current resources, and `body.candidates` for degraded/failed re-decision facts.
+Do not use resource-level `selectionStatus` or `assuranceStatus` by default. The interpreted assurance outcome is represented by `lifecycleStatus` and `statusReason`.
+
+`body.current.resources` carries the full observed resource/path set for `Active`, `Degraded`, and `Failed` assurance outcomes. It is not limited to the currently active primary path. When IA receives multiple observing paths from `IntentNetworkReadyEvent`, IA reports metrics for the whole observed set so downstream consumers can see the affected path and all monitored alternatives in the same event.
 
 Metric names stay neutral and describe the measurement itself, such as `latencyMs`, `availabilityPercent`, `jitterMs`, and `packetLossPercent`.
 
@@ -341,17 +342,13 @@ Do not encode metric origin or evaluation context in field names or wrappers. Do
 
 Do not duplicate `resourceId` into `resourceAttributes.pathId` when they are identical.
 
-`requiresReoptimisation` is not included by default. II MS or another authorised decision component reads lifecycleStatus, statusReason, resource metrics, and candidates, then decides whether re-interpretation, re-optimisation, reselection, or no action is required.
+`requiresReoptimisation` is not included by default. II MS or another authorised decision component reads `lifecycleStatus`, `statusReason`, and the full observed resource metrics, then decides whether re-interpretation, re-optimisation, reselection, or no action is required.
 
-For `Active`, `body.current.resources` is acceptable because there is no re-decision pressure.
-
-For `Degraded` and `Failed`, do not include a separate `current` block by default; instead place the current resource and alternatives together in `body.candidates`. Candidate entries remain fact-only and use metrics plus lifecycleStatus/statusReason at event level to explain the outcome.
-
-For `Terminated`, candidates are normally not required unless reporting final resources.
+For `Terminated`, `current.resources` is normally not required unless reporting final resource facts.
 
 ### 6.3 Active outcome
 
-For `Active`, IA MS may use `body.current.resources` because there is no re-decision pressure. The event remains fact-based: lifecycle/status reason plus resource metrics.
+For `Active`, IA MS uses `body.current.resources` to report the full observed resource/path set within the assurance scope, not only the primary path. The event remains fact-based: lifecycle/status reason plus neutral resource metrics.
 
 Do not include `current.evaluations` or `body.evaluations` by default.
 
@@ -361,7 +358,7 @@ Do not include `current.evaluations` or `body.evaluations` by default.
     "intentId": "INT-HOSP-2026-001",
     "version": "v1",
     "lifecycleStatus": "Active",
-    "statusReason": "Selected resources are operating within resolved runtime targets.",
+    "statusReason": "All monitored delivery resources are operating within resolved runtime targets.",
     "context": {
       "targets": {
         "maxLatencyMs": 10,
@@ -406,6 +403,28 @@ Do not include `current.evaluations` or `body.evaluations` by default.
             "jitterMs": 1.5,
             "packetLossPercent": 0.005
           }
+        },
+        {
+          "resourceId": "SYD-SEC-01",
+          "roles": ["secondary"],
+          "resourceType": "deliveryResource",
+          "resourceClass": "critical-gold",
+          "resourceAttributes": {
+            "accessTechnology": "5G",
+            "locationId": "AU-NSW-SYD-HOSP-001"
+          },
+          "relationships": [
+            {
+              "type": "alternativeTo",
+              "targetResourceId": "SYD-PRI-01"
+            }
+          ],
+          "metrics": {
+            "latencyMs": 9,
+            "availabilityPercent": 99.994,
+            "jitterMs": 1.7,
+            "packetLossPercent": 0.006
+          }
         }
       ]
     },
@@ -426,9 +445,9 @@ Do not include `current.evaluations` or `body.evaluations` by default.
 
 ### 6.4 Degraded outcome
 
-For `Degraded`, IA MS does not include a separate `current` block by default.
+For `Degraded`, IA MS still uses `body.current.resources` to report the full observed resource/path set within the assurance scope. The set includes the degraded resource and all monitored alternatives supplied through `IntentNetworkReadyEvent.serviceConfiguration.observerConfiguration.resources`.
 
-The degraded/current resource and all applicable alternatives are represented together in `body.candidates`. This shape lets II MS or another authorised decision component inspect the degraded resource, available alternatives, and their metrics without needing a separate `requiresReoptimisation` flag, a separate evaluations block, or resource-level status fields.
+This shape lets II MS or another authorised decision component inspect the affected primary path, all observed secondary paths, and their neutral metrics without needing a separate `requiresReoptimisation` flag, a separate evaluations block, a separate `candidates` block, or resource-level status fields.
 
 ```json
 {
@@ -458,30 +477,98 @@ The degraded/current resource and all applicable alternatives are represented to
         "preferredAccessTechnology": "5G"
       }
     },
-    "candidates": [
-      {
-        "resourceId": "SYD-PRI-01",
-        "roles": ["primary"],
-        "resourceType": "deliveryResource",
-        "resourceClass": "critical-gold",
-        "resourceAttributes": {
-          "accessTechnology": "fibre",
-          "locationId": "AU-NSW-SYD-HOSP-001"
-        },
-        "relationships": [
-          {
-            "type": "pairedSecondary",
-            "targetResourceId": "SYD-SEC-01"
+    "current": {
+      "resources": [
+        {
+          "resourceId": "SYD-PRI-01",
+          "roles": ["primary"],
+          "resourceType": "deliveryResource",
+          "resourceClass": "critical-gold",
+          "resourceAttributes": {
+            "accessTechnology": "fibre",
+            "locationId": "AU-NSW-SYD-HOSP-001"
+          },
+          "relationships": [
+            {
+              "type": "pairedSecondary",
+              "targetResourceId": "SYD-SEC-01"
+            }
+          ],
+          "metrics": {
+            "latencyMs": 18,
+            "availabilityPercent": 99.992,
+            "jitterMs": 1.8,
+            "packetLossPercent": 0.006
           }
-        ],
-        "metrics": {
-          "latencyMs": 18,
-          "availabilityPercent": 99.992,
-          "jitterMs": 1.8,
-          "packetLossPercent": 0.006
+        },
+        {
+          "resourceId": "SYD-SEC-01",
+          "roles": ["secondary"],
+          "resourceType": "deliveryResource",
+          "resourceClass": "critical-gold",
+          "resourceAttributes": {
+            "accessTechnology": "5G",
+            "locationId": "AU-NSW-SYD-HOSP-001"
+          },
+          "relationships": [
+            {
+              "type": "alternativeTo",
+              "targetResourceId": "SYD-PRI-01"
+            }
+          ],
+          "metrics": {
+            "latencyMs": 12,
+            "availabilityPercent": 99.994,
+            "jitterMs": 1.8,
+            "packetLossPercent": 0.006
+          }
+        },
+        {
+          "resourceId": "SYD-SEC-02",
+          "roles": ["secondary"],
+          "resourceType": "deliveryResource",
+          "resourceClass": "critical-gold",
+          "resourceAttributes": {
+            "accessTechnology": "microwave",
+            "locationId": "AU-NSW-SYD-HOSP-001"
+          },
+          "relationships": [
+            {
+              "type": "alternativeTo",
+              "targetResourceId": "SYD-PRI-01"
+            }
+          ],
+          "metrics": {
+            "latencyMs": 13,
+            "availabilityPercent": 99.993,
+            "jitterMs": 1.9,
+            "packetLossPercent": 0.007
+          }
+        },
+        {
+          "resourceId": "SYD-SEC-03",
+          "roles": ["secondary"],
+          "resourceType": "deliveryResource",
+          "resourceClass": "critical-gold",
+          "resourceAttributes": {
+            "accessTechnology": "satellite",
+            "locationId": "AU-NSW-SYD-HOSP-001"
+          },
+          "relationships": [
+            {
+              "type": "alternativeTo",
+              "targetResourceId": "SYD-PRI-01"
+            }
+          ],
+          "metrics": {
+            "latencyMs": 16,
+            "availabilityPercent": 99.991,
+            "jitterMs": 2.1,
+            "packetLossPercent": 0.008
+          }
         }
-      }
-    ],
+      ]
+    },
     "references": {
       "correlationId": "corr-intent-assurance-degraded-001",
       "intent": {
@@ -510,9 +597,8 @@ IA MS emits enough curated facts for IC MS to build the external report expressi
 | `lifecycleStatus` | `IntentReport.expression.expressionValue.lifecycleStatus` |
 | `statusReason` | `IntentReport.expression.expressionValue.statusReason` |
 | `context.constraints.location`, `context.constraints.serviceType`, `context.constraints.serviceClass` | `serviceSummary` |
-| `current.resources` | `resourceSummary` |
+| `current.resources` | `resourceSummary`, including the full observed resource/path set within the assurance scope |
 | `context.targets` + `current.resources.metrics` | fact-only `targetSummary` and `observationSummary` |
-| `candidates` | Internal/authorised decision support where exposed by policy, not default public report detail |
 
 IntentReport remains fact-only by default. It does not require separate `degradationSummary`, `reoptimisationSummary`, aggregate compliance `result`, or per-target `status` fields.
 
@@ -524,10 +610,10 @@ IntentReport remains fact-only by default. It does not require separate `degrada
 - `IntentDriftOccurredEvent` is retired and must not be used by default.
 - Use `lifecycleStatus` and `statusReason` for state narrative.
 - Use internal `context` where the event carries resolved runtime targets, constraints, and preferences.
-- Use `current.resources` for normal/active-state resource facts where there is no immediate re-decision pressure.
+- Use `current.resources` for the full observed resource/path set within the assurance scope, including primary and all observed secondary/alternative resources.
 - Do not include `current.evaluations` or `body.evaluations` by default.
-- For `Degraded` and `Failed`, prefer no separate `current` block by default. Use `candidates`.
-- In degraded/failed states, `candidates` includes all applicable available resources, including the current degraded/failed resource and alternatives, with neutral `metrics` fields.
+- For `Degraded` and `Failed`, keep the affected resource and all observed alternatives together in `current.resources` by default.
+- Do not use a separate `candidates` block by default in `IntentAssuranceEvent`; IA reports observed assurance facts, while II MS or another authorised decision component decides whether re-interpretation, re-optimisation, or reselection is required.
 - Do not include resource-level `selectionStatus` or `assuranceStatus` by default; derive interpreted state from `lifecycleStatus` and `statusReason`.
 - Do not include raw callback payloads.
 - Do not include raw telemetry dumps.
