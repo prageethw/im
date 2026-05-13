@@ -56,7 +56,7 @@ Terminated --> [*]
 
 note right of Standby
   Standby means:
-  not currently active/effective,
+  not currently active,
   but still valid for rollback or
   future reactivation.
 end note
@@ -69,7 +69,7 @@ end note
 
 note bottom of Active
   activeVersion points to the version
-  currently confirmed active/effective.
+  currently confirmed active.
 end note
 
 @enduml
