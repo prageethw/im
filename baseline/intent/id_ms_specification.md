@@ -248,7 +248,7 @@ Accept: application/json
   ],
   "expressionSpecification": {
     "@type": "ExpressionSpecification",
-    "expressionLanguage": "JsonLdExpression",
+    "expressionLanguage": "JSON-LD",
     "iri": "https://mycsp.com.au/tio/hospital-surgical-slice/v1.0"
   },
   "targetEntitySchema": {
@@ -347,7 +347,7 @@ Last-Modified: Sat, 18 Apr 2026 02:00:00 GMT
   ],
   "expressionSpecification": {
     "@type": "ExpressionSpecification",
-    "expressionLanguage": "JsonLdExpression",
+    "expressionLanguage": "JSON-LD",
     "iri": "https://mycsp.com.au/tio/hospital-surgical-slice/v1.0"
   },
   "targetEntitySchema": {
@@ -503,7 +503,7 @@ Cache-Control: private, max-age=300
   "specCharacteristic": "...bucket catalogue with example/default characteristicValueSpecification values...",
   "expressionSpecification": {
     "@type": "ExpressionSpecification",
-    "expressionLanguage": "JsonLdExpression",
+    "expressionLanguage": "JSON-LD",
     "iri": "https://mycsp.com.au/tio/hospital-surgical-slice/v1.0"
   },
   "targetEntitySchema": {
@@ -603,7 +603,7 @@ If-Match: "intent-spec-hospital-surgical-slice-spec-v1.19-v1"
   ],
   "expressionSpecification": {
     "@type": "ExpressionSpecification",
-    "expressionLanguage": "JsonLdExpression",
+    "expressionLanguage": "JSON-LD",
     "iri": "https://mycsp.com.au/tio/hospital-surgical-slice/v1.0"
   },
   "targetEntitySchema": {
