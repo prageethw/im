@@ -2,9 +2,7 @@
 
 ## OC MS summary
 
-Optimisation-Controller-MS (OC MS) owns the runtime `Optimisation` resource. It is a generic optimisation controller, not an intent-only controller.
-
-OC MS accepts runtime optimisation requests, validates only the wrapper and OD MS request contract, persists the request, emits `OptimisationRequestedEvent`, then later projects `OptimisationCompletedEvent` outcomes back into the runtime resource.
+Optimisation-Controller-MS (OC MS) owns the runtime `Optimisation` resource. It is a generic optimisation controller, not an intent-only controller. OC MS accepts runtime optimisation requests, validates only the wrapper and OD MS request contract, persists the request, emits `OptimisationRequestedEvent`, then later projects `OptimisationCompletedEvent` outcomes back into the runtime resource.
 
 ## Ownership
 
@@ -34,9 +32,9 @@ Long-running intent control-loop assurance
 ## Endpoint set
 
 ```http
-GET  /optimisation
+GET /optimisation
 POST /optimisation
-GET  /optimisation/{id}
+GET /optimisation/{id}
 POST /optimisation/{id}/cancellation
 POST /optimisation/{id}/retrial
 ```
@@ -44,7 +42,7 @@ POST /optimisation/{id}/retrial
 Not supported:
 
 ```http
-PUT    /optimisation/{id}
+PUT /optimisation/{id}
 DELETE /optimisation/{id}
 ```
 
@@ -262,10 +260,12 @@ OC MS validates:
 generic REST wrapper using its static API/OpenAPI contract
 referenced OptimisationSpecification exists in OD MS
 referenced OptimisationSpecification lifecycleStatus is ACTIVE
-expression.expressionValue.context.targets[] against OD MS targetSpecifications[]
-expression.expressionValue.context.constraints[] against OD MS constraintSpecifications[]
-expression.expressionValue.context.preferences[] against OD MS preferenceSpecifications[]
-context object shape and cardinality against OD MS contextSpecifications[]
+expression.expressionValue against the referenced ACTIVE OptimisationSpecification.targetEntitySchema
+expression.expressionValue.context shape
+expression.expressionValue.context.targets[] entries
+expression.expressionValue.context.constraints[] entries
+expression.expressionValue.context.preferences[] entries
+cardinality and allowed values defined by targetEntitySchema
 ```
 
 OC MS does not validate:
@@ -280,7 +280,6 @@ resource-selection correctness
 ```
 
 After acceptance, OC MS persists the runtime resource and writes `OptimisationRequestedEvent` with `instruction = EXECUTE` to its outbox in the same transaction. Cancellation uses the same event type with `instruction = CANCEL`. Worker terminal outcomes are returned through `OptimisationCompletedEvent` with `status = COMPLETED`, `FAILED`, or `INFEASIBLE`.
-
 
 ## Internal event baseline
 
