@@ -133,12 +133,10 @@ content-type: application/json
             "resourceClass": "critical-gold",
             "roles": ["primary"],
             "metrics": {
-              "benchmark": {
-                "latencyMs": 7,
-                "availabilityPercent": 99.996,
-                "jitterMs": 1.1,
-                "packetLossPercent": 0.004
-              }
+              "latencyMs": 7,
+              "availabilityPercent": 99.996,
+              "jitterMs": 1.1,
+              "packetLossPercent": 0.004
             }
           },
           {
@@ -147,12 +145,10 @@ content-type: application/json
             "resourceClass": "critical-gold",
             "roles": ["secondary"],
             "metrics": {
-              "benchmark": {
-                "latencyMs": 10,
-                "availabilityPercent": 99.994,
-                "jitterMs": 1.8,
-                "packetLossPercent": 0.006
-              }
+              "latencyMs": 10,
+              "availabilityPercent": 99.994,
+              "jitterMs": 1.8,
+              "packetLossPercent": 0.006
             }
           }
         ]
@@ -339,9 +335,9 @@ Controlled vocabulary baseline:
 
 Do not use resource-level `selectionStatus` or `assuranceStatus` by default. The interpreted assurance outcome is represented by `lifecycleStatus` and `statusReason`. Current-versus-candidate meaning is derived from the payload structure: `body.current.resources` for normal/active current resources, and `body.candidates` for degraded/failed re-decision facts.
 
-Current runtime metric names use `latencyMs`, `availabilityPercent`, `jitterMs`, and `packetLossPercent`.
+Metric names stay neutral and describe the measurement itself, such as `latencyMs`, `availabilityPercent`, `jitterMs`, and `packetLossPercent`.
 
-Resource-level `metrics` must contain observed/current live data only. Do not include benchmark or threshold metrics such as `latencyBenchmarkMs`, `availabilityBenchmarkPercent`, `jitterBenchmarkMs`, or `packetLossBenchmarkPercent` in resource metric lists by default. Target and benchmark thresholds belong in the resolved intent, IC projected `IntentReport` target/current comparison, or IA internal evaluation logic.
+Do not encode metric origin or evaluation context in field names or wrappers. Do not use wrappers or names such as `benchmark`, `telemetry`, `observed`, `current`, `latencyBenchmarkMs`, or `currentLatencyMs` by default. The event type and lifecycle stage provide the context for interpreting the metric values.
 
 Do not duplicate `resourceId` into `resourceAttributes.pathId` when they are identical.
 
@@ -531,7 +527,7 @@ IntentReport remains fact-only by default. It does not require separate `degrada
 - Use `current.resources` for normal/active-state resource facts where there is no immediate re-decision pressure.
 - Do not include `current.evaluations` or `body.evaluations` by default.
 - For `Degraded` and `Failed`, prefer no separate `current` block by default. Use `candidates`.
-- In degraded/failed states, `candidates` includes all applicable available resources, including the current degraded/failed resource and alternatives, with observed/current runtime metrics only.
+- In degraded/failed states, `candidates` includes all applicable available resources, including the current degraded/failed resource and alternatives, with neutral `metrics` fields.
 - Do not include resource-level `selectionStatus` or `assuranceStatus` by default; derive interpreted state from `lifecycleStatus` and `statusReason`.
 - Do not include raw callback payloads.
 - Do not include raw telemetry dumps.
