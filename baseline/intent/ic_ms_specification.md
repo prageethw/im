@@ -15,6 +15,10 @@
 | Secondary resource | `IntentReport` |
 | Primary responsibility | TMF-facing runtime `Intent` controller, syntactic admission, lifecycle/status projection, and external runtime intent events |
 
+### TMF deployment path note:
+
+This specification uses `/intentManagement/v5` in examples as the platform base path. A strict TMF gateway exposure may publish the same API under `/tmf-api/intentManagement/v5`. The API gateway may map between the external TMF route prefix and the internal/platform route prefix without changing the resource contract.
+
 ### Boundary statement:
 
 IC MS owns the external runtime `Intent` and `IntentReport` resources.
@@ -74,6 +78,35 @@ Accepted domain-scoped platform extension:
 | Create intent event subscription | `POST` | `/intentManagement/v5/intent/hub` |
 | Retrieve intent event subscription | `GET` | `/intentManagement/v5/intent/hub/{id}` |
 | Delete intent event subscription | `DELETE` | `/intentManagement/v5/intent/hub/{id}` |
+
+---
+
+## 1A. TMF compliance and platform extension baseline:
+
+IC MS keeps the external `Intent` and `IntentReport` contract TMF-aligned while documenting controlled platform extensions explicitly.
+
+### Strict TMF-compatible operations:
+
+| **Capability** | **Route family** | **Position** |
+|---|---|---|
+| Runtime Intent create/list/retrieve | `POST /intent`, `GET /intent`, `GET /intent/{id}` | TMF-compatible |
+| Runtime Intent partial update | `PATCH /intent/{id}` | TMF-compatible |
+| Runtime Intent delete verb | `DELETE /intent/{id}` | TMF-compatible verb; platform behaviour is termination and retention, not physical deletion |
+| IntentReport list/retrieve | `GET /intent/{intentId}/intentReport`, `GET /intent/{intentId}/intentReport/{id}` | TMF-style nested report projection |
+| Hub subscription create/delete | `POST /hub`, `DELETE /hub/{id}` | Strict TMF route family |
+
+### Accepted platform extensions:
+
+| **Extension** | **Reason** |
+|---|---|
+| `PUT /intent/{id}` | Deterministic full replacement for runtime Intent edits where `PATCH` is too ambiguous |
+| `/intent/hub` domain-scoped hub routes | Domain-owned subscription surface for external Intent and IntentReport events |
+| `GET /intent/hub/{id}` | Operational convenience for retrieving a domain-scoped subscription; not part of the strict TMF minimum hub route set |
+| `_links` | Lifecycle-aware and authorisation-aware HATEOAS controls |
+| Strong `ETag` / `If-Match` governance | Optimistic concurrency for unsafe operations |
+| `428 Precondition Required` | Explicit response when required `If-Match` is missing |
+| Termination-retention behaviour for `DELETE /intent/{id}` | Runtime Intent records remain available for audit, reporting, lifecycle history, and traceability |
+| Ordinary external `IntentReport` delete not exposed | `IntentReport` is read-only curated projection/audit history for ordinary consumers; governed/admin removal remains internal or restricted |
 
 ---
 
@@ -1388,6 +1421,12 @@ Content-Type: application/json
 
 ---
 
+## 15A. External event timestamp rule:
+
+External TMF-facing event examples populate both `eventTime` and `timeOccurred` with the same canonical event occurrence timestamp. `timeOccurred` is the platform-corrected spelling used consistently across ID MS and IC MS external event examples. TMF921 examples contain the misspelled `timeOcurred`; this baseline intentionally uses the corrected spelling while preserving the same timestamp semantics.
+
+---
+
 ## 16. External Intent event family:
 
 IC MS emits external TMF-style resource events for `Intent` projection changes.
@@ -1411,6 +1450,7 @@ They must not expose raw telemetry, raw optimiser decisions, raw `t7.knowledge p
 {
   "eventId": "evt-intent-create-001",
   "eventTime": "2026-04-18T12:00:00+10:00",
+  "timeOccurred": "2026-04-18T12:00:00+10:00",
   "eventType": "IntentCreateEvent",
   "correlationId": "corr-intent-create-001",
   "description": "Intent created.",
@@ -1450,6 +1490,7 @@ They must not expose raw telemetry, raw optimiser decisions, raw `t7.knowledge p
 {
   "eventId": "evt-intent-attr-001",
   "eventTime": "2026-04-18T12:40:00+10:00",
+  "timeOccurred": "2026-04-18T12:40:00+10:00",
   "eventType": "IntentAttributeValueChangeEvent",
   "correlationId": "corr-intent-attr-001",
   "description": "Intent projected attributes changed.",
@@ -1493,6 +1534,7 @@ They must not expose raw telemetry, raw optimiser decisions, raw `t7.knowledge p
 {
   "eventId": "evt-intent-status-001",
   "eventTime": "2026-04-18T12:20:00+10:00",
+  "timeOccurred": "2026-04-18T12:20:00+10:00",
   "eventType": "IntentStatusChangeEvent",
   "correlationId": "corr-intent-status-001",
   "description": "Intent lifecycle status changed.",
@@ -1533,6 +1575,7 @@ They must not expose raw telemetry, raw optimiser decisions, raw `t7.knowledge p
 {
   "eventId": "evt-intent-delete-001",
   "eventTime": "2026-04-18T13:00:00+10:00",
+  "timeOccurred": "2026-04-18T13:00:00+10:00",
   "eventType": "IntentDeleteEvent",
   "correlationId": "corr-intent-delete-001",
   "description": "Intent termination accepted.",
@@ -1583,6 +1626,7 @@ IC MS emits external TMF-style resource events for `IntentReport` projection cha
 {
   "eventId": "evt-intent-report-create-001",
   "eventTime": "2026-04-18T12:20:00+10:00",
+  "timeOccurred": "2026-04-18T12:20:00+10:00",
   "eventType": "IntentReportCreateEvent",
   "correlationId": "corr-intent-report-create-001",
   "description": "IntentReport created.",
@@ -1621,6 +1665,7 @@ IC MS emits external TMF-style resource events for `IntentReport` projection cha
 {
   "eventId": "evt-intent-report-attr-001",
   "eventTime": "2026-04-18T12:25:00+10:00",
+  "timeOccurred": "2026-04-18T12:25:00+10:00",
   "eventType": "IntentReportAttributeValueChangeEvent",
   "correlationId": "corr-intent-report-attr-001",
   "description": "IntentReport attributes changed.",
@@ -1660,6 +1705,46 @@ IC MS emits external TMF-style resource events for `IntentReport` projection cha
 
 ---
 
+## 24. IntentReportDeleteEvent:
+
+`IntentReportDeleteEvent` represents governed internal/admin removal, not ordinary external consumer delete.
+
+```json
+{
+  "eventId": "evt-intent-report-delete-001",
+  "eventTime": "2026-04-18T13:30:00+10:00",
+  "timeOccurred": "2026-04-18T13:30:00+10:00",
+  "eventType": "IntentReportDeleteEvent",
+  "correlationId": "corr-intent-report-delete-001",
+  "description": "IntentReport removed by governed retention policy.",
+  "priority": "Normal",
+  "title": "IntentReport removed",
+  "event": {
+    "intentReport": {
+      "id": "IR-INT-HOSP-2026-001-003",
+      "href": "/intentManagement/v5/intent/INT-HOSP-2026-001/intentReport/IR-INT-HOSP-2026-001-003",
+      "intent": {
+        "id": "INT-HOSP-2026-001"
+      },
+      "@type": "IntentReport",
+      "@baseType": "Entity"
+    },
+    "removalReason": "RETENTION_PURGE"
+  },
+  "reportingSystem": {
+    "id": "intent-controller-ms",
+    "name": "Intent Controller MS"
+  },
+  "source": {
+    "id": "intent-controller-ms",
+    "name": "Intent Controller MS"
+  },
+  "@type": "IntentReportDeleteEvent"
+}
+```
+
+---
+
 ## 25. Internal event publication note:
 
 IC MS publishes `IntentValidatedEvent` internally after syntactic validation and admission.
@@ -1686,6 +1771,7 @@ Current primary consumer is II MS / `intent-intelligence-ms`, but the event may 
 - Clients may request a fresh GET using `Cache-Control: no-cache`.
 - `IntentDeleteEvent` represents termination acceptance, not physical deletion.
 - External `Intent*Event` and `IntentReport*Event` payloads are curated projection events and must not expose raw telemetry, raw callback payloads, raw optimiser details, raw knowledge-plane data, or internal candidate scoring.
+- External event examples include both `eventTime` and `timeOccurred` with the same canonical event occurrence timestamp.
 - IC MS does not expose ordinary external `DELETE /intent/{intentId}/intentReport/{id}` by default; IntentReport is read-only audit/projection history and is retained unless governed internal retention policy archives or purges it.
 
 ## Shared semantic bucket baseline
