@@ -2,11 +2,9 @@
 
 ## Purpose
 
-Intent Assurance MS, referred to as IA MS, owns runtime assurance evaluation, callback state normalisation, assurance state updates, and assurance event publication for IME runtime intents.
+Intent Assurance MS, referred to as IA MS, owns runtime assurance evaluation, callback state normalisation, assurance state updates, and assurance event publication for IME runtime intents. IA MS is the runtime assurance truth for IME. IC MS remains the owner of the externally visible runtime `Intent` lifecycle projection. IA MS consumes `IntentNetworkReadyEvent`, `IntentCallbackEvent`, and runtime metrics/observation facts only.
 
-IA MS is the runtime assurance truth for IME. IC MS remains the owner of the externally visible runtime `Intent` lifecycle projection.
-
-IA MS consumes `IntentNetworkReadyEvent`, `IntentCallbackEvent`, and runtime metrics/observation facts only. IA MS does not consume `IntentOptimisedEvent` in the active baseline.
+IA MS does not consume `IntentOptimisedEvent` in the active baseline.
 
 ## Service Identity
 
@@ -37,7 +35,9 @@ IA MS consumes `IntentNetworkReadyEvent`, `IntentCallbackEvent`, and runtime met
 | Runtime assurance trigger | Uses callback outcomes and observation metrics obtained through observability endpoints informed by `IntentNetworkReadyEvent.serviceConfiguration.observerConfiguration` |
 | IA outbox ownership | Owns IA outbox and relay for reliable event publication |
 
-`requiresReoptimisation` is not included by default in `IntentAssuranceEvent`. II MS or another authorised decision component reads the assurance event state and decides whether re-interpretation, re-optimisation, or no action is required.
+`requiresReoptimisation` is not included by default in `IntentAssuranceEvent`.
+
+II MS or another authorised decision component reads the assurance event state and decides whether re-interpretation, re-optimisation, or no action is required.
 
 ## IA MS Does Not Own
 
@@ -73,6 +73,10 @@ IA MS currently consumes it, but consumer identity is not part of the event owne
 ce-source: intent-intelligence-ms
 ```
 
+`IntentNetworkReadyEvent.serviceConfiguration.orchestratorConfiguration.resources[]` carries the selected apply configuration. `IntentNetworkReadyEvent.serviceConfiguration.observerConfiguration.resources[]` carries the full assurance observation scope that IA MS must observe.
+
+Within `observerConfiguration.resources[]`, `metrics` is a list of metric names to observe, not metric values. Example metric names are `latencyMs`, `availabilityPercent`, `jitterMs`, and `packetLossPercent`.
+
 ## Callback handling baseline
 
 | **Concern** | **Owner** |
@@ -106,29 +110,22 @@ The active generic body shape uses:
 | `context.targets` | Runtime targets used to interpret observations |
 | `context.constraints` | Location/service/priority/redundancy context where needed |
 | `context.preferences` | Preference context where useful for downstream decisions |
-| `current.resources` | Selected/applied/observed resources for normal/active states |
-| `candidates` | All applicable available resources for degraded/failed re-decision states, including the current resource and alternatives, with metrics and status indicators |
+| `current.resources` | Full observed resource/path set in the IA assurance scope, mirroring `IntentNetworkReadyEvent.serviceConfiguration.observerConfiguration.resources[]` |
 | `references` | Correlation and external resource references |
 
 Reusable resource entries use `roles`, `resourceId`, `resourceType`, `resourceClass`, `resourceAttributes`, `relationships`, and `metrics`.
 
-Current runtime metric names use `latencyMs`, `availabilityPercent`, `jitterMs`, and `packetLossPercent`.
-
-Benchmark contexts may use `latencyBenchmarkMs`, `availabilityBenchmarkPercent`, `jitterBenchmarkMs`, and `packetLossBenchmarkPercent`.
+Metric names are neutral and use names such as `latencyMs`, `availabilityPercent`, `jitterMs`, and `packetLossPercent`. Do not use metric origin wrappers or context-encoded field names such as `metrics.benchmark`, `metrics.telemetry`, `latencyBenchmarkMs`, `currentLatencyMs`, or `observedLatencyMs` in `IntentAssuranceEvent`.
 
 IA MS does not emit `IntentDriftOccurredEvent` in the active baseline.
 
-Drift/degradation is represented through `IntentAssuranceEvent.lifecycleStatus`, `statusReason`, `context`, resource-level `metrics`, `selectionStatus`, `assuranceStatus`, `current.resources` for Active, and `candidates` for Degraded/Failed.
+Drift/degradation is represented through `IntentAssuranceEvent.lifecycleStatus`, `statusReason`, `context`, and resource-level `metrics` in `current.resources`. IA MS does not include raw callback payloads, raw telemetry dumps, optimiser scoring, solver internals, `provider`, `current.evaluations`, `body.evaluations`, default `requiresReoptimisation`, `selectionStatus`, `assuranceStatus`, or a default `candidates` block in `IntentAssuranceEvent`.
 
-IA MS does not include raw callback payloads, raw telemetry dumps, optimiser scoring, solver internals, `provider`, `current.evaluations`, `body.evaluations`, or default `requiresReoptimisation` in `IntentAssuranceEvent`.
-
-For `Active`, `current.resources` remains acceptable because there is no re-decision pressure. For `Degraded` and `Failed`, IA MS should not include a separate `current` block by default. Instead, it should put the current affected resource and all applicable alternatives together in `candidates`, using candidate-level `selectionStatus`, `assuranceStatus`, and metrics to identify current, available, healthy, degraded, failed, or unavailable resources.
+For `Active`, `Degraded`, and `Failed`, `current.resources[]` should carry the full observer scope where applicable. `lifecycleStatus` and `statusReason` explain the interpreted outcome; each resource entry remains factual.
 
 ## Observation endpoint baseline
 
-IA MS obtains runtime metrics from observability/observation endpoints. The observation endpoints are informed by `IntentNetworkReadyEvent.serviceConfiguration.observerConfiguration`.
-
-IA evaluates returned metric facts against resolved runtime targets and the IA stored applied assurance baseline. KP/rules may support mapping and evaluation policy but are not the source of truth for every assurance decision.
+IA MS obtains runtime metrics from observability/observation endpoints. The observation endpoints are informed by `IntentNetworkReadyEvent.serviceConfiguration.observerConfiguration`. IA evaluates returned metric facts against resolved runtime targets and the IA stored applied assurance baseline. KP/rules may support mapping and evaluation policy but are not the source of truth for every assurance decision.
 
 ## Final baseline statement
 
@@ -136,4 +133,4 @@ IA MS is the runtime assurance truth service. It consumes `IntentNetworkReadyEve
 
 ## Metrics-first IntentAssuranceEvent refinement
 
-`IntentAssuranceEvent` is metrics-first by default. Do not include `current.evaluations` or `body.evaluations` unless a future policy explicitly requires derived evaluation objects. `lifecycleStatus` and `statusReason` explain the outcome; resource-level `metrics`, `selectionStatus`, and `assuranceStatus` provide the facts needed by IC MS, II MS, and authorised decision components.
+`IntentAssuranceEvent` is metrics-first by default. Do not include `current.evaluations` or `body.evaluations` unless a future policy explicitly requires derived evaluation objects. `lifecycleStatus` and `statusReason` explain the outcome; resource-level `metrics` provide the factual observed data needed by IC MS, II MS, and authorised decision components.
