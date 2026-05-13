@@ -1,12 +1,10 @@
-# OSB MS / Optimisation Screen Builder MS Design
+# OSB MS / Optimisation Screen Builder MS Specification
 
 ## Service purpose
 
-OSB MS means Optimisation Screen Builder MS. OSB MS is the context-aware OEX facade / backend-for-frontend service for optimisation experiences.
+OSB MS means Optimisation Screen Builder MS. OSB MS is the context-aware OEX facade / backend-for-frontend service for optimisation experiences. OSB MS sits behind OGW and receives user context from the User Context JWT passed by OGW. It shapes the OEX optimisation experience and calls backend optimisation domain APIs through NGW. OSB MS initially supports runtime optimisation journeys through OC MS.
 
-OSB MS sits behind OGW and receives user context from the User Context JWT passed by OGW. It shapes the OEX optimisation experience and calls backend optimisation domain APIs through NGW.
-
-OSB MS initially supports runtime optimisation journeys through OC MS. It later supports catalogue/specification journeys through OD MS.
+It later supports catalogue/specification journeys through OD MS.
 
 ## Ownership boundary
 
@@ -46,9 +44,7 @@ OSB MS: owns OEX experience/context-aware facade behaviour.
 
 ## API compliance
 
-OSB APIs are private/OEX experience APIs and do not need to be TMF-compliant. NGW-exposed backend OD MS and OC MS APIs remain TMF/TIO-aligned while using Optimisation as the domain concept.
-
-OSB MS must not expose backend OD/OC resource contracts directly unless the UI journey explicitly needs that shape.
+OSB APIs are private/OEX experience APIs and do not need to be TMF-compliant. NGW-exposed backend OD MS and OC MS APIs remain TMF/TIO-aligned while using Optimisation as the domain concept. OSB MS must not expose backend OD/OC resource contracts directly unless the UI journey explicitly needs that shape.
 
 ## Recommended namespace
 
@@ -68,12 +64,12 @@ Those belong to OC MS and OD MS behind NGW.
 ## Phase one endpoint set
 
 ```http
-GET  /optimisationExperience/v1/home
-GET  /optimisationExperience/v1/capabilities
-GET  /optimisationExperience/v1/capabilities/{capabilityId}/request-form
+GET /optimisationExperience/v1/home
+GET /optimisationExperience/v1/capabilities
+GET /optimisationExperience/v1/capabilities/{capabilityId}/request-form
 POST /optimisationExperience/v1/optimisations
-GET  /optimisationExperience/v1/optimisations
-GET  /optimisationExperience/v1/optimisations/{id}
+GET /optimisationExperience/v1/optimisations
+GET /optimisationExperience/v1/optimisations/{id}
 POST /optimisationExperience/v1/optimisations/{id}/cancellation
 POST /optimisationExperience/v1/optimisations/{id}/retrial
 ```
