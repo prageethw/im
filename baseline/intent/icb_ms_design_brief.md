@@ -39,7 +39,7 @@ External system -> API Gateway -> ICB MS -> Outbox DB -> Kafka callback topic ->
 
 **ICB MS carries raw callback facts only. IA MS interprets callback state and owns lifecycle/assurance meaning.**
 
-ICB MS must not decide whether a callback means `Active`, `Failed`, `Terminated`, `Degraded`, or any other intent lifecycle state.
+ICB MS must not decide whether a callback means `Active`, `Failed`, `Terminated`, `Degraded`, or any other intent lifecycle state. ICB MS must not classify callback meaning through a field such as `callbackType`; raw callback meaning is carried by source-owned state such as `sourceState.state`, and IA MS owns interpretation, correlation, skip/dead-letter decisions, and lifecycle-driving assurance outcomes.
 
 ## Core responsibilities:
 
@@ -65,7 +65,8 @@ ICB MS must not decide whether a callback means `Active`, `Failed`, `Terminated`
 | Runtime assurance truth | IA MS |
 | Callback state interpretation | IA MS |
 | Semantic interpretation/resolution | II MS |
-| Optimisation decision | T7 optimiser entity/design |
+| Optimisation decision | `optimiser-controller-ms` |
+| Optimiser solver/backend target | `t7-gurobi-optimiser`, where applicable |
 | Network apply/orchestration execution | External orchestration/apply system |
 | KP config/governance | Knowledge Plane operating model |
 
@@ -76,7 +77,6 @@ The external callback submission contains raw orchestration/apply facts.
 Typical callback facts include:
 
 - `intentId`
-- `callbackType`
 - `callbackSource`
 - `callbackTimestamp`
 - `sourceState.state`
@@ -84,6 +84,8 @@ Typical callback facts include:
 - raw or structured detail payload where safe
 
 ICB MS validates that these fields are present and structurally valid. It does not validate that `intentId` is known to IA MS or decide what the raw state means.
+
+Do not use `callbackType` as an ICB contract field. ICB MS does not classify callback meaning; IA MS interprets raw `sourceState.state` and source references in the context of the intent and assurance state.
 
 ## Idempotency baseline:
 
@@ -101,7 +103,6 @@ ICB MS should also use stable callback fields to protect against duplicates wher
 - source callback identifier
 - `intentId`
 - `sourceReference`
-- `callbackType`
 - `callbackTimestamp`
 
 Duplicate submissions should not create duplicate internal `IntentCallbackEvent` facts.
