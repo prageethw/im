@@ -405,7 +405,7 @@ intent-intelligence-ms
 ### Current primary consumer
 
 ```text
-intent-optimiser-ms
+optimiser-controller-ms
 ```
 
 ### Meaning
@@ -493,6 +493,14 @@ content-type: application/json
           {
             "type": "pairedSecondary",
             "resourceId": "SYD-SEC-01"
+          },
+          {
+            "type": "pairedSecondary",
+            "resourceId": "SYD-SEC-02"
+          },
+          {
+            "type": "pairedSecondary",
+            "resourceId": "SYD-SEC-03"
           }
         ]
       },
@@ -509,6 +517,48 @@ content-type: application/json
           "availabilityPercent": 99.994,
           "jitterMs": 1.8,
           "packetLossPercent": 0.006
+        },
+        "relationships": [
+          {
+            "type": "protects",
+            "resourceId": "SYD-PRI-01"
+          }
+        ]
+      },
+      {
+        "resourceId": "SYD-SEC-02",
+        "resourceType": "deliveryResource",
+        "resourceClass": "critical-gold",
+        "roles": [
+          "secondary"
+        ],
+        "accessTechnology": "fibre",
+        "metrics": {
+          "latencyMs": 8,
+          "availabilityPercent": 99.995,
+          "jitterMs": 1.4,
+          "packetLossPercent": 0.005
+        },
+        "relationships": [
+          {
+            "type": "protects",
+            "resourceId": "SYD-PRI-01"
+          }
+        ]
+      },
+      {
+        "resourceId": "SYD-SEC-03",
+        "resourceType": "deliveryResource",
+        "resourceClass": "critical-gold",
+        "roles": [
+          "secondary"
+        ],
+        "accessTechnology": "microwave",
+        "metrics": {
+          "latencyMs": 11,
+          "availabilityPercent": 99.992,
+          "jitterMs": 1.9,
+          "packetLossPercent": 0.007
         },
         "relationships": [
           {
@@ -590,6 +640,52 @@ content-type: application/json
           {
             "type": "pairedSecondary",
             "resourceId": "MEL-SEC-01"
+          },
+          {
+            "type": "pairedSecondary",
+            "resourceId": "MEL-SEC-02"
+          }
+        ]
+      },
+      {
+        "resourceId": "MEL-SEC-01",
+        "resourceType": "deliveryResource",
+        "resourceClass": "critical-gold",
+        "roles": [
+          "secondary"
+        ],
+        "accessTechnology": "5G",
+        "metrics": {
+          "latencyMs": 11,
+          "availabilityPercent": 99.993,
+          "jitterMs": 1.9,
+          "packetLossPercent": 0.007
+        },
+        "relationships": [
+          {
+            "type": "protects",
+            "resourceId": "MEL-PRI-01"
+          }
+        ]
+      },
+      {
+        "resourceId": "MEL-SEC-02",
+        "resourceType": "deliveryResource",
+        "resourceClass": "critical-gold",
+        "roles": [
+          "secondary"
+        ],
+        "accessTechnology": "fibre",
+        "metrics": {
+          "latencyMs": 10,
+          "availabilityPercent": 99.994,
+          "jitterMs": 1.6,
+          "packetLossPercent": 0.006
+        },
+        "relationships": [
+          {
+            "type": "protects",
+            "resourceId": "MEL-PRI-01"
           }
         ]
       }
@@ -605,7 +701,7 @@ content-type: application/json
 - Do not flatten `location`, `serviceType`, or `serviceClass` into top-level event fields.
 - Do not include direct top-level `priority`, `preferredAccessTechnology`, or `redundancyRequired` outside the buckets.
 - Do not include `provider` by default.
-- Do not include downstream-selected resources; all resources in `IntentResolvedEvent.resources` are applicable resources known for downstream consideration, not final selected output.
+- Do not include downstream-selected resources; all resources in `IntentResolvedEvent.resources` are applicable/applyable resources known for downstream consideration by `optimiser-controller-ms`, not final selected output.
 - Include generic `metrics` values for applicable resources using neutral metric names such as `latencyMs`, `availabilityPercent`, `jitterMs`, and `packetLossPercent`.
 - Do not encode metric origin or lifecycle context into wrappers or field names such as `metrics.benchmark`, `metrics.telemetry`, `latencyBenchmarkMs`, or `currentLatencyMs`.
 
@@ -693,6 +789,21 @@ content-type: application/json
             "resourceClass": "critical-gold",
             "roles": [
               "primary"
+            ],
+            "accessTechnology": "fibre",
+            "relationships": [
+              {
+                "type": "pairedSecondary",
+                "resourceId": "SYD-SEC-01"
+              },
+              {
+                "type": "pairedSecondary",
+                "resourceId": "SYD-SEC-02"
+              },
+              {
+                "type": "pairedSecondary",
+                "resourceId": "SYD-SEC-03"
+              }
             ]
           },
           {
@@ -701,6 +812,43 @@ content-type: application/json
             "resourceClass": "critical-gold",
             "roles": [
               "secondary"
+            ],
+            "accessTechnology": "5G",
+            "relationships": [
+              {
+                "type": "protects",
+                "resourceId": "SYD-PRI-01"
+              }
+            ]
+          },
+          {
+            "resourceId": "SYD-SEC-02",
+            "resourceType": "deliveryResource",
+            "resourceClass": "critical-gold",
+            "roles": [
+              "secondary"
+            ],
+            "accessTechnology": "fibre",
+            "relationships": [
+              {
+                "type": "protects",
+                "resourceId": "SYD-PRI-01"
+              }
+            ]
+          },
+          {
+            "resourceId": "SYD-SEC-03",
+            "resourceType": "deliveryResource",
+            "resourceClass": "critical-gold",
+            "roles": [
+              "secondary"
+            ],
+            "accessTechnology": "microwave",
+            "relationships": [
+              {
+                "type": "protects",
+                "resourceId": "SYD-PRI-01"
+              }
             ]
           }
         ]
@@ -725,6 +873,34 @@ content-type: application/json
           },
           {
             "resourceId": "SYD-SEC-01",
+            "resourceType": "deliveryResource",
+            "resourceClass": "critical-gold",
+            "roles": [
+              "secondary"
+            ],
+            "metrics": [
+              "latencyMs",
+              "availabilityPercent",
+              "jitterMs",
+              "packetLossPercent"
+            ]
+          },
+          {
+            "resourceId": "SYD-SEC-02",
+            "resourceType": "deliveryResource",
+            "resourceClass": "critical-gold",
+            "roles": [
+              "secondary"
+            ],
+            "metrics": [
+              "latencyMs",
+              "availabilityPercent",
+              "jitterMs",
+              "packetLossPercent"
+            ]
+          },
+          {
+            "resourceId": "SYD-SEC-03",
             "resourceType": "deliveryResource",
             "resourceClass": "critical-gold",
             "roles": [
@@ -769,8 +945,8 @@ content-type: application/json
 - Carry the resolved runtime `body.context` with `targets`, `constraints`, and `preferences`; IA MS stores this as assurance context.
 - Use `serviceConfiguration.orchestratorConfiguration` for apply/orchestration details.
 - Use `serviceConfiguration.observerConfiguration` for assurance/monitoring details.
-- `serviceConfiguration.orchestratorConfiguration.resources[]` carries network-ready resource details, topology, roles, and orchestrator-relevant information; it does not carry metric values.
-- `serviceConfiguration.observerConfiguration.resources[]` uses `metrics` as a list of metric names IA should observe, not a value object.
+- `serviceConfiguration.orchestratorConfiguration.resources[]` carries the full network-ready resource set with resource details, topology, roles, and orchestrator-relevant information; it does not carry metric values.
+- `serviceConfiguration.observerConfiguration.resources[]` carries the full resource set to be observed and uses `metrics` as a list of metric names IA should observe, not a value object.
 - Do not include `applyOutcome`.
 - Do not use this event as a substitute for `IntentAssuranceEvent`; IA MS remains responsible for apply outcome interpretation and runtime assurance truth.
 
@@ -875,6 +1051,6 @@ II MS consumes `IntentValidatedEvent`, validates and resolves the admitted expre
 
 `IntentRejectedEvent` is the semantic/policy/capability rejection handoff. IC MS consumes it and projects the external runtime `Intent` lifecycle accordingly.
 
-`IntentResolvedEvent` is the candidate-level semantic-resolution handoff. It carries canonical service context and the full valid/applicable resource set for downstream consideration. It includes generic metric values for applicable resources using neutral metric names such as `latencyMs`, `availabilityPercent`, `jitterMs`, and `packetLossPercent`. It is not the final service-ready/apply-ready handoff.
+`IntentResolvedEvent` is the candidate-level semantic-resolution handoff. It carries canonical service context and the full valid/applicable/applyable resource set for downstream consideration by `optimiser-controller-ms`. It includes generic metric values for applicable resources using neutral metric names such as `latencyMs`, `availabilityPercent`, `jitterMs`, and `packetLossPercent`. It is not the final service-ready/apply-ready handoff.
 
-`IntentNetworkReadyEvent` is the service-ready preparation handoff to IA MS. It carries the prepared orchestration and observation configuration through `serviceConfiguration.orchestratorConfiguration` and `serviceConfiguration.observerConfiguration`, and it does not mean network apply has succeeded. It does not carry metric values in `serviceConfiguration.orchestratorConfiguration.resources[]`; `serviceConfiguration.observerConfiguration.resources[].metrics` names the metrics IA should observe.
+`IntentNetworkReadyEvent` is the service-ready preparation handoff to IA MS. It carries the full prepared resource set in the orchestration and observation configuration through `serviceConfiguration.orchestratorConfiguration` and `serviceConfiguration.observerConfiguration`, and it does not mean network apply has succeeded. It does not carry metric values in `serviceConfiguration.orchestratorConfiguration.resources[]`; `serviceConfiguration.observerConfiguration.resources[].metrics` names the metrics IA should observe.
