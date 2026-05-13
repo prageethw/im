@@ -493,14 +493,27 @@ content-type: application/json
           {
             "type": "pairedSecondary",
             "resourceId": "SYD-SEC-01"
-          },
+          }
+        ]
+      },
+      {
+        "resourceId": "SYD-PRI-02",
+        "resourceType": "deliveryResource",
+        "resourceClass": "critical-gold",
+        "roles": [
+          "primary"
+        ],
+        "accessTechnology": "fibre",
+        "metrics": {
+          "latencyMs": 8,
+          "availabilityPercent": 99.995,
+          "jitterMs": 1.5,
+          "packetLossPercent": 0.005
+        },
+        "relationships": [
           {
             "type": "pairedSecondary",
             "resourceId": "SYD-SEC-02"
-          },
-          {
-            "type": "pairedSecondary",
-            "resourceId": "SYD-SEC-03"
           }
         ]
       },
@@ -534,36 +547,15 @@ content-type: application/json
         ],
         "accessTechnology": "fibre",
         "metrics": {
-          "latencyMs": 8,
-          "availabilityPercent": 99.995,
-          "jitterMs": 1.4,
-          "packetLossPercent": 0.005
+          "latencyMs": 9,
+          "availabilityPercent": 99.997,
+          "jitterMs": 1.2,
+          "packetLossPercent": 0.003
         },
         "relationships": [
           {
             "type": "protects",
-            "resourceId": "SYD-PRI-01"
-          }
-        ]
-      },
-      {
-        "resourceId": "SYD-SEC-03",
-        "resourceType": "deliveryResource",
-        "resourceClass": "critical-gold",
-        "roles": [
-          "secondary"
-        ],
-        "accessTechnology": "microwave",
-        "metrics": {
-          "latencyMs": 11,
-          "availabilityPercent": 99.992,
-          "jitterMs": 1.9,
-          "packetLossPercent": 0.007
-        },
-        "relationships": [
-          {
-            "type": "protects",
-            "resourceId": "SYD-PRI-01"
+            "resourceId": "SYD-PRI-02"
           }
         ]
       }
@@ -795,14 +787,6 @@ content-type: application/json
               {
                 "type": "pairedSecondary",
                 "resourceId": "SYD-SEC-01"
-              },
-              {
-                "type": "pairedSecondary",
-                "resourceId": "SYD-SEC-02"
-              },
-              {
-                "type": "pairedSecondary",
-                "resourceId": "SYD-SEC-03"
               }
             ]
           },
@@ -814,36 +798,6 @@ content-type: application/json
               "secondary"
             ],
             "accessTechnology": "5G",
-            "relationships": [
-              {
-                "type": "protects",
-                "resourceId": "SYD-PRI-01"
-              }
-            ]
-          },
-          {
-            "resourceId": "SYD-SEC-02",
-            "resourceType": "deliveryResource",
-            "resourceClass": "critical-gold",
-            "roles": [
-              "secondary"
-            ],
-            "accessTechnology": "fibre",
-            "relationships": [
-              {
-                "type": "protects",
-                "resourceId": "SYD-PRI-01"
-              }
-            ]
-          },
-          {
-            "resourceId": "SYD-SEC-03",
-            "resourceType": "deliveryResource",
-            "resourceClass": "critical-gold",
-            "roles": [
-              "secondary"
-            ],
-            "accessTechnology": "microwave",
             "relationships": [
               {
                 "type": "protects",
@@ -872,6 +826,20 @@ content-type: application/json
             ]
           },
           {
+            "resourceId": "SYD-PRI-02",
+            "resourceType": "deliveryResource",
+            "resourceClass": "critical-gold",
+            "roles": [
+              "primary"
+            ],
+            "metrics": [
+              "latencyMs",
+              "availabilityPercent",
+              "jitterMs",
+              "packetLossPercent"
+            ]
+          },
+          {
             "resourceId": "SYD-SEC-01",
             "resourceType": "deliveryResource",
             "resourceClass": "critical-gold",
@@ -887,20 +855,6 @@ content-type: application/json
           },
           {
             "resourceId": "SYD-SEC-02",
-            "resourceType": "deliveryResource",
-            "resourceClass": "critical-gold",
-            "roles": [
-              "secondary"
-            ],
-            "metrics": [
-              "latencyMs",
-              "availabilityPercent",
-              "jitterMs",
-              "packetLossPercent"
-            ]
-          },
-          {
-            "resourceId": "SYD-SEC-03",
             "resourceType": "deliveryResource",
             "resourceClass": "critical-gold",
             "roles": [
@@ -945,8 +899,8 @@ content-type: application/json
 - Carry the resolved runtime `body.context` with `targets`, `constraints`, and `preferences`; IA MS stores this as assurance context.
 - Use `serviceConfiguration.orchestratorConfiguration` for apply/orchestration details.
 - Use `serviceConfiguration.observerConfiguration` for assurance/monitoring details.
-- `serviceConfiguration.orchestratorConfiguration.resources[]` carries the full network-ready resource set with resource details, topology, roles, and orchestrator-relevant information; it does not carry metric values.
-- `serviceConfiguration.observerConfiguration.resources[]` carries the full resource set to be observed and uses `metrics` as a list of metric names IA should observe, not a value object.
+- `serviceConfiguration.orchestratorConfiguration.resources[]` carries only the optimiser-selected network-ready configuration/resources that must be applied by the orchestrator; it includes resource details, topology, roles, and orchestrator-relevant information, but not metric values.
+- `serviceConfiguration.observerConfiguration.resources[]` carries the full assurance observation scope, including selected resources and any additional primary/secondary alternatives that IA must observe; it uses `metrics` as a list of metric names IA should observe, not a value object.
 - Do not include `applyOutcome`.
 - Do not use this event as a substitute for `IntentAssuranceEvent`; IA MS remains responsible for apply outcome interpretation and runtime assurance truth.
 
@@ -1053,4 +1007,4 @@ II MS consumes `IntentValidatedEvent`, validates and resolves the admitted expre
 
 `IntentResolvedEvent` is the candidate-level semantic-resolution handoff. It carries canonical service context and the full valid/applicable/applyable resource set for downstream consideration by `optimiser-controller-ms`. It includes generic metric values for applicable resources using neutral metric names such as `latencyMs`, `availabilityPercent`, `jitterMs`, and `packetLossPercent`. It is not the final service-ready/apply-ready handoff.
 
-`IntentNetworkReadyEvent` is the service-ready preparation handoff to IA MS. It carries the full prepared resource set in the orchestration and observation configuration through `serviceConfiguration.orchestratorConfiguration` and `serviceConfiguration.observerConfiguration`, and it does not mean network apply has succeeded. It does not carry metric values in `serviceConfiguration.orchestratorConfiguration.resources[]`; `serviceConfiguration.observerConfiguration.resources[].metrics` names the metrics IA should observe.
+`IntentNetworkReadyEvent` is the service-ready preparation handoff to IA MS. It carries the optimiser-selected apply configuration in `serviceConfiguration.orchestratorConfiguration` and the full assurance observation scope in `serviceConfiguration.observerConfiguration`, and it does not mean network apply has succeeded. It does not carry metric values in `serviceConfiguration.orchestratorConfiguration.resources[]`; `serviceConfiguration.observerConfiguration.resources[].metrics` names the metrics IA should observe.
