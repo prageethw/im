@@ -2,11 +2,9 @@
 
 ## 1. Service purpose
 
-Optimisation Definition MS (OD MS) owns the governed catalogue of `OptimisationSpecification` resources.
+Optimisation Definition MS (OD MS) owns the governed catalogue of `OptimisationSpecification` resources. An `OptimisationSpecification` defines the allowed shape, semantics, lifecycle, and validation contract for runtime `Optimisation` requests.
 
-An `OptimisationSpecification` defines the allowed shape, semantics, lifecycle, and validation contract for runtime `Optimisation` requests. It describes what a runtime optimisation request may contain, including the required `expression.expressionValue.context` container and its `targets[]`, `constraints[]`, and `preferences[]` buckets.
-
-External OD MS APIs are aligned to the TMF921 `IntentSpecification` resource and operation pattern, but the domain concept exposed by this optimiser architecture is `OptimisationSpecification`.
+It describes what a runtime optimisation request may contain, including the required `expression.expressionValue.context` container and its `targets[]`, `constraints[]`, and `preferences[]` buckets. External OD MS APIs are aligned to the TMF921 `IntentSpecification` resource and operation pattern, but the domain concept exposed by this optimiser architecture is `OptimisationSpecification`.
 
 OD MS does **not** execute optimisation runs, evaluate solver feasibility, select candidates, invoke Gurobi, persist runtime `Optimisation` resources, or project runtime optimisation outcomes. Those runtime responsibilities belong to OSB MS, OC MS, workers, and the optimiser engine.
 
@@ -64,24 +62,24 @@ Runtime optimisation result projection
 TMF-aligned operation set:
 
 ```http
-GET    /optimisationSpecification
-POST   /optimisationSpecification
-GET    /optimisationSpecification/{id}
-PATCH  /optimisationSpecification/{id}
+GET /optimisationSpecification
+POST /optimisationSpecification
+GET /optimisationSpecification/{id}
+PATCH /optimisationSpecification/{id}
 DELETE /optimisationSpecification/{id}
 ```
 
 Approved platform extension:
 
 ```http
-PUT    /optimisationSpecification/{id}
+PUT /optimisationSpecification/{id}
 ```
 
 OD MS does not expose runtime optimisation operations. Runtime operations belong to OSB MS and OC MS.
 
 ## 5. OptimisationSpecification resource shape
 
-`OptimisationSpecification` is the optimiser-domain equivalent of the TMF921 `IntentSpecification` resource.
+`OptimisationSpecification` is a platform optimiser-domain resource modelled using the TMF921 `IntentSpecification` / `EntitySpecification` pattern. It is not a native TMF921 resource name.
 
 Canonical fields:
 
@@ -152,9 +150,9 @@ OD MS must keep the three TMF-aligned specification structures separate. They ar
 Baseline rule:
 
 ```text
-specCharacteristic[]      = catalogue / discovery / UI guidance
-expressionSpecification   = expression language + ontology IRI
-targetEntitySchema        = authoritative runtime expressionValue validation schema
+specCharacteristic[] = catalogue / discovery / UI guidance
+expressionSpecification = expression language + ontology IRI
+targetEntitySchema = authoritative runtime expressionValue validation schema
 ```
 
 ## 8. Runtime optimisation context contract
@@ -226,10 +224,7 @@ context.preferences[] contains soft ranking or selection preferences.
   "description": "Schema for Optimisation.expression.expressionValue. The context object is the canonical container for the runtime optimisation problem definition.",
   "type": "object",
   "additionalProperties": true,
-  "required": [
-    "@context",
-    "context"
-  ],
+  "required": ["@context", "context"],
   "properties": {
     "@context": {
       "description": "JSON-LD context for optimisation vocabulary prefixes.",
@@ -240,33 +235,23 @@ context.preferences[] contains soft ranking or selection preferences.
       "description": "The full optimisation scenario / big picture. Contains optimisation goals, hard requirements, and soft preferences.",
       "type": "object",
       "additionalProperties": false,
-      "required": [
-        "targets",
-        "constraints",
-        "preferences"
-      ],
+      "required": ["targets", "constraints", "preferences"],
       "properties": {
         "targets": {
           "description": "Optimisation goals the optimiser tries to achieve.",
           "type": "array",
           "minItems": 1,
-          "items": {
-            "$ref": "#/$defs/target"
-          }
+          "items": { "$ref": "#/$defs/target" }
         },
         "constraints": {
           "description": "Hard mandatory requirements that must be satisfied for a valid solution. Concrete active OptimisationSpecification schemas decide whether this array may be empty for a given capability.",
           "type": "array",
-          "items": {
-            "$ref": "#/$defs/constraint"
-          }
+          "items": { "$ref": "#/$defs/constraint" }
         },
         "preferences": {
           "description": "Soft ranking or selection preferences used to choose between otherwise valid outcomes.",
           "type": "array",
-          "items": {
-            "$ref": "#/$defs/preference"
-          }
+          "items": { "$ref": "#/$defs/preference" }
         }
       }
     }
@@ -277,15 +262,8 @@ context.preferences[] contains soft ranking or selection preferences.
       "additionalProperties": true,
       "description": "A goal or threshold the optimiser should optimise toward.",
       "properties": {
-        "maxLatencyMs": {
-          "type": "number",
-          "minimum": 0
-        },
-        "minAvailabilityPercent": {
-          "type": "number",
-          "minimum": 0,
-          "maximum": 100
-        }
+        "maxLatencyMs": { "type": "number", "minimum": 0 },
+        "minAvailabilityPercent": { "type": "number", "minimum": 0, "maximum": 100 }
       }
     },
     "constraint": {
@@ -293,17 +271,9 @@ context.preferences[] contains soft ranking or selection preferences.
       "additionalProperties": true,
       "description": "A hard requirement that every valid optimisation outcome must satisfy.",
       "properties": {
-        "locationId": {
-          "type": "string",
-          "minLength": 1
-        },
-        "serviceClass": {
-          "type": "string",
-          "minLength": 1
-        },
-        "redundancyRequired": {
-          "type": "boolean"
-        }
+        "locationId": { "type": "string", "minLength": 1 },
+        "serviceClass": { "type": "string", "minLength": 1 },
+        "redundancyRequired": { "type": "boolean" }
       }
     },
     "preference": {
@@ -311,14 +281,8 @@ context.preferences[] contains soft ranking or selection preferences.
       "additionalProperties": true,
       "description": "A soft preference that influences ranking or selection among feasible outcomes.",
       "properties": {
-        "preferredAccessTechnology": {
-          "type": "string",
-          "minLength": 1
-        },
-        "optimiseFor": {
-          "type": "string",
-          "minLength": 1
-        }
+        "preferredAccessTechnology": { "type": "string", "minLength": 1 },
+        "optimiseFor": { "type": "string", "minLength": 1 }
       }
     }
   }
@@ -327,9 +291,7 @@ context.preferences[] contains soft ranking or selection preferences.
 
 ## 10. Embedded schema governance baseline
 
-The embedded `optimisation-expression-value.schema.json` validates the runtime `Optimisation.expression.expressionValue` structure only.
-
-It does not perform solver feasibility checks, rank candidates, calculate objective trade-offs, select the best candidate, or decide runtime optimisation outcomes. Those responsibilities remain with OC MS, workers, and the optimiser engine.
+The embedded `optimisation-expression-value.schema.json` validates the runtime `Optimisation.expression.expressionValue` structure only. It does not perform solver feasibility checks, rank candidates, calculate objective trade-offs, select the best candidate, or decide runtime optimisation outcomes. Those responsibilities remain with OC MS, workers, and the optimiser engine.
 
 | Schema element | Baseline rule |
 |---|---|
@@ -370,9 +332,7 @@ There is no `DEPRECATED` state in the optimiser baseline.
 
 `POST /optimisationSpecification` always creates a `DRAFT` `OptimisationSpecification`.
 
-`DRAFT -> ACTIVE` is a governed activation transition on an existing `DRAFT` specification.
-
-Activation may be performed by:
+`DRAFT -> ACTIVE` is a governed activation transition on an existing `DRAFT` specification. Activation may be performed by:
 
 - `PATCH`, when the draft body is already final and only lifecycle activation is required.
 - `PUT`, as an approved platform extension, when finalising/replacing the full mutable `DRAFT` contract as part of activation.
@@ -415,7 +375,7 @@ DELETE /optimisationSpecification/{id}
 Required request header:
 
 ```http
-If-Match: "<current-etag>"
+If-Match: ""
 ```
 
 Failure rules:
@@ -431,7 +391,7 @@ Successful GET responses include bounded private cache headers:
 
 ```http
 Cache-Control: private, max-age=300
-ETag: "<current-resource-version>"
+ETag: ""
 ```
 
 The only explicit client cache override documented by OD MS is:
@@ -467,6 +427,8 @@ Link relation meaning:
 | `activate` | `PATCH` | Governed activation of a finalised `DRAFT`. |
 | `retire` | `PATCH` | Governed retirement of an `ACTIVE` specification. |
 | `createNewVersion` | `POST` | Create a new versioned `DRAFT` from an existing active/retired family. |
+
+The `activate` and `retire` link relations point to `PATCH` on the `OptimisationSpecification` resource itself. OD MS does not expose separate `/activate` or `/retire` action endpoints.
 
 ## 16. Operation examples
 
@@ -515,7 +477,7 @@ Content-Type: application/json
   ],
   "expressionSpecification": {
     "@type": "ExpressionSpecification",
-    "expressionLanguage": "JsonLdExpression",
+    "expressionLanguage": "JSON-LD",
     "iri": "https://example.com/ontology/optimisation/v1"
   },
   "targetEntitySchema": {
@@ -576,7 +538,7 @@ Content-Type: application/json
   ],
   "expressionSpecification": {
     "@type": "ExpressionSpecification",
-    "expressionLanguage": "JsonLdExpression",
+    "expressionLanguage": "JSON-LD",
     "iri": "https://example.com/ontology/optimisation/v1"
   },
   "targetEntitySchema": {
@@ -721,7 +683,7 @@ Content-Type: application/json
   ],
   "expressionSpecification": {
     "@type": "ExpressionSpecification",
-    "expressionLanguage": "JsonLdExpression",
+    "expressionLanguage": "JSON-LD",
     "iri": "https://example.com/ontology/optimisation/v1"
   },
   "targetEntitySchema": {
@@ -923,7 +885,7 @@ value types
 supported target names
 supported constraint names
 supported preference names
-supported context object shape
+context object shape
 allowed values where defined
 cardinality rules such as candidateResources minItems = 2 where applicable
 ```
@@ -942,13 +904,10 @@ OD MS does not persist runtime `Optimisation` resources, does not write OC MS ou
 
 ---
 
-## Event and subscription posture:
+## Event and subscription posture
 
-OD MS is baselined as a synchronous REST API only for the initial optimiser architecture.
+OD MS is baselined as a synchronous REST API only for the initial optimiser architecture. TMF-style hub/listener subscription support is not included in the initial OD MS baseline. OD MS does not expose `/hub` endpoints and does not publish external `OptimisationSpecification` events by default. This is a deliberate scope decision.
 
-TMF-style hub/listener subscription support is not included in the initial OD MS baseline. OD MS does not expose `/hub` endpoints and does not publish external `OptimisationSpecification` events by default.
+Optimisation specifications support short-run optimisation models, and the initial runtime path can discover and validate against OD MS synchronously. OEX and OC MS may query OD MS directly for active `OptimisationSpecification` resources and their `targetEntitySchema` contracts. A future TMF-style `/hub` subscription model may be introduced if concrete requirements emerge for external notification of specification creation, activation, retirement, or catalogue changes.
 
-This is a deliberate scope decision. Optimisation specifications support short-run optimisation models, and the initial runtime path can discover and validate against OD MS synchronously. OEX and OC MS may query OD MS directly for active `OptimisationSpecification` resources and their `targetEntitySchema` contracts.
-
-A future TMF-style `/hub` subscription model may be introduced if concrete requirements emerge for external notification of specification creation, activation, retirement, or catalogue changes. Until then, event support is deferred and must not be assumed by clients.
-
+Until then, event support is deferred and must not be assumed by clients.
