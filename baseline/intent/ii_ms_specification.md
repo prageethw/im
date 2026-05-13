@@ -29,9 +29,7 @@ II MS does not own runtime `Intent` REST APIs, external lifecycle projection, do
 
 ## 1. External API
 
-II MS has no external TMF-facing API and no consumer-facing REST contract in the active baseline.
-
-II MS is not exposed through NGW, OEX, public API gateways, or partner-facing API channels.
+II MS has no external TMF-facing API and no consumer-facing REST contract in the active baseline. II MS is not exposed through NGW, OEX, public API gateways, or partner-facing API channels.
 
 Operational probes such as health, readiness, and metrics are platform-internal only. They are for Kubernetes/platform operations and must not be treated as external product APIs or TMF921 resource APIs.
 
@@ -230,9 +228,7 @@ Supported baseline preference fields:
 preferredAccessTechnology
 ```
 
-II MS preserves preferences for downstream selection guidance.
-
-II MS does not reject the intent only because a preference cannot be satisfied unless policy later promotes that preference into a hard constraint.
+II MS preserves preferences for downstream selection guidance. II MS does not reject the intent only because a preference cannot be satisfied unless policy later promotes that preference into a hard constraint.
 
 ---
 
@@ -481,19 +477,17 @@ content-type: application/json
     "resources": [
       {
         "resourceId": "SYD-PRI-01",
-        "resourceType": "networkPath",
-        "resourceClass": "critical-gold-access",
+        "resourceType": "deliveryResource",
+        "resourceClass": "critical-gold",
         "roles": [
           "primary"
         ],
         "accessTechnology": "fibre",
         "metrics": {
-          "benchmark": {
-            "latencyMs": 7,
-            "availabilityPercent": 99.996,
-            "jitterMs": 1.1,
-            "packetLossPercent": 0.004
-          }
+          "latencyMs": 7,
+          "availabilityPercent": 99.996,
+          "jitterMs": 1.1,
+          "packetLossPercent": 0.004
         },
         "relationships": [
           {
@@ -504,19 +498,17 @@ content-type: application/json
       },
       {
         "resourceId": "SYD-SEC-01",
-        "resourceType": "networkPath",
-        "resourceClass": "critical-gold-access",
+        "resourceType": "deliveryResource",
+        "resourceClass": "critical-gold",
         "roles": [
           "secondary"
         ],
         "accessTechnology": "5G",
         "metrics": {
-          "benchmark": {
-            "latencyMs": 10,
-            "availabilityPercent": 99.994,
-            "jitterMs": 1.8,
-            "packetLossPercent": 0.006
-          }
+          "latencyMs": 10,
+          "availabilityPercent": 99.994,
+          "jitterMs": 1.8,
+          "packetLossPercent": 0.006
         },
         "relationships": [
           {
@@ -582,19 +574,17 @@ content-type: application/json
     "resources": [
       {
         "resourceId": "MEL-PRI-01",
-        "resourceType": "networkPath",
-        "resourceClass": "critical-gold-access",
+        "resourceType": "deliveryResource",
+        "resourceClass": "critical-gold",
         "roles": [
           "primary"
         ],
         "accessTechnology": "fibre",
         "metrics": {
-          "benchmark": {
-            "latencyMs": 9,
-            "availabilityPercent": 99.995,
-            "jitterMs": 1.4,
-            "packetLossPercent": 0.005
-          }
+          "latencyMs": 9,
+          "availabilityPercent": 99.995,
+          "jitterMs": 1.4,
+          "packetLossPercent": 0.005
         },
         "relationships": [
           {
@@ -615,9 +605,9 @@ content-type: application/json
 - Do not flatten `location`, `serviceType`, or `serviceClass` into top-level event fields.
 - Do not include direct top-level `priority`, `preferredAccessTechnology`, or `redundancyRequired` outside the buckets.
 - Do not include `provider` by default.
-- Do not include downstream-selected resources; all resources in `IntentResolvedEvent.resources` are valid candidate resources known for downstream consideration, not final selected output.
-- For initial handoff, use `metrics.benchmark`.
-- For future re-resolution based on live degradation, use `metrics.telemetry` and omit `metrics.benchmark` by default unless explicitly needed.
+- Do not include downstream-selected resources; all resources in `IntentResolvedEvent.resources` are applicable resources known for downstream consideration, not final selected output.
+- Include generic `metrics` values for applicable resources using neutral metric names such as `latencyMs`, `availabilityPercent`, `jitterMs`, and `packetLossPercent`.
+- Do not encode metric origin or lifecycle context into wrappers or field names such as `metrics.benchmark`, `metrics.telemetry`, `latencyBenchmarkMs`, or `currentLatencyMs`.
 
 ---
 
@@ -699,16 +689,16 @@ content-type: application/json
         "resources": [
           {
             "resourceId": "SYD-PRI-01",
-            "resourceType": "networkPath",
-            "resourceClass": "critical-gold-access",
+            "resourceType": "deliveryResource",
+            "resourceClass": "critical-gold",
             "roles": [
               "primary"
             ]
           },
           {
             "resourceId": "SYD-SEC-01",
-            "resourceType": "networkPath",
-            "resourceClass": "critical-gold-access",
+            "resourceType": "deliveryResource",
+            "resourceClass": "critical-gold",
             "roles": [
               "secondary"
             ]
@@ -721,35 +711,31 @@ content-type: application/json
         "resources": [
           {
             "resourceId": "SYD-PRI-01",
-            "resourceType": "networkPath",
-            "resourceClass": "critical-gold-access",
+            "resourceType": "deliveryResource",
+            "resourceClass": "critical-gold",
             "roles": [
               "primary"
             ],
-            "metrics": {
-              "benchmark": {
-                "latencyMs": 7,
-                "availabilityPercent": 99.996,
-                "jitterMs": 1.1,
-                "packetLossPercent": 0.004
-              }
-            }
+            "metrics": [
+              "latencyMs",
+              "availabilityPercent",
+              "jitterMs",
+              "packetLossPercent"
+            ]
           },
           {
             "resourceId": "SYD-SEC-01",
-            "resourceType": "networkPath",
-            "resourceClass": "critical-gold-access",
+            "resourceType": "deliveryResource",
+            "resourceClass": "critical-gold",
             "roles": [
               "secondary"
             ],
-            "metrics": {
-              "benchmark": {
-                "latencyMs": 10,
-                "availabilityPercent": 99.994,
-                "jitterMs": 1.8,
-                "packetLossPercent": 0.006
-              }
-            }
+            "metrics": [
+              "latencyMs",
+              "availabilityPercent",
+              "jitterMs",
+              "packetLossPercent"
+            ]
           }
         ]
       }
@@ -783,6 +769,8 @@ content-type: application/json
 - Carry the resolved runtime `body.context` with `targets`, `constraints`, and `preferences`; IA MS stores this as assurance context.
 - Use `serviceConfiguration.orchestratorConfiguration` for apply/orchestration details.
 - Use `serviceConfiguration.observerConfiguration` for assurance/monitoring details.
+- `serviceConfiguration.orchestratorConfiguration.resources[]` carries network-ready resource details, topology, roles, and orchestrator-relevant information; it does not carry metric values.
+- `serviceConfiguration.observerConfiguration.resources[]` uses `metrics` as a list of metric names IA should observe, not a value object.
 - Do not include `applyOutcome`.
 - Do not use this event as a substitute for `IntentAssuranceEvent`; IA MS remains responsible for apply outcome interpretation and runtime assurance truth.
 
@@ -795,11 +783,11 @@ II MS maps KP data into event-facing resource entries.
 | KP field | Event-facing treatment |
 |---|---|
 | `resourceId` | Include as `resourceId` |
-| `resourceType` | Include as `resourceType` |
-| `resourceClass` | Include as `resourceClass` |
+| `resourceType` | Include as `resourceType`, using controlled resource vocabulary such as `deliveryResource` |
+| `resourceClass` | Include as `resourceClass`, using controlled class vocabulary such as `critical-gold` |
 | `resourceRoles` | Map to `roles` |
 | `accessTechnology` | Include if useful to preference handling |
-| `metrics.benchmark` | Include under `metrics.benchmark` for first-pass fulfilment handoff |
+| `metrics` | Map supported values into neutral event-facing metric fields such as `latencyMs`, `availabilityPercent`, `jitterMs`, and `packetLossPercent` in `IntentResolvedEvent.resources[]`; use metric names only in `IntentNetworkReadyEvent.serviceConfiguration.observerConfiguration.resources[].metrics` |
 | `relationships` | Include only downstream-relevant relationships |
 | `provider` | Do not include by default; KP inventory metadata only |
 
@@ -887,6 +875,6 @@ II MS consumes `IntentValidatedEvent`, validates and resolves the admitted expre
 
 `IntentRejectedEvent` is the semantic/policy/capability rejection handoff. IC MS consumes it and projects the external runtime `Intent` lifecycle accordingly.
 
-`IntentResolvedEvent` is the candidate-level semantic-resolution handoff. It carries canonical service context and the full valid resource set for downstream consideration; it is not the final service-ready/apply-ready handoff.
+`IntentResolvedEvent` is the candidate-level semantic-resolution handoff. It carries canonical service context and the full valid/applicable resource set for downstream consideration. It includes generic metric values for applicable resources using neutral metric names such as `latencyMs`, `availabilityPercent`, `jitterMs`, and `packetLossPercent`. It is not the final service-ready/apply-ready handoff.
 
-`IntentNetworkReadyEvent` is the service-ready preparation handoff to IA MS. It carries the prepared orchestration and observation configuration through `serviceConfiguration.orchestratorConfiguration` and `serviceConfiguration.observerConfiguration`, and it does not mean network apply has succeeded.
+`IntentNetworkReadyEvent` is the service-ready preparation handoff to IA MS. It carries the prepared orchestration and observation configuration through `serviceConfiguration.orchestratorConfiguration` and `serviceConfiguration.observerConfiguration`, and it does not mean network apply has succeeded. It does not carry metric values in `serviceConfiguration.orchestratorConfiguration.resources[]`; `serviceConfiguration.observerConfiguration.resources[].metrics` names the metrics IA should observe.
