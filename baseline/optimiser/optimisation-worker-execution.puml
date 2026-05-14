@@ -16,7 +16,7 @@ participant "Gurobi\nOptimiser" as Gurobi
 queue "OC MS Inbox" as Inbox
 participant "OC MS" as OCMS
 database "OC MS DB" as OCDB
-actor "User / OEX /\nAuthorised Platform" as Caller
+actor "User & OEX " as Caller
 participant "OGW" as OGW
 participant "OSB MS" as OSB
 participant "NGW" as NGW
@@ -35,7 +35,7 @@ Gurobi --> Worker : 5. Return solver output\nor failure information
 == Outcome Mapping & Publishing ==
 
 Worker -> Worker : 6. Map outcome to\nSUCCESS, INFEASIBLE, or FAILURE
-Worker -> Kafka : 7. Publish OptimisationCompletedEvent\nor OptimisationFailedEvent
+Worker -> Kafka : 7. Publish OptimisationCompletedEvent\nwith success, infeasible, or failure outcome
 
 == Result Ingestion ==
 
@@ -47,10 +47,29 @@ OCDB --> Inbox : Confirmed
 == User Observation ==
 
 Caller -> OGW : 11. GET /optimisation/{id}
-OGW -> OSB : <mTLS + User Context JWT>
-OSB -> NGW : <mTLS + OAuth2 (system-to-system)>
-NGW -> OCMS : Route read request
-OCMS -> OCDB : Read lifecycle & result
+OGW -> OGW : 12. Authenticate caller/token/session\nand derive user context
+OGW -> OSB : 13. Invoke OSB MS\nwith user context\nmTLS, correlation id, trace context
+OSB -> OSB : 14. Authorise result visibility\nusing user context
+note right of OSB
+User-context-related authorisation is performed
+at OSB / OCB-level before the request crosses NGW.
+end note
+
+OSB -> NGW : 15. Forward read request\nwith system caller identity\nmTLS, correlation id, trace context\n(no user context downstream)
+note right of NGW
+User context terminates at NGW.
+NGW-to-downstream calls carry only
+system/service caller identity plus technical metadata.
+end note
+
+NGW -> OCMS : 16. Route read request\nusing mTLS and service/system auth context only
+note right of OCMS
+OC MS authorises the calling service/system.
+OC MS does not receive or depend on
+end-user identity/claims/roles/scopes.
+end note
+
+OCMS -> OCDB : 17. Read lifecycle & result
 OCDB --> OCMS : Return record
 OCMS --> NGW : Return response
 NGW --> OSB : Return response
