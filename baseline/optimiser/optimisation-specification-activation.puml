@@ -10,7 +10,7 @@ skinparam sequenceActorBorderColor #4F46E5
 skinparam noteBorderColor #A5B4FC
 skinparam noteBackgroundColor #EEF2FF
 
-actor "Optimisation Domain\nEngineer" as Engineer
+actor "User & OEX " as Caller
 participant "OGW" as OGW
 participant "OSB MS" as OSB
 participant "NGW" as NGW
@@ -19,30 +19,57 @@ database "OD MS DB" as ODDB
 
 == Activation Request ==
 
-Engineer -> OGW : 1. Request activation of DRAFT OptimisationSpecification
-OGW -> OSB : 2-3. Invoke OSB MS\n<mTLS + User Context JWT>
-OSB -> NGW : 4. Forward activation request\n<mTLS + OAuth2 (system-to-system)>
-NGW -> ODMS : 5. Route governed activation request
+Caller -> OGW : 1. Request activation of DRAFT\nOptimisationSpecification
+OGW -> OGW : 2. Authenticate caller/token/session\nand derive user context
+note right of OGW
+User context may include tenant, claims,
+roles/scopes, and entitlements.
+end note
+
+OGW -> OSB : 3. Invoke OSB MS\nwith user context\nmTLS, correlation id, trace context
+OSB -> OSB : 4. Authorise activation action\nusing user context\nand shape governed request
+note right of OSB
+User-context-related authorisation is performed
+at OSB / OCB-level before the request crosses NGW.
+end note
+
+OSB -> NGW : 5. Forward activation request\nwith system caller identity\nmTLS, correlation id, trace context, If-Match\n(no user context downstream)
+note right of NGW
+User context terminates at NGW.
+NGW-to-downstream calls carry only
+system/service caller identity plus technical metadata.
+end note
+
+NGW -> ODMS : 6. Route governed activation request\nusing mTLS and service/system auth context only
+note right of ODMS
+OD MS authorises the calling service/system.
+OD MS does not receive or depend on
+end-user identity/claims/roles/scopes.
+end note
 
 == Validation ==
 
-ODMS -> ODDB : 6. Validate If-Match for DRAFT specification
+ODMS -> ODDB : 7. Validate If-Match for DRAFT specification
 ODDB --> ODMS : If-Match confirmed
-ODMS -> ODMS : 7. Validate full OptimisationSpecification\n(specCharacteristic[], expressionSpecification,\ntargetEntitySchema)
+ODMS -> ODMS : 8. Validate full OptimisationSpecification\n(specCharacteristic[], expressionSpecification,\ntargetEntitySchema)
 
 == Lifecycle Transition ==
 
-ODMS -> ODDB : 8. Change selected version\nDRAFT -> ACTIVE
+ODMS -> ODDB : 9. Change selected version\nDRAFT -> ACTIVE
 ODDB --> ODMS : Version activated
-ODMS -> ODDB : 9. Atomically move previously ACTIVE version\nin same specification family -> RETIRED
+ODMS -> ODDB : 10. Atomically move previously ACTIVE version\nin same specification family -> RETIRED
 ODDB --> ODMS : Previous version retired
-note right of ODMS : 10. At most one ACTIVE version\nper specification family enforced
+
+note right of ODMS
+At most one ACTIVE version
+per specification family is enforced.
+end note
 
 == Activation Response ==
 
 ODMS --> NGW : 11. Return activated OptimisationSpecification\n(updated ETag + lifecycle-aware _links)
 NGW --> OSB : Return response to OSB MS
 OSB --> OGW : Shape response for OEX experience
-OGW --> Engineer : Activated OptimisationSpecification result
+OGW --> Caller : Activated OptimisationSpecification result
 
 @enduml
