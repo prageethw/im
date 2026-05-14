@@ -20,7 +20,6 @@ database "OD MS DB" as ODDB
 == Discovery Request ==
 
 Caller -> OGW : 1. Request available optimisation capabilities
-
 OGW -> OGW : 2. Authenticate caller/token/session\nand derive user context
 note right of OGW
 User context may include tenant, claims,
@@ -34,7 +33,6 @@ is performed at OSB / OCB-level before NGW.
 end note
 
 OSB -> OSB : 4. Shape discovery request\nand apply user-context-aware filtering
-
 OSB -> NGW : 5. Call NGW\nwith system caller identity\nmTLS, correlation id, trace context\n(no user context downstream)
 note right of NGW
 User context terminates at NGW.
@@ -57,10 +55,10 @@ ODDB --> ODMS : Return active records
 
 == Discovery Response ==
 
-ODMS --> NGW : 8. Return capability and request-contract metadata\n(specCharacteristic[], expressionSpecification,\ntargetEntitySchema)
+ODMS --> NGW : 8. Return capability & request-contract metadata\n(specCharacteristic[], expressionSpecification,\ntargetEntitySchema)
 NGW --> OSB : 9. Return response to OSB MS
 OSB --> OSB : 10. Shape response for OEX / API consumer
 OSB --> OGW : Shaped response
-OGW --> Caller : 11. Available optimisation capabilities\nand request contract details
+OGW --> Caller : 11. Available optimisation capabilities\n& request contract details
 
 @enduml
