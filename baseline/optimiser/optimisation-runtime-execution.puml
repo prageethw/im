@@ -10,7 +10,7 @@ skinparam sequenceActorBorderColor #4F46E5
 skinparam noteBorderColor #A5B4FC
 skinparam noteBackgroundColor #EEF2FF
 
-actor "User" as User
+actor "User & OEX " as Caller
 participant "OGW" as OGW
 participant "OSB MS" as OSB
 participant "NGW" as NGW
@@ -24,31 +24,60 @@ queue "OC MS Inbox" as Inbox
 
 == Optimisation Request ==
 
-User -> OGW : 1. Initiate optimisation journey via UI
-OGW -> OSB : 2-3. Invoke OSB MS\n<mTLS + User Context JWT>
-OSB -> OSB : 4. Validate User Context JWT\n& shape request/action model
-OSB -> NGW : 5. Forward request\n<mTLS + OAuth2 (system-to-system)>
-NGW -> OCMS : 6. Route request to OC MS
+Caller -> OGW : 1. Initiate optimisation journey via UI
+OGW -> OGW : 2. Authenticate caller/token/session\nand derive user context
+note right of OGW
+User context may include tenant, claims,
+roles/scopes, and entitlements.
+end note
+
+OGW -> OSB : 3. Invoke OSB MS\nwith user context\nmTLS, correlation id, trace context
+OSB -> OSB : 4. Validate user context\nshape request/action model\nand perform user-context authorisation
+note right of OSB
+User-context-related authorisation is performed
+at OSB / OCB-level before the request crosses NGW.
+end note
+
+OSB -> NGW : 5. Forward optimisation request\nwith system caller identity\nmTLS, correlation id, trace context\n(no user context downstream)
+note right of NGW
+User context terminates at NGW.
+NGW-to-downstream calls carry only
+system/service caller identity plus technical metadata.
+end note
+
+NGW -> OCMS : 6. Route request to OC MS\nusing mTLS and service/system auth context only
+note right of OCMS
+OC MS authorises the calling service/system.
+OC MS does not receive or depend on
+end-user identity/claims/roles/scopes.
+end note
 
 == Validation ==
 
-OCMS -> ODMS : 7. Validate referenced ACTIVE OptimisationSpecification\n& request contract <mTLS>
+OCMS -> ODMS : 7. Validate referenced ACTIVE OptimisationSpecification\nand request contract\nusing mTLS and service/system auth context only
+note right of ODMS
+OD MS authorises the calling service/system.
+OD MS does not receive or depend on
+end-user identity/claims/roles/scopes.
+end note
+
 ODMS --> OCMS : Specification confirmed
+
 OCMS -> OCMS : 8. Validate expression.expressionValue.context.targets[],\nconstraints[], preferences[]\nagainst targetEntitySchema
 
 == Persistence & Event Publishing ==
 
 OCMS -> OCDB : 9. Persist runtime Optimisation\n(lifecycleStatus = ACKNOWLEDGED)
 OCDB --> OCMS : Confirmed
-OCMS -> Outbox : 10. Write OptimisationRequestedEvent\n(instruction = EXECUTE) — same transaction
-Outbox -> Kafka : 11. Relay publishes event to Kafka
+OCMS -> Outbox : 10. Write OptimisationRequestedEvent\n(instruction = EXECUTE) -- same transaction
+Outbox -> Kafka : 11. Relay publishes event to Kafka\nwith correlation id and trace context
 
 == Worker Execution ==
 
 Kafka -> Worker : 12. Consume OptimisationRequestedEvent
 Worker -> Worker : 13. Resolve internal deterministic\nmodel binding
 Worker -> Worker : 14. Invoke Gurobi Optimiser
-Worker -> Kafka : 15. Publish OptimisationCompletedEvent\nor OptimisationFailedEvent
+Worker -> Kafka : 15. Publish OptimisationCompletedEvent\nwith success or failure outcome
 
 == Result Ingestion ==
 
@@ -58,15 +87,16 @@ OCDB --> Inbox : Confirmed
 
 == User Polling ==
 
-User -> OGW : 18. Poll GET /optimisation/{id}
-OGW -> OSB : <mTLS + User Context JWT>
-OSB -> NGW : <mTLS + OAuth2 (system-to-system)>
-NGW -> OCMS : Route poll request
-OCMS -> OCDB : Read current status / result
+Caller -> OGW : 18. Poll GET /optimisation/{id}
+OGW -> OSB : 19. Invoke OSB MS\nwith user context\nmTLS, correlation id, trace context
+OSB -> OSB : 20. Authorise status/result visibility\nusing user context
+OSB -> NGW : 21. Forward poll request\nwith system caller identity\nmTLS, correlation id, trace context\n(no user context downstream)
+NGW -> OCMS : 22. Route poll request\nusing mTLS and service/system auth context only
+OCMS -> OCDB : 23. Read current status / result
 OCDB --> OCMS : Return status / result
 OCMS --> NGW : Return response
 NGW --> OSB : Return response
 OSB --> OGW : Shape response for OEX experience
-OGW --> User : Current optimisation status / result
+OGW --> Caller : Current optimisation status / result
 
 @enduml
