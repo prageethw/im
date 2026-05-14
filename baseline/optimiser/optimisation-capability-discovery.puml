@@ -10,7 +10,7 @@ skinparam sequenceActorBorderColor #4F46E5
 skinparam noteBorderColor #A5B4FC
 skinparam noteBackgroundColor #EEF2FF
 
-actor "User & OEX" as Caller
+actor "User & OEX " as Caller
 participant "OGW" as OGW
 participant "OSB MS" as OSB
 participant "NGW" as NGW
@@ -18,14 +18,16 @@ participant "OD MS" as ODMS
 database "OD MS DB" as ODDB
 
 == Discovery Request ==
+
 Caller -> OGW : 1. Request available optimisation capabilities
+
 OGW -> OGW : 2. Authenticate caller/token/session\nand derive user context
 note right of OGW
-User context may include tenant,
-claims, roles/scopes, and entitlements.
+User context may include tenant, claims,
+roles/scopes, and entitlements.
 end note
 
-OGW -> OSB : 3. Invoke OSB MS\nwith user context\n mTLs, correlation id, trace context
+OGW -> OSB : 3. Invoke OSB MS\nwith user context\nmTLS, correlation id, trace context
 note right of OSB
 User-context-related authorisation and filtering
 is performed at OSB / OCB-level before NGW.
@@ -33,13 +35,12 @@ end note
 
 OSB -> OSB : 4. Shape discovery request\nand apply user-context-aware filtering
 
-OSB -> NGW : 5. Call NGW\nwith system caller identity\n mTLS, correlation id, trace context\n(no user context downstream)
+OSB -> NGW : 5. Call NGW\nwith system caller identity\nmTLS, correlation id, trace context\n(no user context downstream)
 note right of NGW
 User context terminates at NGW.
 NGW-to-downstream calls carry only
-system/service caller identity plus
-technical metadata such as correlation id
-and trace context.
+system/service caller identity plus technical metadata
+such as correlation id and trace context.
 end note
 
 NGW -> ODMS : 6. Route discovery request\nusing mTLS and service/system auth context only
@@ -50,14 +51,16 @@ end-user identity/claims/roles/scopes.
 end note
 
 == Data Retrieval ==
+
 ODMS -> ODDB : 7. Read ACTIVE OptimisationSpecification records
 ODDB --> ODMS : Return active records
 
 == Discovery Response ==
-ODMS --> NGW : 8. Return capability & request-contract metadata\n(specCharacteristic[], expressionSpecification,\ntargetEntitySchema)
+
+ODMS --> NGW : 8. Return capability and request-contract metadata\n(specCharacteristic[], expressionSpecification,\ntargetEntitySchema)
 NGW --> OSB : 9. Return response to OSB MS
 OSB --> OSB : 10. Shape response for OEX / API consumer
 OSB --> OGW : Shaped response
-OGW --> Caller : 11. Available optimisation capabilities\n& request contract details
+OGW --> Caller : 11. Available optimisation capabilities\nand request contract details
 
 @enduml
