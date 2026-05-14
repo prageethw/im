@@ -1,9 +1,9 @@
-# Intent Callback MS Solution Brief:
+# Intent Callback MS Solution Brief
 ## Summary:
 
-Intent Callback MS, referred to as ICB MS, is the thin callback ingestion service for the Intent Management Enabler platform. It accepts callback submissions from trusted external orchestration or apply systems through the API Gateway, performs technical authorisation and structural validation, durably records the accepted callback fact, and publishes a raw internal `IntentCallbackEvent` to the dedicated callback Kafka topic for IA MS.
+Intent Callback MS, referred to as ICB MS, is the thin callback ingestion service for the Intent Management Enabler platform. It accepts callback submissions from trusted external orchestration or application systems through the API Gateway, performs technical authorisation and structural validation, durably records the accepted callback fact, and publishes a raw internal `IntentCallbackEvent` to the dedicated callback Kafka topic for IA MS.
 
-ICB MS does not interpret callback meaning. It does not decide whether a callback means `Active`, `Failed`, `Terminated`, `Degraded`, or any other lifecycle or assurance outcome. IA MS is the normalisation and interpretation point. IA MS consumes `IntentCallbackEvent`, correlates the `intentId`, interprets raw `sourceState.state`, and emits lifecycle-driving `IntentAssuranceEvent` outcomes to the main internal event flow.
+ICB MS does not interpret the callback meaning. It does not decide whether a callback means `Active`, `Failed`, `Terminated`, `Degraded`, or any other lifecycle or assurance outcome. IA MS is the normalisation and interpretation point. IA MS consumes `IntentCallbackEvent`, correlates the `intentId`, interprets raw `sourceState.state`, and emits lifecycle-driving `IntentAssuranceEvent` outcomes to the main internal event flow.
 
 The current solution deliberately keeps ICB MS implementation-oriented and narrow:
 
@@ -39,7 +39,7 @@ Kafka topic: t7.intent.management.events.callbacks
 Intent Assurance MS
 ```
 
-ICB MS sits behind the API Gateway. External systems do not call it directly. The API Gateway authenticates the external caller and forwards trusted caller identity or claims to ICB MS. ICB MS uses that trusted context for technical authorisation and then validates the callback payload structure.
+ICB MS sits behind the API Gateway. External systems do not call it directly. The API Gateway authenticates the external caller and forwards the trusted caller identity or claims to ICB MS. ICB MS uses that trusted context for technical authorisation and then validates the callback payload structure.
 
 The callback Kafka topic is dedicated to raw callback facts. It is separate from the main internal intent event topic. IA MS is the intended consumer.
 
@@ -47,7 +47,7 @@ The callback Kafka topic is dedicated to raw callback facts. It is separate from
 
 ```text
 1. External orchestration/apply system submits a callback.
-2. API Gateway authenticates the caller and forwards trusted caller context.
+2. API Gateway authenticates the caller and forwards the trusted caller context.
 3. ICB MS authorises the callback submission for the caller/source context.
 4. ICB MS validates only structure and syntax.
 5. ICB MS writes the callback submission and callback outbox record in one DB transaction.
