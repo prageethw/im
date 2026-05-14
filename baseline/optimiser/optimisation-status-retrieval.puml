@@ -10,7 +10,7 @@ skinparam sequenceActorBorderColor #4F46E5
 skinparam noteBorderColor #A5B4FC
 skinparam noteBackgroundColor #EEF2FF
 
-actor "User / OEX /\nAuthorised Platform" as Caller
+actor "User & OEX " as Caller
 participant "OGW" as OGW
 participant "OSB MS" as OSB
 participant "NGW" as NGW
@@ -22,10 +22,32 @@ queue "Kafka" as Kafka
 == Status / Result Request ==
 
 Caller -> OGW : 1. Request optimisation status or result
-OGW -> OSB : 2-3. Invoke OSB MS\n<mTLS + User Context JWT>
-OSB -> OSB : 4. Validate access to\nrequested optimisation view
-OSB -> NGW : 5. Forward request\n<mTLS + OAuth2 (system-to-system)>
-NGW -> OCMS : 6. Route GET /optimisation/{id}
+OGW -> OGW : 2. Authenticate caller/token/session\nand derive user context
+note right of OGW
+User context may include tenant, claims,
+roles/scopes, and entitlements.
+end note
+
+OGW -> OSB : 3. Invoke OSB MS\nwith user context\nmTLS, correlation id, trace context
+OSB -> OSB : 4. Validate access to\nrequested optimisation view\nusing user context
+note right of OSB
+User-context-related authorisation is performed
+at OSB / OCB-level before the request crosses NGW.
+end note
+
+OSB -> NGW : 5. Forward status/result request\nwith system caller identity\nmTLS, correlation id, trace context\n(no user context downstream)
+note right of NGW
+User context terminates at NGW.
+NGW-to-downstream calls carry only
+system/service caller identity plus technical metadata.
+end note
+
+NGW -> OCMS : 6. Route GET /optimisation/{id}\nusing mTLS and service/system auth context only
+note right of OCMS
+OC MS authorises the calling service/system.
+OC MS does not receive or depend on
+end-user identity/claims/roles/scopes.
+end note
 
 == Data Retrieval ==
 
@@ -42,9 +64,9 @@ OGW --> Caller : 11. Current lifecycle / result state
 == Read-Only Boundary ==
 
 note over OCMS, Kafka
-  12. No OC MS Outbox record written.
-  No worker instruction emitted.
-  This is a read-only monitoring operation.
+12. No OC MS Outbox record written.
+No worker instruction emitted.
+This is a read-only monitoring operation.
 end note
 
 @enduml
