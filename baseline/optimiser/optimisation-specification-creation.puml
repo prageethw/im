@@ -10,7 +10,7 @@ skinparam sequenceActorBorderColor #4F46E5
 skinparam noteBorderColor #A5B4FC
 skinparam noteBackgroundColor #EEF2FF
 
-actor "Optimisation Domain\nEngineer" as Engineer
+actor "User & OEX " as Caller
 participant "OGW" as OGW
 participant "OSB MS" as OSB
 participant "NGW" as NGW
@@ -19,16 +19,38 @@ database "OD MS DB" as ODDB
 
 == Catalogue Create Request ==
 
-Engineer -> OGW : 1. Initiate OptimisationSpecification creation\n(post E2E team agreement)
-OGW -> OSB : 2-3. Invoke OSB MS\n<mTLS + User Context JWT>
-OSB -> OSB : 4. Validate user context\n& confirm catalogue-management access
-OSB -> NGW : 5. Forward create request\n<mTLS + OAuth2 (system-to-system)>
-NGW -> ODMS : 6. Route create request
+Caller -> OGW : 1. Initiate OptimisationSpecification creation\n(post E2E team agreement)
+OGW -> OGW : 2. Authenticate caller/token/session\nand derive user context
+note right of OGW
+User context may include tenant, claims,
+roles/scopes, and entitlements.
+end note
+
+OGW -> OSB : 3. Invoke OSB MS\nwith user context\nmTLS, correlation id, trace context
+OSB -> OSB : 4. Validate user context\nand confirm catalogue-management access
+note right of OSB
+User-context-related authorisation is performed
+at OSB / OCB-level before the request crosses NGW.
+end note
+
+OSB -> NGW : 5. Forward create request\nwith system caller identity\nmTLS, correlation id, trace context\n(no user context downstream)
+note right of NGW
+User context terminates at NGW.
+NGW-to-downstream calls carry only
+system/service caller identity plus technical metadata.
+end note
+
+NGW -> ODMS : 6. Route create request\nusing mTLS and service/system auth context only
+note right of ODMS
+OD MS authorises the calling service/system.
+OD MS does not receive or depend on
+end-user identity/claims/roles/scopes.
+end note
 
 == Validation & Persistence ==
 
-ODMS -> ODMS : 7. Authenticate & authorise\ncatalogue operation
-ODMS -> ODMS : 8. Validate OptimisationSpecification shape\n(TMF fields, specCharacteristic[],\nexpressionSpecification, targetEntitySchema)
+ODMS -> ODMS : 7. Authorise catalogue operation\nfor calling service/system
+ODMS -> ODMS : 8. Validate OptimisationSpecification shape\n(TMF-style fields, specCharacteristic[],\nexpressionSpecification, targetEntitySchema)
 ODMS -> ODDB : 9. Persist new OptimisationSpecification\n(lifecycleStatus = DRAFT)
 ODDB --> ODMS : Confirm persisted
 
@@ -37,13 +59,13 @@ ODDB --> ODMS : Confirm persisted
 ODMS --> NGW : 10. Return DRAFT OptimisationSpecification\n(+ Location & ETag where applicable)
 NGW --> OSB : 11. Return response to OSB MS
 OSB --> OGW : 12. Shape catalogue-management response\nfor OEX experience
-OGW --> Engineer : 13. DRAFT OptimisationSpecification result
+OGW --> Caller : 13. DRAFT OptimisationSpecification result
 
 == Governance Note ==
 
-note over Engineer, ODDB
-  14. DRAFT specification is NOT usable for runtime optimisation
-  until reviewed and activated under OD MS governance.
+note over Caller, ODDB
+14. DRAFT specification is NOT usable for runtime optimisation
+until reviewed and activated under OD MS governance.
 end note
 
 @enduml
