@@ -10,7 +10,7 @@ skinparam sequenceActorBorderColor #4F46E5
 skinparam noteBorderColor #A5B4FC
 skinparam noteBackgroundColor #EEF2FF
 
-actor "User / OEX /\nAuthorised Platform" as Caller
+actor "User & OEX " as Caller
 participant "OGW" as OGW
 participant "OSB MS" as OSB
 participant "NGW" as NGW
@@ -20,38 +20,68 @@ queue "OC MS Outbox" as Outbox
 queue "Kafka" as Kafka
 participant "Python/Gurobi\nWorker" as Worker
 
+note over Caller,OGW
+  External access is authenticated at OGW.
+  OGW validates the caller token/session and establishes caller identity,
+  tenant, roles/scopes, correlation id, and trace context.
+end note
+
+note over OGW,OSB
+  OGW forwards user identity, tenant, roles/scopes, correlation id,
+  and trace context only to OSB MS.
+  OSB MS performs user-context authorisation before the request crosses NGW.
+end note
+
+note over NGW,OCMS
+  Service-to-service calls use mTLS.
+  User context terminates at NGW.
+  Downstream services see only the calling system/service identity,
+  internal route policy, correlation id, and trace context.
+end note
+
 == Cancellation Request ==
 
 Caller -> OGW : 1. POST /optimisation/{id}/cancellation\n(If-Match header)
-OGW -> OSB : 2-3. Invoke OSB MS\n<mTLS + User Context JWT>
-OSB -> OSB : 4. Validate user context & runtime state\nExpose cancellation action only if allowed
-OSB -> NGW : 5. Forward cancellation request\n<mTLS + OAuth2 (system-to-system)>
-NGW -> OCMS : 6. Route cancellation request
+OGW -> OGW : 2. Authenticate caller\nValidate token/session\nDerive identity, tenant, roles/scopes
+OGW -> OSB : 3. Invoke OSB MS\nForward user identity/claims, correlation id, trace context
+OSB -> OSB : 4. Validate user context & runtime state\nAuthorise cancellation action\nExpose cancellation action only if allowed
+OSB -> NGW : 5. Forward cancellation request\nPreserve If-Match, system caller identity, correlation id, trace context\nDo not forward user context downstream
+NGW -> NGW : 6. Enforce internal route policy\nTerminate user context\nUse system/service identity for downstream call
+NGW -> OCMS : 7. Route cancellation request\n(mTLS, service/system auth context only)
 
 == Validation ==
 
-OCMS -> OCDB : 7. Validate ETag (If-Match)
+OCMS -> OCDB : 8. Validate ETag (If-Match)
 OCDB --> OCMS : ETag confirmed
-OCMS -> OCDB : 8. Check lifecycleStatus is\nACKNOWLEDGED, QUEUED, or PROCESSING
+OCMS -> OCMS : 9. Authorise service/system caller\nDo not perform end-user authorisation\nUser-context authorisation already completed in OSB MS
+OCMS -> OCDB : 10. Check lifecycleStatus is\nACKNOWLEDGED, QUEUED, or PROCESSING
 OCDB --> OCMS : Status eligible for cancellation
 
 == State Transition & Event Publishing ==
 
-OCMS -> OCDB : 9. Update lifecycleStatus = CANCELLING
+OCMS -> OCDB : 11. Update lifecycleStatus = CANCELLING
 OCDB --> OCMS : Confirmed
-OCMS -> Outbox : 10. Write OptimisationRequestedEvent\n(instruction = CANCEL) — same transaction
-Outbox -> Kafka : 11. Relay publishes event to Kafka
+OCMS -> Outbox : 12. Write OptimisationRequestedEvent\n(instruction = CANCEL) — same transaction
+note right of Outbox
+  Outbox write is part of the OC MS durable state change.
+  Event publication is idempotent and carries correlation/trace context.
+end note
+Outbox -> Kafka : 13. Relay publishes event to Kafka
 
 == Worker Cancellation ==
 
-Kafka -> Worker : 12. Consume CANCEL instruction
-Worker -> Worker : 13. Stop, cancel, or safely ignore\nwork where possible
+Kafka -> Worker : 14. Consume CANCEL instruction
+Worker -> Worker : 15. Stop, cancel, or safely ignore\nwork where possible
 
 == Final Projection ==
 
-Worker -> Kafka : Publish cancellation outcome event
-Kafka -> OCMS : Consume outcome
-OCMS -> OCDB : 14. Project lifecycleStatus = CANCELLED\nwhen cancellation confirmed or safely resolved
-note right of OCDB : Final state is eventual —\nworker determines safe resolution
+Worker -> Kafka : 16. Publish cancellation outcome event
+Kafka -> OCMS : 17. Consume outcome
+OCMS -> OCDB : 18. Project lifecycleStatus = CANCELLED\nwhen cancellation confirmed or safely resolved
+
+note right of OCDB
+  Final state is eventual —
+  worker determines safe resolution.
+end note
 
 @enduml
