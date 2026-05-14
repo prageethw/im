@@ -1,4 +1,4 @@
-# id_ms_solution_brief.md
+# Intent Definition MS Solution Brief
 
 ## Summary:
 
