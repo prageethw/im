@@ -14,13 +14,13 @@ ID MS sits in the Intent Domain as the definition-time contract service.
 
 ```text
 External client / OEX / authorised platform
-        |
-        | REST over NGW / API Gateway
-        v
+  |
+  | REST over NGW / API Gateway
+  v
 Intent Definition MS (ID MS)
-        |
-        | owns
-        v
+  |
+  | owns
+  v
 IntentSpecification catalogue
 IntentSpecification lifecycle state
 IntentSpecification version-family governance
@@ -28,9 +28,7 @@ IntentSpecification hub subscriptions
 External IntentSpecification REST webhook notification delivery
 ```
 
-ID MS exposes REST APIs for `IntentSpecification` resources and domain-scoped subscription resources.
-
-IC MS and other authorised consumers may retrieve active specifications from ID MS to validate runtime intent creation and to discover the governed expression contract.
+ID MS exposes REST APIs for `IntentSpecification` resources and domain-scoped subscription resources. IC MS and other authorised consumers may retrieve active specifications from ID MS to validate runtime intent creation and to discover the governed expression contract.
 
 Core logical resources are:
 
@@ -54,15 +52,11 @@ The primary ID MS process flows are:
 7. Create, retrieve, and delete external event subscriptions.
 8. Deliver external `IntentSpecification` event notifications by REST webhook callback after successful resource changes.
 
-Activation is a lifecycle update on the resource, not a custom action endpoint. The service must not expose `POST /intentManagement/v5/intentSpecification/{id}/activate`.
-
-Strict TMF-compatible clients may use `PATCH`; the preferred platform extension is `PUT` when the caller submits the full resource representation.
+Activation is a lifecycle update on the resource, not a custom action endpoint. The service must not expose `POST /intentManagement/v5/intentSpecification/{id}/activate`. Strict TMF-compatible clients may use `PATCH`; the preferred platform extension is `PUT` when the caller submits the full resource representation.
 
 ## Solution Elaboration:
 
-ID MS manages the definition-time contract used by the intent platform.
-
-A specification defines the governed expression shape, high-level characteristic catalogue, metadata, lifecycle status, version identity, related parties, and schema references used by downstream intent creation and validation flows.
+ID MS manages the definition-time contract used by the intent platform. A specification defines the governed expression shape, high-level characteristic catalogue, metadata, lifecycle status, version identity, related parties, and schema references used by downstream intent creation and validation flows.
 
 The baseline surgical hospital slice specification uses:
 
@@ -75,9 +69,7 @@ The baseline surgical hospital slice specification uses:
 - `priority` values of `critical`, `high`, and `standard`
 - canonical `context.targets`, `context.constraints`, and `context.preferences` semantics in the expression model
 
-ID MS validates resource structure, required fields, lifecycle rules, and syntax/schema references.
-
-It does not decide whether a submitted runtime intent is semantically feasible or fulfilable in the network. Semantic and policy validation belongs to II MS and the knowledge plane. Runtime assurance belongs to IA MS.
+ID MS validates resource structure, required fields, lifecycle rules, and syntax/schema references. It does not decide whether a submitted runtime intent is semantically feasible or fulfilable in the network. Semantic and policy validation belongs to II MS and the knowledge plane. Runtime assurance belongs to IA MS.
 
 ## Responsibilities:
 
@@ -109,7 +101,8 @@ ID MS does not:
 - ingest orchestrator callbacks;
 - interpret callback state;
 - expose internal II MS, IA MS, KP, optimiser, or callback implementation details through external `IntentSpecification` events;
-- use `DELETED` as an `IntentSpecification.lifecycleStatus`.
+- use `DELETED` as an `IntentSpecification.lifecycleStatus`;
+- publish external hub notifications to Kafka topics.
 
 ## Contracts:
 
@@ -227,9 +220,7 @@ Clients must not use or submit `DELETED` as a lifecycle status.
 
 ## Authorisation:
 
-ID MS is externally reached through the platform gateway/security boundary.
-
-The gateway authenticates the caller and forwards trusted system context according to platform policy. ID MS must authorise callers for specification management operations and subscription management operations. It must enforce resource-level and lifecycle-level rules independently of gateway authentication.
+ID MS is externally reached through the platform gateway/security boundary. The gateway authenticates the caller and forwards trusted system context according to platform policy. ID MS must authorise callers for specification management operations and subscription management operations. It must enforce resource-level and lifecycle-level rules independently of gateway authentication.
 
 | Operation type | Authorisation expectation |
 |---|---|
@@ -297,15 +288,29 @@ External ID MS events use TMF-style event identity fields:
 
 `eventTime` and `timeOccurred` should carry the same canonical occurrence timestamp.
 
-## CloudEvents headers:
+## Webhook HTTP request:
 
-The current ID MS baseline uses TMF-style external event envelopes for subscription notifications. It does not require CloudEvents headers for the ID MS external event examples.
+ID MS hub notification delivery is an outbound HTTP callback to the subscriber URL registered through `/intentSpecification/hub`.
 
-If the platform event distribution layer wraps these events in CloudEvents for transport, the CloudEvents metadata must remain a transport envelope only and must not change the TMF-style resource-event payload semantics.
+```http
+POST https://subscriber.example.com/tmf-callbacks/intent-specification-events HTTP/1.1
+Content-Type: application/json
+X-Correlation-Id: corr-intent-spec-status-001
+```
 
-## Message shape:
+Subscriber callback authentication is deployment-specific and should use the configured subscriber credential or gateway-mediated callback authentication model. The webhook request is not a Kafka message and does not require Kafka transport metadata or CloudEvents headers.
 
-A typical `IntentSpecificationStatusChangeEvent` has this logical shape:
+## Webhook HTTP headers:
+
+| Header | Purpose |
+|---|---|
+| `Content-Type: application/json` | Identifies the event notification payload format. |
+| `X-Correlation-Id` | Carries the correlation identifier for tracing the change flow and callback delivery. |
+| `Authorization` | Optional subscriber callback credential where configured by the platform/subscriber contract. |
+
+## Webhook request body:
+
+A typical `IntentSpecificationStatusChangeEvent` webhook body has this logical shape:
 
 ```json
 {
@@ -396,7 +401,9 @@ Delete events are emitted only after successful delete and show the last known l
 - The previous `ACTIVE` version in the same `familyId` becomes `RETIRED`.
 - New runtime intent creation must use the new active specification.
 - Existing runtime intents referencing retired specifications may continue temporarily where safe.
-- Activation emits two `IntentSpecificationStatusChangeEvent` events: one for `DRAFT -> ACTIVE` and one for previous active `ACTIVE -> RETIRED`.
+- Activation emits two `IntentSpecificationStatusChangeEvent` events:
+  - one for the newly activated specification version with `lifecycleStatus: ACTIVE`;
+  - one for the previous active specification version with `lifecycleStatus: RETIRED`.
 
 ### Delete behaviour:
 
