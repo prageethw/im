@@ -1,4 +1,4 @@
-# ic_ms_design_brief.md
+# ic_ms_design_brief.md:
 
 ## Service identity:
 
@@ -25,10 +25,10 @@ It is responsible for:
 | Runtime lifecycle/status projection | Own external `Intent.lifecycleStatus`, `statusReason`, and `statusChangeDate` |
 | Syntactic validation | Validate incoming runtime `Intent` against active `IntentSpecification` from ID MS |
 | Initial admission | Accept syntactically valid requests and project `Acknowledged` |
-| State/progress event publication | Emit `IntentValidatedEvent` to the internal event backbone after syntactic validation succeeds |
+| Internal state/progress event publication | Emit `IntentValidatedEvent` to the internal Kafka event backbone after syntactic validation succeeds |
 | Rejection projection | Consume rejection outcome from II MS and project `Rejected` |
 | Assurance projection | Consume `IntentAssuranceEvent` from IA MS and update external `Intent` / `IntentReport` |
-| External events | Emit TMF-style `Intent*Event` and `IntentReport*Event` events |
+| External webhook notifications | Deliver TMF-style `Intent` and `IntentReport` notifications by HTTP POST to subscriber listener callback URLs |
 
 ## IC MS does not own:
 
@@ -56,13 +56,7 @@ Examples in this design brief use the platform route prefix:
 /intentManagement/v5
 ```
 
-Strict TMF gateway exposure may use:
-
-```http
-/tmf-api/intentManagement/v5
-```
-
-The API gateway may map between the external TMF deployment prefix and the internal platform route prefix without changing IC MS resource ownership or operation semantics.
+The API gateway may map external deployment routes to the internal platform route prefix without changing IC MS resource ownership or operation semantics.
 
 ### Intent resource APIs:
 
@@ -99,7 +93,9 @@ Accepted domain-scoped platform extension:
 | Retrieve intent event subscription | `GET` | `/intentManagement/v5/intent/hub/{id}` |
 | Delete intent event subscription | `DELETE` | `/intentManagement/v5/intent/hub/{id}` |
 
-Strict TMF hub routes are rooted at `/intentManagement/v5/hub`. IC MS also supports the domain-scoped `/intentManagement/v5/intent/hub` route family as an approved platform extension for Intent and IntentReport event subscriptions. `GET /intentManagement/v5/intent/hub/{id}` is an operational convenience extension and is not part of the strict minimum TMF hub operation set.
+Strict TMF hub routes are rooted at `/intentManagement/v5/hub`.
+
+IC MS also supports the domain-scoped `/intentManagement/v5/intent/hub` route family as an approved platform extension for Intent and IntentReport event subscriptions. `GET /intentManagement/v5/intent/hub/{id}` is an operational convenience extension and is not part of the strict minimum TMF hub operation set.
 
 ## IC MS validation responsibility:
 
@@ -113,17 +109,26 @@ On `POST /intentManagement/v5/intent`, IC MS:
 6. accepts syntactically valid requests
 7. creates/persists the external `Intent` projection
 8. sets initial `lifecycleStatus = Acknowledged`
-9. emits `IntentValidatedEvent` to the internal event backbone after syntactic validation succeeds
+9. emits `IntentValidatedEvent` to the internal Kafka event backbone after syntactic validation succeeds
 
 IC MS validates syntax and contract shape only.
 
 It does not decide semantic meaning, network feasibility, policy allowability, resource candidates, optimisation, apply result, or runtime assurance truth.
 
+## Event delivery paths:
+
+IC MS has two separate event-delivery paths.
+
+| **Path** | **Purpose** | **Durability model** | **Delivery mechanism** | **Headers** | **Consumers** |
+|---|---|---|---|---|---|
+| Internal platform events | Internal workflow/state-progress events such as `IntentValidatedEvent` | IC MS internal event outbox | Kafka relay publishes to the internal event topic | CloudEvents-style Kafka/platform headers | Authorised internal microservices such as II MS |
+| External TMF/webhook notifications | Subscriber notifications for `Intent` and `IntentReport` projection changes | IC MS webhook delivery outbox | HTTP retry relay posts to subscriber listener callback URLs | HTTP request headers | External subscribers registered through `/hub` or `/intent/hub` |
+
+Kafka is used for internal platform events where independent internal consumers exist. Kafka is not used for external hub notification delivery. External hub subscribers receive REST webhook callbacks, not Kafka messages.
+
 ## IntentValidatedEvent production rule:
 
-IC MS does not emit `IntentValidatedEvent` as a point-to-point command for one specific consumer.
-
-IC MS emits `IntentValidatedEvent` as a platform state/progress event that states:
+IC MS does not emit `IntentValidatedEvent` as a point-to-point command for one specific consumer. IC MS emits `IntentValidatedEvent` as a platform state/progress event that states:
 
 ```text
 This Intent has passed IC MS syntactic validation and has been admitted into the intent lifecycle.
@@ -137,9 +142,50 @@ II MS / intent-intelligence-ms
 
 II MS is the current primary consumer because it performs semantic validation and resolution. However, the event is not defined only for II MS. It may be consumed by other authorised internal consumers where useful.
 
-### Rule:
+### Rule: `IntentValidatedEvent` is a state/progress event, not a point-to-point command:
 
-`IntentValidatedEvent` is a state/progress event, not a point-to-point command.
+## Internal Kafka event publication:
+
+IC MS publishes internal platform events through the internal event outbox and Kafka relay.
+
+| **Internal event** | **Produced by** | **Primary consumer** | **Delivery** |
+|---|---|---|---|
+| `IntentValidatedEvent` | IC MS | II MS | Internal event outbox -> Kafka relay -> internal event topic |
+
+Internal Kafka events use CloudEvents-style Kafka/platform headers.
+
+### Internal Kafka CloudEvents-style headers:
+
+| **Header** | **Value pattern** | **Notes** |
+|---|---|---|
+| `ce-specversion` | `1.0` | CloudEvents spec version |
+| `ce-type` | `IntentValidatedEvent` | Internal event type |
+| `ce-source` | `intent-controller-ms` | Producing service identity |
+| `ce-id` | `{event-id}` | Unique event identifier |
+| `ce-time` | `{event-time}` | Event occurrence / publication timestamp |
+| `ce-subject` | `{intentId}` | Runtime Intent the event relates to |
+| `correlationid` | `{correlationId}` | End-to-end trace correlation |
+| `content-type` | `application/json` | Payload content type |
+
+## External webhook notification delivery:
+
+External `Intent` and `IntentReport` events are delivered through the REST hub subscription model. IC MS stores subscriber registrations and writes delivery work to a local webhook delivery outbox. A webhook delivery relay sends HTTP `POST` requests to subscriber listener callback URLs.
+
+External webhook notifications use HTTP headers and a TMF-style event payload body. They do not use Kafka topics or CloudEvents-style Kafka headers.
+
+### External webhook HTTP headers:
+
+| **HTTP header** | **Value pattern** | **Notes** |
+|---|---|---|
+| `Content-Type` | `application/json` | Event body is JSON |
+| `X-Correlation-Id` | `{correlationId}` | Optional/required depending on gateway policy |
+| `Authorization` | Subscriber callback credential | Used where callback authentication is configured |
+
+### External webhook success response:
+
+```http
+HTTP/1.1 204 No Content
+```
 
 ## IC MS lifecycle/status projection:
 
@@ -241,17 +287,15 @@ IntentReportDeleteEvent
 
 External TMF-facing event examples and emitted event envelopes populate both `eventTime` and `timeOccurred` with the same canonical event occurrence timestamp. `timeOccurred` is the corrected platform spelling used consistently across IC MS and ID MS external event examples.
 
-These events are external projection/resource events only.
-
-They must not expose raw telemetry, raw optimiser decisions, raw `t7.knowledge plane` data, raw callback payloads, internal candidate scoring, internal Kafka event payloads, or full internal `IntentAssuranceEvent` body unless deliberately curated into `IntentReport`.
+These events are external projection/resource events only. They must not expose raw telemetry, raw optimiser decisions, raw `t7.knowledge plane` data, raw callback payloads, internal candidate scoring, internal Kafka event payloads, or full internal `IntentAssuranceEvent` body unless deliberately curated into `IntentReport`.
 
 ## IntentReport responsibility:
 
-`IntentReport` is a read-only external report projection owned by IC MS.
+`IntentReport` is a read-only external report projection owned by IC MS. It is based on assurance truth from IA MS, but it is not raw assurance telemetry and not the raw `IntentAssuranceEvent` body.
 
-It is based on assurance truth from IA MS, but it is not raw assurance telemetry and not the raw `IntentAssuranceEvent` body.
+IntentReport uses the TMF expression wrapper. Curated report facts are carried inside `IntentReport.expression.expressionValue`.
 
-IntentReport uses the TMF expression wrapper. Curated report facts are carried inside `IntentReport.expression.expressionValue`. The default report areas are:
+The default report areas are:
 
 - `version`
 - `lifecycleStatus`
@@ -263,16 +307,15 @@ IntentReport uses the TMF expression wrapper. Curated report facts are carried i
 - `targetSummary`
 - `observationSummary`
 
-`targetSummary` is fact-only by default: target value, observed value, and unit. It does not include aggregate compliance-result labels or per-target `status` by default. Consumers decide compliance from the facts.
+`targetSummary` is fact-only by default: target value, observed value, and unit. It does not include aggregate compliance-result labels or per-target `status` by default.
 
-IntentReport should not expose raw telemetry dumps, raw callback payloads, raw optimiser details, raw KP data, internal candidate scoring, internal Kafka payloads, or implementation-only details unless deliberately curated and approved for external reporting.
+Consumers decide compliance from the facts. IntentReport should not expose raw telemetry dumps, raw callback payloads, raw optimiser details, raw KP data, internal candidate scoring, internal Kafka payloads, or implementation-only details unless deliberately curated and approved for external reporting.
 
+### IntentReport delete posture:
 
-### IntentReport delete posture
+`IntentReport` is read-only from ordinary external API consumers.
 
-`IntentReport` is read-only from ordinary external API consumers. IC MS does not expose ordinary external `DELETE /intentManagement/v5/intent/{intentId}/intentReport/{id}` through NGW or public TMF-facing consumer APIs by default.
-
-External consumers can list and retrieve `IntentReport` records only.
+IC MS does not expose ordinary external `DELETE /intentManagement/v5/intent/{intentId}/intentReport/{id}` through NGW or public TMF-facing consumer APIs by default. External consumers can list and retrieve `IntentReport` records only.
 
 Reason: `IntentReport` is a curated assurance/lifecycle report projection and audit/history record. Deleting it as a normal consumer operation would remove traceability and would require a separate report lifecycle such as `Archived` or `Deleted`, which is deliberately not baselined.
 
@@ -283,7 +326,6 @@ If a deployment must expose the TMF report delete route for compatibility, it mu
 `IntentReportDeleteEvent` remains part of the external TMF-style event vocabulary for `IntentReport` alignment. It may be emitted only after successful governed internal/admin removal where notification is allowed by policy. It is not emitted as the result of ordinary external consumer delete because ordinary report delete is not exposed.
 
 No separate `IntentReport` lifecycle is baselined for ordinary consumer use because delete/purge is a governed administrative operation, not a normal report lifecycle transition.
-
 
 ## TMF compliance and platform extension baseline:
 
@@ -302,7 +344,7 @@ Approved IC MS platform extensions:
 | **Extension** | **Purpose / boundary** |
 |---|---|
 | `PUT /intentManagement/v5/intent/{id}` | Deterministic full replacement where supported; `PATCH` remains available for strict TMF-compatible clients. |
-| `/intentManagement/v5/intent/hub` | Domain-scoped subscription route for IC-owned `Intent*Event` and `IntentReport*Event` notifications. |
+| `/intentManagement/v5/intent/hub` | Domain-scoped subscription route for IC-owned `Intent` and `IntentReport` notifications. |
 | `GET /intentManagement/v5/intent/hub/{id}` | Operational convenience for retrieving a domain-scoped subscription. Not part of the strict minimum TMF hub operation set. |
 | `ETag` / `If-Match` with `428 Precondition Required` and `412 Precondition Failed` | Platform optimistic-concurrency policy for unsafe operations. |
 | Termination-retention behaviour for `DELETE /intent/{id}` | `DELETE` is treated as termination of the retained runtime `Intent` projection, not physical deletion by default. |
@@ -586,9 +628,7 @@ IC MS lifecycle modelling is split into two related views:
 1. Intent-level lifecycle — the external `Intent.lifecycleStatus` that IC MS projects.
 2. Intent-version lifecycle — the lifecycle of each runtime Intent version, including `Standby` and `Retired`.
 
-Important rule:
-
-`Standby` and `Retired` are version-level states, not overall Intent lifecycle states.
+Important rule: `Standby` and `Retired` are version-level states, not overall Intent lifecycle states.
 
 ### Intent-level lifecycle states:
 
@@ -658,25 +698,19 @@ skinparam note {
 }
 
 [*] --> Acknowledged : POST /intent passes\nsyntactic validation
-
 Acknowledged --> Rejected : II MS semantic/policy\nrejection outcome
 Acknowledged --> InProgress : downstream fulfilment\nstarts
-
 InProgress --> Rejected : semantic/policy\nrejection outcome
 InProgress --> Active : IA MS confirms apply /\nassurance active
 InProgress --> Failed : IA MS apply / runtime\nfailure outcome
-
 Active --> Degraded : IA MS reports\ndegraded assurance
 Degraded --> Active : IA MS reports\nrecovered assurance
 Degraded --> InProgress : re-decision /\nre-optimisation starts
-
 Active --> Paused : IA MS reports\npaused outcome
 Paused --> Active : IA MS reports\nresumed / active
 Paused --> Failed : IA MS reports\nfailure
-
 Active --> Failed : IA MS reports\nruntime failure
 Degraded --> Failed : IA MS reports\nfailure
-
 Acknowledged --> Terminated : termination request\naccepted
 InProgress --> Terminated : termination request\naccepted
 Active --> Terminated : termination request\naccepted
@@ -684,22 +718,19 @@ Degraded --> Terminated : termination request\naccepted
 Paused --> Terminated : termination request\naccepted
 Failed --> Terminated : termination request\naccepted
 Rejected --> Terminated : termination request\naccepted, if retained\nas terminated
-
 Terminated --> [*]
 
 note right of Terminated
-  Runtime Intent records are retained.
-  DELETE /intent/{id} is treated as
-  termination, not physical delete.
+Runtime Intent records are retained.
+DELETE /intent/{id} is treated as termination,
+not physical delete.
 end note
 
 note bottom of Active
-  IC MS owns external lifecycle projection.
-  Runtime truth comes from IA MS.
+IC MS owns external lifecycle projection.
+Runtime truth comes from IA MS.
 end note
-
 @enduml
-
 ```
 
 ### Intent-version lifecycle PlantUML:
@@ -726,28 +757,21 @@ skinparam note {
 }
 
 [*] --> Acknowledged : version created /\nsyntactically admitted
-
 Acknowledged --> Rejected : semantic/policy\nrejection
 Acknowledged --> InProgress : fulfilment starts
-
 InProgress --> Active : apply + assurance\nconfirmed
 InProgress --> Failed : apply / fulfilment\nfailed
 InProgress --> Rejected : semantic/policy\nrejection
-
 Active --> Degraded : assurance degraded
 Degraded --> Active : assurance recovered
-
 Active --> Standby : newer version becomes Active
 Degraded --> Standby : newer version becomes Active\nwhile old version degraded
-
 Standby --> InProgress : rollback / reactivation\nrequested
 InProgress --> Active : rollback / reactivation\napply confirmed
-
 Standby --> Retired : explicit retirement /\nremoved from future use
 Failed --> Retired : explicit retirement
 Rejected --> Retired : explicit retirement
 Terminated --> Retired : explicit retirement\nif policy allows
-
 Active --> Terminated : Intent termination accepted
 Degraded --> Terminated : Intent termination accepted
 Standby --> Terminated : Intent termination accepted
@@ -755,34 +779,27 @@ InProgress --> Terminated : Intent termination accepted
 Paused --> Terminated : Intent termination accepted
 Failed --> Terminated : Intent termination accepted
 Rejected --> Terminated : Intent termination accepted
-
 Active --> Paused : pause outcome
 Paused --> Active : resume outcome
 Paused --> Failed : failure outcome
-
 Retired --> [*]
 Terminated --> [*]
 
 note right of Standby
-  Standby means:
-  not currently active/effective,
-  but still valid for rollback or
-  future reactivation.
+Standby means: not currently active/effective,
+but still valid for rollback or future reactivation.
 end note
 
 note right of Retired
-  Retired is terminal.
-  A retired version is permanently
-  removed from future active-candidate use.
+Retired is terminal. A retired version is
+permanently removed from future active-candidate use.
 end note
 
 note bottom of Active
-  activeVersion points to the version
-  currently confirmed active/effective.
+activeVersion points to the version currently
+confirmed active/effective.
 end note
-
 @enduml
-
 ```
 
 ### Example activeVersion transition:
@@ -840,9 +857,7 @@ Accept: application/json
 
 ### Version-history exposure rule:
 
-Internal version history is retained for audit, rollback, assurance correlation, and traceability.
-
-Historical versions are not returned by default in the external `Intent` resource.
+Internal version history is retained for audit, rollback, assurance correlation, and traceability. Historical versions are not returned by default in the external `Intent` resource.
 
 If needed, version history may be exposed through one of the following:
 
@@ -1005,9 +1020,7 @@ Rules:
 | `Failed` | Remains `Failed` |
 | `Retired` | Remains `Retired` |
 
-Reason:
-
-Termination closes live/candidate versions, but should not rewrite final historical outcomes such as `Rejected`, `Failed`, or `Retired`.
+Reason: Termination closes live/candidate versions, but should not rewrite final historical outcomes such as `Rejected`, `Failed`, or `Retired`.
 
 ### Baseline statement:
 
@@ -1078,7 +1091,7 @@ DELETE /intentManagement/v5/intent/{id}
 | IC MS -> DB | Hard fail-fast | Return `503`; consumer retries |
 | IC MS -> cache | Graceful/silent | Bypass cache or ignore failed cache writes; use DB/source-of-truth; emit telemetry |
 | IC MS -> ID MS | Cached active-spec fallback then fail-closed for create/update | Use valid fresh cached active spec where available; otherwise fail closed for runtime-content admission |
-| IC MS -> Kafka/event broker | Graceful/silent with transactional outbox | API succeeds after DB + outbox commit; relay retries Kafka later |
+| IC MS -> Kafka/event broker | Graceful/silent with internal event outbox | API succeeds after DB + internal event outbox commit; relay retries Kafka later |
 | IC MS -> external webhook callback | Async fail-fast per delivery attempt | Delivery attempt fails fast, retries later; original API unaffected |
 
 ### ID MS dependency rule:
@@ -1138,15 +1151,13 @@ Retry-After: 30
 
 **For runtime-content admission, IC MS must confirm the exact referenced active `IntentSpecification.id` from ID MS or a valid fresh cached active specification. If it cannot confirm the active specification, IC MS fails closed and does not admit the runtime Intent or runtime version.**
 
-**IC MS uses dependency-specific circuit-breaker behaviour. DB failure is hard fail-fast and returns `503 Service Unavailable`. Cache failure is graceful/silent. Kafka/event-broker failure is handled through transactional outbox. External webhook callback failure is asynchronous and does not affect the original API response.**
+**IC MS uses dependency-specific circuit-breaker behaviour. DB failure is hard fail-fast and returns `503 Service Unavailable`. Cache failure is graceful/silent. Kafka/event-broker failure is handled through internal event outbox. External webhook callback failure is asynchronous and does not affect the original API response.**
 
 ## Deployment and persistence strategy:
 
 ### Runtime/state model:
 
-IC MS is a stateful MS, backed by a managed PostgreSQL-compatible RDBMS.
-
-IC MS application instances can still scale independently because durable state is externalised to the database rather than held in local memory.
+IC MS is a stateful MS, backed by a managed PostgreSQL-compatible RDBMS. IC MS application instances can still scale independently because durable state is externalised to the database rather than held in local memory.
 
 ### Source of truth:
 
@@ -1157,7 +1168,8 @@ The IC MS database is the source of truth for:
 - `IntentReport` projections
 - hub/event subscriptions where IC MS owns the subscription route
 - inbox records for idempotent event consumption
-- outbox records for durable event publication
+- internal event outbox records for durable Kafka publication
+- webhook delivery outbox records for durable HTTP callback delivery
 - ETag values
 - lifecycle/status projection state
 - audit-relevant runtime projection metadata
@@ -1171,7 +1183,8 @@ The IC MS database is the source of truth for:
 | `intent_report` | Stores external `IntentReport` projections linked to retained `Intent` records |
 | `event_subscription` | Stores external event subscriptions where IC MS owns the route |
 | `inbox_event` | Stores consumed internal events such as `IntentRejectedEvent` and `IntentAssuranceEvent` for idempotent processing |
-| `outbox_event` | Stores durable internal/external events before publication |
+| `internal_event_outbox` | Stores internal platform events before Kafka publication, including `IntentValidatedEvent` |
+| `webhook_delivery_outbox` | Stores external TMF/webhook notification delivery work before HTTP POST to subscriber callback URLs |
 | audit table / audit log | Optional dedicated audit trail if not covered by platform audit capability |
 
 ### JSONB usage:
@@ -1183,7 +1196,8 @@ Recommended JSONB fields:
 - external `Intent` resource body snapshot
 - internal `IntentVersion` payload
 - `IntentReport` body snapshot
-- event payload snapshot in `outbox_event`
+- internal event payload snapshot in `internal_event_outbox`
+- webhook notification payload snapshot in `webhook_delivery_outbox`
 - consumed event snapshot in `inbox_event`
 - curated resource/service/evaluation summaries where structure may evolve
 
@@ -1223,20 +1237,23 @@ For `intent_version`:
 
 ### Event publication and consumption:
 
-IC MS should use transactional outbox for event publication.
+IC MS should use separate durable outbox models for internal Kafka publication and external webhook notification delivery.
 
-Events published through outbox include:
+Internal events published through the internal event outbox include:
 
-- internal `IntentValidatedEvent`
-- external `IntentCreateEvent`
-- external `IntentAttributeValueChangeEvent`
-- external `IntentStatusChangeEvent`
-- external `IntentDeleteEvent`
-- external `IntentReportCreateEvent`
-- external `IntentReportAttributeValueChangeEvent`
-- external `IntentReportDeleteEvent` — governed internal/admin retention or deletion scenarios only
+- `IntentValidatedEvent`
 
-IC MS should use inbox/idempotency handling for consumed events, including:
+External webhook notifications delivered through the webhook delivery outbox include:
+
+- `IntentCreateEvent`
+- `IntentAttributeValueChangeEvent`
+- `IntentStatusChangeEvent`
+- `IntentDeleteEvent`
+- `IntentReportCreateEvent`
+- `IntentReportAttributeValueChangeEvent`
+- `IntentReportDeleteEvent` — governed internal/admin retention or deletion scenarios only
+
+IC MS should use inbox/idempotency handling for consumed internal events, including:
 
 - `IntentRejectedEvent`
 - `IntentAssuranceEvent`
@@ -1255,11 +1272,7 @@ IC MS should support:
 
 ### Disaster recovery:
 
-Initial deployment may be single-region or same-region multi-AZ.
-
-The selected database service/deployment pattern must support future cross-region active-passive DR as use cases expand.
-
-Active-active multi-region writes are not baselined initially.
+Initial deployment may be single-region or same-region multi-AZ. The selected database service/deployment pattern must support future cross-region active-passive DR as use cases expand. Active-active multi-region writes are not baselined initially.
 
 ### Health checks:
 
@@ -1269,14 +1282,11 @@ Active-active multi-region writes are not baselined initially.
 | Readiness | Service can access dependencies needed for serving traffic |
 | DB readiness | Required for normal IC MS resource operations |
 | ID MS readiness for admission | Required for new runtime-content admission unless valid fresh cached active spec exists |
-| Kafka/outbox relay readiness | Should not block API readiness if DB/outbox commit path is healthy |
+| Kafka/internal outbox relay readiness | Should not block API readiness if DB/outbox commit path is healthy |
+| Webhook delivery relay readiness | Should not block API readiness; delivery failures are retried asynchronously |
 | Cache readiness | Should not block API readiness because cache failure is graceful/silent |
 
-Readiness should fail when the DB/source-of-truth path is unavailable.
-
-Cache failure should not make IC MS unavailable.
-
-Kafka/event-broker unavailability should be surfaced through relay metrics/alerts rather than making the IC MS API unavailable when DB/outbox commit is healthy.
+Readiness should fail when the DB/source-of-truth path is unavailable. Cache failure should not make IC MS unavailable. Kafka/event-broker unavailability should be surfaced through relay metrics/alerts rather than making the IC MS API unavailable when DB/internal outbox commit is healthy. Webhook delivery failures should be surfaced through webhook delivery metrics/alerts and retried asynchronously.
 
 ### Configuration and secrets:
 
@@ -1286,10 +1296,12 @@ Examples:
 
 - DB connection settings
 - cache endpoint
-- Kafka/event broker connection
+- Kafka/event broker connection for internal events
+- external webhook callback authentication settings
 - ID MS lookup endpoint
 - active-spec cache TTL values
-- outbox relay settings
+- internal event outbox relay settings
+- webhook delivery outbox relay settings
 - inbox/idempotency settings
 - retry/backoff settings
 - service identity
@@ -1299,13 +1311,13 @@ Secrets must not be stored in application images or source files.
 
 ### Deployment baseline statement:
 
-**IC MS is a stateful MS, backed by a managed PostgreSQL-compatible RDBMS. IC MS application instances can still scale independently because durable state is externalised to the database rather than held in local memory. The database is the source of truth for retained `Intent` projections, internal `IntentVersion` history, `IntentReport` projections, subscriptions, inbox/outbox records, ETag values, and lifecycle/status projection state.**
+**IC MS is a stateful MS, backed by a managed PostgreSQL-compatible RDBMS. IC MS application instances can still scale independently because durable state is externalised to the database rather than held in local memory. The database is the source of truth for retained `Intent` projections, internal `IntentVersion` history, `IntentReport` projections, subscriptions, inbox records, internal event outbox records, webhook delivery outbox records, ETag values, and lifecycle/status projection state.**
 
-## Shared semantic bucket design baseline
+## Shared semantic bucket design baseline:
 
-IC MS accepts and projects runtime `Intent` resources using the shared semantic buckets defined by ID MS.
+IC MS accepts and projects runtime `Intent` resources using the shared semantic buckets defined by ID MS. External runtime `Intent.expression` uses the TMF expression wrapper.
 
-External runtime `Intent.expression` uses the TMF expression wrapper. The domain payload sits inside `expression.expressionValue.context`:
+The domain payload sits inside `expression.expressionValue.context`:
 
 ```json
 {
@@ -1352,11 +1364,11 @@ Design rules:
 - IC MS does not perform semantic/KP validation.
 - IC MS does not invent optimiser categories; it preserves the bucketed expression for II MS.
 
+## Runtime expression context alignment with ID MS:
 
+IC MS must use the ID MS external runtime expression baseline for runtime Intent create/update/retrieve examples. External `Intent.expression.expressionValue` contains a single `context` object.
 
-## Runtime expression context alignment with ID MS
-
-IC MS must use the ID MS external runtime expression baseline for runtime Intent create/update/retrieve examples. External `Intent.expression.expressionValue` contains a single `context` object. The `context` object contains only the canonical semantic buckets:
+The `context` object contains only the canonical semantic buckets:
 
 ```text
 targets
@@ -1368,7 +1380,7 @@ preferences
 
 Internal `IntentValidatedEvent.body.expression` carries the admitted expression as native JSON using the same canonical buckets, without the external TMF expression wrapper.
 
-## TMF fields and precondition response alignment
+## TMF fields and precondition response alignment:
 
 IC MS supports the optional TMF-style `fields` query parameter on create/list/retrieve/update operations where applicable, including `IntentReport` list/retrieve projections.
 
