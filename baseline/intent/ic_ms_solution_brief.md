@@ -1,4 +1,4 @@
-# Intent Controller MS Solution Brief:
+# Intent Controller MS Solution Brief
 
 ## Summary:
 
