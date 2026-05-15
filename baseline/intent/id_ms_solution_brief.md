@@ -327,9 +327,7 @@ A typical `IntentSpecificationStatusChangeEvent` has this logical shape:
       },
       "@type": "IntentSpecification",
       "@baseType": "EntitySpecification"
-    },
-    "previousLifecycleStatus": "DRAFT",
-    "newLifecycleStatus": "ACTIVE"
+    }
   },
   "reportingSystem": {
     "id": "intent-definition-ms",
@@ -343,7 +341,7 @@ A typical `IntentSpecificationStatusChangeEvent` has this logical shape:
 }
 ```
 
-Status-change events include lifecycle transition fields.
+Status-change events carry the current `intentSpecification.lifecycleStatus` snapshot. They do not carry separate `previousLifecycleStatus` or `newLifecycleStatus` fields; the event type and the emitted resource snapshot provide the lifecycle-change signal.
 
 Delete events are emitted only after successful delete and show the last known lifecycle state as `DRAFT`. Delete events must not use `DELETED`.
 
