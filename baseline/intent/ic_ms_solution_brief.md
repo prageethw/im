@@ -35,7 +35,7 @@ IC MS -> webhook_delivery_outbox -> HTTP POST -> external subscriber listener ca
 IC MS owns the externally visible runtime projection, not the full internal fulfilment state machine. The external `Intent` record is the current consumer-facing state of the runtime intent. Historical versions, standby states, rollback candidates, internal resource candidates, optimiser scoring, and raw assurance detail remain internal unless projected through `IntentReport` or another documented platform extension.
 
 ## Process View:
--![alt text](https://plantuml-server.kkeisuke.dev/svg/jLbjRnkv4Vw-lsBg0eM5o5RYIu9hW1IdM8eZr6-mv5oBSr1GkvJ4UiNLaLpRWc6Wd-u77FeBxvTqXkI-QNSb9tUr0SFI3cU6y_8yG-uFsZ1bqcKCesCu6yC1NANIY2M7aJHS6XZpdrCkGmuVu-HU1tyo2uuFLp
+![alt text](https://plantuml-server.kkeisuke.dev/svg/jLbjRnkv4Vw-lsBg0eM5o5RYIu9hW1IdM8eZr6-mv5oBSr1GkvJ4UiNLaLpRWc6Wd-u77FeBxvTqXkI-QNSb9tUr0SFI3cU6y_8yG-uFsZ1bqcKCesCu6yC1NANIY2M7aJHS6XZpdrCkGmuVu-HU1tyo2uuFLp
 4JCj2tGgwOOalGNkgCQytcl1-BkOGGrtDLafgoy7QkabH6nqcSAFZpH_jJai2_HeHYnQJvi2aSCVxzB6mHJbJ4bHTy6txFfxC6x_fA9VTUw3lxKnAIYU4LDT7RwTitRpSbDhsQpMP7OTchIDm9L58NV4c_3LwTeDIgBlvN-Wq28qoS9-DOSMP48YbJ-pPX7VZjF__TaRE0XGPLxWqVC1
 sInN2SI9qkkTe3flCFGIcSi7T-yYFqe7yvWXDc-3rRMzcJ7wjITRTkfFVBoe-EpyQDAmPy9gGehHaKQmQu9apYc8VqN6ThRkGOTy5XV_312Oud5rV386A6JPdci7UHccdo0BqREU2nkEDg3VwhVCd5zUJ3nJzAQyRfL8TAhCZIZRpYSw4DhYjiN7-u6fvKjv1hl-8nMwFpHLd3VQ9kkN
 9hhuQd_NzMTp98xYKQu6o9k-7gJeHSMzb1SvZwMgUAKIPTbFf5bFeO9PzNluafLpVo53V0fKyjUXy4xz_3gyFD2iapzlvza1K07FmD4mpluF9YF86Ui99dJ68_B_6_tjqR_zsDV0JtttZ5Gp4JeTLrAA8ky8ULGWp0Zpr5LQXD5muF3-4fGDLeW2e2JSmITSzK15uc22X-AnYlfS5DYH
