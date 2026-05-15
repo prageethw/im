@@ -4,7 +4,7 @@
 
 Intent Definition MS (ID MS) is the definition-time microservice responsible for the `IntentSpecification` catalogue, version governance, lifecycle governance, syntax contract publication, and external `IntentSpecification` event subscription model. ID MS is the authoritative owner of `IntentSpecification` resources under `/intentManagement/v5/intentSpecification`.
 
-It defines what runtime intent expressions are allowed to look like, which specification versions are available for creating new runtime intents, and which lifecycle/version rules protect active and retired specifications. ID MS is deliberately not the runtime intent owner. It does not own runtime `Intent`, `IntentReport`, semantic validation, policy validation, network feasibility, optimisation, runtime assurance, telemetry, or callback ingestion.
+It defines what runtime intent expressions are allowed to look like, which specification versions are available for new runtime intent creation, and which lifecycle/version rules protect active and retired specifications. ID MS is deliberately not the runtime intent owner. It does not own runtime `Intent`, `IntentReport`, semantic validation, policy validation, network feasibility, optimisation, runtime assurance, telemetry, or callback ingestion.
 
 Those responsibilities remain with IC MS, II MS, IA MS, ICB MS, optimiser components, and knowledge/assurance services as applicable. The service follows the TMF921 `IntentSpecification` responsibility boundary while retaining documented platform extensions for deterministic full update, domain-scoped hub routes, version-family governance, HATEOAS links, optimistic concurrency, and explicit missing-precondition errors.
 
@@ -253,19 +253,13 @@ ID MS requires durable persistence for:
 
 The implementation should create hub delivery work from committed state. Resource mutation and notification delivery should be resilient to retry, duplicate delivery, and transient subscriber callback failures.
 
-## Kafka publication:
+## Hub notification delivery:
 
-ID MS does not use Kafka for `/intentSpecification/hub` notification delivery. The hub is a REST webhook subscription mechanism: ID MS stores subscriber callback registrations and delivers `IntentSpecification` event notifications by HTTP `POST` to the registered callback URL.
+ID MS uses `/intentSpecification/hub` as a REST webhook subscription mechanism. Subscribers register callback URLs and optional filters. After a committed `IntentSpecification` resource change, ID MS delivers matching `IntentSpecification` event notifications by HTTP `POST` to the registered subscriber callback URL.
 
-Delivery reliability is handled by an ID MS-owned local callback/outbox table and retry relay. Kafka is not required because ID MS is the event originator and delivery owner, and no independent internal consumer requires a dedicated topic for these external hub notifications.
+Kafka is not used for ID MS hub notification delivery. There is no ID MS self-publish/self-consume Kafka loop and no dedicated Kafka topic for these external hub notifications. ID MS is both the event originator and the delivery owner.
 
 Events are external subscription notifications for specification-resource changes. They must not expose internal fulfilment, KP, optimiser, assurance, telemetry, callback, or candidate/resource scoring details.
-
-## Topics:
-
-No Kafka topic is defined or required for ID MS `/intentSpecification/hub` notifications. Registered subscribers receive events through REST webhook callback delivery.
-
-The implementation should use the ID MS local hub delivery outbox and retry relay for reliable callback delivery.
 
 Supported external event types are:
 
@@ -275,6 +269,12 @@ IntentSpecificationAttributeValueChangeEvent
 IntentSpecificationStatusChangeEvent
 IntentSpecificationDeleteEvent
 ```
+
+## Delivery reliability:
+
+ID MS handles hub notification reliability through an ID MS-owned local delivery outbox and retry relay. Resource mutation and delivery work creation should be based on committed state so that subscriber callback delivery can be retried without changing the committed `IntentSpecification` outcome.
+
+Registered subscribers receive notifications through REST webhook callback delivery only. They do not subscribe to Kafka topics and do not receive Kafka transport metadata.
 
 ## Event identity:
 
