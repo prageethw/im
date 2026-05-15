@@ -1,31 +1,31 @@
 # Intent Definition MS Solution Brief
 
-## Summary:
+## Summary
 
 Intent Definition MS (ID MS) is the definition-time microservice responsible for the `IntentSpecification` catalogue, version governance, lifecycle governance, syntax contract publication, and external `IntentSpecification*Event` subscription model.
 
-ID MS is the authoritative owner of `IntentSpecification` resources under the platform path `/intentManagement/v5/intentSpecification`. It defines what runtime intent expressions are allowed to look like, which specification versions are available for new runtime intent creation, and which lifecycle/version rules protect active and retired specifications.
+ID MS is the authoritative owner of `IntentSpecification` resources under `/intentManagement/v5/intentSpecification`. It defines what runtime intent expressions are allowed to look like, which specification versions are available for new runtime intent creation, and which lifecycle/version rules protect active and retired specifications.
 
-ID MS is deliberately not the runtime intent owner. It does not own runtime `Intent`, `IntentReport`, semantic validation, policy validation, network feasibility, optimisation, assurance, telemetry, or callback ingestion. Those responsibilities remain with IC MS, II MS, IA MS, ICB MS, optimiser components, and knowledge/assurance services as applicable.
+ID MS is deliberately not the runtime intent owner. It does not own runtime `Intent`, `IntentReport`, semantic validation, policy validation, network feasibility, optimisation, runtime assurance, telemetry, or callback ingestion. Those responsibilities remain with IC MS, II MS, IA MS, ICB MS, optimiser components, and knowledge/assurance services as applicable.
 
 The service follows the TMF921 `IntentSpecification` responsibility boundary while retaining documented platform extensions for deterministic full update, domain-scoped hub routes, version-family governance, HATEOAS links, optimistic concurrency, and explicit missing-precondition errors.
 
-## Logical View:
+## Logical View
 
 ID MS sits in the Intent Domain as the definition-time contract service.
 
 ```text
 External client / OEX / authorised platform
-        |
-        | REST over NGW / API Gateway
-        v
+  |
+  | REST over NGW / API Gateway
+  v
 Intent Definition MS (ID MS)
-        |
-        | owns
-        v
+  |
+  | owns
+  v
 IntentSpecification catalogue
 IntentSpecification lifecycle state
-IntentSpecification version family governance
+IntentSpecification version-family governance
 IntentSpecification hub subscriptions
 External IntentSpecification event publication
 ```
@@ -41,7 +41,7 @@ Core logical resources are:
 | Specification family | Logical version family grouped by `familyId`. |
 | Specification version | Individual governed `IntentSpecification` version with its own lifecycle state. |
 
-## Process View:
+## Process View
 
 The primary ID MS process flows are:
 
@@ -54,9 +54,11 @@ The primary ID MS process flows are:
 7. Create, retrieve, and delete external event subscriptions.
 8. Publish external `IntentSpecification*Event` notifications after successful resource changes.
 
-Activation is a lifecycle update on the resource, not a custom action endpoint. The service must not expose `POST /intentManagement/v5/intentSpecification/{id}/activate`. Strict TMF-compatible clients may use `PATCH`; the preferred platform extension is `PUT` when the caller submits the full resource representation.
+Activation is a lifecycle update on the resource, not a custom action endpoint. The service must not expose `POST /intentManagement/v5/intentSpecification/{id}/activate`.
 
-## Solution Elaboration:
+Strict TMF-compatible clients may use `PATCH`; the preferred platform extension is `PUT` when the caller submits the full resource representation.
+
+## Solution Elaboration
 
 ID MS manages the definition-time contract used by the intent platform. A specification defines the governed expression shape, high-level characteristic catalogue, metadata, lifecycle status, version identity, related parties, and schema references used by downstream intent creation and validation flows.
 
@@ -67,13 +69,13 @@ The baseline surgical hospital slice specification uses:
 - `familyId` for version-family governance
 - `specCharacteristic` as a high-level characteristic catalogue
 - `expressionSpecification` as the expression contract reference
-- `targetEntitySchema` as the governed schema artefact reference for the expression value shape
+- `targetEntitySchema` as the governed schema artefact reference for the expression-value shape
 - `priority` values of `critical`, `high`, and `standard`
 - canonical `context.targets`, `context.constraints`, and `context.preferences` semantics in the expression model
 
-ID MS validates resource structure, required fields, lifecycle rules, and syntax/schema references. It does not decide whether a submitted runtime intent is semantically feasible or fulfilable in the network. That semantic and policy validation belongs to II MS and the knowledge plane. Runtime assurance belongs to IA MS.
+ID MS validates resource structure, required fields, lifecycle rules, and syntax/schema references. It does not decide whether a submitted runtime intent is semantically feasible or fulfilable in the network. Semantic and policy validation belongs to II MS and the knowledge plane. Runtime assurance belongs to IA MS.
 
-## Responsibilities:
+## Responsibilities
 
 ID MS is responsible for:
 
@@ -89,23 +91,23 @@ ID MS is responsible for:
 | External events | Publish TMF-style external resource events after successful specification changes. |
 | Retrieval support | Allow IC MS and authorised consumers to retrieve active specifications for runtime validation and discovery. |
 
-## ID MS does not:
+## ID MS does not
 
 ID MS does not:
 
-- Own runtime `Intent` resources.
-- Own `IntentReport` resources.
-- Validate runtime semantic feasibility.
-- Validate network topology or fulfilment feasibility.
-- Perform policy fulfilment decisions.
-- Perform optimisation.
-- Own runtime assurance or telemetry history.
-- Ingest orchestrator callbacks.
-- Interpret callback state.
-- Expose internal II MS, IA MS, KP, optimiser, or callback implementation details through external `IntentSpecification` events.
-- Use `DELETED` as an `IntentSpecification.lifecycleStatus`.
+- own runtime `Intent` resources;
+- own `IntentReport` resources;
+- validate runtime semantic feasibility;
+- validate network topology or fulfilment feasibility;
+- perform policy fulfilment decisions;
+- perform optimisation;
+- own runtime assurance or telemetry history;
+- ingest orchestrator callbacks;
+- interpret callback state;
+- expose internal II MS, IA MS, KP, optimiser, or callback implementation details through external `IntentSpecification` events;
+- use `DELETED` as an `IntentSpecification.lifecycleStatus`.
 
-## Contracts:
+## Contracts
 
 ID MS exposes two contract families:
 
@@ -128,9 +130,9 @@ A strict TMF deployment may expose the same API through:
 
 The gateway may map the strict deployment prefix to the platform-owned service path without changing resource semantics.
 
-## Request shape / event shape where relevant:
+## Request shape / event shape
 
-### IntentSpecification resource API:
+### IntentSpecification resource API
 
 | Purpose | Method | Endpoint |
 |---|---:|---|
@@ -141,7 +143,7 @@ The gateway may map the strict deployment prefix to the platform-owned service p
 | Partial update specification | `PATCH` | `/intentManagement/v5/intentSpecification/{id}` |
 | Delete specification | `DELETE` | `/intentManagement/v5/intentSpecification/{id}` |
 
-### Hub subscription API:
+### Hub subscription API
 
 | Purpose | Method | Endpoint |
 |---|---:|---|
@@ -151,9 +153,9 @@ The gateway may map the strict deployment prefix to the platform-owned service p
 
 Domain-scoped hub routes are intentional platform extensions. Strict TMF exposure may use a generic root `/hub` route at the gateway layer where required.
 
-## Field specification:
+## Field specification
 
-### IntentSpecification fields:
+### IntentSpecification fields
 
 | Field | Baseline use |
 |---|---|
@@ -175,7 +177,7 @@ Domain-scoped hub routes are intentional platform extensions. Strict TMF exposur
 | `@schemaLocation` | Schema location for the specification resource, where supplied. |
 | `_links` | Server-generated lifecycle-aware navigation/action affordances. |
 
-### Lifecycle values:
+### Lifecycle values
 
 ```text
 DRAFT
@@ -185,7 +187,7 @@ RETIRED
 
 There is no `DELETED` lifecycle state. Delete is an operation/outcome, not a lifecycle status.
 
-### Query parameters:
+### Query parameters
 
 | Parameter | Applies to | Purpose |
 |---|---|---|
@@ -196,7 +198,7 @@ There is no `DELETED` lifecycle state. Delete is an operation/outcome, not a lif
 | `name` | List | Filter specifications by name. |
 | `version` | List | Filter specifications by version. |
 
-## Fields not accepted:
+## Fields not accepted
 
 Clients must not provide server-generated values on create:
 
@@ -208,7 +210,7 @@ Clients must not provide server-generated values on create:
 
 Clients must not use or submit `DELETED` as a lifecycle status.
 
-PATCH must not normally be used for material replacement of:
+`PATCH` must not normally be used for material replacement of:
 
 - `familyId`
 - `version`
@@ -217,13 +219,11 @@ PATCH must not normally be used for material replacement of:
 - `targetEntitySchema`
 - major lifecycle/version contract identity
 
-## Authorisation:
+## Authorisation
 
 ID MS is externally reached through the platform gateway/security boundary. The gateway authenticates the caller and forwards trusted system context according to platform policy.
 
 ID MS must authorise callers for specification management operations and subscription management operations. It must enforce resource-level and lifecycle-level rules independently of gateway authentication.
-
-Authorisation expectations are:
 
 | Operation type | Authorisation expectation |
 |---|---|
@@ -233,7 +233,7 @@ Authorisation expectations are:
 | Delete draft specifications | Caller must be authorised for controlled deletion and the resource must be unused. |
 | Manage hub subscriptions | Caller must be authorised to register, inspect, or remove external listener subscriptions. |
 
-## Persistence / state / outbox model where relevant:
+## Persistence / state / outbox model
 
 ID MS requires durable persistence for:
 
@@ -247,13 +247,13 @@ ID MS requires durable persistence for:
 
 The implementation should publish external events from committed state. Resource mutation and event publication should be resilient to retry, duplicate delivery, and transient downstream publisher failures.
 
-## Kafka publication where relevant:
+## Kafka publication
 
 ID MS may publish external specification events through the platform eventing mechanism used for TMF-style notifications. The solution brief does not require ID MS to expose internal workflow event topics.
 
 Events are external subscription notifications for specification-resource changes. They must not expose internal fulfilment, KP, optimiser, assurance, telemetry, callback, or candidate/resource scoring details.
 
-## Topics:
+## Topics
 
 The baseline documents define the external event family but do not lock a dedicated Kafka topic name for ID MS in the same way the ICB callback topic is locked. The implementation should use the platform’s external notification/event distribution convention for TMF-style `IntentSpecification*Event` delivery.
 
@@ -266,7 +266,7 @@ IntentSpecificationStatusChangeEvent
 IntentSpecificationDeleteEvent
 ```
 
-## Event identity:
+## Event identity
 
 External ID MS events use TMF-style event identity fields:
 
@@ -287,13 +287,13 @@ External ID MS events use TMF-style event identity fields:
 
 `eventTime` and `timeOccurred` should carry the same canonical occurrence timestamp.
 
-## CloudEvents headers:
+## CloudEvents headers
 
 The current ID MS baseline uses TMF-style external event envelopes for subscription notifications. It does not require CloudEvents headers for the ID MS external event examples.
 
 If the platform event distribution layer wraps these events in CloudEvents for transport, the CloudEvents metadata must remain a transport envelope only and must not change the TMF-style resource-event payload semantics.
 
-## Message shape:
+## Message shape
 
 A typical `IntentSpecificationStatusChangeEvent` has this logical shape:
 
@@ -339,9 +339,9 @@ A typical `IntentSpecificationStatusChangeEvent` has this logical shape:
 
 Status-change events include lifecycle transition fields. Delete events are emitted only after successful delete and show the last known lifecycle state as `DRAFT`. Delete events must not use `DELETED`.
 
-## Behaviour:
+## Behaviour
 
-### Create behaviour:
+### Create behaviour
 
 - Create normally produces a `DRAFT` specification.
 - ID MS validates resource shape and required syntax/schema references.
@@ -349,21 +349,21 @@ Status-change events include lifecycle transition fields. Delete events are emit
 - Successful create returns `201 Created` with the full created resource.
 - Successful create emits `IntentSpecificationCreateEvent`.
 
-### List behaviour:
+### List behaviour
 
 - List supports pagination, lifecycle filtering, name filtering, version filtering, and `fields` projection.
 - The default list response is lightweight.
 - Full `specCharacteristic`, `expressionSpecification`, and `targetEntitySchema` are omitted by default unless requested through `fields`.
 - List GET may use short private caching.
 
-### Retrieve behaviour:
+### Retrieve behaviour
 
 - Retrieve returns the full single-resource representation by default.
 - Retrieve includes full contract metadata, lifecycle state, schema references, and `_links`.
 - Retrieve GET may use private caching.
 - Clients may request a fresh response with `Cache-Control: no-cache`.
 
-### Full update behaviour:
+### Full update behaviour
 
 - `PUT` is the preferred platform extension for deterministic full replacement of an editable `DRAFT` specification.
 - `PUT` requires `If-Match`.
@@ -371,14 +371,14 @@ Status-change events include lifecycle transition fields. Delete events are emit
 - Missing `If-Match` returns `428 Precondition Required`.
 - Stale or mismatched `If-Match` returns `412 Precondition Failed`.
 
-### Partial update behaviour:
+### Partial update behaviour
 
 - `PATCH` remains available for TMF compatibility.
 - `PATCH` is discouraged as a general update method.
 - `PATCH` should be used only for tightly controlled small compatibility updates.
 - `PATCH` must not normally replace material contract fields.
 
-### Activation behaviour:
+### Activation behaviour
 
 - Activation is a lifecycle update on `/intentSpecification/{id}`.
 - Only `DRAFT` can be activated.
@@ -388,7 +388,7 @@ Status-change events include lifecycle transition fields. Delete events are emit
 - Existing runtime intents referencing retired specifications may continue temporarily where safe.
 - Activation emits two `IntentSpecificationStatusChangeEvent` events: one for `DRAFT -> ACTIVE` and one for previous active `ACTIVE -> RETIRED`.
 
-### Delete behaviour:
+### Delete behaviour
 
 - Delete is allowed only for unused `DRAFT` specifications.
 - Delete is blocked for `ACTIVE` and `RETIRED` specifications.
@@ -397,7 +397,7 @@ Status-change events include lifecycle transition fields. Delete events are emit
 - Successful delete returns `204 No Content`.
 - Delete emits `IntentSpecificationDeleteEvent` only after successful delete.
 
-## Configuration:
+## Configuration
 
 ID MS configuration should include:
 
@@ -412,7 +412,7 @@ ID MS configuration should include:
 | Event filter policy | Supported `IntentSpecification*Event` event types. |
 | Schema registry / governed artefact references | Validation of `expressionSpecification` and `targetEntitySchema` references. |
 
-## Consumer contract:
+## Consumer contract
 
 Consumers of ID MS should rely on these behaviours:
 
@@ -424,7 +424,7 @@ Consumers of ID MS should rely on these behaviours:
 - Consumers must use `If-Match` for unsafe updates and deletes.
 - Event subscribers receive only external `IntentSpecification*Event` notifications and not internal workflow details.
 
-## Open items:
+## Open items
 
 | Item | Status |
 |---|---|
@@ -433,7 +433,7 @@ Consumers of ID MS should rely on these behaviours:
 | Physical versus logical delete for unused drafts | Implementation detail; external outcome remains `204 No Content` and no `DELETED` lifecycle state. |
 | Exact governance approval workflow before activation | Business/process implementation detail; activation rules require governance completion where applicable. |
 
-## Closed items:
+## Closed items
 
 | Decision | Baseline |
 |---|---|
@@ -449,7 +449,7 @@ Consumers of ID MS should rely on these behaviours:
 | Priority vocabulary | Closed. Use `critical`, `high`, `standard`; do not use `clinical-critical`. |
 | Base type | Closed. Use `@baseType: EntitySpecification`. |
 
-## MS identity:
+## MS identity
 
 | Item | Baseline |
 |---|---|
