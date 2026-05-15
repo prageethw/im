@@ -1,4 +1,4 @@
-# Intent Intelligence MS Solution Brief:
+# Intent Intelligence MS Solution Brief
 
 ## Summary:
 
@@ -7,10 +7,10 @@ Intent Intelligence MS (II MS) is the internal semantic interpretation and resol
 II MS is not an external TMF-facing API service. It does not expose runtime Intent REST APIs, design-time IntentSpecification APIs, customer-facing lifecycle projections, callback endpoints, orchestration execution, or assurance truth. Its responsibility is to convert a syntactically accepted runtime intent into one of the following internal outcomes:
 
 - `IntentRejectedEvent` when the admitted intent cannot be semantically, policy, or capability resolved.
-- `IntentResolvedEvent` when the admitted intent has been semantically resolved into canonical intent context and a full valid candidate resource set for downstream optimisation or fulfilment consideration.
-- `IntentNetworkReadyEvent` when II MS has prepared the concrete service configuration needed for orchestration/apply and assurance observation.
+- `IntentResolvedEvent` when the admitted intent has been semantically resolved into a canonical intent context and a full, valid candidate resource set for downstream optimisation or fulfilment consideration.
+- `IntentNetworkReadyEvent` when II MS has prepared the concrete service configuration needed for orchestration/apply, and assurance observation.
 
-`IntentResolvedEvent` and `IntentNetworkReadyEvent` are intentionally different milestones. `IntentResolvedEvent` is the candidate-level semantic-resolution handoff. `IntentNetworkReadyEvent` is the service-ready preparation handoff to IA MS and means the service configuration/resource set has been prepared for orchestration/apply and assurance observation. It does not mean the network apply has succeeded.
+`IntentResolvedEvent` and `IntentNetworkReadyEvent` are intentionally different milestones. `IntentResolvedEvent` is the candidate-level semantic-resolution handoff. `IntentNetworkReadyEvent` is the service-ready preparation handoff to IA MS and means the service configuration/resource set has been prepared for orchestration/apply and assurance observation. It does not mean the network application has succeeded.
 
 ## Logical View:
 
@@ -46,7 +46,7 @@ Logical responsibilities:
 3. It parses `body.expression.context.targets`, `body.expression.context.constraints`, and `body.expression.context.preferences`.
 4. It resolves location, service type, service class, capability, policy, and resource context from the Knowledge Plane.
 5. It validates hard constraints such as location, service class, priority, redundancy, and time window.
-6. It validates measurable targets such as latency, availability, jitter, and packet loss against known capability context.
+6. It validates measurable targets such as latency, availability, jitter, and packet loss against a known capability context.
 7. It preserves preferences as soft selection guidance unless policy explicitly promotes a preference into a hard constraint.
 8. It resolves the complete valid candidate resource set for the current semantic context after applicable scope and policy filtering.
 9. It records the semantic decision and writes the output event to the II outbox.
@@ -65,7 +65,7 @@ expression.context.constraints
 expression.context.preferences
 ```
 
-`targets` are measurable runtime objectives such as maximum latency, minimum availability, maximum jitter, and maximum packet loss. `constraints` are hard requirements and required non-target inputs such as location, service type, service class, priority, redundancy requirement, and time window. `preferences` are soft selection guidance such as preferred access technology.
+`targets` are measurable runtime objectives such as maximum latency, minimum availability, maximum jitter, and maximum packet loss. `constraints` are hard requirements and required non-target inputs such as location, service type, service class, priority, redundancy requirement, and time window. `preferences` are soft selection guidance, such as preferred access technology.
 
 II MS must not flatten these buckets into unrelated top-level fields. Keeping the same semantic buckets from ID MS to IC MS to II MS reduces mapping, prevents drift, and allows IA MS and later control-loop components to interpret assurance outcomes against the same intent context.
 
@@ -81,7 +81,7 @@ II MS owns:
 | Target validation | Validate supported measurable runtime objectives. |
 | Constraint validation | Validate hard requirements such as location, priority, redundancy, and time window. |
 | Preference preservation | Preserve soft selection guidance for downstream selection/optimisation. |
-| Candidate resource resolution | Build the full valid candidate resource set after applicable scope and policy filtering. |
+| Candidate resource resolution | Build the full, valid candidate resource set after applicable scope and policy filtering. |
 | Semantic rejection | Emit `IntentRejectedEvent` with intent-domain reason codes. |
 | Candidate-level resolution | Emit `IntentResolvedEvent` for downstream optimisation/fulfilment consideration. |
 | Service-ready preparation | Emit `IntentNetworkReadyEvent` with prepared orchestration and observation configuration. |
