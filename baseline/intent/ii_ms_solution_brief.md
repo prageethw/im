@@ -1,4 +1,4 @@
-# Intent Intelligence MS Solution Brief
+# Intent Intelligence MS Solution Brief:
 
 ## Summary:
 
@@ -121,9 +121,15 @@ II MS contracts are internal event contracts only.
 
 II MS has no external TMF-facing REST contract in the active baseline. Any health, readiness, or metrics endpoints are internal platform probes only and must not be treated as product APIs.
 
-## Inbound event shape: IntentValidatedEvent:
+II MS does not expose REST hub subscriptions and does not deliver external HTTP webhook notifications. All II-owned event contracts are internal Kafka event contracts only.
 
-The inbound event uses CloudEvents headers and a plain JSON body.
+## Event delivery path:
+
+II MS has one event-delivery model in the active baseline: internal Kafka event processing. It consumes `IntentValidatedEvent` from the internal intent-management event topic and publishes II-owned milestone events through the II internal outbox relay to Kafka. These events use CloudEvents-style Kafka/platform headers and JSON bodies. II MS does not use the external REST hub/webhook notification model because it has no external TMF-facing API or subscriber callback contract.
+
+## Inbound internal Kafka event shape: IntentValidatedEvent:
+
+The inbound event is consumed from Kafka and uses CloudEvents-style Kafka/platform headers with a plain JSON body.
 
 ```http
 ce-specversion: 1.0
@@ -254,9 +260,9 @@ Suggested tables:
 
 The processing transaction should persist the semantic decision and enqueue the output event atomically. The relay publishes from the outbox and records publication state separately from decision ownership.
 
-## Kafka publication:
+## Internal Kafka publication:
 
-II MS publishes internal events through the outbox relay. Event delivery is at-least-once. Consumers must be idempotent.
+II MS publishes internal platform events through the internal outbox relay to Kafka. Event delivery is at-least-once. Consumers must be idempotent.
 
 Publication rules:
 
@@ -268,7 +274,7 @@ Publication rules:
 - Retry transient Kafka publication failures through the outbox relay.
 - Treat exhausted publication retries as an operational failure requiring support handling.
 
-## Topics:
+## Internal Kafka topics:
 
 | Topic | Event types | Direction for II MS |
 |---|---|---|
@@ -291,7 +297,7 @@ CloudEvents identity must be stable and suitable for deduplication.
 | `body.version` | Runtime intent version when versioning is used. |
 | `body.references.correlationId` | End-to-end trace/correlation id. |
 
-## CloudEvents headers:
+## Internal Kafka CloudEvents headers:
 
 Example outbound headers for `IntentResolvedEvent`:
 
@@ -317,7 +323,7 @@ ce-subject: INT-HOSP-2026-001
 content-type: application/json
 ```
 
-## Message shape: IntentRejectedEvent:
+## Internal Kafka message body: IntentRejectedEvent:
 
 `IntentRejectedEvent` is emitted when semantic, policy, capability, or processing validation fails after IC MS syntactic admission.
 
@@ -377,7 +383,7 @@ Baseline reason-code families:
 | `KNOWLEDGE_LOOKUP_ERROR` | KP lookup failed or returned insufficient trusted information. |
 | `PROCESSING_ERROR` | II MS failed due to an internal processing error. |
 
-## Message shape: IntentResolvedEvent:
+## Internal Kafka message body: IntentResolvedEvent:
 
 `IntentResolvedEvent` is the candidate-level semantic-resolution handoff. It carries canonical context and all valid/applicable candidate resources known for the resolved context after scope and policy filtering. It is not the final selected/applied resource set.
 
@@ -486,7 +492,7 @@ Rules:
 - Do not use context-encoded metric wrappers such as `metrics.benchmark` or `metrics.telemetry` in the baseline message shape.
 - Do not include `provider` by default.
 
-## Message shape: IntentNetworkReadyEvent:
+## Internal Kafka message body: IntentNetworkReadyEvent:
 
 `IntentNetworkReadyEvent` is the service-ready preparation handoff to IA MS. It carries the service configuration required for orchestration/apply and assurance observation. It does not mean network apply succeeded.
 
@@ -702,5 +708,5 @@ Consumer rules:
 | Primary input event | `IntentValidatedEvent` |
 | Output events | `IntentRejectedEvent`, `IntentResolvedEvent`, `IntentNetworkReadyEvent` |
 | Primary persistence | PostgreSQL / PostgreSQL-compatible RDBMS |
-| Event style | Internal CloudEvents headers with plain JSON `body` |
+| Event style | Internal Kafka events with CloudEvents-style Kafka/platform headers and plain JSON `body` |
 | Public exposure | None |
