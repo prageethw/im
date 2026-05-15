@@ -74,7 +74,7 @@ An authorised specification owner creates a new `IntentSpecification` as a `DRAF
 
 ### Activate intent capability:
 
-An authorised governance actor promotes a draft specification version to `ACTIVE` through lifecycle update. Activation retires the previous active version in the same `familyId` and makes the new version available for new runtime intent creation.
+An authorised governance actor promotes a draft specification version to `ACTIVE` through a lifecycle update. Activation retires the previously active version with the same `familyId` and makes the new version available for creating new runtime intents.
 
 ### Create runtime intent:
 
@@ -90,7 +90,7 @@ II MS prepares service configuration for orchestration/apply and assurance obser
 
 ### Ingest external apply callback:
 
-An external orchestration/apply system submits a callback to ICB MS. ICB MS validates only technical and structural properties, stores the callback, and publishes raw `IntentCallbackEvent` to the dedicated callback topic.
+An external orchestration/apply system submits a callback to ICB MS. ICB MS validates only technical and structural properties, stores the callback, and publishes a raw `IntentCallbackEvent` to the dedicated callback topic.
 
 ### Assure runtime intent:
 
@@ -120,7 +120,7 @@ External Consumer / OEX / Authorised Platform
 | owns IntentSpecification   |
 +----------------------------+
         |
-        | active specification discovery / validation support
+        | active specification discovery/validation support
         v
 +----------------------------+         Internal Kafka event backbone
 | Intent Controller MS       |  --->   IntentValidatedEvent
@@ -191,8 +191,8 @@ Logical resource ownership:
 6. II MS performs semantic, policy, capability, and resource-context validation.
 7. II MS emits IntentRejectedEvent if rejected.
 8. II MS emits IntentResolvedEvent when candidate-level resolution is complete.
-9. II MS emits IntentNetworkReadyEvent when service configuration is ready for apply and observation.
-10. External orchestration/apply system submits callback to ICB MS.
+9. II MS emits IntentNetworkReadyEvent when service configuration is ready for application and observation.
+10. External orchestration/apply system submits a callback to ICB MS.
 11. ICB MS persists the callback and emits IntentCallbackEvent.
 12. IA MS consumes IntentNetworkReadyEvent, IntentCallbackEvent, and observation metrics.
 13. IA MS emits IntentAssuranceEvent.
@@ -203,7 +203,7 @@ Logical resource ownership:
 
 External consumers and OEX discover supported intent capabilities by reading `IntentSpecification` resources from ID MS. The default list response should remain lightweight. Full specification details, including `specCharacteristic`, `expressionSpecification`, and `targetEntitySchema`, are retrieved from the single-resource endpoint or requested through `fields` where supported.
 
-Only `ACTIVE` specification versions are valid for new runtime intent creation. `DRAFT` versions are for governance and editing. `RETIRED` versions are retained for audit/history and existing references but are not used for new runtime creation.
+Only `ACTIVE` specification versions are valid for creating new runtime intents. `DRAFT` versions are for governance and editing. `RETIRED` versions are retained for audit/history and existing references, but are not used for new runtime creation.
 
 ## Create intent specification:
 
@@ -213,13 +213,13 @@ ID MS exposes:
 POST /intentManagement/v5/intentSpecification
 ```
 
-Successful create normally returns `201 Created`, a server-generated `id`, `href`, `Location`, `ETag`, and lifecycle-aware links. Created specifications normally start in `DRAFT`.
+Successful creation normally returns `201 Created`, a server-generated `id`, `href`, `Location`, `ETag`, and lifecycle-aware links. Created specifications normally start in `DRAFT`.
 
 ID MS does not accept caller-supplied server-generated fields such as `id`, `href`, `Location`, `ETag`, or `_links` on create.
 
 ## Activate intent specification:
 
-Activation is a lifecycle update on the resource. The platform must not expose a custom activation action such as:
+Activation is a lifecycle update on the resource. The platform must not expose a custom activation action, such as:
 
 ```http
 POST /intentManagement/v5/intentSpecification/{id}/activate
@@ -275,9 +275,9 @@ IC MS owns the external projection:
 - creates or updates `IntentReport` projection;
 - emits external `Intent*Event` and `IntentReport*Event` notifications where applicable.
 
-IA MS must not expose raw telemetry dumps, raw callback payloads, or internal mapping detail as the external customer-facing API.
+IA MS must not expose raw telemetry dumps, raw callback payloads, or internal mapping details as the external customer-facing API.
 
-## Cancel / terminate runtime intent:
+## Cancel/terminate runtime intent:
 
 The runtime termination operation is represented externally as:
 
@@ -287,7 +287,7 @@ DELETE /intentManagement/v5/intent/{id}
 
 This is a termination request, not physical deletion of the runtime record. IC MS retains the intent for audit, traceability, reporting, and lifecycle history.
 
-Termination must follow the same security, authorisation, and concurrency expectations as other unsafe operations. If optimistic concurrency is required for the operation, missing `If-Match` returns `428 Precondition Required`, and stale or mismatched `If-Match` returns `412 Precondition Failed`.
+Termination must follow the same security, authorisation, and concurrency expectations as other unsafe operations. If optimistic concurrency is required for the operation, a missing `If-Match` returns `428 Precondition Required`, and stale or mismatched `If-Match` returns `412 Precondition Failed`.
 
 ## Retry failed runtime intent:
 
@@ -310,7 +310,7 @@ ICB MS exposes:
 POST /intent-callback/v1/submissions
 ```
 
-ICB MS sits behind the API Gateway. It accepts callback submissions from trusted external orchestration/apply systems. It validates only technical and structural properties, such as required fields, non-empty strings, ISO timestamp format, request size, trusted caller/source authorisation, and idempotency where required.
+ICB MS sits behind the API Gateway. It accepts callback submissions from trusted external orchestration/apply systems. It validates only technical and structural properties, such as required fields, non-empty strings, ISO timestamp format, request size, trusted caller/source authorisation, and idempotency, where required.
 
 ICB MS does not validate that `intentId` exists. IA MS owns intent correlation and unknown-intent handling after consuming `IntentCallbackEvent`.
 
@@ -339,7 +339,7 @@ Legacy fields such as `orchestratorState`, `source`, `timestamp`, and `callbackT
 | Admit syntactically valid runtime intents | No | Yes | No | No | No |
 | Emit `IntentValidatedEvent` | No | Yes | No | No | No |
 | Semantic interpretation | No | No | Yes | No | No |
-| Knowledge Plane-backed validation | No | No | Yes | Limited/No | No |
+| Knowledge Plane-backed validation | No | No | Yes | No | No |
 | Candidate resource resolution | No | No | Yes | No | No |
 | Service-ready configuration | No | No | Yes | No | No |
 | Runtime assurance truth | No | No | No | Yes | No |
@@ -354,9 +354,9 @@ Security is enforced across the gateway, service, data, and event layers. Extern
 
 ## User authentication and access governance:
 
-External users and client systems authenticate through the OEX / gateway / platform access layer. The external access layer is responsible for user authentication, tenant/customer context, consent and delegation controls where applicable, and coarse-grained access governance.
+External users and client systems authenticate through the OEX / gateway/platform access layer. The external access layer is responsible for user authentication, tenant/customer context, consent and delegation controls where applicable, and coarse-grained access governance.
 
-Downstream services should receive only trusted platform identity/context required for their responsibility. Internal services must not accept caller-supplied trust claims directly from the public internet.
+Downstream services should receive only the trusted platform identity/context required for their responsibility. Internal services must not accept caller-supplied trust claims directly from the public internet.
 
 ## OEX internal access path:
 
@@ -572,8 +572,8 @@ Expected platform controls include:
 |---|---|
 | `Acknowledged` | IC MS admitted the request after syntactic validation. |
 | `InProgress` | Downstream semantic, optimisation, service-ready, apply, or assurance workflow is underway. |
-| `Active` | Service is applied and assurance evidence supports active state. |
-| `Degraded` | Service is still present but assurance evidence indicates degraded operation. |
+| `Active` | Service is applied, and assurance evidence supports the active state. |
+| `Degraded` | Service is still present, but assurance evidence indicates degraded operation. |
 | `Paused` | Policy exists but is intentionally paused. |
 | `Rejected` | Request or later workflow outcome was rejected by semantic, policy, apply, or network decision. |
 | `Failed` | Delivery or operation failed irrecoverably. |
