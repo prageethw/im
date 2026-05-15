@@ -1,12 +1,10 @@
-# Intent Controller MS Solution Brief
+# Intent Controller MS Solution Brief:
 
 ## Summary:
 
-Intent Controller MS (IC MS) is the TMF-facing runtime intent controller for the Intent Enabler. It owns the external `Intent` and `IntentReport` resource boundary, admits syntactically valid runtime intent requests, projects external lifecycle/status state, and publishes curated external runtime intent events.
+Intent Controller MS (IC MS) is the TMF-facing runtime intent controller for the Intent Enabler. It owns the external `Intent` and `IntentReport` resource boundary, admits syntactically valid runtime intent requests, projects external lifecycle/status state, and publishes curated external runtime intent events. IC MS is deliberately not the semantic, optimisation, orchestration, callback, or runtime assurance owner.
 
-IC MS is deliberately not the semantic, optimisation, orchestration, callback, or runtime assurance owner. Its main purpose is to provide a stable external runtime API and event projection layer while delegating deeper decisioning and assurance responsibilities to the appropriate downstream services.
-
-The current baseline source is `baseline-v1.0` from GitHub `main/baseline/intent`. This solution brief is aligned to the validated `ic_ms_specification.md`, `ic_ms_design_brief.md`, and the already baselined ID MS definition contract.
+Its main purpose is to provide a stable external runtime API and event projection layer while delegating deeper decisioning and assurance responsibilities to the appropriate downstream services. The current baseline source is GitHub `main/baseline/intent`. This solution brief is aligned to the validated `ic_ms_specification.md`, `ic_ms_design_brief.md`, and the baselined ID MS definition contract.
 
 ## Logical View:
 
@@ -20,9 +18,11 @@ IC MS sits between external intent consumers and the internal intent fulfilment 
 | Upstream dependency | ID MS for concrete active `IntentSpecification` validation. |
 | Downstream event consumers | II MS consumes admitted runtime intent state through `IntentValidatedEvent`. |
 | Downstream status inputs | II MS rejection outcomes and IA MS assurance outcomes drive IC MS external lifecycle/status projection. |
-| External event subscribers | Receive TMF-style `Intent*Event` and `IntentReport*Event` notifications through the IC MS hub subscription model. |
+| External event subscribers | Receive TMF-style `Intent` and `IntentReport` events through the IC MS hub subscription model. |
 
-IC MS owns the externally visible runtime projection, not the full internal fulfilment state machine. The external `Intent` record is the current consumer-facing state of the runtime intent. Historical versions, standby states, rollback candidates, internal resource candidates, optimiser scoring, and raw assurance detail remain internal unless projected through `IntentReport` or another documented platform extension.
+IC MS owns the externally visible runtime projection, not the full internal fulfilment state machine.
+
+The external `Intent` record is the current consumer-facing state of the runtime intent. Historical versions, standby states, rollback candidates, internal resource candidates, optimiser scoring, and raw assurance detail remain internal unless projected through `IntentReport` or another documented platform extension.
 
 ## Process View:
 
@@ -68,7 +68,7 @@ IC MS owns the externally visible runtime projection, not the full internal fulf
 
 IC MS is the runtime equivalent of a controlled admission and projection layer. It accepts runtime intent requests only when the incoming payload is structurally valid and references a concrete active `IntentSpecification`. It does not interpret whether the intent is semantically achievable, feasible, optimal, policy-compliant, or currently assured.
 
-The design intentionally separates three concerns:
+The design intentionally separates these concerns:
 
 | Concern | Owner |
 |---|---|
@@ -96,7 +96,7 @@ IC MS is responsible for:
 | Runtime version projection | Return the current projected runtime version externally while retaining internal version history. |
 | `IntentReport` projection | Expose read-only curated report/projection history derived from assurance outcomes. |
 | Event subscription | Support strict TMF `/hub` and domain-scoped `/intent/hub` subscription routes. |
-| External event publication | Emit TMF-style `Intent*Event` and `IntentReport*Event` events. |
+| External event publication | Emit consumer-safe TMF-style `Intent` and `IntentReport` events. |
 | Concurrency control | Enforce ETag / `If-Match` on unsafe state-changing operations. |
 | Common error shape | Return the shared platform REST error body. |
 
@@ -297,9 +297,7 @@ IC MS should reject or ignore unsupported external request fields according to t
 
 ## Authorisation:
 
-IC MS is exposed through the platform gateway boundary and must enforce standard platform access controls before accepting runtime intent operations.
-
-Authorisation responsibilities include:
+IC MS is exposed through the platform gateway boundary and must enforce standard platform access controls before accepting runtime intent operations. Authorisation responsibilities include:
 
 | Area | Behaviour |
 |---|---|
@@ -353,8 +351,8 @@ IC MS publishes internal and external-facing event streams through the platform 
 | Event category | Purpose |
 |---|---|
 | `IntentValidatedEvent` | Internal state/progress event emitted after syntactic validation succeeds. |
-| External `Intent*Event` | Consumer-safe TMF-style resource events for runtime `Intent` projection changes. |
-| External `IntentReport*Event` | Consumer-safe TMF-style resource events for report projection changes. |
+| External `Intent` events | Consumer-safe TMF-style resource events for runtime `Intent` projection changes. |
+| External `IntentReport` events | Consumer-safe TMF-style resource events for report projection changes. |
 
 `IntentValidatedEvent` is not a point-to-point command. It states that an `Intent` has passed IC MS syntactic validation and has been admitted into the runtime lifecycle.
 
@@ -403,6 +401,8 @@ IntentReportDeleteEvent
 ```
 
 `IntentReportDeleteEvent` is included for TMF vocabulary alignment but is emitted only after governed internal/admin removal where notification is allowed by policy.
+
+Status-change events carry the current `intent.lifecycleStatus` snapshot in the `event.intent` payload. They do not carry separate `previousLifecycleStatus` or `newLifecycleStatus` fields in the external event payload. The event type, timestamp, and emitted resource snapshot provide the lifecycle-change signal.
 
 ## CloudEvents headers:
 
@@ -507,9 +507,7 @@ Canonical message intent:
       "lifecycleStatus": "Active",
       "@type": "Intent",
       "@baseType": "Entity"
-    },
-    "previousLifecycleStatus": "InProgress",
-    "newLifecycleStatus": "Active"
+    }
   },
   "reportingSystem": {
     "id": "intent-controller-ms",
