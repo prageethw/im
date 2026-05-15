@@ -1199,6 +1199,11 @@ GET /intentManagement/v5/intentSpecification/hub/{id}
 DELETE /intentManagement/v5/intentSpecification/hub/{id}
 ```
 
+Hub subscriptions are delivered as TMF-style REST webhook notifications.
+ID MS stores the subscriber callback registration and, when a subscribed `IntentSpecification` event occurs, delivers the corresponding event payload by HTTP `POST` to the subscriber listener callback URL.
+Kafka is not used for external hub notification delivery because ID MS is both the event originator and the delivery owner, and no independent internal consumer requires a topic for these external notifications.
+Delivery reliability is handled by an ID MS-owned local delivery outbox and retry relay.
+
 ### Request
 
 ```http
@@ -1249,6 +1254,9 @@ ETag: "subscription-sub-001-v1"
 - The subscription callback is an external listener endpoint owned by the consuming system.
 - The `query` field filters delivered events.
 - ID MS hub subscriptions are for external IntentSpecification events only: `IntentSpecificationCreateEvent`, `IntentSpecificationAttributeValueChangeEvent`, `IntentSpecificationStatusChangeEvent`, and `IntentSpecificationDeleteEvent`.
+- ID MS delivers subscribed events by HTTP `POST` to the stored subscriber callback URL.
+- ID MS does not publish hub notifications to Kafka and does not create a self-publish/self-consume Kafka loop for external subscription delivery.
+- ID MS uses a local delivery outbox and retry relay to track pending, delivered, failed, and retryable webhook notification work.
 - ID MS hub subscriptions must not expose internal workflow events, KP details, runtime assurance state, telemetry, callback payloads, or internal fulfilment details.
 
 ---
@@ -1361,6 +1369,9 @@ Cache-Control: no-store
 |---|---|
 | Route style | Domain-scoped `/intentSpecification/hub` route is intentional |
 | Subscription target | External listener callback URL |
+| Delivery mechanism | HTTP `POST` to subscriber listener callback URL |
+| Delivery reliability | ID MS-owned local delivery outbox and retry relay |
+| Kafka usage | Kafka is not used for external hub notification delivery |
 | Filter | `query` filters event types |
 | Event family | ID MS external IntentSpecification events only: `IntentSpecificationCreateEvent`, `IntentSpecificationAttributeValueChangeEvent`, `IntentSpecificationStatusChangeEvent`, and `IntentSpecificationDeleteEvent` |
 | Retrieve | Supported intentionally |
@@ -1825,6 +1836,8 @@ DELETE /intentManagement/v5/intentSpecification/hub/{id}
 ```
 
 The domain-scoped route is acceptable only as a documented platform extension and must preserve the same subscription semantics.
+Hub notification delivery remains REST webhook delivery to the subscriber listener callback URL; Kafka is not part of the external hub notification model.
+ID MS may use a local delivery outbox and retry relay for reliable webhook delivery, but that outbox is an ID MS implementation detail and not a subscriber-facing contract.
 `GET /intentManagement/v5/intentSpecification/hub/{id}` is also a platform extension for safe subscription inspection and is not part of the strict TMF generic hub route minimum.
 
 ### External event timestamp rule
