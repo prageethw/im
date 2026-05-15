@@ -1,4 +1,4 @@
-# Intent Definition MS Solution Brief:
+# Intent Definition MS Solution Brief
 
 ## Summary:
 
