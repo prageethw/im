@@ -1,6 +1,6 @@
-# id_ms_design_brief.md
+# id_ms_design_brief.md:
 
-## ID MS API contract — baseline
+## ID MS API contract — baseline:
 
 ID MS owns the definition-time `IntentSpecification` resource and related hub subscriptions.
 
@@ -13,10 +13,10 @@ ID MS owns the definition-time `IntentSpecification` resource and related hub su
 | Primary resource | `IntentSpecification` |
 
 ID MS owns definition-time `IntentSpecification` contracts and subscription management for specification events.
-It validates syntax and resource shape, enforces specification lifecycle/version governance, and publishes external specification lifecycle events.
+It validates syntax and resource shape, enforces specification lifecycle/version governance, and delivers external specification lifecycle notifications to subscribed REST webhook listener callbacks.
 ID MS does not validate runtime semantic feasibility, policy fulfilment, network topology, optimisation, assurance, telemetry, orchestration callbacks, or runtime intent lifecycle truth.
 
-## TMF compliance and platform extension baseline
+## TMF compliance and platform extension baseline:
 
 ID MS follows the TMF921 `IntentSpecification` resource responsibility boundary while retaining a small set of approved platform extensions.
 
@@ -55,7 +55,7 @@ External `IntentSpecificationCreateEvent`, `IntentSpecificationAttributeValueCha
 
 `IntentSpecificationStatusChangeEvent` carries the current `intentSpecification.lifecycleStatus` snapshot. It does not carry separate `previousLifecycleStatus` or `newLifecycleStatus` fields in the external event payload.
 
-## IntentSpecification resource APIs
+## IntentSpecification resource APIs:
 
 | **Purpose** | **Method** | **Endpoint** |
 |---|---:|---|
@@ -69,7 +69,7 @@ External `IntentSpecificationCreateEvent`, `IntentSpecificationAttributeValueCha
 `PUT /intentSpecification/{id}` is an intentional platform extension for deterministic full replacement.
 `PATCH /intentSpecification/{id}` remains supported for TMF compatibility, but is discouraged as a general update method.
 
-## Hub subscription APIs
+## Hub subscription APIs:
 
 ID MS intentionally uses domain-scoped hub routes for `IntentSpecification` event subscriptions.
 Strict TMF exposure may use the generic root `/hub` route at the gateway layer; `/intentSpecification/hub` and `GET /intentSpecification/hub/{id}` are approved platform extensions for domain-owned operational clarity.
@@ -80,10 +80,10 @@ Strict TMF exposure may use the generic root `/hub` route at the gateway layer; 
 | Retrieve subscription by ID | `GET` | `/intentSpecification/hub/{id}` |
 | Delete event subscription | `DELETE` | `/intentSpecification/hub/{id}` |
 
-Hub subscriptions are for external `IntentSpecification` event notifications only.
+Hub subscriptions are for external `IntentSpecification` event notifications only. ID MS delivers those notifications by HTTP `POST` to the subscriber-owned REST webhook listener callback URL. Kafka is not used for external hub notification delivery.
 They must not expose internal workflow events, KP details, runtime assurance state, telemetry, callback payloads, optimiser decisions, or candidate/resource scoring details.
 
-## Query conventions
+## Query conventions:
 
 List endpoint:
 
@@ -111,7 +111,7 @@ ETag: "list-etag-value"
 Cache-Control: private, max-age=60
 ```
 
-## Lifecycle rules
+## Lifecycle rules:
 
 Allowed lifecycle states:
 
@@ -139,7 +139,7 @@ Important:
 - Activation is a lifecycle update on `/intentSpecification/{id}`, not a custom `/activate` endpoint.
 - When a new version becomes `ACTIVE`, the previous `ACTIVE` version in the same `familyId` becomes `RETIRED`.
 
-## ETag / If-Match rules
+## ETag / If-Match rules:
 
 | **Operation** | **ETag / If-Match rule** |
 |---|---|
@@ -188,7 +188,7 @@ Content-Type: application/json
 }
 ```
 
-## Create IntentSpecification
+## Create IntentSpecification:
 
 ```http
 POST /intentManagement/v5/intentSpecification?fields=id,href,familyId,name,version,lifecycleStatus,isBundle,validFor,relatedParty,specCharacteristic,expressionSpecification,targetEntitySchema,@type,@baseType
@@ -233,7 +233,7 @@ Notes:
 - `Location` points to the new resource.
 - `ETag` is mandatory.
 
-## Retrieve IntentSpecification
+## Retrieve IntentSpecification:
 
 ```http
 GET /intentManagement/v5/intentSpecification/hospital-surgical-slice-spec-v1.19?fields=id,href,familyId,name,description,version,lifecycleStatus,isBundle,validFor,relatedParty,specCharacteristic,expressionSpecification,targetEntitySchema,@type,@baseType
@@ -258,7 +258,7 @@ Notes:
 - IC MS may use this to validate incoming runtime `Intent` requests.
 - The returned resource includes full `familyId`, `isBundle`, `validFor`, `relatedParty`, `specCharacteristic`, `expressionSpecification`, `targetEntitySchema`, lifecycle status, and `_links`.
 
-## List IntentSpecifications
+## List IntentSpecifications:
 
 The list operation returns a lightweight summary by default.
 
@@ -279,7 +279,7 @@ Default list representation includes:
 
 The list operation does not include full `specCharacteristic`, `expressionSpecification`, or `targetEntitySchema` by default unless requested through `fields`.
 
-## Full update IntentSpecification
+## Full update IntentSpecification:
 
 ```http
 PUT /intentManagement/v5/intentSpecification/hospital-surgical-slice-spec-v1.19?fields=id,href,familyId,name,description,version,lifecycleStatus,isBundle,validFor,relatedParty,specCharacteristic,expressionSpecification,targetEntitySchema,@type,@baseType
@@ -323,7 +323,7 @@ Content-Type: application/json
 }
 ```
 
-## Partial update IntentSpecification
+## Partial update IntentSpecification:
 
 ```http
 PATCH /intentManagement/v5/intentSpecification/hospital-surgical-slice-spec-v1.19
@@ -342,7 +342,7 @@ Rules:
 - Prefer `PUT` for deterministic full replacement.
 - Must not normally be used for material replacement of `familyId`, `version`, `specCharacteristic`, `expressionSpecification`, `targetEntitySchema`, or major lifecycle/version contract identity.
 
-## Delete IntentSpecification
+## Delete IntentSpecification:
 
 ```http
 DELETE /intentManagement/v5/intentSpecification/hospital-surgical-slice-spec-v1.19
@@ -368,7 +368,7 @@ Rules:
 - Delete emits `IntentSpecificationDeleteEvent` only after successful delete.
 - Physical versus logical removal is an implementation detail.
 
-## Activate IntentSpecification
+## Activate IntentSpecification:
 
 Activation is a lifecycle update, not a custom action endpoint.
 
@@ -395,7 +395,7 @@ Rules:
   - one event carrying the new version snapshot with `lifecycleStatus: ACTIVE`
   - one event carrying the previous active version snapshot with `lifecycleStatus: RETIRED`
 
-## Hub create subscription
+## Hub create subscription:
 
 ```http
 POST /intentManagement/v5/intentSpecification/hub
@@ -449,7 +449,18 @@ IntentSpecificationStatusChangeEvent
 IntentSpecificationDeleteEvent
 ```
 
-## Hub retrieve subscription
+
+Hub notification delivery baseline:
+
+- `/intentSpecification/hub` is a REST webhook subscription mechanism.
+- ID MS stores subscriber callback registrations.
+- ID MS delivers matching `IntentSpecification` event notifications by HTTP `POST` to the subscriber listener callback URL.
+- The HTTP request body is the TMF-style external event payload, such as `IntentSpecificationStatusChangeEvent`.
+- The subscriber returns `204 No Content` when notified successfully.
+- Kafka topics are not used for external hub notification delivery because ID MS is both the event originator and the delivery owner.
+- Delivery reliability is handled by an ID MS-owned local webhook delivery outbox and retry relay.
+
+## Hub retrieve subscription:
 
 ```http
 GET /intentManagement/v5/intentSpecification/hub/sub-001
@@ -466,7 +477,7 @@ ETag: "subscription-sub-001-v1"
 Cache-Control: private, max-age=300
 ```
 
-## Hub delete subscription
+## Hub delete subscription:
 
 ```http
 DELETE /intentManagement/v5/intentSpecification/hub/sub-001
@@ -481,7 +492,7 @@ HTTP/1.1 204 No Content
 Content-Language: en-AU
 ```
 
-## Standard error body
+## Standard error body:
 
 All ID MS errors use the common cross-MS error shape:
 
@@ -509,15 +520,15 @@ Common errors:
 | `428` | `PRECONDITION_REQUIRED` | Missing required `If-Match` |
 | `500` | `INTERNAL_ERROR` | Unexpected server error |
 
-## ID MS API boundary statement
+## ID MS API boundary statement:
 
 **ID MS owns definition-time `IntentSpecification` contracts and subscription management for specification events.
-It validates syntax and resource shape, enforces specification lifecycle/version governance, and publishes external specification lifecycle events.
+It validates syntax and resource shape, enforces specification lifecycle/version governance, and delivers external specification lifecycle notifications to subscribed REST webhook listener callbacks.
 It does not validate runtime semantic feasibility, policy fulfilment, network topology, optimisation, assurance, telemetry, orchestration callbacks, or callback ingestion.**
 
-## Lifecycle and versioning rules
+## Lifecycle and versioning rules:
 
-### Lifecycle state model
+### Lifecycle state model:
 
 Allowed `IntentSpecification.lifecycleStatus` values:
 
@@ -530,7 +541,7 @@ RETIRED
 There is no `DELETED` lifecycle status.
 Delete is an operation/outcome, not a normal lifecycle state.
 
-### Lifecycle transitions
+### Lifecycle transitions:
 
 | **Transition** | **Allowed** | **Rule** |
 |---|---:|---|
@@ -542,7 +553,7 @@ Delete is an operation/outcome, not a normal lifecycle state.
 | `RETIRED` -> deleted | No by default | Retired specifications remain for audit/runtime compatibility |
 | Any state -> `DELETED` | No | `DELETED` is not a lifecycle status |
 
-### Versioning rules
+### Versioning rules:
 
 - Each meaningful change after activation requires a new versioned `IntentSpecification`.
 - A new version starts as `DRAFT`.
@@ -553,7 +564,7 @@ Delete is an operation/outcome, not a normal lifecycle state.
 - Existing runtime intents that reference a retired specification may continue temporarily where safe.
 - Preferred long-term treatment is to migrate existing intents to the new active specification version where safe, or terminate and recreate them.
 
-### Specification family rule
+### Specification family rule:
 
 A specification family is the logical grouping of related versions of the same specification.
 
@@ -573,7 +584,7 @@ hospital-surgical-slice-spec-v1.20
 
 Only one version in that family should be `ACTIVE` for new runtime intent creation.
 
-### Mutability rules
+### Mutability rules:
 
 | **Lifecycle status** | **Mutable?** | **Reason** |
 |---|---:|---|
@@ -581,7 +592,7 @@ Only one version in that family should be `ACTIVE` for new runtime intent creati
 | `ACTIVE` | No | Active contract must be stable for runtime clients and IC MS validation |
 | `RETIRED` | No | Retired contract must remain stable for audit and existing runtime references |
 
-### Runtime compatibility rules
+### Runtime compatibility rules:
 
 - IC MS must validate new runtime `Intent` creation only against an `ACTIVE` `IntentSpecification`.
 - If a submitted intent references a `DRAFT` specification, IC MS rejects it.
@@ -589,7 +600,7 @@ Only one version in that family should be `ACTIVE` for new runtime intent creati
 - Existing intents that were created against a now-retired specification may continue temporarily if platform policy allows.
 - Existing intents should be migrated to the new active specification version only through a controlled intent update/recreate flow.
 
-### Activation governance rules
+### Activation governance rules:
 
 Activation should only be allowed when:
 
@@ -601,7 +612,7 @@ Activation should only be allowed when:
 - there is no conflicting active version in the same family, or the activation operation also retires the previous active version
 - governance approval has been completed where required
 
-### Delete rules
+### Delete rules:
 
 Delete is allowed only for unused `DRAFT` specifications.
 
@@ -614,9 +625,9 @@ Delete is blocked when:
 
 Delete success returns `204 No Content` and does not create `lifecycleStatus = DELETED`.
 
-## Caching, ETag, and dependency-specific circuit-breaker baseline
+## Caching, ETag, and dependency-specific circuit-breaker baseline:
 
-### Caching scope
+### Caching scope:
 
 ID MS caching applies only to GET responses.
 
@@ -630,7 +641,7 @@ GET /intentManagement/v5/intentSpecification/hub/{id}
 
 No caching strategy is baselined for non-GET operations.
 
-### Single-resource GET caching
+### Single-resource GET caching:
 
 For a single `IntentSpecification`:
 
@@ -654,7 +665,7 @@ Meaning:
 - `ETag` is returned, but not for GET revalidation
 - `ETag` is used only for unsafe operation concurrency through `If-Match`
 
-### List GET caching
+### List GET caching:
 
 For list reads:
 
@@ -679,7 +690,7 @@ Meaning:
 - list responses still include `X-Total-Count` and `X-Result-Count`
 - list-level `ETag` may be returned, but not for GET revalidation in this baseline
 
-### Client cache override
+### Client cache override:
 
 Clients can request a fresh GET response using:
 
@@ -701,7 +712,7 @@ Meaning:
 - `If-None-Match` is not baselined
 - `304 Not Modified` is not baselined
 
-### ETag rule
+### ETag rule:
 
 ETag is not used for GET revalidation in this baseline.
 
@@ -734,7 +745,7 @@ DELETE /intentManagement/v5/intentSpecification/hub/{id}
 
 and any activation/state-changing operation where stale updates could overwrite newer resource state.
 
-### No non-GET caching strategy
+### No non-GET caching strategy:
 
 No caching strategy is baselined for non-GET operations.
 
@@ -743,7 +754,7 @@ Current rule:
 - caching strategy is only discussed for GET responses
 - non-GET operations do not have a caching strategy baseline
 
-### ID MS internal cache refresh on active-version promotion
+### ID MS internal cache refresh on active-version promotion:
 
 When a new `IntentSpecification` version is promoted to `ACTIVE`, ID MS must refresh its own active-specification cache.
 
@@ -762,7 +773,7 @@ Baseline statement:
 
 **On active-version promotion, ID MS must refresh its own active-specification cache using a no-cache/internal refresh path so the newly active version becomes the cached active copy and the previous active version is no longer returned as active.**
 
-### IC MS cache behaviour
+### IC MS cache behaviour:
 
 IC MS may use a cached `ACTIVE` `IntentSpecification` for runtime `Intent` syntactic validation only when:
 
@@ -776,7 +787,7 @@ IC MS may use a cached `ACTIVE` `IntentSpecification` for runtime `Intent` synta
 
 If ID MS is unavailable and IC MS has no valid fresh cached `ACTIVE` specification, IC MS must fail closed for new runtime intent creation.
 
-### IC MS fail-closed response
+### IC MS fail-closed response:
 
 If active specification cannot be confirmed from ID MS or a valid fresh cache:
 
@@ -797,7 +808,7 @@ Retry-After: 30
 }
 ```
 
-### Dependency-specific circuit-breaker behaviour
+### Dependency-specific circuit-breaker behaviour:
 
 ID MS has multiple circuit-breaker trigger points.
 Different dependency failures have different behaviours.
@@ -806,11 +817,10 @@ Different dependency failures have different behaviours.
 |---|---|---|
 | ID MS -> DB | Hard fail-fast | Return `503`; consumer retries |
 | ID MS -> cache | Graceful/silent | Bypass/ignore cache, use DB/source-of-truth, emit telemetry |
-| ID MS -> Kafka/event broker | Graceful/silent with outbox | API succeeds after DB + outbox commit; relay retries Kafka later |
 | ID MS -> external callback webhook | Async fail-fast per attempt | Delivery attempt fails fast, retries later; original API unaffected |
 | IC MS -> ID MS | Cached fallback then fail-closed | IC MS may use fresh cached active spec fallback; otherwise fail closed |
 
-### DB failure
+### DB failure:
 
 DB is a hard dependency.
 
@@ -839,7 +849,7 @@ Rules:
 - ID MS cannot safely create, update, retrieve, activate, retire, or delete specifications without DB access.
 - Consumer must retry later.
 
-### Cache failure
+### Cache failure:
 
 Cache is not source of truth.
 
@@ -858,26 +868,26 @@ Rules:
 - do not return `503` only because cache is unavailable
 - cache failure must not block create, update, or read when DB is available
 
-### Kafka / event broker failure
+### Webhook delivery outbox failure:
 
-Kafka is not on the synchronous critical path when ID MS uses transactional outbox.
+External hub notification delivery is not on the synchronous critical path after the ID MS resource transaction commits.
 
 For create, update, delete, activation, and retirement:
 
-- commit resource change and outbox record transactionally in DB
-- return API success once DB + outbox transaction succeeds
-- publish to Kafka asynchronously through outbox relay
-- if Kafka is unavailable, relay fails fast for that publish attempt
-- retry later using outbox retry policy
-- do not fail original API call after successful DB/outbox commit
+- commit the resource change and webhook delivery outbox record transactionally in DB
+- return API success once the DB transaction succeeds
+- deliver subscribed notifications asynchronously by HTTP `POST` through the ID MS webhook delivery relay
+- if the subscriber callback endpoint is unavailable, the delivery attempt fails fast
+- retry later using bounded retry and backoff policy
+- do not fail the original API call after successful DB/outbox commit
 
 Rules:
 
-- Kafka/event broker failure is graceful/silent for the original API consumer
-- Kafka failure is operationally visible through retry metrics and alerts
-- if DB/outbox commit fails, API operation fails because durable event publication cannot be guaranteed
+- webhook delivery failure is graceful/silent for the original API consumer
+- webhook delivery failure is operationally visible through retry metrics and alerts
+- if DB/outbox commit fails, API operation fails because durable notification delivery cannot be guaranteed
 
-### External callback webhook failure
+### External callback webhook failure:
 
 External subscriber callback delivery is asynchronous.
 
@@ -895,7 +905,7 @@ Rules:
 - webhook failure must not roll back specification create, update, status-change, or delete operations
 - webhook delivery is not a synchronous dependency for the API write path
 
-### Final combined baseline statement
+### Final combined baseline statement:
 
 **ID MS caching applies only to GET responses.
 GET responses may use bounded private caching, with longer TTL for single-resource GETs and shorter TTL for list GETs.
@@ -908,18 +918,17 @@ ETag is used only for unsafe operation concurrency through `If-Match`.**
 **ID MS uses dependency-specific circuit-breaker behaviour.
 Database failure is hard fail-fast and returns `503 Service Unavailable`.
 Cache failure is handled silently and gracefully by bypassing cache or ignoring cache writes where safe.
-Kafka/event-broker failure is handled through transactional outbox.
-External webhook callback failure is handled asynchronously: each failed delivery attempt fails fast, is retried later, and does not affect the original resource API response.**
+Webhook delivery failure is handled through the ID MS local delivery outbox. Each failed delivery attempt fails fast, is retried later, and does not affect the original resource API response.**
 
-## Deployment and persistence strategy
+## Deployment and persistence strategy:
 
-### Runtime model
+### Runtime model:
 
 ID MS is deployed as a mostly stateless API service.
 The service instances can be horizontally scaled behind the API gateway / ingress layer.
 The application instances should not hold domain truth in local memory.
 
-### Source of truth
+### Source of truth:
 
 The source of truth for ID MS is a managed PostgreSQL / PostgreSQL-compatible relational database.
 
@@ -929,20 +938,20 @@ ID MS stores and governs:
 - specification versions
 - lifecycle status
 - hub subscriptions
-- outbox records for event publication
+- local webhook delivery webhook delivery outbox records for subscribed event notification delivery
 - audit-relevant metadata
 
-### Recommended persistence model
+### Recommended persistence model:
 
 | **Table / store** | **Purpose** |
 |---|---|
 | `intent_specification` | Stores `IntentSpecification` resource, version, lifecycle, ETag, timestamps, and resource body |
 | `intent_specification_subscription` | Stores `/intentSpecification/hub` event subscriptions |
-| `outbox_event` | Stores durable events before publication to Kafka/event infrastructure |
+| `webhook_delivery_outbox` | Stores durable subscriber webhook notification delivery records before HTTP callback delivery |
 | `inbox_event` | Optional; used only if ID MS later consumes internal events requiring idempotent processing |
 | audit table / audit log | Optional dedicated audit trail if not covered by platform audit capability |
 
-### JSONB usage
+### JSONB usage:
 
 Use JSONB where flexible document-shaped content is required.
 
@@ -954,7 +963,7 @@ Recommended JSONB fields:
 - `relatedParty`
 - `_links`
 - full resource body snapshot where useful
-- event payload snapshot in `outbox_event`
+- event payload snapshot in `webhook_delivery_outbox`
 
 Rationale:
 
@@ -962,7 +971,7 @@ Rationale:
 - JSONB supports flexible schema evolution.
 - Relational columns still support governance queries such as `id`, `familyId`, `name`, `version`, `lifecycleStatus`, `ETag`, and timestamps.
 
-### Suggested relational columns
+### Suggested relational columns:
 
 For `intent_specification`:
 
@@ -980,7 +989,7 @@ For `intent_specification`:
 | `activated_at` | Activation timestamp, if active/previously active |
 | `retired_at` | Retirement timestamp, if retired |
 
-### High availability
+### High availability:
 
 ID MS should be deployed with:
 
@@ -991,13 +1000,13 @@ ID MS should be deployed with:
 - no local state dependency
 - safe restart behaviour
 
-### Disaster recovery
+### Disaster recovery:
 
 Initial deployment may be single-region or same-region multi-AZ.
 The selected database service/deployment pattern must support future cross-region active-passive DR as use cases expand.
 Active-active multi-region writes are not baselined initially.
 
-### Rollout strategy
+### Rollout strategy:
 
 ID MS supports rolling deployment.
 
@@ -1008,21 +1017,21 @@ Rules:
 - migrations should be additive first where possible
 - deployment should support rollback to the previous application version while DB remains compatible
 
-### Health checks
+### Health checks:
 
 | **Health endpoint / check** | **Meaning** |
 |---|---|
 | Liveness | Process is running and can respond |
 | Readiness | Service can access critical dependencies needed for serving traffic |
 | DB readiness | Required for normal ID MS resource operations |
-| Kafka/outbox relay readiness | Should not block API readiness if DB/outbox commit path is healthy |
+| Webhook delivery relay readiness | Should not block API readiness if DB/outbox commit path is healthy |
 | Cache readiness | Should not block API readiness because cache failure is graceful/silent |
 
 Readiness should fail when the DB/source-of-truth path is unavailable.
 Readiness should not fail only because cache is unavailable.
-Kafka/event-broker unavailability should be surfaced through relay metrics/alerts rather than making the ID MS API unavailable when the DB/outbox path is healthy.
+Webhook delivery failures should be surfaced through relay metrics/alerts rather than making the ID MS API unavailable when the DB/outbox path is healthy.
 
-### Configuration and secrets
+### Configuration and secrets:
 
 ID MS configuration should be externalised through platform configuration and secret management.
 
@@ -1030,7 +1039,6 @@ Examples:
 
 - DB connection settings
 - cache endpoint
-- Kafka/event broker connection
 - outbox relay configuration
 - retry/backoff settings
 - cache TTL values
@@ -1040,7 +1048,7 @@ Examples:
 
 Secrets must not be stored in application images or source files.
 
-### Observability
+### Observability:
 
 ID MS should emit:
 
@@ -1049,7 +1057,7 @@ ID MS should emit:
 - dependency metrics
 - cache hit/miss metrics
 - circuit-breaker metrics
-- outbox publish metrics
+- webhook delivery metrics
 - subscription delivery metrics
 - audit/security logs where required
 - distributed traces with propagated correlation context
@@ -1067,11 +1075,11 @@ Recommended metrics include:
 - `id_ms_db_error_count`
 - `id_ms_cache_bypass_count`
 - `id_ms_cache_write_failure_count`
-- `id_ms_outbox_pending_count`
-- `id_ms_outbox_publish_failure_count`
+- `id_ms_webhook_delivery_pending_count`
+- `id_ms_webhook_delivery_failure_count`
 - `id_ms_webhook_delivery_failure_count`
 
-### Security posture
+### Security posture:
 
 ID MS should sit behind the platform gateway / ingress security layer.
 
@@ -1085,16 +1093,16 @@ Security baseline:
 - log security-relevant administrative operations
 - avoid exposing internal DB/cache/broker details in error responses
 
-### Deployment baseline statement
+### Deployment baseline statement:
 
 ID MS application instances are stateless and horizontally scalable.
-The source of truth for `IntentSpecification`, hub subscriptions, lifecycle/version state, and outbox records is a managed PostgreSQL-compatible RDBMS.
+The source of truth for `IntentSpecification`, hub subscriptions, lifecycle/version state, and webhook delivery outbox records is a managed PostgreSQL-compatible RDBMS.
 JSONB may be used for document-shaped resource bodies and event snapshots, while relational columns support governance queries, lifecycle/versioning, ETag handling, and operational reporting.
-ID MS readiness depends on DB/source-of-truth availability, but cache and Kafka failures are handled gracefully through cache bypass and transactional outbox where possible.
+ID MS readiness depends on DB/source-of-truth availability, but cache and webhook delivery failures are handled gracefully through cache bypass and the local delivery outbox where possible.
 
-## Security and access-control baseline
+## Security and access-control baseline:
 
-### Authentication
+### Authentication:
 
 ID MS sits behind NGW.
 NGW performs system-to-system authentication using:
@@ -1104,7 +1112,7 @@ NGW performs system-to-system authentication using:
 | mTLS | Authenticates the calling system/client at transport layer |
 | OAuth2 token validation | Validates the calling workload/system token |
 
-### Authorisation boundary
+### Authorisation boundary:
 
 ID MS does not own business/user-level operation authorisation.
 Business/user-level authorisation belongs in the OEX layer.
@@ -1118,7 +1126,7 @@ Business/user-level authorisation belongs in the OEX layer.
 No OAuth2 scopes are assumed.
 No context-aware authorisation is baselined at NGW.
 
-### ID MS technical integrity responsibilities
+### ID MS technical integrity responsibilities:
 
 ID MS still enforces:
 
@@ -1132,7 +1140,7 @@ ID MS still enforces:
 - delete only for unused `DRAFT`
 - callback URL validation for hub subscriptions if hub endpoints are exposed to system callers
 
-### Audit baseline
+### Audit baseline:
 
 ID MS must audit technical/governance-changing operations, including:
 
@@ -1147,16 +1155,16 @@ ID MS must audit technical/governance-changing operations, including:
 
 Business/user authorisation audit belongs to OEX where that decision is made.
 
-### Baseline statement
+### Baseline statement:
 
 **ID MS is protected behind NGW.
 NGW performs system-to-system authentication using mTLS and OAuth2 token validation.
 Business/user-level authorisation is owned by the OEX layer and should not be implemented as operation-level authorisation inside ID MS.
 ID MS trusts authenticated platform/system callers and enforces technical resource integrity, lifecycle/version governance, validation, ETag/If-Match concurrency rules, and state-machine constraints for `IntentSpecification` resources.**
 
-## Observability and audit baseline
+## Observability and audit baseline:
 
-### Observability purpose
+### Observability purpose:
 
 ID MS must provide enough operational visibility to support production operations, troubleshooting, governance review, and platform audit.
 
@@ -1169,7 +1177,7 @@ Observability covers:
 - dependency health signals
 - event/outbox delivery visibility
 
-### Correlation and trace context
+### Correlation and trace context:
 
 ID MS must log and propagate correlation context.
 
@@ -1179,11 +1187,11 @@ Rules:
 - Generate a correlation ID if one is not provided.
 - Include correlation ID in structured logs.
 - Include correlation ID in emitted events.
-- Include correlation ID in outbox records.
+- Include correlation ID in webhook delivery outbox records.
 - Propagate correlation ID to downstream dependency calls where applicable.
 - Do not expose internal trace details in external error bodies.
 
-### Structured logging
+### Structured logging:
 
 ID MS logs should be structured and machine-readable.
 
@@ -1204,7 +1212,7 @@ Recommended log fields:
 | `result` | Success/failure/degraded |
 | `reasonCode` | Stable failure/reason code where applicable |
 
-### Sensitive-data logging rule
+### Sensitive-data logging rule:
 
 ID MS must not log:
 
@@ -1213,17 +1221,16 @@ ID MS must not log:
 - secrets
 - DB credentials
 - cache credentials
-- Kafka credentials
 - full internal connection strings
 - sensitive platform headers
 - raw internal dependency stack traces in external responses
 
 Internal logs may include sanitized technical details needed for support.
-External error responses must remain stable and must not expose DB/cache/Kafka/internal infrastructure details.
+External error responses must remain stable and must not expose DB/cache/internal infrastructure details.
 
-### Metrics baseline
+### Metrics baseline:
 
-ID MS should emit metrics for API operations, lifecycle transitions, dependency behaviour, caching, outbox/event delivery, and technical integrity validation.
+ID MS should emit metrics for API operations, lifecycle transitions, dependency behaviour, caching, webhook delivery, and technical integrity validation.
 
 Recommended metrics include:
 
@@ -1244,12 +1251,12 @@ Recommended metrics include:
 | `id_ms_cache_miss_count` | Count of cache misses |
 | `id_ms_cache_bypass_count` | Count of cache bypass events |
 | `id_ms_cache_write_failure_count` | Count of ignored cache-write failures |
-| `id_ms_outbox_pending_count` | Current pending outbox event count |
-| `id_ms_outbox_publish_failure_count` | Count of outbox publish failures |
+| `id_ms_webhook_delivery_pending_count` | Current pending outbox event count |
+| `id_ms_webhook_delivery_failure_count` | Count of outbox publish failures |
 | `id_ms_webhook_delivery_failure_count` | Count of callback/webhook delivery failures |
 | `id_ms_webhook_delivery_retry_count` | Count of callback/webhook retry attempts |
 
-### Audit baseline
+### Audit baseline:
 
 ID MS audit focuses on technical/governance-changing operations and technical integrity decisions.
 
@@ -1272,7 +1279,7 @@ ID MS must audit:
 
 Business/user-level authorisation audit belongs to OEX, because OEX owns business/user-level authorisation decisions.
 
-### Audit record fields
+### Audit record fields:
 
 Recommended audit record fields:
 
@@ -1292,14 +1299,14 @@ Recommended audit record fields:
 | `result` | Success/failure |
 | `reasonCode` | Stable reason code for failure or special decision |
 
-### Alerting baseline
+### Alerting baseline:
 
 Operational alerts should be raised for:
 
 - DB unavailable / DB circuit breaker open
 - repeated DB errors
 - outbox backlog above threshold
-- repeated Kafka/event publish failures
+- repeated webhook delivery failures
 - repeated webhook delivery failures
 - activation failures
 - repeated ETag/If-Match conflicts above normal threshold
@@ -1308,7 +1315,7 @@ Operational alerts should be raised for:
 - readiness failures
 - unexpected error rate increase
 
-### Tracing baseline
+### Tracing baseline:
 
 ID MS should participate in distributed tracing.
 
@@ -1317,28 +1324,28 @@ Trace spans should cover:
 - inbound API request
 - DB/source-of-truth operation
 - cache read/write where applicable
-- outbox record creation
-- outbox relay publish attempt where applicable
+- webhook delivery outbox record creation
+- webhook delivery relay attempt where applicable
 - webhook delivery attempt where applicable
 
 Trace data must not include secrets or sensitive token contents.
 
-### Baseline statement
+### Baseline statement:
 
 **ID MS must log and propagate correlation context, emit structured operational telemetry, and audit technical/governance-changing operations.
 Business/user authorisation audit remains with OEX, while ID MS audit focuses on specification creation, update, activation, retirement, deletion, hub subscription changes, technical validation failures, ETag/If-Match integrity decisions, immutable-resource enforcement, and dependency failure signals.**
 
-## ID MS consistency sweep
+## ID MS consistency sweep:
 
-### Sweep date
+### Sweep date:
 
 2026-05-15
 
-### Overall result
+### Overall result:
 
 **PASS WITH NOTES**
 
-### Checks
+### Checks:
 
 | **Area** | **Result** | **Notes** |
 |---|---|---|
@@ -1348,14 +1355,14 @@ Business/user authorisation audit remains with OEX, while ID MS audit focuses on
 | GET-only caching | PASS | Caching is scoped to GET responses only |
 | No GET ETag revalidation | PASS | `If-None-Match` and `304 Not Modified` are not baselined |
 | ETag unsafe concurrency | PASS | ETag is positioned for `If-Match` unsafe operation concurrency |
-| Dependency-specific circuit breakers | PASS | DB/cache/Kafka/webhook behaviours are present |
+| Dependency-specific circuit breakers | PASS | DB/cache/webhook behaviours are present |
 | Security boundary | PASS | NGW authentication and OEX authorisation boundary preserved |
 | Eventing boundary | PASS | External `IntentSpecification` event family and boundary are present |
 | Persistence baseline | PASS | PostgreSQL-compatible RDBMS, JSONB, and outbox persistence are present |
 | Boundary exclusions | PASS | ID MS does not own runtime fulfilment concerns |
 | Platform extensions | PASS | `PUT`, domain-scoped hub, `familyId`, `_links`, ETag/If-Match, and caching are documented |
 
-### Notes requiring attention
+### Notes requiring attention:
 
 - Examples use `/intentManagement/v5`.
 - Domain-scoped `/intentSpecification/hub` route is intentional; strict TMF generic `/hub` exposure can be handled by NGW/API gateway routing when required.
@@ -1366,13 +1373,13 @@ Business/user authorisation audit remains with OEX, while ID MS audit focuses on
 - `targetEntitySchema` is retained as the governed runtime expression-value schema reference.
 - `familyId` is retained for version-family governance.
 
-### Final consistency position
+### Final consistency position:
 
 The ID MS design brief is internally consistent for the current baseline.
-The design keeps ID MS focused on definition-time `IntentSpecification` resource ownership, lifecycle/version governance, syntax/resource-shape validation, ETag/If-Match concurrency, GET-only caching, external `IntentSpecification` event publication, PostgreSQL-compatible persistence, and technical observability/audit.
+The design keeps ID MS focused on definition-time `IntentSpecification` resource ownership, lifecycle/version governance, syntax/resource-shape validation, ETag/If-Match concurrency, GET-only caching, external `IntentSpecification` webhook notification delivery, PostgreSQL-compatible persistence, and technical observability/audit.
 ID MS does not own semantic validation, policy validation, candidate/resource feasibility, optimisation, runtime assurance, telemetry, or callback ingestion.
 
-## Callback URL baseline
+## Callback URL baseline:
 
 Callback URLs are subscriber-owned listener endpoints.
 Do not use TMF-specific path prefixes or TMF-owned path wording in callback URL examples.
