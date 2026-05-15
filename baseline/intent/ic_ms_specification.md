@@ -1,4 +1,4 @@
-# ic_ms_specification.md
+# ic_ms_specification.md:
 
 ## IC MS Specification:
 
@@ -79,6 +79,15 @@ Accepted domain-scoped platform extension:
 | Retrieve intent event subscription | `GET` | `/intentManagement/v5/intent/hub/{id}` |
 | Delete intent event subscription | `DELETE` | `/intentManagement/v5/intent/hub/{id}` |
 
+Hub subscriptions are REST webhook subscriptions. IC MS stores subscriber callback registrations and delivers subscribed external `Intent` and `IntentReport` event notifications by HTTP `POST` to the subscriber listener callback URL. Kafka is not used for external hub notification delivery. Delivery reliability is handled by an IC MS-owned local webhook delivery outbox and HTTP retry relay.
+
+IC MS therefore has two separate event-delivery paths:
+
+| Delivery path | Purpose | Transport | Durability model | Headers | Payload |
+|---|---|---|---|---|---|
+| Internal platform events | Publish internal state/progress events such as `IntentValidatedEvent` to independent internal consumers. | Kafka. | IC MS internal event outbox and Kafka relay. | CloudEvents-style Kafka/platform event headers. | Internal event JSON body. |
+| External TMF/webhook notifications | Notify registered hub subscribers about consumer-safe `Intent` and `IntentReport` events. | HTTP `POST` to subscriber listener callback URL. | IC MS webhook delivery outbox and HTTP retry relay. | HTTP headers. | TMF-style event request body. |
+
 ---
 
 ## 1A. TMF compliance and platform extension baseline:
@@ -107,6 +116,8 @@ IC MS keeps the external `Intent` and `IntentReport` contract TMF-aligned while 
 | `428 Precondition Required` | Explicit response when required `If-Match` is missing |
 | Termination-retention behaviour for `DELETE /intent/{id}` | Runtime Intent records remain available for audit, reporting, lifecycle history, and traceability |
 | Ordinary external `IntentReport` delete not exposed | `IntentReport` is read-only curated projection/audit history for ordinary consumers; governed/admin removal remains internal or restricted |
+
+Hub notification delivery is REST webhook delivery to subscriber listener callback URLs. IC MS does not create a Kafka topic or self-publish/self-consume Kafka events for external hub notifications.
 
 ---
 
@@ -1183,7 +1194,7 @@ Cache-Control: private, max-age=300
 
 ---
 
-## 11A. IntentReport delete posture
+## 11A. IntentReport delete posture:
 
 IC MS does not expose ordinary external `DELETE /intentManagement/v5/intent/{intentId}/intentReport/{id}` through NGW or public TMF-facing consumer APIs by default.
 
@@ -1191,7 +1202,7 @@ External consumers can list and retrieve `IntentReport` records only. `IntentRep
 
 IC MS may provide an internal-only governed delete/purge capability for `IntentReport` records. This internal capability is not routed through NGW, not advertised as a public consumer API, and not available to normal external consumers. It is restricted to retention purge, legal deletion, platform administration, approved data-correction workflows, or policy-governed cleanup.
 
-### TMF posture
+### TMF posture:
 
 TMF921 includes an `IntentReport` delete operation and `IntentReportDeleteEvent` in the API/event model. IC MS intentionally does not expose the delete operation to ordinary external consumers because deleting reports as a normal consumer action would remove audit/projection history and would require introducing a separate report lifecycle such as `Archived` or `Deleted`.
 
@@ -1199,7 +1210,7 @@ No separate `IntentReport` lifecycle is baselined for ordinary consumer use. Del
 
 If an implementation must expose the TMF report delete route for compatibility, it must be restricted/admin-only or return a policy error such as `403 Forbidden` or `405 Method Not Allowed` for ordinary consumers, depending on gateway/API policy.
 
-### Event posture
+### Event posture:
 
 `IntentReportDeleteEvent` remains part of the external TMF-style event vocabulary for `IntentReport` alignment.
 
@@ -1282,6 +1293,59 @@ IntentReportDeleteEvent
 ```
 
 `IntentReportDeleteEvent` is included in the subscription vocabulary for TMF alignment, but is emitted only for governed internal/admin retention or deletion scenarios, not ordinary external consumer delete.
+
+### Hub notification delivery rule:
+
+Subscribed notifications are delivered as REST webhook callbacks. IC MS sends an HTTP `POST` to the subscriber callback URL using the corresponding external TMF-style event payload as the request body. Kafka and CloudEvents headers are not used for this external hub delivery path. Webhook requests use HTTP headers such as `Content-Type`, `X-Correlation-Id`, and subscriber-specific authentication headers where configured.
+
+IC MS records pending webhook deliveries in an IC MS-owned local delivery outbox and retries delivery according to platform retry policy. A subscriber listener should return `204 No Content` when the notification is accepted.
+
+### Example subscriber listener callback:
+
+```http
+POST https://consumer.example.com/listener/intent/events HTTP/1.1
+Content-Type: application/json
+X-Correlation-Id: corr-intent-status-001
+```
+
+```json
+{
+  "eventId": "evt-intent-status-001",
+  "eventTime": "2026-04-18T12:20:00+10:00",
+  "timeOccurred": "2026-04-18T12:20:00+10:00",
+  "eventType": "IntentStatusChangeEvent",
+  "correlationId": "corr-intent-status-001",
+  "description": "Intent lifecycle status changed.",
+  "priority": "Normal",
+  "title": "Intent status changed",
+  "event": {
+    "intent": {
+      "id": "INT-HOSP-2026-001",
+      "href": "/intentManagement/v5/intent/INT-HOSP-2026-001",
+      "name": "Sydney Hospital Surgical Connection Intent",
+      "version": "v2",
+      "lifecycleStatus": "Active",
+      "@type": "Intent",
+      "@baseType": "Entity"
+    }
+  },
+  "reportingSystem": {
+    "id": "intent-controller-ms",
+    "name": "Intent Controller MS"
+  },
+  "source": {
+    "id": "intent-controller-ms",
+    "name": "Intent Controller MS"
+  },
+  "@type": "IntentStatusChangeEvent"
+}
+```
+
+### Subscriber listener success response:
+
+```http
+HTTP/1.1 204 No Content
+```
 
 ---
 
@@ -1549,9 +1613,7 @@ They must not expose raw telemetry, raw optimiser decisions, raw `t7.knowledge p
       "lifecycleStatus": "Active",
       "@type": "Intent",
       "@baseType": "Entity"
-    },
-    "previousLifecycleStatus": "InProgress",
-    "newLifecycleStatus": "Active"
+    }
   },
   "reportingSystem": {
     "id": "intent-controller-ms",
@@ -1564,6 +1626,8 @@ They must not expose raw telemetry, raw optimiser decisions, raw `t7.knowledge p
   "@type": "IntentStatusChangeEvent"
 }
 ```
+
+`IntentStatusChangeEvent` carries the current `event.intent.lifecycleStatus` snapshot. It does not carry separate `previousLifecycleStatus` or `newLifecycleStatus` fields in the external event payload. The event type plus the emitted resource snapshot provide the external lifecycle/status-change signal.
 
 ---
 
@@ -1745,7 +1809,7 @@ IC MS emits external TMF-style resource events for `IntentReport` projection cha
 
 ---
 
-## 25. Internal event publication note:
+## 25. Internal Kafka event publication note:
 
 IC MS publishes `IntentValidatedEvent` internally after syntactic validation and admission.
 
@@ -1754,6 +1818,23 @@ This is not a point-to-point command for a single consumer.
 It is a platform state/progress event meaning the runtime Intent has passed IC MS syntactic validation and has been admitted into the intent lifecycle.
 
 Current primary consumer is II MS / `intent-intelligence-ms`, but the event may be consumed by other authorised internal consumers where useful.
+
+Internal publication uses the IC MS internal event outbox and Kafka relay. Kafka records use the platform CloudEvents-style header model. This internal Kafka publication path is separate from external hub notification delivery.
+
+Typical internal Kafka headers are:
+
+| Header | Meaning |
+|---|---|
+| `ce-specversion` | CloudEvents specification version. |
+| `ce-id` | Stable event identifier. |
+| `ce-source` | Producing service, typically `intent-controller-ms`. |
+| `ce-type` | Internal event type, for example `IntentValidatedEvent`. |
+| `ce-time` | Event occurrence timestamp. |
+| `ce-subject` | Runtime intent identifier where applicable. |
+| `ce-correlationid` | Correlation identifier for tracing. |
+| `content-type` | Event payload content type, usually `application/json`. |
+
+External hub notifications do not use these Kafka headers. They are HTTP webhook calls and use HTTP headers.
 
 ---
 
@@ -1770,13 +1851,13 @@ Current primary consumer is II MS / `intent-intelligence-ms`, but the event may 
 - GET responses may use bounded private caching.
 - Clients may request a fresh GET using `Cache-Control: no-cache`.
 - `IntentDeleteEvent` represents termination acceptance, not physical deletion.
-- External `Intent*Event` and `IntentReport*Event` payloads are curated projection events and must not expose raw telemetry, raw callback payloads, raw optimiser details, raw knowledge-plane data, or internal candidate scoring.
+- External `Intent` events and `IntentReport` events are curated projection events and must not expose raw telemetry, raw callback payloads, raw optimiser details, raw knowledge-plane data, or internal candidate scoring.
 - External event examples include both `eventTime` and `timeOccurred` with the same canonical event occurrence timestamp.
 - IC MS does not expose ordinary external `DELETE /intent/{intentId}/intentReport/{id}` by default; IntentReport is read-only audit/projection history and is retained unless governed internal retention policy archives or purges it.
 
-## Shared semantic bucket baseline
+## Shared semantic bucket baseline:
 
-### Runtime Intent expression
+### Runtime Intent expression:
 
 IC MS accepts and projects runtime Intent resources using the external runtime expression shape baselined by ID MS:
 
@@ -1799,7 +1880,7 @@ IC MS accepts and projects runtime Intent resources using the external runtime e
 
 `location`, `serviceType`, and `serviceClass` are not peer fields beside `targets`, `constraints`, and `preferences`. They are modelled under `expression.expressionValue.context.constraints` because they restrict what and where the intent must fulfil.
 
-### Complete POST /intent request body example
+### Complete POST /intent request body example:
 
 ```json
 {
@@ -1849,7 +1930,7 @@ IC MS accepts and projects runtime Intent resources using the external runtime e
 }
 ```
 
-### Complete IntentValidatedEvent body example
+### Complete IntentValidatedEvent body example:
 
 ```json
 {
@@ -1903,7 +1984,7 @@ IC MS accepts and projects runtime Intent resources using the external runtime e
 }
 ```
 
-### Baseline rules
+### Baseline rules:
 
 - External runtime `Intent.expression.expressionValue` uses the `context` wrapper.
 - `context` contains only `targets`, `constraints`, and `preferences`.

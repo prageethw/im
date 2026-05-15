@@ -1,10 +1,10 @@
-# Intent Controller MS Solution Brief
+# Intent Controller MS Solution Brief:
 
 ## Summary:
 
 Intent Controller MS (IC MS) is the TMF-facing runtime intent controller for the Intent Enabler. It owns the external `Intent` and `IntentReport` resource boundary, admits syntactically valid runtime intent requests, projects external lifecycle/status state, and publishes curated external runtime intent events. IC MS is deliberately not the semantic, optimisation, orchestration, callback, or runtime assurance owner.
 
-Its main purpose is to provide a stable external runtime API and event projection layer while delegating deeper decision-making and assurance responsibilities to the appropriate downstream services. 
+Its main purpose is to provide a stable external runtime API and event projection layer while delegating deeper decisioning and assurance responsibilities to the appropriate downstream services. The current baseline source is GitHub `main/baseline/intent`. This solution brief is aligned to the validated `ic_ms_specification.md`, `ic_ms_design_brief.md`, and the baselined ID MS definition contract.
 
 ## Logical View:
 
@@ -69,8 +69,11 @@ IC MS owns the externally visible runtime projection, not the full internal fulf
 3. When a subscribed `Intent` or `IntentReport` event occurs, IC MS creates the TMF-style event payload.
 4. IC MS writes webhook delivery work to its own local delivery outbox.
 5. The IC MS delivery relay posts the event payload to the subscriber listener callback URL using HTTP `POST`.
-6. The subscriber listener acknowledges delivery with an HTTP success response, normally `204 No Content`, where aligned to TMF listener behaviour.
-7. IC MS retries failed callback deliveries according to the delivery policy.
+6. The subscriber listener acknowledges delivery with an HTTP success response, normally `204 No Content` where aligned to TMF listener behaviour.
+7. IC MS retries failed callback deliveries according to delivery policy.
+
+Kafka is not used for external hub notification delivery. IC MS does not create a self-publish/self-consume Kafka loop for hub notifications where it is both the event originator and the delivery owner.
+
 ## Solution Elaboration:
 
 IC MS is the runtime equivalent of a controlled admission and projection layer. It accepts runtime intent requests only when the incoming payload is structurally valid and references a concrete active `IntentSpecification`. It does not interpret whether the intent is semantically achievable, feasible, optimal, policy-compliant, or currently assured.
@@ -167,7 +170,7 @@ Accepted domain-scoped platform extension:
 | Retrieve intent event subscription | `GET` | `/intentManagement/v5/intent/hub/{id}` |
 | Delete intent event subscription | `DELETE` | `/intentManagement/v5/intent/hub/{id}` |
 
-The hub routes register REST webhook subscribers.
+The hub routes register REST webhook subscribers. They are not Kafka subscription APIs.
 
 ## Request shape:
 
@@ -364,25 +367,36 @@ IC MS persists external runtime intent projections, runtime version metadata, hu
 | Delivery status | Tracks pending, delivered, retrying, and failed delivery work. |
 | Retry metadata | Retry count, next retry time, and last error information. |
 
-## Internal event publication:
+## Event delivery paths:
 
-IC MS publishes internal state/progress events through the platform event backbone where an independent internal consumer exists.
+IC MS has two distinct event-delivery paths. The two paths must not be collapsed into a single Kafka or webhook model.
 
-| Event category | Purpose |
-|---|---|
-| `IntentValidatedEvent` | Internal state/progress event emitted after syntactic validation succeeds. |
+| Delivery path | Purpose | Transport | Durability model | Headers | Payload |
+|---|---|---|---|---|---|
+| Internal platform event publication | Notify independent internal microservice consumers that runtime intent admission or another internal milestone has occurred. | Kafka. | IC MS internal event outbox and Kafka relay. | CloudEvents-style Kafka/platform event headers. | Internal event JSON body, for example `IntentValidatedEvent`. |
+| External TMF/webhook notification delivery | Notify registered external subscribers about consumer-safe `Intent` and `IntentReport` events. | HTTP `POST` to subscriber listener callback URL. | IC MS webhook delivery outbox and HTTP retry relay. | HTTP headers. | TMF-style event request body, for example `IntentStatusChangeEvent`. |
 
-`IntentValidatedEvent` is not a point-to-point command. It states that an `Intent` has passed IC MS syntactic validation and has been admitted into the runtime lifecycle.
+## Internal Kafka event publication:
 
-## Hub notification delivery:
+IC MS publishes internal state/progress events through the platform Kafka event backbone where an independent internal consumer exists.
 
-External `Intent` and `IntentReport` notifications are delivered to subscriber listener callback URLs through the hub subscription model.
+| Event category | Purpose | Transport | Primary consumer |
+|---|---|---|---|
+| `IntentValidatedEvent` | Internal state/progress event emitted after syntactic validation succeeds. | Kafka. | II MS / `intent-intelligence-ms`. |
 
-| Delivery target | Event usage |
-|---|---|
-| Subscriber callback URL | External event delivery target configured through `/hub` or `/intent/hub`; the URL is subscriber-owned, not TMF-owned. |
+`IntentValidatedEvent` is not a point-to-point command. It states that an `Intent` has passed IC MS syntactic validation and has been admitted into the runtime lifecycle. IC MS writes the event to its internal event outbox, and the internal event relay publishes it to Kafka using the platform event header model.
 
-External events must not expose raw telemetry, raw optimiser decisions, raw Knowledge Plane data, raw callback payloads, internal candidate scoring, or internal event payloads.
+## External hub notification delivery:
+
+External `Intent` and `IntentReport` notifications are delivered to subscriber listener callback URLs through the hub subscription model. They are not delivered to external subscribers through Kafka.
+
+| Delivery target | Event usage | Transport |
+|---|---|---|
+| Subscriber callback URL | External event delivery target configured through `/hub` or `/intent/hub`; the URL is subscriber-owned, not TMF-owned. | HTTP `POST`. |
+
+IC MS writes webhook delivery work to a local webhook delivery outbox and an HTTP delivery relay posts the TMF-style event body to the subscriber listener callback URL. Kafka is not used for external hub notification delivery.
+
+External events must not expose raw telemetry, raw optimiser decisions, raw Knowledge Plane data, raw callback payloads, internal candidate scoring, or internal Kafka payloads.
 
 ## Event identity:
 
@@ -419,9 +433,9 @@ IntentReportDeleteEvent
 
 Status-change events carry the current `intent.lifecycleStatus` snapshot in the `event.intent` payload. They do not carry separate `previousLifecycleStatus` or `newLifecycleStatus` fields in the external event payload. The event type, timestamp, and emitted resource snapshot provide the lifecycle-change signal.
 
-## Internal CloudEvents headers:
+## Internal Kafka CloudEvents headers:
 
-For internal event backbone delivery, IC MS should use the common platform CloudEvents envelope where applicable. Typical CloudEvents headers include:
+For internal Kafka event backbone delivery, IC MS should use the common platform CloudEvents envelope where applicable. These headers apply to internal Kafka events such as `IntentValidatedEvent`; they do not apply to external webhook notifications. Typical CloudEvents headers include:
 
 | Header | Meaning |
 |---|---|
@@ -434,8 +448,9 @@ For internal event backbone delivery, IC MS should use the common platform Cloud
 | `ce-correlationid` | Correlation identifier for tracing. |
 | `content-type` | Event payload content type, usually `application/json`. |
 
-External TMF-style subscriber callbacks are REST webhook notifications. They carry HTTP headers and a REST request body.
-## Internal message shape:
+External TMF-style subscriber callbacks are REST webhook notifications. They carry HTTP headers and a REST request body rather than Kafka-style CloudEvents headers.
+
+## Internal Kafka message body:
 
 ### IntentValidatedEvent:
 
@@ -509,6 +524,8 @@ X-Correlation-Id: corr-intent-status-001
 ```
 
 ## Webhook HTTP headers:
+
+Webhook notifications use HTTP headers, not Kafka CloudEvents headers.
 
 | Header | Purpose |
 |---|---|
@@ -637,7 +654,7 @@ Internal consumers can rely on `IntentValidatedEvent` as the admitted runtime in
 | Item | Status |
 |---|---|
 | Exact physical Kafka topic split for IC internal events | May be refined by deployment policy while preserving `IntentValidatedEvent` semantics. |
-| Public exposure posture for TMF strict `/hub` versus domain-scoped `/intent/hub` | Both are baselined; gateway product exposure can choose the supported route set. |
+| Public exposure posture for TMF strict `/hub` versus domain-scoped `/intent/hub` | Both are baselined; gateway product exposure can choose supported route set. |
 | Optional internal/admin `IntentReport` purge API details | Governed capability is allowed, but ordinary external consumer delete remains not exposed by default. |
 | Full internal version-history retrieval API | Not exposed by default; can be defined later as a documented platform extension if needed. |
 
