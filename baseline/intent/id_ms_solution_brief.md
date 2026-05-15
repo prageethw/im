@@ -220,7 +220,9 @@ Clients must not use or submit `DELETED` as a lifecycle status.
 
 ## Authorisation:
 
-ID MS is externally reached through the platform gateway/security boundary. The gateway authenticates the caller and forwards trusted system context according to platform policy. ID MS must authorise callers for specification management operations and subscription management operations. It must enforce resource-level and lifecycle-level rules independently of gateway authentication.
+ID MS is externally reached through the platform gateway/security boundary. The gateway authenticates the caller and forwards trusted system context according to platform policy.
+
+ID MS must authorise callers for specification management operations and subscription management operations. It must enforce resource-level and lifecycle-level rules independently of gateway authentication.
 
 | Operation type | Authorisation expectation |
 |---|---|
@@ -248,7 +250,7 @@ The implementation should create hub delivery work from committed state. Resourc
 
 ID MS uses `/intentSpecification/hub` as a REST webhook subscription mechanism. Subscribers register callback URLs and optional filters. After a committed `IntentSpecification` resource change, ID MS delivers matching `IntentSpecification` event notifications by HTTP `POST` to the registered subscriber callback URL.
 
-Kafka is not used for ID MS hub notification delivery. There is no ID MS self-publish/self-consume Kafka loop and no dedicated Kafka topic for these external hub notifications. ID MS is both the event originator and the delivery owner.
+The delivery model is a TMF-style subscriber listener callback. Kafka is not used for ID MS hub notification delivery. There is no ID MS self-publish/self-consume Kafka loop and no dedicated Kafka topic for these external hub notifications. ID MS is both the event originator and the delivery owner.
 
 Events are external subscription notifications for specification-resource changes. They must not expose internal fulfilment, KP, optimiser, assurance, telemetry, callback, or candidate/resource scoring details.
 
@@ -290,10 +292,10 @@ External ID MS events use TMF-style event identity fields:
 
 ## Webhook HTTP request:
 
-ID MS hub notification delivery is an outbound HTTP callback to the subscriber URL registered through `/intentSpecification/hub`.
+ID MS hub notification delivery is an outbound HTTP callback to the subscriber listener URL registered through `/intentSpecification/hub`.
 
 ```http
-POST https://subscriber.example.com/tmf-callbacks/intent-specification-events HTTP/1.1
+POST https://subscriber.example.com/tmf-callbacks/intent-specification-status-change-event HTTP/1.1
 Content-Type: application/json
 X-Correlation-Id: corr-intent-spec-status-001
 ```
@@ -419,7 +421,7 @@ Delete events are emitted only after successful delete and show the last known l
 - `/intentSpecification/hub` creates, retrieves, and deletes REST webhook subscriptions.
 - ID MS stores subscriber callback URLs and subscription filters in its own subscription store.
 - After a committed specification change, ID MS creates local delivery outbox work for matching subscriptions.
-- An ID MS-owned retry relay delivers the event by HTTP `POST` to each subscriber callback URL.
+- An ID MS-owned retry relay delivers the event by HTTP `POST` to each subscriber listener callback URL.
 - Kafka is not used for hub delivery. There is no ID MS self-publish/self-consume Kafka loop for external notifications.
 
 ## Configuration:
@@ -468,7 +470,7 @@ Consumers of ID MS should rely on these behaviours:
 | `PATCH` position | Closed. Supported for TMF compatibility but discouraged generally. |
 | Activation endpoint | Closed. No custom `/activate`; use lifecycle update through `PUT` or `PATCH`. |
 | Version family | Closed. Use `familyId`; only one active version per family for new runtime creation. |
-| Hub delivery model | Closed. `/intentSpecification/hub` uses REST webhook callback delivery backed by an ID MS-owned local delivery outbox; Kafka is not used for external hub notification delivery. |
+| Hub delivery model | Closed. `/intentSpecification/hub` uses REST webhook subscriber listener callback delivery backed by an ID MS-owned local delivery outbox; Kafka is not used for external hub notification delivery. |
 | Event family | Closed. `IntentSpecificationCreateEvent`, `IntentSpecificationAttributeValueChangeEvent`, `IntentSpecificationStatusChangeEvent`, and `IntentSpecificationDeleteEvent`. |
 | Event timestamp spelling | Closed. Use both `eventTime` and corrected `timeOccurred` with the same canonical occurrence timestamp. |
 | Priority vocabulary | Closed. Use `critical`, `high`, `standard`; do not use `clinical-critical`. |
