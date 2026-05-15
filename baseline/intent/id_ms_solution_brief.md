@@ -1,4 +1,4 @@
-# Intent Definition MS Solution Brief
+# Intent Definition MS Solution Brief:
 
 ## Summary:
 
@@ -25,7 +25,7 @@ IntentSpecification catalogue
 IntentSpecification lifecycle state
 IntentSpecification version-family governance
 IntentSpecification hub subscriptions
-External IntentSpecification event publication
+External IntentSpecification REST webhook notification delivery
 ```
 
 ID MS exposes REST APIs for `IntentSpecification` resources and domain-scoped subscription resources.
@@ -52,12 +52,12 @@ The primary ID MS process flows are:
 5. Retire the previous active specification in the same `familyId` during activation.
 6. Delete an unused draft specification where retention and runtime-reference rules allow it.
 7. Create, retrieve, and delete external event subscriptions.
-8. Publish external `IntentSpecification` event notifications after successful resource changes.
+8. Deliver external `IntentSpecification` event notifications by REST webhook callback after successful resource changes.
 
 Activation is a lifecycle update on the resource, not a custom action endpoint. The service must not expose `POST /intentManagement/v5/intentSpecification/{id}/activate`.
 
 Strict TMF-compatible clients may use `PATCH`; the preferred platform extension is `PUT` when the caller submits the full resource representation.
-![alt text](https://img.plantuml.biz/plantuml/png/xLZRJXn747sVhwWGoG9vsIKOi4r4v8K5Z68kOfVOKl13pqmFsw9tUjBTiu2GfJpb0w9yeRyaLTqpUvsz9SvR5i6YdkhggbEdBZtlZ6NQvZq9PwdbgOKMJqGgh50fdBTX4zhyjvod4OSJgHw2xsoNzpXaaeaqCFSYpPXcFJ25q3atXjtnfXHtAKIeZkiHgP15ztTQvMbyfAJIyFs9-un8u5yh8f6nr1vE2iUClqcY6S9AnrmNWdlH6nuc5TOrjLOFXT0hznaHIfNbOshYlN1lTszIOjAg94cser6hOj4Ng6HQS8j-AgmwHQbiMlmj_GI15LRowjYidxNmQmE-_luNN6dHO_e9lrM4CHYFcWa25bdKkdRyY159cOGZAL3XRTg0o-DFq81cRhjm9PbDbEwj0JE5H302CgnTd7vqpqu_ZgzNcNUR5lQv7MUjytOGAIbvHCzDkQUTyUWsFMAMINMNStzoinF4k18oms7jChUXUeGE2oL7dQr3h_3ofdDu-MdSZ4Aq9Kp6RDJb6kM7d8C7fU-vzjjRP-shPkVe_V5r41mSm0zrEDASMGuN_05QcYKMXWQAH4JCkNLm47XSOFCdH07suUgotO66SBBdB4Noz_2_Hd-tM1lRVvi-Gyfwl0PzhWqkr21XFI6Vpk8QI97mw2cIl6sPpSq-h3axrcfGhzVXIu37uQ4491wBONfWEWPDSJOsSClu6B73fnbfDnPIT2QUvSnWZuSIjpreONcLgCVck4-EOmeXh0QzWDOXMCrImrnCDm8wV7Deu_RM3mMgCJo3cECYUkUDAL6Ts5eH2Oy7UUpZiTmUH38OXdxC-Gp9IR02KeLBWG52FPnSDa4XHCUDxDw7N-TZzJcGIcLEAMTH5uDrXr5nYj_d8PWyD94McGi6u6VSie5ZZcBFXNI8zOb9IRJ-GdHo5kul25f98Jg4IGllEvqhs7vyT0lqAKazwU3srXPS_ZmGcm4TLfvxRmWCe7DxkCGCTeTnBBqQwumLFQvok_3WdST7bDvrVoVtpB12f95soOSuMoo54IOzLhXr_fYf59S5bZs2RLCboOOtBuq3-gKAi5s7Qzmcq0qyyWDbJmMcfg82d1wlKW3mM0J2xS6OD9v5l59cungvLjPBM8-5YLIV5XkWqM742lfCYfXLvcGLOp-JHRCBn30dYGkOMfgR74bKbO6J4eJiArQ7arpApMkEOqFaGtIJnLHjrpFD4-G6PeJhOZUT3KAOEYsGLuNkMca-KHzNCHTwmXeCSI-J76NnG9NhYFv1ZGQtU0ycY_NDyg5oeQ4CIz3suG6XYfzMAyRQk_rD2d7J8aN3tF9VcCpvKPUbTpx3box9HOHoXtzSKNWBWMLhxbpnHUNswnz_bXK3h89XYKE6-nfdO1sxDGkH31kUJM4ThgZfOpQN9EgSdsmQ12Qou8wQpw6EkEjQIVKXjPecaXWImMLiGANowKSmw0JqSYm08KU_Yca0nsJBf_X4fwtEgAomlpXs9JQnB4FRImq-Z8JT_-pw5kpQWPUmMuSc-jSdO7tiIT6QMyC1zINDoWgBcHMQuxpD-qBbPYxZ2dLajS3ZXcEGPq0PHQg05vST58YGVQe73LRQWLqgKuX2_JPjSzqNM4xERt0g877gRzXctPH0BMKMymRQlabLd1xbIe3mCVOJdneqTioLdKzz6jmpQ28M8feWdslWuwbXk0MypDxXbylXYMF7mbYn7UykCRnmMh8ogbxQg_CfKCxh6rwTfq4yhcznff55ema6woNbuer_hQgmoV6fz6J33JhBPsFLh3uUjFyeKKE55z59dyoi_7L9krV7cwSR0sxItA3ZS-zlixDKubKPTrCNW8SkJscEfBaHzxqePwjDDw-ucxNE9JTqrS9HP3AbMiSVZZl7gsNLAbsWcF3uI7D2jhw0L07pb2rdmO6z9g39FoQWo2Dljoq6zKM9DfqjE6eZY9KDPtB3OWxxyBbG3mRpeOOXNtVWGi6HSWgSm3GHfqI8V7Dk3LC47B5b9klSlMR8ZWQCim8mvUGGYuakYND78d5MgV1mP-ijsUuUkp6Q6PT0LQxEaYqlDAyPtMZyXHC6xtsyN-sHc-VyUTkVLbvSgNcLAC3DzGS2IFE84-6ItERO4Fqra9gHMVvLIJSFgQUKgh7MTAtDp7wZ4JaLTVx8QD9leA4YULgh-NiGohdZEayPFy0uB-mdKumiNvICNiN98wLZd7b6NQrXVv08GGq4bkYvRolYsX2aHQyfnWxszwNNuSXLT47WbhsA8i0hr9W1F5AfUwmB5UYClX8fj8szpfZHQIRSdTb7gc291cL-DL3crU9_Y4jH_9R3XV9Tw1wVRhzZjMf1AGlUOMBdFHdy3G00)
+
 ## Solution Elaboration:
 
 ID MS manages the definition-time contract used by the intent platform.
@@ -92,7 +92,7 @@ ID MS is responsible for:
 | Mutability control | Allow material update only while the specification is `DRAFT`. |
 | Concurrency | Enforce strong `ETag` / `If-Match` behaviour on unsafe operations. |
 | Subscription management | Manage external `IntentSpecification` event subscriptions through domain-scoped hub routes. |
-| External events | Publish TMF-style external resource events after successful specification changes. |
+| External events | Deliver TMF-style external resource-event notifications to registered hub subscriber callback URLs after successful specification changes. |
 | Retrieval support | Allow IC MS and authorised consumers to retrieve active specifications for runtime validation and discovery. |
 
 ## ID MS does not:
@@ -119,6 +119,8 @@ ID MS exposes two contract families:
 |---|---|
 | Resource API | REST API for `IntentSpecification` lifecycle and version management. |
 | Hub API | Domain-scoped hub API for external `IntentSpecification` event subscriptions. |
+
+The hub API is a REST webhook subscription model. Subscribers register callback URLs, and ID MS delivers matching `IntentSpecification` event notifications by HTTP `POST` to those callback URLs. Kafka is not used for hub notification delivery.
 
 The platform base path is:
 
@@ -247,21 +249,23 @@ ID MS requires durable persistence for:
 | Version-family index | Efficient lookup and enforcement of one active version per `familyId`. |
 | Subscription store | Source of truth for domain-scoped hub subscriptions. |
 | Audit/history store | Retention of lifecycle and governance evidence, especially for active/retired specifications. |
-| Outbox/event publication store | Durable publication of external `IntentSpecification` event notifications after committed resource changes. |
+| Hub delivery outbox store | Durable ID MS-owned callback delivery work for external `IntentSpecification` event notifications after committed resource changes. |
 
-The implementation should publish external events from committed state. Resource mutation and event publication should be resilient to retry, duplicate delivery, and transient downstream publisher failures.
+The implementation should create hub delivery work from committed state. Resource mutation and notification delivery should be resilient to retry, duplicate delivery, and transient subscriber callback failures.
 
 ## Kafka publication:
 
-ID MS may publish external specification events through the platform eventing mechanism used for TMF-style notifications. The solution brief does not require ID MS to expose internal workflow event topics.
+ID MS does not use Kafka for `/intentSpecification/hub` notification delivery. The hub is a REST webhook subscription mechanism: ID MS stores subscriber callback registrations and delivers `IntentSpecification` event notifications by HTTP `POST` to the registered callback URL.
+
+Delivery reliability is handled by an ID MS-owned local callback/outbox table and retry relay. Kafka is not required because ID MS is the event originator and delivery owner, and no independent internal consumer requires a dedicated topic for these external hub notifications.
 
 Events are external subscription notifications for specification-resource changes. They must not expose internal fulfilment, KP, optimiser, assurance, telemetry, callback, or candidate/resource scoring details.
 
 ## Topics:
 
-The baseline documents define the external event family but do not lock a dedicated Kafka topic name for ID MS in the same way the ICB callback topic is locked.
+No Kafka topic is defined or required for ID MS `/intentSpecification/hub` notifications. Registered subscribers receive events through REST webhook callback delivery.
 
-The implementation should use the platform’s external notification/event distribution convention for TMF-style `IntentSpecification` event delivery.
+The implementation should use the ID MS local hub delivery outbox and retry relay for reliable callback delivery.
 
 Supported external event types are:
 
@@ -286,7 +290,7 @@ External ID MS events use TMF-style event identity fields:
 | `description` | Human-readable event description. |
 | `priority` | Event priority, normally `Normal`. |
 | `title` | Human-readable event title. |
-| `event` | Event payload containing the `intentSpecification` snapshot and transition data where applicable. |
+| `event` | Event payload containing the `intentSpecification` snapshot. |
 | `reportingSystem` | ID MS reporting system identity. |
 | `source` | ID MS source identity. |
 | `@type` | Event type. |
@@ -403,6 +407,14 @@ Delete events are emitted only after successful delete and show the last known l
 - Successful delete returns `204 No Content`.
 - Delete emits `IntentSpecificationDeleteEvent` only after successful delete.
 
+### Hub notification behaviour:
+
+- `/intentSpecification/hub` creates, retrieves, and deletes REST webhook subscriptions.
+- ID MS stores subscriber callback URLs and subscription filters in its own subscription store.
+- After a committed specification change, ID MS creates local delivery outbox work for matching subscriptions.
+- An ID MS-owned retry relay delivers the event by HTTP `POST` to each subscriber callback URL.
+- Kafka is not used for hub delivery. There is no ID MS self-publish/self-consume Kafka loop for external notifications.
+
 ## Configuration:
 
 ID MS configuration should include:
@@ -414,8 +426,8 @@ ID MS configuration should include:
 | Version-family rule | Only one active version per `familyId` for new runtime intent creation. |
 | Cache policy | GET-only private caching, with bounded TTLs. |
 | Concurrency policy | Unsafe operations require `If-Match`. |
-| Hub route policy | Domain-scoped `/intentSpecification/hub` routes retained as platform extension. |
-| Event filter policy | Supported `IntentSpecification` event types. |
+| Hub route policy | Domain-scoped `/intentSpecification/hub` routes retained as platform extension for REST webhook subscription delivery. |
+| Event filter policy | Supported `IntentSpecification` event types and subscription filters for REST webhook delivery. |
 | Schema registry / governed artefact references | Validation of `expressionSpecification` and `targetEntitySchema` references. |
 
 ## Consumer contract:
@@ -428,13 +440,12 @@ Consumers of ID MS should rely on these behaviours:
 - Consumers must treat `ACTIVE` and `RETIRED` specification contracts as immutable.
 - Consumers should use `fields` where a lightweight response is sufficient.
 - Consumers must use `If-Match` for unsafe updates and deletes.
-- Event subscribers receive only external `IntentSpecification` event notifications and not internal workflow details.
+- Event subscribers receive only external `IntentSpecification` event notifications through REST webhook callbacks and not internal workflow details.
 
 ## Open items:
 
 | Item | Status |
 |---|---|
-| Dedicated physical Kafka topic name for ID MS external events | Not locked in the current baseline; use platform external notification convention unless later baselined. |
 | Exact schema registry implementation for `targetEntitySchema.@schemaLocation` and `schemaHash` | Implementation detail to be finalised. |
 | Physical versus logical delete for unused drafts | Implementation detail; external outcome remains `204 No Content` and no `DELETED` lifecycle state. |
 | Exact governance approval workflow before activation | Business/process implementation detail; activation rules require governance completion where applicable. |
@@ -450,6 +461,7 @@ Consumers of ID MS should rely on these behaviours:
 | `PATCH` position | Closed. Supported for TMF compatibility but discouraged generally. |
 | Activation endpoint | Closed. No custom `/activate`; use lifecycle update through `PUT` or `PATCH`. |
 | Version family | Closed. Use `familyId`; only one active version per family for new runtime creation. |
+| Hub delivery model | Closed. `/intentSpecification/hub` uses REST webhook callback delivery backed by an ID MS-owned local delivery outbox; Kafka is not used for external hub notification delivery. |
 | Event family | Closed. `IntentSpecificationCreateEvent`, `IntentSpecificationAttributeValueChangeEvent`, `IntentSpecificationStatusChangeEvent`, and `IntentSpecificationDeleteEvent`. |
 | Event timestamp spelling | Closed. Use both `eventTime` and corrected `timeOccurred` with the same canonical occurrence timestamp. |
 | Priority vocabulary | Closed. Use `critical`, `high`, `standard`; do not use `clinical-critical`. |
@@ -465,4 +477,4 @@ Consumers of ID MS should rely on these behaviours:
 | Domain | Intent Domain |
 | Base path | `/intentManagement/v5` |
 | Primary resource | `IntentSpecification` |
-| Primary responsibility | Definition-time `IntentSpecification` catalogue, lifecycle/version governance, syntax contract, and external specification events. |
+| Primary responsibility | Definition-time `IntentSpecification` catalogue, lifecycle/version governance, syntax contract, and external REST webhook specification-event notifications. |
