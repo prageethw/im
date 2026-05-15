@@ -167,7 +167,7 @@ Accepted domain-scoped platform extension:
 | Retrieve intent event subscription | `GET` | `/intentManagement/v5/intent/hub/{id}` |
 | Delete intent event subscription | `DELETE` | `/intentManagement/v5/intent/hub/{id}` |
 
-The hub routes register REST webhook subscribers. They are not Kafka subscription APIs.
+The hub routes register REST webhook subscribers.
 
 ## Request shape:
 
@@ -376,13 +376,13 @@ IC MS publishes internal state/progress events through the platform event backbo
 
 ## Hub notification delivery:
 
-External `Intent` and `IntentReport` notifications are delivered to subscriber listener callback URLs through the hub subscription model. They are not delivered to external subscribers through Kafka.
+External `Intent` and `IntentReport` notifications are delivered to subscriber listener callback URLs through the hub subscription model.
 
 | Delivery target | Event usage |
 |---|---|
 | Subscriber callback URL | External event delivery target configured through `/hub` or `/intent/hub`; the URL is subscriber-owned, not TMF-owned. |
 
-External events must not expose raw telemetry, raw optimiser decisions, raw Knowledge Plane data, raw callback payloads, internal candidate scoring, or internal Kafka payloads.
+External events must not expose raw telemetry, raw optimiser decisions, raw Knowledge Plane data, raw callback payloads, internal candidate scoring, or internal event payloads.
 
 ## Event identity:
 
@@ -434,8 +434,7 @@ For internal event backbone delivery, IC MS should use the common platform Cloud
 | `ce-correlationid` | Correlation identifier for tracing. |
 | `content-type` | Event payload content type, usually `application/json`. |
 
-External TMF-style subscriber callbacks are REST webhook notifications. They carry HTTP headers and a REST request body rather than Kafka-style CloudEvents headers.
-
+External TMF-style subscriber callbacks are REST webhook notifications. They carry HTTP headers and a REST request body.
 ## Internal message shape:
 
 ### IntentValidatedEvent:
@@ -638,7 +637,7 @@ Internal consumers can rely on `IntentValidatedEvent` as the admitted runtime in
 | Item | Status |
 |---|---|
 | Exact physical Kafka topic split for IC internal events | May be refined by deployment policy while preserving `IntentValidatedEvent` semantics. |
-| Public exposure posture for TMF strict `/hub` versus domain-scoped `/intent/hub` | Both are baselined; gateway product exposure can choose supported route set. |
+| Public exposure posture for TMF strict `/hub` versus domain-scoped `/intent/hub` | Both are baselined; gateway product exposure can choose the supported route set. |
 | Optional internal/admin `IntentReport` purge API details | Governed capability is allowed, but ordinary external consumer delete remains not exposed by default. |
 | Full internal version-history retrieval API | Not exposed by default; can be defined later as a documented platform extension if needed. |
 
