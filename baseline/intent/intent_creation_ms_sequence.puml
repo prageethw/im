@@ -1,0 +1,187 @@
+@startuml IC MS - Runtime Intent Sequence Flows
+!theme plain
+skinparam sequenceMessageAlign center
+skinparam backgroundColor #FFFFFF
+skinparam participantBackgroundColor #dae8fc
+skinparam participantBorderColor #6c8ebf
+skinparam sequenceArrowColor #333333
+skinparam noteBorderColor #d6b656
+skinparam noteBackgroundColor #fff2cc
+skinparam dividerBackgroundColor #f0f0f0
+skinparam sequenceGroupBackgroundColor #f9f9f9
+
+title Intent Creation MS (IC MS) — Runtime Intent Sequence Flows
+
+actor "External Consumer" as Consumer
+participant "NGW / API Gateway" as GW
+participant "Intent Creation MS\n(IC MS)" as ICMS
+participant "Intent Definition MS\n(ID MS)" as IDMS
+collections "Intent\nStore (DB)" as STORE
+database "Outbox /\nDelivery Outbox (DB)" as OUTBOX
+database "Subscription\nRegistry (DB)" as SUBREG
+participant "Delivery Relay\n(background worker)" as RELAY
+collections "Downstream\nServices" as DS
+participant "Intent Assurance MS\n(IA MS)" as IAMS
+actor "Subscriber\nListener" as SUB
+
+== 1. Runtime Intent Creation ==
+Consumer -> GW : POST /intentManagement/v5/intent\n{ intentSpecification.id, expression/request, ... }
+GW -> ICMS : forward request
+
+group Syntactic Validation
+    ICMS -> ICMS : validate TMF resource shape
+    ICMS -> IDMS : GET /intentManagement/v5/intentSpecification/{id}\n(verify referenced spec is Active)
+    IDMS --> ICMS : IntentSpecification { lifecycleStatus: "Active", schema/definition }
+    ICMS -> ICMS : validate runtime expression/request shape\nagainst active IntentSpecification definition
+end
+
+alt Validation fails
+    ICMS --> GW : 422 Unprocessable Entity\n{ code: VALIDATION_FAILED, errors: [...] }
+    GW --> Consumer : 422 VALIDATION_FAILED
+else Validation succeeds
+    group Atomic DB transaction
+        ICMS -> STORE : persist external Intent projection\n{ id, version: 1, lifecycleStatus: Acknowledged }
+        ICMS -> OUTBOX : write IntentCreateEvent row { status: PENDING }
+    end
+    ICMS --> GW : 201 Created { intent, lifecycleStatus: Acknowledged }
+    GW --> Consumer : 201 Created { intent }
+
+    ICMS -> DS : emit IntentValidatedEvent (internal)\n→ semantic interpretation → optimisation\n→ orchestration preparation → apply\n→ callback interpretation → assurance
+    note right of DS : Downstream services process\nthe intent asynchronously
+
+    DS --> ICMS : outcome/projection events\n(progress, fulfilment state updates)
+    ICMS -> STORE : update external Intent projection\n(lifecycleStatus, IntentReport view)
+
+    RELAY -> OUTBOX : poll PENDING IntentCreateEvent
+    OUTBOX --> RELAY : [IntentCreateEvent]
+    RELAY -> SUBREG : lookup matching subscriptions
+    SUBREG --> RELAY : [{ callbackUrl }]
+    RELAY -> SUB : HTTPS POST {callbackUrl}\n{ event: IntentCreateEvent, intentId, lifecycleStatus }
+    alt HTTP 2xx
+        SUB --> RELAY : 204 No Content
+        RELAY -> OUTBOX : mark DELIVERED
+    else failure
+        SUB --> RELAY : 4xx / 5xx / timeout
+        RELAY -> OUTBOX : increment retry count (delivery policy back-off)
+    end
+end
+
+== 2. Runtime Intent Update ==
+note over Consumer, ICMS : Unsafe operations require If-Match header (optimistic concurrency via ETag)
+Consumer -> GW : PUT /intentManagement/v5/intent/{id}\n  or PATCH /intentManagement/v5/intent/{id}\nHeaders: If-Match: "{currentETag}"
+GW -> ICMS : forward request
+
+ICMS -> STORE : fetch current Intent record + ETag
+STORE --> ICMS : { intent, etag }
+
+alt ETag mismatch (concurrent modification)
+    ICMS --> GW : 412 Precondition Failed
+    GW --> Consumer : 412 Precondition Failed
+else ETag matches
+    ICMS -> ICMS : apply optimistic concurrency check
+    group Syntactic Validation (same as creation)
+        ICMS -> IDMS : validate updated expression against active IntentSpecification
+        IDMS --> ICMS : validation result
+    end
+
+    alt Meaningful runtime content change
+        group Atomic DB transaction
+            ICMS -> STORE : create new runtime version (version: n+1)\nretain version history for audit/traceability
+            ICMS -> STORE : update external projection to current version
+            ICMS -> OUTBOX : write IntentAttributeValueChangeEvent { status: PENDING }
+        end
+        ICMS -> DS : re-admit new version through downstream fulfilment flow
+        DS --> ICMS : updated outcome/projection events
+        ICMS -> STORE : update Intent + IntentReport projections
+    else Minor / non-content change
+        ICMS -> STORE : update in place (no new version)
+        ICMS -> OUTBOX : write IntentAttributeValueChangeEvent { status: PENDING }
+    end
+
+    ICMS --> GW : 200 OK { intent, version: n+1, newETag }
+    GW --> Consumer : 200 OK { intent }
+
+    RELAY -> OUTBOX : poll → deliver IntentAttributeValueChangeEvent to SUB
+    RELAY -> SUB : HTTPS POST {callbackUrl}\n{ event: IntentAttributeValueChangeEvent }
+    SUB --> RELAY : 204 No Content
+    RELAY -> OUTBOX : mark DELIVERED
+end
+
+== 3. Runtime Intent Termination ==
+note over Consumer, ICMS : DELETE is runtime termination, not physical deletion.\nRecord is retained for audit, reporting, lifecycle history, traceability.
+Consumer -> GW : DELETE /intentManagement/v5/intent/{id}
+GW -> ICMS : forward request
+ICMS -> STORE : fetch Intent record (validate exists & not already Terminated)
+STORE --> ICMS : { intent }
+
+group Atomic DB transaction
+    ICMS -> STORE : set lifecycleStatus → Terminated\n(retain record — no physical delete)
+    ICMS -> OUTBOX : write IntentDeleteEvent { status: PENDING }
+end
+
+ICMS --> GW : 202 Accepted { lifecycleStatus: Terminated }
+GW --> Consumer : 202 Accepted { intent }
+
+RELAY -> OUTBOX : poll → PENDING IntentDeleteEvent
+OUTBOX --> RELAY : [IntentDeleteEvent]
+RELAY -> SUBREG : lookup matching subscriptions
+SUBREG --> RELAY : [{ callbackUrl }]
+RELAY -> SUB : HTTPS POST {callbackUrl}\n{ event: IntentDeleteEvent, lifecycleStatus: Terminated }
+SUB --> RELAY : 204 No Content
+RELAY -> OUTBOX : mark DELIVERED
+
+== 4. IntentReport Projection ==
+note over IAMS, ICMS : IA MS owns runtime assurance truth.\nIC MS consumes curated assurance outcomes and projects IntentReport.
+IAMS -> ICMS : publish assurance outcome event\n{ intentId, assuranceStatus, metrics, ... }
+ICMS -> STORE : create / update IntentReport projection\n{ intentId, reportId, assuranceStatus, timestamp }
+ICMS -> OUTBOX : write IntentReportCreateEvent or IntentReportAttributeValueChangeEvent
+
+RELAY -> OUTBOX : poll → deliver IntentReport event to SUB
+RELAY -> SUB : HTTPS POST {callbackUrl}\n{ event: IntentReportCreateEvent / AttributeValueChangeEvent }
+SUB --> RELAY : 204 No Content
+RELAY -> OUTBOX : mark DELIVERED
+
+Consumer -> GW : GET /intentManagement/v5/intentReport\n  or GET /.../{reportId}
+GW -> ICMS : forward request
+ICMS -> STORE : query IntentReport projections
+STORE --> ICMS : [IntentReport] or single record
+ICMS --> GW : 200 OK { result }
+GW --> Consumer : 200 OK { result }
+
+note over Consumer, STORE : Ordinary external consumers do NOT delete IntentReport records.\nOnly governed internal/admin purge (policy-controlled) may remove reports.
+
+group Admin / Governed Purge (policy-controlled, internal)
+    ICMS -> STORE : remove IntentReport record (policy allows)
+    ICMS -> OUTBOX : write IntentReportDeleteEvent { status: PENDING }
+    RELAY -> OUTBOX : poll → deliver IntentReportDeleteEvent to SUB
+    RELAY -> SUB : HTTPS POST {callbackUrl}\n{ event: IntentReportDeleteEvent }
+    SUB --> RELAY : 204 No Content
+    RELAY -> OUTBOX : mark DELIVERED
+end
+
+== 5a. Register Hub Subscription ==
+note over Consumer, SUBREG : Subscriber registers callback URL via strict TMF /hub\nor platform extension /intent/hub
+Consumer -> GW : POST /intentManagement/v5/hub\n  or POST /intentManagement/v5/intent/hub\n{ callbackUrl, query/filter }
+GW -> ICMS : forward request
+ICMS -> SUBREG : persist { subscriptionId, callbackUrl, filter, deliveryMetadata }
+SUBREG --> ICMS : 201 { subscriptionId }
+ICMS --> GW : 201 Created { subscriptionId, callbackUrl }
+GW --> Consumer : 201 Created { subscription }
+
+== 5b. Retrieve Hub Subscription ==
+Consumer -> GW : GET /intentManagement/v5/hub/{id}
+GW -> ICMS : forward request
+ICMS -> SUBREG : lookup subscription record
+SUBREG --> ICMS : subscription
+ICMS --> GW : 200 OK { subscription }
+GW --> Consumer : 200 OK { subscription }
+
+== 5c. Delete Hub Subscription ==
+Consumer -> GW : DELETE /intentManagement/v5/hub/{id}
+GW -> ICMS : forward request
+ICMS -> SUBREG : remove subscription record
+SUBREG --> ICMS : confirmed
+ICMS --> GW : 204 No Content
+GW --> Consumer : 204 No Content
+
+@enduml
