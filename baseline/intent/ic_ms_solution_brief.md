@@ -2,7 +2,7 @@
 
 ## Summary:
 
-Intent Controller MS (IC MS) is the TMF-facing runtime intent controller for the Intent Enabler. It owns the external `Intent` and `IntentReport` resource boundary, admits syntactically valid runtime intent requests, projects external lifecycle/status state, and publishes curated external runtime intent events. IC MS is deliberately not the semantic, optimisation, orchestration, callback, or runtime assurance owner.
+Intent Controller MS (IC MS) is the TMF-facing runtime intent controller for the Intent Enabler. It owns the external `Intent` and `IntentReport` resource boundary, admits syntactically valid runtime intent requests, projects external lifecycle/status state, and publishes curated external runtime intent events. IC MS is deliberately not the owner of semantic, optimisation, orchestration, callback, or runtime assurance.
 
 ## Logical View:
 
