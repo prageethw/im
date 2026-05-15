@@ -17,12 +17,13 @@
 ### Boundary statement
 
 ID MS owns definition-time `IntentSpecification` contracts and subscription management for specification events.
-
-ID MS validates syntax/resource shape and enforces specification lifecycle/version governance. ID MS does not own runtime `Intent`, `IntentReport`, semantic validation, policy validation, network/resource feasibility, optimisation, runtime assurance, telemetry, or callback ingestion.
+ID MS validates syntax/resource shape and enforces specification lifecycle/version governance.
+ID MS does not own runtime `Intent`, `IntentReport`, semantic validation, policy validation, network/resource feasibility, optimisation, runtime assurance, telemetry, or callback ingestion.
 
 ### TMF deployment path note
 
-The examples in this specification use the platform base path `/intentManagement/v5`. A strict TMF deployment may expose the same API through `/tmf-api/intentManagement/v5`; the API gateway may map between the deployment prefix and the platform-owned service path without changing resource semantics.
+The examples in this specification use the platform base path `/intentManagement/v5`.
+A strict TMF deployment may expose the same API through `/tmf-api/intentManagement/v5`; the API gateway may map between the deployment prefix and the platform-owned service path without changing resource semantics.
 
 ---
 
@@ -378,6 +379,7 @@ Last-Modified: Sat, 18 Apr 2026 02:00:00 GMT
 ```
 
 ---
+
 ## 5. List IntentSpecifications
 
 ### Request
@@ -443,6 +445,7 @@ Cache-Control: private, max-age=60
 The list operation returns a lightweight summary by default. It does not include full `specCharacteristic`, `expressionSpecification`, or `targetEntitySchema` unless explicitly requested through `fields`.
 
 ---
+
 ## 6. Retrieve IntentSpecification
 
 ### Request
@@ -500,7 +503,50 @@ Cache-Control: private, max-age=300
   "@type": "IntentSpecification",
   "@baseType": "EntitySpecification",
   "@schemaLocation": "https://mycsp.com.au/schemas/intentManagement/v5/intentSpecification/hospital-surgical-slice-spec-v1.19.schema.json",
-  "specCharacteristic": "...bucket catalogue with example/default characteristicValueSpecification values...",
+  "specCharacteristic": [
+    {
+      "@type": "CharacteristicSpecification",
+      "id": "context",
+      "name": "context",
+      "description": "Top-level semantic context supported by this IntentSpecification. The context contains canonical context.targets, context.constraints, and context.preferences. Detailed field rules are defined in the expression-value schema referenced by targetEntitySchema.@schemaLocation.",
+      "valueType": "object",
+      "configurable": true,
+      "minCardinality": 1,
+      "maxCardinality": 1,
+      "characteristicValueSpecification": [
+        {
+          "@type": "CharacteristicValueSpecification",
+          "valueType": "object",
+          "isDefault": true,
+          "value": {
+            "targets": {
+              "maxLatencyMs": 10,
+              "minAvailabilityPercent": 99.99,
+              "maxJitterMs": 2,
+              "maxPacketLossPercent": 0.01
+            },
+            "constraints": {
+              "location": {
+                "locationId": "AU-NSW-SYD-HOSP-001",
+                "locationType": "hospital",
+                "geographicScope": "campus"
+              },
+              "serviceType": "surgical-connectivity",
+              "serviceClass": "critical-gold",
+              "priority": "critical",
+              "redundancyRequired": true,
+              "timeWindow": {
+                "startDateTime": "2026-04-18T12:00:00+10:00"
+              }
+            },
+            "preferences": {
+              "preferredAccessTechnology": "5G"
+            }
+          }
+        }
+      ]
+    }
+  ],
   "expressionSpecification": {
     "@type": "ExpressionSpecification",
     "expressionLanguage": "JSON-LD",
@@ -549,6 +595,7 @@ Content-Language: en-AU
 ```
 
 ---
+
 ## 7. Full update IntentSpecification
 
 `PUT` is the preferred platform extension for deterministic full replacement of an editable `DRAFT` specification.
@@ -654,9 +701,61 @@ Last-Modified: Sat, 18 Apr 2026 03:00:00 GMT
   "@type": "IntentSpecification",
   "@baseType": "EntitySpecification",
   "@schemaLocation": "https://mycsp.com.au/schemas/intentManagement/v5/intentSpecification/hospital-surgical-slice-spec-v1.19.schema.json",
-  "specCharacteristic": "...full replacement specCharacteristic...",
-  "expressionSpecification": "...full replacement expressionSpecification...",
-  "targetEntitySchema": "...full replacement targetEntitySchema...",
+  "specCharacteristic": [
+    {
+      "@type": "CharacteristicSpecification",
+      "id": "context",
+      "name": "context",
+      "description": "Top-level semantic context supported by this IntentSpecification. The context contains canonical context.targets, context.constraints, and context.preferences. Detailed field rules are defined in the expression-value schema referenced by targetEntitySchema.@schemaLocation.",
+      "valueType": "object",
+      "configurable": true,
+      "minCardinality": 1,
+      "maxCardinality": 1,
+      "characteristicValueSpecification": [
+        {
+          "@type": "CharacteristicValueSpecification",
+          "valueType": "object",
+          "isDefault": true,
+          "value": {
+            "targets": {
+              "maxLatencyMs": 10,
+              "minAvailabilityPercent": 99.99,
+              "maxJitterMs": 2,
+              "maxPacketLossPercent": 0.01
+            },
+            "constraints": {
+              "location": {
+                "locationId": "AU-NSW-SYD-HOSP-001",
+                "locationType": "hospital",
+                "geographicScope": "campus"
+              },
+              "serviceType": "surgical-connectivity",
+              "serviceClass": "critical-gold",
+              "priority": "critical",
+              "redundancyRequired": true,
+              "timeWindow": {
+                "startDateTime": "2026-04-18T12:00:00+10:00"
+              }
+            },
+            "preferences": {
+              "preferredAccessTechnology": "5G"
+            }
+          }
+        }
+      ]
+    }
+  ],
+  "expressionSpecification": {
+    "@type": "ExpressionSpecification",
+    "expressionLanguage": "JSON-LD",
+    "iri": "https://mycsp.com.au/tio/hospital-surgical-slice/v1.0"
+  },
+  "targetEntitySchema": {
+    "@type": "TargetEntitySchema",
+    "@schemaLocation": "https://mycsp.com.au/schemas/intentManagement/v5/intentExpression/hospital-surgical-slice-spec-v1.19.expression.schema.json",
+    "schemaVersion": "1.19",
+    "schemaHash": "sha256:REPLACE_WITH_PUBLISHED_SCHEMA_HASH"
+  },
   "_links": {
     "self": {
       "href": "/intentManagement/v5/intentSpecification/hospital-surgical-slice-spec-v1.19"
@@ -739,9 +838,12 @@ Cache-Control: no-store
 ```
 
 ---
+
 ## 8. Partial update IntentSpecification
 
-`PATCH` remains supported for TMF compatibility, but it is discouraged as a general update method. Prefer `PUT` for deterministic full replacement of editable `DRAFT` specifications. Use `PATCH` only where a TMF-compatible client cannot use `PUT` or where a tightly controlled, small targeted compatibility update is required.
+`PATCH` remains supported for TMF compatibility, but it is discouraged as a general update method.
+Prefer `PUT` for deterministic full replacement of editable `DRAFT` specifications.
+Use `PATCH` only where a TMF-compatible client cannot use `PUT` or where a tightly controlled, small targeted compatibility update is required.
 
 `PATCH` must not normally be used for material contract replacement, including `familyId`, `version`, `specCharacteristic`, `expressionSpecification`, `targetEntitySchema`, or major lifecycle/version contract identity.
 
@@ -816,6 +918,7 @@ Last-Modified: Sat, 18 Apr 2026 03:00:00 GMT
 ```
 
 ---
+
 ## 9. Delete IntentSpecification
 
 ### Request
@@ -914,9 +1017,7 @@ Cache-Control: no-store
 
 ## 10. Activate IntentSpecification through lifecycle update
 
-Activation is not exposed through a custom action endpoint.
-
-Do not use:
+Activation is not exposed through a custom action endpoint. Do not use:
 
 ```http
 POST /intentManagement/v5/intentSpecification/{id}/activate
@@ -936,7 +1037,7 @@ For the preferred platform extension where the caller sends the full resource re
 PUT /intentManagement/v5/intentSpecification/{id}
 ```
 
-Although `PATCH` is discouraged as a general update method, this is an acceptable tightly controlled TMF-compatible case because activation is a small lifecycle-status transition.
+Although `PATCH` is discouraged as a general update method, this is an acceptable tightly controlled TMF-compatible case because activation is a small lifecycle-status update.
 
 ### PATCH activation request
 
@@ -980,8 +1081,7 @@ Last-Modified: Sat, 18 Apr 2026 03:30:00 GMT
     "id": "hospital-surgical-slice-spec-v1.19",
     "href": "/intentManagement/v5/intentSpecification/hospital-surgical-slice-spec-v1.19",
     "version": "1.19",
-    "previousLifecycleStatus": "ACTIVE",
-    "newLifecycleStatus": "RETIRED"
+    "lifecycleStatus": "RETIRED"
   },
   "@type": "IntentSpecification",
   "@baseType": "EntitySpecification",
@@ -1019,11 +1119,10 @@ Last-Modified: Sat, 18 Apr 2026 03:30:00 GMT
 
 Activation emits two `IntentSpecificationStatusChangeEvent` events:
 
-1. One event for the newly activated version:
-   - `DRAFT -> ACTIVE`
+1. One event for the newly activated version, with the emitted `intentSpecification.lifecycleStatus` set to `ACTIVE`.
+2. One event for the previous active version in the same `familyId`, with the emitted `intentSpecification.lifecycleStatus` set to `RETIRED`.
 
-2. One event for the previous active version in the same `familyId`:
-   - `ACTIVE -> RETIRED`
+The status-change event type identifies that the lifecycle status changed. The event body carries the current `IntentSpecification` resource snapshot and does not carry separate `previousLifecycleStatus` or `newLifecycleStatus` fields.
 
 ### Invalid lifecycle transition response
 
@@ -1089,7 +1188,8 @@ Cache-Control: no-store
 
 ## 11. Hub create subscription
 
-ID MS intentionally uses the domain-scoped hub route for `IntentSpecification` event subscriptions. Strict TMF hub compatibility is based on the generic `/hub` subscription model; the `/intentSpecification/hub` route family is an approved platform extension that keeps subscription ownership explicit for the `IntentSpecification` domain.
+ID MS intentionally uses the domain-scoped hub route for `IntentSpecification` event subscriptions.
+Strict TMF hub compatibility is based on the generic `/hub` subscription model; the `/intentSpecification/hub` route family is an approved platform extension that keeps subscription ownership explicit for the `IntentSpecification` domain.
 
 The supported platform hub routes are:
 
@@ -1148,14 +1248,15 @@ ETag: "subscription-sub-001-v1"
 
 - The subscription callback is an external listener endpoint owned by the consuming system.
 - The `query` field filters delivered events.
-- ID MS hub subscriptions are for external `IntentSpecification*Event` notifications only.
+- ID MS hub subscriptions are for external IntentSpecification events only: `IntentSpecificationCreateEvent`, `IntentSpecificationAttributeValueChangeEvent`, `IntentSpecificationStatusChangeEvent`, and `IntentSpecificationDeleteEvent`.
 - ID MS hub subscriptions must not expose internal workflow events, KP details, runtime assurance state, telemetry, callback payloads, or internal fulfilment details.
 
 ---
 
 ## 12. Hub retrieve subscription
 
-`GET /intentManagement/v5/intentSpecification/hub/{id}` is a platform extension for operational convenience. It is not required by the strict TMF generic hub route shape, but is retained because it gives operators and consumers a safe way to inspect an ID MS-owned subscription without exposing internal workflow state.
+`GET /intentManagement/v5/intentSpecification/hub/{id}` is a platform extension for operational convenience.
+It is not required by the strict TMF generic hub route shape, but is retained because it gives operators and consumers a safe way to inspect an ID MS-owned subscription without exposing internal workflow state.
 
 ### Request
 
@@ -1261,7 +1362,7 @@ Cache-Control: no-store
 | Route style | Domain-scoped `/intentSpecification/hub` route is intentional |
 | Subscription target | External listener callback URL |
 | Filter | `query` filters event types |
-| Event family | ID MS external `IntentSpecification*Event` notifications only |
+| Event family | ID MS external IntentSpecification events only: `IntentSpecificationCreateEvent`, `IntentSpecificationAttributeValueChangeEvent`, `IntentSpecificationStatusChangeEvent`, and `IntentSpecificationDeleteEvent` |
 | Retrieve | Supported intentionally |
 | Delete | Requires `If-Match` |
 | Missing `If-Match` | `428 Precondition Required` |
@@ -1302,12 +1403,10 @@ ID MS emits external TMF-style resource events for `IntentSpecification` changes
 |---|---|
 | `IntentSpecificationCreateEvent` | New `IntentSpecification` created |
 | `IntentSpecificationAttributeValueChangeEvent` | Editable draft attributes changed |
-| `IntentSpecificationStatusChangeEvent` | Lifecycle status changes, such as `DRAFT -> ACTIVE` or `ACTIVE -> RETIRED` |
+| `IntentSpecificationStatusChangeEvent` | Lifecycle status changes, such as activation to `ACTIVE` or retirement to `RETIRED` |
 | `IntentSpecificationDeleteEvent` | Unused draft specification deleted after delete succeeds |
 
-These are external subscription events for the `IntentSpecification` resource.
-
-They are not internal fulfilment events and must not expose II MS semantic validation details, lightweight II MS KP details, `t7.knowledge plane` data, optimiser decisions, runtime assurance state, telemetry, callback payloads, or internal candidate/resource scoring details.
+These are external subscription events for the `IntentSpecification` resource. They are not internal fulfilment events and must not expose II MS semantic validation details, lightweight II MS KP details, `t7.knowledge plane` data, optimiser decisions, runtime assurance state, telemetry, callback payloads, or internal candidate/resource scoring details.
 
 Event resource snapshots should carry consistent resource metadata:
 
@@ -1323,12 +1422,12 @@ Event resource snapshots should carry consistent resource metadata:
 - `@type`
 - `@baseType`
 
-Status-change events include lifecycle transition fields such as `previousLifecycleStatus` and `newLifecycleStatus`.
+Status-change events carry the current `intentSpecification.lifecycleStatus` snapshot. They do not carry separate `previousLifecycleStatus` or `newLifecycleStatus` fields.
 
 Activation emits two `IntentSpecificationStatusChangeEvent` events:
 
-- one for the new version `DRAFT -> ACTIVE`
-- one for the previous active version `ACTIVE -> RETIRED`
+- one for the newly activated version, with `intentSpecification.lifecycleStatus` set to `ACTIVE`
+- one for the previous active version, with `intentSpecification.lifecycleStatus` set to `RETIRED`
 
 Delete events are emitted only after successful delete and show the last known lifecycle state as `DRAFT`. Delete events must not use `DELETED`.
 
@@ -1336,7 +1435,9 @@ Delete events are emitted only after successful delete and show the last known l
 
 ## 16. Event envelope pattern
 
-External TMF-facing event examples populate both `eventTime` and `timeOccurred` with the same canonical event occurrence timestamp. `timeOccurred` is the platform-corrected spelling used consistently across ID MS and IC MS external event examples. TMF921 examples contain the misspelled `timeOcurred`; this baseline intentionally uses the corrected spelling while preserving the same timestamp semantics.
+External TMF-facing event examples populate both `eventTime` and `timeOccurred` with the same canonical event occurrence timestamp.
+`timeOccurred` is the platform-corrected spelling used consistently across ID MS and IC MS external event examples.
+TMF921 examples contain the misspelled `timeOcurred`; this baseline intentionally uses the corrected spelling while preserving the same timestamp semantics.
 
 ```json
 {
@@ -1374,9 +1475,7 @@ External TMF-facing event examples populate both `eventTime` and `timeOccurred` 
       ],
       "@type": "IntentSpecification",
       "@baseType": "EntitySpecification"
-    },
-    "previousLifecycleStatus": "DRAFT",
-    "newLifecycleStatus": "ACTIVE"
+    }
   },
   "reportingSystem": {
     "id": "intent-definition-ms",
@@ -1545,9 +1644,7 @@ External TMF-facing event examples populate both `eventTime` and `timeOccurred` 
       ],
       "@type": "IntentSpecification",
       "@baseType": "EntitySpecification"
-    },
-    "previousLifecycleStatus": "DRAFT",
-    "newLifecycleStatus": "ACTIVE"
+    }
   },
   "reportingSystem": {
     "id": "intent-definition-ms",
@@ -1615,7 +1712,6 @@ External TMF-facing event examples populate both `eventTime` and `timeOccurred` 
 }
 ```
 
-
 ---
 
 ## 21. Final specification notes
@@ -1642,6 +1738,7 @@ External TMF-facing event examples populate both `eventTime` and `timeOccurred` 
 - Activation is represented through PUT/PATCH lifecycle update, not a custom action endpoint.
 - External TMF-facing events include both `eventTime` and `timeOccurred` with the same canonical event occurrence timestamp.
 - `timeOccurred` is the platform-corrected spelling used consistently across ID MS and IC MS external event examples. TMF921 examples contain the misspelled `timeOcurred`; this baseline intentionally uses the corrected spelling while preserving the same timestamp semantics.
+- `IntentSpecificationStatusChangeEvent` carries the current `intentSpecification.lifecycleStatus` snapshot and does not carry separate `previousLifecycleStatus` or `newLifecycleStatus` fields.
 
 ---
 
@@ -1681,8 +1778,8 @@ For ID MS, accepted platform extensions are:
 ### Update method rule
 
 `PATCH` is the strict TMF-compatible update operation.
-
-`PUT` is the platform extension for deterministic full replacement and is preferred from the platform engineering perspective where clients support it. `PATCH` remains supported for TMF compatibility but is not encouraged for ordinary edits when deterministic full replacement is available.
+`PUT` is the platform extension for deterministic full replacement and is preferred from the platform engineering perspective where clients support it.
+`PATCH` remains supported for TMF compatibility but is not encouraged for ordinary edits when deterministic full replacement is available.
 
 ### Lifecycle activation rule
 
@@ -1727,29 +1824,35 @@ GET /intentManagement/v5/intentSpecification/hub/{id}
 DELETE /intentManagement/v5/intentSpecification/hub/{id}
 ```
 
-The domain-scoped route is acceptable only as a documented platform extension and must preserve the same subscription semantics. `GET /intentManagement/v5/intentSpecification/hub/{id}` is also a platform extension for safe subscription inspection and is not part of the strict TMF generic hub route minimum.
+The domain-scoped route is acceptable only as a documented platform extension and must preserve the same subscription semantics.
+`GET /intentManagement/v5/intentSpecification/hub/{id}` is also a platform extension for safe subscription inspection and is not part of the strict TMF generic hub route minimum.
 
 ### External event timestamp rule
 
-For external TMF-facing resource events, ID MS populates both `eventTime` and `timeOccurred` with the same canonical event occurrence timestamp. `timeOccurred` is the platform-corrected spelling used consistently across ID MS and IC MS external event examples. TMF921 examples contain the misspelled `timeOcurred`; this baseline intentionally uses the corrected spelling while preserving the same timestamp semantics. Internal events remain separate and continue to use the platform CloudEvents/header model plus the relevant internal body timestamp fields.
+For external TMF-facing resource events, ID MS populates both `eventTime` and `timeOccurred` with the same canonical event occurrence timestamp.
+`timeOccurred` is the platform-corrected spelling used consistently across ID MS and IC MS external event examples.
+TMF921 examples contain the misspelled `timeOcurred`; this baseline intentionally uses the corrected spelling while preserving the same timestamp semantics.
+Internal events remain separate and continue to use the platform CloudEvents/header model plus the relevant internal body timestamp fields.
 
 ### Route prefix rule
 
-The examples in this specification use `/intentManagement/v5` as the platform service base path. A strict TMF API gateway may expose the same operations under `/tmf-api/intentManagement/v5`; this is a deployment mapping concern and must not change resource ownership, payload semantics, or lifecycle governance.
+The examples in this specification use `/intentManagement/v5` as the platform service base path.
+A strict TMF API gateway may expose the same operations under `/tmf-api/intentManagement/v5`; this is a deployment mapping concern and must not change resource ownership, payload semantics, or lifecycle governance.
 
 ### Baseline statement
 
-ID MS and IC MS remain TMF-aligned at the external contract level. Controlled platform extensions are allowed when documented, non-breaking, and semantically compatible with TMF. For ID MS, `PATCH /intentSpecification/{id}` is the strict TMF update operation, while `PUT /intentSpecification/{id}` is an accepted platform extension for deterministic full replacement.
+ID MS and IC MS remain TMF-aligned at the external contract level.
+Controlled platform extensions are allowed when documented, non-breaking, and semantically compatible with TMF.
 
+For ID MS, `PATCH /intentSpecification/{id}` is the strict TMF update operation, while `PUT /intentSpecification/{id}` is an accepted platform extension for deterministic full replacement.
 TMF `/hub` routing is the strict subscription route form, while `/intentSpecification/hub` is an accepted domain-scoped platform extension when deliberately used.
 
 ---
 
 ## Appendix A — External expression-value schema artefact
 
-The following JSON Schema is the external validation artefact referenced by `targetEntitySchema.@schemaLocation`. It is shown here as implementation guidance only.
-
-It is not embedded inside `IntentSpecification.expressionSpecification`, `Intent.expression`, or `IntentReport.expression`.
+The following JSON Schema is the external validation artefact referenced by `targetEntitySchema.@schemaLocation`.
+It is shown here as implementation guidance only. It is not embedded inside `IntentSpecification.expressionSpecification`, `Intent.expression`, or `IntentReport.expression`.
 
 ```json
 {
