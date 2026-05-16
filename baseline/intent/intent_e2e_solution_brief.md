@@ -1,4 +1,4 @@
-# Intent Enabler E2E Solution Brief:
+# Intent Enabler E2E Solution Brief
 
 ## Business context:
 
