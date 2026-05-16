@@ -1,4 +1,4 @@
-# Intent Callback MS Solution Brief:
+# Intent Callback MS Solution Brief
 ## Summary:
 
 Intent Callback MS, referred to as ICB MS, is the thin callback ingestion service for the Intent Management Enabler platform. It accepts callback submissions from trusted external orchestration or application systems through the API Gateway, performs technical authorisation and structural validation, durably records the accepted callback fact, and publishes a raw internal `IntentCallbackEvent` to the dedicated callback Kafka topic for IA MS.
