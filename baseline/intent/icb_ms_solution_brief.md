@@ -1,4 +1,4 @@
-# Intent Callback MS Solution Brief
+# Intent Callback MS Solution Brief:
 ## Summary:
 
 Intent Callback MS, referred to as ICB MS, is the thin callback ingestion service for the Intent Management Enabler platform. It accepts callback submissions from trusted external orchestration or application systems through the API Gateway, performs technical authorisation and structural validation, durably records the accepted callback fact, and publishes a raw internal `IntentCallbackEvent` to the dedicated callback Kafka topic for IA MS.
@@ -315,9 +315,11 @@ relay:
     orderBy: CREATED_AT_ASC
 ```
 
-## Kafka publication:
+## Internal Kafka publication:
 
-### Topics:
+ICB MS has one event-delivery path: internal Kafka publication only. It does not expose REST hub subscriptions and does not deliver external HTTP webhook notifications.
+
+### Internal Kafka topics:
 
 | Topic | Purpose | Producer | Consumer |
 |---|---|---|---|
@@ -341,7 +343,7 @@ Internal topics use the intent management domain prefix. The callback topic is d
 | Delivery model | At least once |
 | Consumer requirement | Idempotent consumption required |
 
-#### CloudEvents headers:
+#### Internal Kafka CloudEvents headers:
 
 ```http
 ce-specversion: 1.0
@@ -355,7 +357,7 @@ content-type: application/json
 
 Where correlation is available, it should be propagated through the common internal event correlation model, for example via a `correlationId` value inside `body.references` and/or an agreed transport correlation header.
 
-#### Message shape:
+#### Internal Kafka message body:
 
 ```text
 topic: t7.intent.management.events.callbacks
@@ -512,7 +514,7 @@ Duplicate submissions must not create duplicate internal callback facts. The ser
 | Producer | ICB MS (`intent-callback-ms`). |
 | Topic | `t7.intent.management.events.callbacks`. |
 | Contract style | Consumer-driven contract between IA MS and ICB MS. |
-| Locked shape | CloudEvents headers, Kafka key, top-level `body`, and callback fact field semantics. |
+| Locked shape | Internal Kafka CloudEvents headers, Kafka key, top-level `body`, and callback fact field semantics. |
 | Delivery | At least once. |
 | Idempotency | IA MS must deduplicate using `ce-id`, callback id, or agreed stable event identifier. |
 | Unknown `intentId` | IA MS owns dead-letter/alert handling. |
