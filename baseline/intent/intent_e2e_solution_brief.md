@@ -1,4 +1,4 @@
-# Intent Enabler E2E Solution Brief
+# Intent Enabler E2E Solution Brief:
 
 ## Business context:
 
@@ -16,9 +16,7 @@ The E2E design deliberately keeps service boundaries narrow:
 
 ## Solution summary:
 
-The Intent Enabler is a multi-microservice solution built around external TMF-compliant APIs, internal event-driven workflow, durable persistence, outbox-backed publication, and clear responsibility boundaries.
-
-At a high level:
+The Intent Enabler is a multi-microservice solution built around external TMF-compliant APIs, internal event-driven workflow, durable persistence, outbox-backed publication, and clear responsibility boundaries. At a high level:
 
 1. ID MS publishes and governs active `IntentSpecification` contracts.
 2. IC MS admits runtime `Intent` requests that are syntactically valid and reference an active specification.
@@ -122,9 +120,9 @@ External Consumer / OEX / Authorised Platform
         |
         | active specification discovery/validation support
         v
-+----------------------------+         Internal Kafka event backbone
-| Intent Controller MS       |  --->   IntentValidatedEvent
-| owns Intent, IntentReport  |  <---   IntentRejectedEvent / IntentAssuranceEvent
++----------------------------+        Internal Kafka event backbone
+| Intent Controller MS       | -----> IntentValidatedEvent
+| owns Intent, IntentReport  | <----- IntentRejectedEvent / IntentAssuranceEvent
 +----------------------------+
         |
         v
@@ -137,11 +135,11 @@ External Consumer / OEX / Authorised Platform
         |
         | IntentResolvedEvent / IntentNetworkReadyEvent
         v
-+----------------------------+              +----------------------------+
-| Intent Assurance MS        | <----------  | Intent Callback MS         |
-| assurance truth            |              | thin callback ingestion    |
-| lifecycle-driving outcome  |              | raw callback relay         |
-+----------------------------+              +----------------------------+
++----------------------------+        +----------------------------+
+| Intent Assurance MS        | <----- | Intent Callback MS          |
+| assurance truth            |        | thin callback ingestion     |
+| lifecycle-driving outcome  |        | raw callback relay          |
++----------------------------+        +----------------------------+
         |
         | IntentAssuranceEvent
         v
@@ -156,7 +154,7 @@ Logical resource ownership:
 | Resource / concept | Owner |
 |---|---|
 | `IntentSpecification` | ID MS |
-| `EventSubscription` for `IntentSpecification*Event` | ID MS |
+| Event subscriptions for `IntentSpecification` event notifications | ID MS |
 | Runtime `Intent` | IC MS |
 | Runtime `IntentReport` | IC MS |
 | Semantic resolution state | II MS |
@@ -164,6 +162,18 @@ Logical resource ownership:
 | Raw callback submission | ICB MS |
 | Runtime assurance truth | IA MS |
 | External runtime lifecycle projection | IC MS |
+
+## Event delivery model:
+
+The Intent Enabler uses three distinct delivery models. They must not be collapsed into a single Kafka-only model.
+
+| Delivery path | Used for | Mechanism | Transport metadata |
+|---|---|---|---|
+| Internal platform events | Internal workflow facts such as `IntentValidatedEvent`, `IntentRejectedEvent`, `IntentResolvedEvent`, `IntentNetworkReadyEvent`, `IntentCallbackEvent`, and `IntentAssuranceEvent` | Service-owned internal event outbox, relay, Kafka topic, idempotent internal consumers | CloudEvents-style Kafka/platform headers |
+| External hub notifications | Subscriber notifications for `IntentSpecification`, `Intent`, and `IntentReport` resource events | Service-owned webhook delivery outbox, HTTP retry relay, HTTP `POST` to subscriber listener callback URL | HTTP headers such as `Content-Type`, `X-Correlation-Id`, and subscriber callback authentication where configured |
+| Callback ingestion | Source/orchestrator callback submission into the platform | REST `POST` to ICB MS, callback persistence, callback outbox, internal Kafka publication to IA MS | HTTP headers on inbound callback; CloudEvents-style Kafka/platform headers on internal `IntentCallbackEvent` |
+
+ID MS and IC MS hub notifications are REST webhook callbacks with TMF-aligned event payloads. Kafka is not used for external hub notification delivery. Subscriber callback URLs are subscriber-owned; the platform defines the subscription API, delivery rules, retry behaviour, and TMF-aligned notification payload shape.
 
 ## Process view:
 
@@ -213,9 +223,7 @@ ID MS exposes:
 POST /intentManagement/v5/intentSpecification
 ```
 
-Successful creation normally returns `201 Created`, a server-generated `id`, `href`, `Location`, `ETag`, and lifecycle-aware links. Created specifications normally start in `DRAFT`.
-
-ID MS does not accept caller-supplied server-generated fields such as `id`, `href`, `Location`, `ETag`, or `_links` on create.
+Successful creation normally returns `201 Created`, a server-generated `id`, `href`, `Location`, `ETag`, and lifecycle-aware links. Created specifications normally start in `DRAFT`. ID MS does not accept caller-supplied server-generated fields such as `id`, `href`, `Location`, `ETag`, or `_links` on create.
 
 ## Activate intent specification:
 
@@ -251,9 +259,9 @@ IC MS validates:
 - runtime expression shape against the active specification contract;
 - basic external authorisation context passed by the gateway/security layer.
 
-IC MS does not validate semantic feasibility, network topology, resource suitability, or assurance success. After successful admission, IC MS persists the intent, sets the projected lifecycle to `Acknowledged`, and emits `IntentValidatedEvent`.
+IC MS does not validate semantic feasibility, network topology, resource suitability, or assurance success. After successful admission, IC MS persists the intent, sets the projected lifecycle to `Acknowledged`, and emits `IntentValidatedEvent`. II MS then performs semantic interpretation and service-ready preparation.
 
-II MS then performs semantic interpretation and service-ready preparation. Where an optimiser component is used, `IntentResolvedEvent` can hand off a full candidate set to the optimiser, and II MS can consume the selected outcome before producing `IntentNetworkReadyEvent`.
+Where an optimiser component is used, `IntentResolvedEvent` can hand off a full candidate set to the optimiser, and II MS can consume the selected outcome before producing `IntentNetworkReadyEvent`.
 
 ## Monitor runtime intent:
 
@@ -273,7 +281,7 @@ IC MS owns the external projection:
 - updates runtime `Intent.lifecycleStatus`;
 - updates `statusReason`;
 - creates or updates `IntentReport` projection;
-- emits external `Intent*Event` and `IntentReport*Event` notifications where applicable.
+- emits external `Intent` events and `IntentReport` events where applicable.
 
 IA MS must not expose raw telemetry dumps, raw callback payloads, or internal mapping details as the external customer-facing API.
 
@@ -285,13 +293,15 @@ The runtime termination operation is represented externally as:
 DELETE /intentManagement/v5/intent/{id}
 ```
 
-This is a termination request, not physical deletion of the runtime record. IC MS retains the intent for audit, traceability, reporting, and lifecycle history.
+This is a termination request, not physical deletion of the runtime record. IC MS retains the intent for audit, traceability, reporting, and lifecycle history. Termination must follow the same security, authorisation, and concurrency expectations as other unsafe operations.
 
-Termination must follow the same security, authorisation, and concurrency expectations as other unsafe operations. If optimistic concurrency is required for the operation, a missing `If-Match` returns `428 Precondition Required`, and stale or mismatched `If-Match` returns `412 Precondition Failed`.
+If optimistic concurrency is required for the operation, a missing `If-Match` returns `428 Precondition Required`, and stale or mismatched `If-Match` returns `412 Precondition Failed`.
 
 ## Retry failed runtime intent:
 
-A failed or degraded runtime intent does not automatically imply retry, rollback, reselection, or re-optimisation. IA MS reports assurance truth. IC MS projects it externally. A retry or recovery action should be initiated by an authorised workflow that can evaluate:
+A failed or degraded runtime intent does not automatically imply retry, rollback, reselection, or re-optimisation. IA MS reports assurance truth. IC MS projects it externally.
+
+A retry or recovery action should be initiated by an authorised workflow that can evaluate:
 
 - current lifecycle state;
 - latest assurance metrics;
@@ -346,7 +356,10 @@ Legacy fields such as `orchestratorState`, `source`, `timestamp`, and `callbackT
 | Runtime callback ingestion | No | No | No | No | Yes |
 | Raw callback interpretation | No | No | No | Yes | No |
 | External lifecycle projection | No | Yes | No | No | No |
-| Outbox-backed event publication | Yes | Yes | Yes | Yes | Yes |
+| Internal Kafka event publication | No | Yes | Yes | Yes | Yes |
+| External webhook notification delivery | Yes | Yes | No | No | No |
+| Callback ingestion and raw callback relay | No | No | No | No | Yes |
+| Outbox-backed delivery / publication | Yes | Yes | Yes | Yes | Yes |
 
 ## Solution security:
 
@@ -384,9 +397,9 @@ The network gateway or API gateway authenticates callers, enforces coarse-graine
 
 ## Service-to-service security:
 
-Internal service-to-service calls and event producers/consumers should use service identity, mTLS where applicable, least-privilege credentials, and topic/API-level ACLs.
+Internal service-to-service calls and event producers/consumers should use service identity, mTLS where applicable, least-privilege credentials, and topic/API-level ACLs. Service-to-service authorisation is based on system/service identity and allowed operation, not arbitrary end-user claims.
 
-Service-to-service authorisation is based on system/service identity and allowed operation, not arbitrary end-user claims. User-context-related authorisation should be resolved before crossing into internal service-to-service paths unless a specific audited delegation model is introduced.
+User-context-related authorisation should be resolved before crossing into internal service-to-service paths unless a specific audited delegation model is introduced.
 
 ## Kafka security:
 
@@ -420,11 +433,12 @@ Internal events are facts, not commands. Producers emit events only after durabl
 Event security rules:
 
 - use stable event names exactly as baselined;
-- use CloudEvents-style transport metadata for internal events;
-- use a top-level JSON `body` payload;
+- use CloudEvents-style transport metadata for internal Kafka events;
+- use a top-level JSON `body` payload for internal Kafka events;
 - propagate `correlationId`;
-- prefer `intentId` as Kafka key for intent-scoped events;
-- do not directly expose internal event payloads as external TMF events;
+- prefer `intentId` as Kafka key for intent-scoped internal events;
+- do not directly expose internal Kafka event payloads as external TMF-aligned webhook notification payloads;
+- use HTTP headers and subscriber listener authentication where configured for external webhook notification delivery;
 - do not include secrets, credentials, tokens, raw telemetry dumps, raw stack traces, or internal solver/KP details unless explicitly governed for an internal-only topic.
 
 ## Sensitive information boundary:
@@ -464,6 +478,7 @@ Expected platform controls include:
 - Outbox patterns decouple API acceptance from event publication where appropriate.
 - ICB MS must not accept a callback unless the callback and outbox record are durably committed.
 - Kafka unavailability after durable acceptance should be handled through retrying outbox relay.
+- Webhook delivery failures after durable acceptance should be handled through retrying webhook delivery relay.
 - Consumers must tolerate duplicate events and replay.
 
 ### Scalability:
@@ -471,6 +486,7 @@ Expected platform controls include:
 - IC MS, II MS, IA MS, and ICB MS should scale horizontally behind idempotent processing and partition-aware Kafka consumption.
 - Kafka keys should prefer `intentId` for intent-scoped ordering.
 - Outbox relays should process deterministic batches and support safe clustered coordination.
+- Webhook delivery relays should support retry, backoff, and isolation of failing subscriber callbacks.
 - List APIs should support pagination and lightweight default response shapes.
 
 ### Performance:
@@ -504,12 +520,14 @@ Expected platform controls include:
 | `IntentNetworkReadyEvent` misunderstood as apply success | Premature external `Active` projection | Document that apply success requires callback and/or observation evidence. |
 | Specification lifecycle/version mistakes | Runtime intents created against wrong contract | Enforce one active version per `familyId` and active-only runtime creation. |
 | Kafka duplicate delivery | Duplicate lifecycle/report updates | Idempotent consumers and stable deduplication keys. |
+| Webhook delivery retry duplication | Duplicate subscriber notifications | Use event identifiers, idempotent subscriber listener handling, and delivery retry tracking. |
 | Long-lived stale docs | Implementation drift | Use GitHub main/baseline/intent as source of truth and update solution briefs after baseline changes. |
 
 ## Assumptions:
 
 - GitHub `main/baseline/intent` is the source of truth for baseline-v1.0 and committed solution briefs.
 - ID MS and IC MS expose the external TMF-compliant resource APIs.
+- ID MS and IC MS deliver external hub notifications by HTTP POST to subscriber listener callback URLs using TMF-aligned event payloads.
 - II MS and IA MS are internal-only event-driven services.
 - ICB MS is externally reachable only through the API Gateway for trusted callback sources.
 - Managed PostgreSQL or PostgreSQL-compatible storage is suitable for owned service persistence and outbox tables.
@@ -527,6 +545,7 @@ Expected platform controls include:
 - IA MS must not consume `IntentOptimisedEvent` in the active baseline.
 - `IntentDriftOccurredEvent` is retired.
 - External events must not expose internal KP, optimiser, telemetry, callback, or candidate-scoring details.
+- External hub notifications must use subscriber-owned callback URLs and TMF-aligned event payloads; Kafka is not used for external hub notification delivery.
 
 ## Appendix:
 
@@ -585,9 +604,16 @@ Expected platform controls include:
 |---|---|---|---|
 | Main internal intent event topic | Core internal intent workflow events | IC MS, II MS, IA MS, optimiser where applicable | IC MS, II MS, IA MS, optimiser where applicable |
 | `t7.intent.management.events.callbacks` | Raw accepted callback facts | ICB MS | IA MS |
-| External notification topic / platform event channel | TMF-aligned external resource notifications | ID MS / IC MS | External subscription delivery layer |
 
-Exact physical topic names other than the callback topic remain platform implementation details unless separately baselined.
+Exact physical topic names other than the callback topic remain platform implementation details unless separately baselined. External hub notifications are not Kafka topics; they are delivered by HTTP POST to subscriber listener callback URLs through ID MS / IC MS webhook delivery outboxes.
+
+### External webhook notification delivery:
+
+| Notification family | Owner | Delivery mechanism | Payload pattern |
+|---|---|---|---|
+| `IntentSpecification` event notifications | ID MS | HTTP POST to subscriber listener callback URL registered through `/intentSpecification/hub` | TMF-aligned event payload |
+| `Intent` event notifications | IC MS | HTTP POST to subscriber listener callback URL registered through runtime hub subscription API | TMF-aligned event payload |
+| `IntentReport` event notifications | IC MS | HTTP POST to subscriber listener callback URL registered through runtime hub subscription API | TMF-aligned event payload |
 
 ### Event types:
 
@@ -637,14 +663,15 @@ Outbox workers and event consumers should follow these rules:
 
 - read committed outbox records only;
 - publish in deterministic order where ordering matters;
-- mark published only after broker acknowledgement;
+- mark published only after broker acknowledgement for Kafka publication;
 - leave failed publications retryable;
 - use idempotent consumers;
 - deduplicate by `ce-id`, callback id, event id, or another agreed stable identifier;
 - propagate `correlationId`;
 - do not perform semantic filtering in ICB relay workers;
 - keep lifecycle mapping in IA MS, not ICB MS;
-- keep external projection in IC MS, not IA MS.
+- keep external projection in IC MS, not IA MS;
+- deliver external hub notifications by HTTP POST from the service-owned webhook delivery outbox, not by Kafka topic subscription.
 
 ### IntentAssuranceEvent lifecycle mapping:
 
