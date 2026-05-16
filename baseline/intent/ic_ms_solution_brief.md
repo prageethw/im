@@ -80,9 +80,9 @@ IC MS owns the externally visible runtime projection, not the full internal fulf
 4. IC MS writes webhook delivery work to its own local delivery outbox.
 5. The IC MS delivery relay posts the event payload to the subscriber listener callback URL using HTTP `POST`.
 6. The subscriber listener acknowledges delivery with an HTTP success response, normally `204 No Content` where aligned to TMF listener behaviour.
-7. IC MS retries failed callback deliveries according to delivery policy.
+7. IC MS retries failed callback deliveries according to the delivery policy.
 
-Kafka is not used for external hub notification delivery. IC MS does not create a self-publish/self-consume Kafka loop for hub notifications where it is both the event originator and the delivery owner.
+Kafka is not used for external hub notification delivery. IC MS does not create a self-publish/self-consume Kafka loop for hub notifications, in which it is both the event originator and the delivery owner.
 
 ## Solution Elaboration:
 
@@ -161,7 +161,7 @@ IC MS also does not resolve an `IntentSpecification` by `familyId`, name, key, o
 | List reports for intent | `GET` | `/intentManagement/v5/intent/{intentId}/intentReport` | Platform/TMF-style nested report projection |
 | Retrieve report by ID | `GET` | `/intentManagement/v5/intent/{intentId}/intentReport/{id}` | Platform/TMF-style nested report projection |
 
-Ordinary external consumers do not receive a public `DELETE /intentManagement/v5/intent/{intentId}/intentReport/{id}` capability. Governed internal/admin purge may exist but is not exposed through NGW/public consumer APIs by default.
+Ordinary external consumers do not receive a public `DELETE /intentManagement/v5/intent/{intentId}/intentReport/{id}` capability. Governed internal/admin purge may exist, but is not exposed through NGW/public consumer APIs by default.
 
 ### Hub subscription APIs:
 
@@ -285,6 +285,8 @@ Retired
 ```
 
 External `GET /intent/{id}` returns the current projected `Intent` state. It does not return the full internal version aggregate by default.
+
+![alt text](https://img.plantuml.biz/plantuml/png/bLNDRXCn4BxxAKRYXfg6q9OK3gWXFrAa8ggcDyB1jMSJKw-zsDv0L5NY8NX2deJnPdVbR5lKvBGPppVVD-EPyOKFt8Korooee17cO_YyWB-__y3S13IXTuaRr72fCXHRGGwBm0F2HF6LupbZ_awPWjCdt79njtAsD79ijNNmQbRz4W-_vjB-L6O56TSUavCA9gmpw61mca8gjdi6yEbH-FFPQ3QE9zP9TBNrvEHqS7P6rfareROD1eFpjyFQjWXRokBMQiaU4Y9Zd-MPpax6moxFvFrm-ERTapmFZ7rz_GrwlOym4dV6_jGeLoZX0rnzMTn0NrM5XO9xZtvf_DO4Be8IiE5QIHwKDOpj8MEeQ_oE8bHXvlDuHnvpRWZMBwnMOhiqhl8WDDWo29lZuo1pS-Niog7t58RkmlZWaBBFIfqfdPCiqXCRmZEM-7RuNy3S0O_eT8DH-YXA5zPaokKUU57eBVINXcfHEcu40gzSkm5cNEbTxbM06WUk91qvBar6vwN3bf_LZ14xGMfLcQ0T5fPIN1hPdBJqh7L-GdQBSoZi1jtpmBqwE-n95Ch7-lGZk6SBKgryTTNGr3jHVCLB_vJUOcTlagpT_g_Kbpdvz9kw9fXEJLjCNSizHS_vrXS03MQl2YyWwFJd3RfS6Rvhir3_YKLo-AD4Jzt9XS22phiDSW0oIUi0r5vc1-2IWX-0gajt8AgTqSDmHw0oiWQk3CeuYwqxnMH9d1YMLXjZrRPqQhKEOBE4YVRXTTqHk-S3ugWuIPDEmzbG79FRP7evlPasox1_h-G3A2AcTHIgkIAVHFHHND1GhBTU2Qv1eiQ0nmoDh3PthUZMXc3pA6btnnHZzvx5JGVuYm8QGklsCIkShJVNSI8zk3Ai8OwOXynHmAf_KxOB-gGtyny0)
 
 ### IntentReport projection fields:
 
