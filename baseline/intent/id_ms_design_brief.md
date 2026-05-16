@@ -100,7 +100,7 @@ Supported query params:
 | `lifecycleStatus` | Filter by `DRAFT`, `ACTIVE`, or `RETIRED` |
 | `name` | Filter by specification name |
 | `version` | Filter by specification version |
-| `fields` | Optional TMF-style field selection / projection |
+| `fields` | Optional TMF-aligned field selection / projection |
 
 Response headers:
 
@@ -455,7 +455,7 @@ Hub notification delivery baseline:
 - `/intentSpecification/hub` is a REST webhook subscription mechanism.
 - ID MS stores subscriber callback registrations.
 - ID MS delivers matching `IntentSpecification` event notifications by HTTP `POST` to the subscriber listener callback URL.
-- The HTTP request body is the TMF-style external event payload, such as `IntentSpecificationStatusChangeEvent`.
+- The HTTP request body is the TMF-aligned external event payload, such as `IntentSpecificationStatusChangeEvent`.
 - The subscriber returns `204 No Content` when notified successfully.
 - Kafka topics are not used for external hub notification delivery because ID MS is both the event originator and the delivery owner.
 - Delivery reliability is handled by an ID MS-owned local webhook delivery outbox and retry relay.
@@ -1382,7 +1382,7 @@ ID MS does not own semantic validation, policy validation, candidate/resource fe
 ## Callback URL baseline:
 
 Callback URLs are subscriber-owned listener endpoints.
-Do not use TMF-specific path prefixes or TMF-owned path wording in callback URL examples.
+Do not imply TM Forum owns subscriber callback URLs. Callback URLs are subscriber-owned, while notification payloads follow TMF-aligned event patterns.
 Use neutral listener paths such as:
 
 ```text

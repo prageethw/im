@@ -16,7 +16,7 @@ The E2E design deliberately keeps service boundaries narrow:
 
 ## Solution summary:
 
-The Intent Enabler is a multi-microservice solution built around external TMF-facing APIs, internal event-driven workflow, durable persistence, outbox-backed publication, and clear responsibility boundaries.
+The Intent Enabler is a multi-microservice solution built around external TMF-compliant APIs, internal event-driven workflow, durable persistence, outbox-backed publication, and clear responsibility boundaries.
 
 At a high level:
 
@@ -98,7 +98,7 @@ IA MS consumes service-ready configuration, callback facts, and runtime observat
 
 ### Project external lifecycle and report:
 
-IC MS consumes downstream outcome events and updates external `Intent.lifecycleStatus`, `statusReason`, and `IntentReport` projection. External consumers see a curated TMF-facing view, not raw internal workflow detail.
+IC MS consumes downstream outcome events and updates external `Intent.lifecycleStatus`, `statusReason`, and `IntentReport` projection. External consumers see a curated TMF-compliant view, not raw internal workflow detail.
 
 ### Terminate runtime intent:
 
@@ -362,7 +362,7 @@ Downstream services should receive only the trusted platform identity/context re
 
 OEX or other authorised experience layers call the Intent Enabler through the platform gateway path. The gateway validates access, normalises trusted headers/context, applies edge controls, and routes requests to the appropriate domain service.
 
-OEX should not call internal event-driven services directly. II MS and IA MS have no public TMF-facing REST API in the active baseline.
+OEX should not call internal event-driven services directly. II MS and IA MS have no public TMF-compliant REST API in the active baseline.
 
 ## OEX to intent backend access:
 
@@ -509,7 +509,7 @@ Expected platform controls include:
 ## Assumptions:
 
 - GitHub `main/baseline/intent` is the source of truth for baseline-v1.0 and committed solution briefs.
-- ID MS and IC MS expose the external TMF-facing resource APIs.
+- ID MS and IC MS expose the external TMF-compliant resource APIs.
 - II MS and IA MS are internal-only event-driven services.
 - ICB MS is externally reachable only through the API Gateway for trusted callback sources.
 - Managed PostgreSQL or PostgreSQL-compatible storage is suitable for owned service persistence and outbox tables.
@@ -519,7 +519,7 @@ Expected platform controls include:
 
 ## Constraints:
 
-- TMF-facing resource responsibility boundaries must remain intact.
+- TMF-compliant resource responsibility boundaries must remain intact.
 - `IntentSpecification` lifecycle states are `DRAFT`, `ACTIVE`, and `RETIRED`.
 - Runtime intent lifecycle states are `Acknowledged`, `InProgress`, `Active`, `Degraded`, `Paused`, `Rejected`, `Failed`, and `Terminated`.
 - `IntentNetworkReadyEvent` must not be treated as network apply success.
@@ -585,7 +585,7 @@ Expected platform controls include:
 |---|---|---|---|
 | Main internal intent event topic | Core internal intent workflow events | IC MS, II MS, IA MS, optimiser where applicable | IC MS, II MS, IA MS, optimiser where applicable |
 | `t7.intent.management.events.callbacks` | Raw accepted callback facts | ICB MS | IA MS |
-| External notification topic / platform event channel | TMF-style external resource notifications | ID MS / IC MS | External subscription delivery layer |
+| External notification topic / platform event channel | TMF-aligned external resource notifications | ID MS / IC MS | External subscription delivery layer |
 
 Exact physical topic names other than the callback topic remain platform implementation details unless separately baselined.
 

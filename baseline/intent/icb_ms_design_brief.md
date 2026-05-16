@@ -60,7 +60,7 @@ ICB MS must not decide whether a callback means `Active`, `Failed`, `Terminated`
 | **Concern** | **Owner** |
 |---|---|
 | Runtime `Intent` resource API | IC MS |
-| External TMF-facing lifecycle projection | IC MS |
+| External TMF-compliant lifecycle projection | IC MS |
 | `IntentReport` projection | IC MS |
 | Runtime assurance truth | IA MS |
 | Callback state interpretation | IA MS |

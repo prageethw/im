@@ -27,7 +27,7 @@ IC MS -> webhook_delivery_outbox -> HTTP POST -> external subscriber listener ca
 | Internal event path | Emits admitted runtime intent state through `IntentValidatedEvent` using the IC MS internal event outbox and Kafka relay. |
 | Downstream event consumers | II MS consumes admitted runtime intent state through `IntentValidatedEvent`. |
 | Downstream status inputs | II MS rejection outcomes and IA MS assurance outcomes drive IC MS external lifecycle/status projection. |
-| External event subscribers | Receive TMF-style `Intent` and `IntentReport` events through REST webhook subscriber listener callbacks registered via the IC MS hub subscription model. |
+| External event subscribers | Receive TMF-aligned `Intent` and `IntentReport` events through REST webhook subscriber listener callbacks registered via the IC MS hub subscription model. |
 | External notification path | Uses `webhook_delivery_outbox` and HTTP `POST`; Kafka is not used for external hub notification delivery. |
 
 IC MS owns the externally visible runtime projection, not the full internal fulfilment state machine. The external `Intent` record is the current consumer-facing state of the runtime intent. Historical versions, standby states, rollback candidates, internal resource candidates, optimiser scoring, and raw assurance detail remain internal unless projected through `IntentReport` or another documented platform extension.
@@ -76,7 +76,7 @@ IC MS owns the externally visible runtime projection, not the full internal fulf
 
 1. A subscriber registers a callback URL through the strict TMF `/hub` route or the accepted domain-scoped `/intent/hub` platform extension.
 2. IC MS stores the subscription, callback URL, optional filter/query, and delivery metadata.
-3. When a subscribed `Intent` or `IntentReport` event occurs, IC MS creates the TMF-style event payload.
+3. When a subscribed `Intent` or `IntentReport` event occurs, IC MS creates the TMF-aligned event payload.
 4. IC MS writes webhook delivery work to its own local delivery outbox.
 5. The IC MS delivery relay posts the event payload to the subscriber listener callback URL using HTTP `POST`.
 6. The subscriber listener acknowledges delivery with an HTTP success response, normally `204 No Content`, where aligned to TMF listener behaviour.
@@ -100,7 +100,7 @@ The design intentionally separates these concerns:
 | Callback ingestion | ICB MS |
 | Callback interpretation and runtime assurance truth | IA MS |
 
-IC MS therefore exposes a stable TMF-style resource API while avoiding leakage of internal fulfilment mechanics. It is responsible for correct external lifecycle/status representation, consumer-safe reports, event subscription handling, ETag concurrency, and error consistency.
+IC MS therefore exposes a stable TMF-aligned resource API while avoiding leakage of internal fulfilment mechanics. It is responsible for correct external lifecycle/status representation, consumer-safe reports, event subscription handling, ETag concurrency, and error consistency.
 
 ## Responsibilities:
 
@@ -116,7 +116,7 @@ IC MS is responsible for:
 | Runtime version projection | Return the current projected runtime version externally while retaining internal version history. |
 | `IntentReport` projection | Expose read-only curated report/projection history derived from assurance outcomes. |
 | Event subscription | Support strict TMF `/hub` and domain-scoped `/intent/hub` subscription routes. |
-| External event delivery | Deliver consumer-safe TMF-style `Intent` and `IntentReport` event notifications by REST webhook callback to subscriber listener URLs. |
+| External event delivery | Deliver consumer-safe TMF-aligned `Intent` and `IntentReport` event notifications by REST webhook callback to subscriber listener URLs. |
 | Concurrency control | Enforce ETag / `If-Match` on unsafe state-changing operations. |
 | Common error shape | Return the shared platform REST error body. |
 
@@ -158,8 +158,8 @@ IC MS also does not resolve an `IntentSpecification` by `familyId`, name, key, o
 
 | Purpose | Method | Endpoint | Position |
 |---|---:|---|---|
-| List reports for intent | `GET` | `/intentManagement/v5/intent/{intentId}/intentReport` | Platform/TMF-style nested report projection |
-| Retrieve report by ID | `GET` | `/intentManagement/v5/intent/{intentId}/intentReport/{id}` | Platform/TMF-style nested report projection |
+| List reports for intent | `GET` | `/intentManagement/v5/intent/{intentId}/intentReport` | Platform/TMF-aligned nested report projection |
+| Retrieve report by ID | `GET` | `/intentManagement/v5/intent/{intentId}/intentReport/{id}` | Platform/TMF-aligned nested report projection |
 
 Ordinary external consumers do not receive a public `DELETE /intentManagement/v5/intent/{intentId}/intentReport/{id}` capability. Governed internal/admin purge may exist, but is not exposed through NGW/public consumer APIs by default.
 
@@ -192,7 +192,7 @@ A runtime intent create/update request must include:
 | `description` | Optional descriptive text. |
 | `humanExpression` | Human-readable expression of the requested outcome. |
 | `intentSpecification.id` | Required concrete active specification ID. |
-| `expression` | Required TMF-style `JsonLdExpression`. |
+| `expression` | Required TMF-aligned `JsonLdExpression`. |
 | `expression.expressionValue.context.targets` | Required measurable outcome/SLA objectives where defined by the specification. |
 | `expression.expressionValue.context.constraints` | Required or optional hard constraints as defined by the specification. |
 | `expression.expressionValue.context.preferences` | Optional soft selection guidance as defined by the specification. |
@@ -374,7 +374,7 @@ IC MS persists external runtime intent projections, runtime version metadata, hu
 |---|---|
 | Delivery ID | Stable delivery work identifier. |
 | Subscription ID | Links the notification to the subscriber registration. |
-| Event payload | TMF-style event body to send to the subscriber listener. |
+| Event payload | TMF-aligned event body to send to the subscriber listener. |
 | Callback URL | Resolved subscriber listener URL. |
 | Delivery status | Tracks pending, delivered, retrying, and failed delivery work. |
 | Retry metadata | Retry count, next retry time, and last error information. |
@@ -386,7 +386,7 @@ IC MS has two distinct event-delivery paths. The two paths must not be collapsed
 | Delivery path | Purpose | Transport | Durability model | Headers | Payload |
 |---|---|---|---|---|---|
 | Internal platform event publication | Notify independent internal microservice consumers that runtime intent admission or another internal milestone has occurred. | Kafka. | IC MS internal event outbox and Kafka relay. | CloudEvents-style Kafka/platform event headers. | Internal event JSON body, for example `IntentValidatedEvent`. |
-| External TMF/webhook notification delivery | Notify registered external subscribers about consumer-safe `Intent` and `IntentReport` events. | HTTP `POST` to subscriber listener callback URL. | IC MS webhook delivery outbox and HTTP retry relay. | HTTP headers. | TMF-style event request body, for example `IntentStatusChangeEvent`. |
+| External TMF/webhook notification delivery | Notify registered external subscribers about consumer-safe `Intent` and `IntentReport` events. | HTTP `POST` to subscriber listener callback URL. | IC MS webhook delivery outbox and HTTP retry relay. | HTTP headers. | TMF-aligned event request body, for example `IntentStatusChangeEvent`. |
 
 ## Internal Kafka event publication:
 
@@ -404,15 +404,15 @@ External `Intent` and `IntentReport` notifications are delivered to subscriber l
 
 | Delivery target | Event usage | Transport |
 |---|---|---|
-| Subscriber callback URL | External event delivery target configured through `/hub` or `/intent/hub`; the URL is subscriber-owned, not TMF-owned. | HTTP `POST`. |
+| Subscriber callback URL | External event delivery target configured through `/hub` or `/intent/hub`; the URL is subscriber-owned; notification payloads follow TMF-aligned event patterns so subscribers can use common TMF listener conventions. | HTTP `POST`. |
 
-IC MS writes webhook delivery work to a local webhook delivery outbox and an HTTP delivery relay posts the TMF-style event body to the subscriber listener callback URL. Kafka is not used for external hub notification delivery.
+IC MS writes webhook delivery work to a local webhook delivery outbox and an HTTP delivery relay posts the TMF-aligned event body to the subscriber listener callback URL. Kafka is not used for external hub notification delivery.
 
 External events must not expose raw telemetry, raw optimiser decisions, raw Knowledge Plane data, raw callback payloads, internal candidate scoring, or internal Kafka payloads.
 
 ## Event identity:
 
-External IC MS events use a TMF-style event resource shape.
+External IC MS events use a TMF-aligned event resource shape.
 
 | Field | Meaning |
 |---|---|
@@ -460,7 +460,7 @@ For internal Kafka event backbone delivery, IC MS should use the common platform
 | `ce-correlationid` | Correlation identifier for tracing. |
 | `content-type` | Event payload content type, usually `application/json`. |
 
-External TMF-style subscriber callbacks are REST webhook notifications. They carry HTTP headers and a REST request body rather than Kafka-style CloudEvents headers.
+External TMF-aligned subscriber callbacks are REST webhook notifications. They carry HTTP headers and a REST request body rather than Kafka-style CloudEvents headers.
 
 ## Internal Kafka message body:
 
@@ -650,13 +650,13 @@ External consumers can rely on IC MS to provide:
 
 | Contract item | Guarantee |
 |---|---|
-| Stable runtime `Intent` API | TMF-style create, list, retrieve, update, patch, and termination routes. |
+| Stable runtime `Intent` API | TMF-aligned create, list, retrieve, update, patch, and termination routes. |
 | Concrete spec reference requirement | Runtime requests must reference `intentSpecification.id`. |
 | External status projection | `lifecycleStatus`, `statusReason`, and `statusChangeDate` are IC MS-owned projections. |
 | Report read model | `IntentReport` is a read-only curated projection/audit resource for ordinary consumers. |
 | Hypermedia links | Responses include links for valid next actions where applicable. |
 | Optimistic concurrency | Unsafe operations use `If-Match` and ETag. |
-| External events | Subscribers receive consumer-safe TMF-style resource events through REST webhook callbacks. |
+| External events | Subscribers receive consumer-safe TMF-aligned resource events through REST webhook callbacks. |
 | No internal leakage | Raw telemetry, optimiser decisions, callback payloads, candidate scoring, and KP internals are not exposed in external events. |
 
 Internal consumers can rely on `IntentValidatedEvent` as the admitted runtime intent handoff, not as a command targeted to a single service.

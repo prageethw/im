@@ -13,7 +13,7 @@
 | Base path | `/intentManagement/v5` |
 | Primary resource | `Intent` |
 | Secondary resource | `IntentReport` |
-| Primary responsibility | TMF-facing runtime `Intent` controller, syntactic admission, lifecycle/status projection, and external runtime intent events |
+| Primary responsibility | TMF-compliant runtime `Intent` controller, syntactic admission, lifecycle/status projection, and external runtime intent events |
 
 ### TMF deployment path note:
 
@@ -59,8 +59,8 @@ Network apply/orchestration execution is owned by the orchestration layer / netw
 
 | **Purpose** | **Method** | **Endpoint** | **Position** |
 |---|---:|---|---|
-| List reports for intent | `GET` | `/intentManagement/v5/intent/{intentId}/intentReport` | Platform/TMF-style nested report projection |
-| Retrieve report by ID | `GET` | `/intentManagement/v5/intent/{intentId}/intentReport/{id}` | Platform/TMF-style nested report projection |
+| List reports for intent | `GET` | `/intentManagement/v5/intent/{intentId}/intentReport` | Platform/TMF-aligned nested report projection |
+| Retrieve report by ID | `GET` | `/intentManagement/v5/intent/{intentId}/intentReport/{id}` | Platform/TMF-aligned nested report projection |
 
 ### Hub subscription APIs:
 
@@ -86,7 +86,7 @@ IC MS therefore has two separate event-delivery paths:
 | Delivery path | Purpose | Transport | Durability model | Headers | Payload |
 |---|---|---|---|---|---|
 | Internal platform events | Publish internal state/progress events such as `IntentValidatedEvent` to independent internal consumers. | Kafka. | IC MS internal event outbox and Kafka relay. | CloudEvents-style Kafka/platform event headers. | Internal event JSON body. |
-| External TMF/webhook notifications | Notify registered hub subscribers about consumer-safe `Intent` and `IntentReport` events. | HTTP `POST` to subscriber listener callback URL. | IC MS webhook delivery outbox and HTTP retry relay. | HTTP headers. | TMF-style event request body. |
+| External TMF/webhook notifications | Notify registered hub subscribers about consumer-safe `Intent` and `IntentReport` events. | HTTP `POST` to subscriber listener callback URL. | IC MS webhook delivery outbox and HTTP retry relay. | HTTP headers. | TMF-aligned event request body. |
 
 ---
 
@@ -101,7 +101,7 @@ IC MS keeps the external `Intent` and `IntentReport` contract TMF-aligned while 
 | Runtime Intent create/list/retrieve | `POST /intent`, `GET /intent`, `GET /intent/{id}` | TMF-compatible |
 | Runtime Intent partial update | `PATCH /intent/{id}` | TMF-compatible |
 | Runtime Intent delete verb | `DELETE /intent/{id}` | TMF-compatible verb; platform behaviour is termination and retention, not physical deletion |
-| IntentReport list/retrieve | `GET /intent/{intentId}/intentReport`, `GET /intent/{intentId}/intentReport/{id}` | TMF-style nested report projection |
+| IntentReport list/retrieve | `GET /intent/{intentId}/intentReport`, `GET /intent/{intentId}/intentReport/{id}` | TMF-aligned nested report projection |
 | Hub subscription create/delete | `POST /hub`, `DELETE /hub/{id}` | Strict TMF route family |
 
 ### Accepted platform extensions:
@@ -546,7 +546,7 @@ Cache-Control: private, max-age=60
 |---|---|
 | `offset` | Zero-based start position |
 | `limit` | Maximum number of records |
-| `fields` | Optional TMF-style field selection / projection parameter |
+| `fields` | Optional TMF-aligned field selection / projection parameter |
 | `lifecycleStatus` | Filter by projected external lifecycle status |
 | `version` | Filter by projected runtime version |
 | `intentSpecification.id` | Filter by concrete IntentSpecification ID |
@@ -1196,7 +1196,7 @@ Cache-Control: private, max-age=300
 
 ## 11A. IntentReport delete posture:
 
-IC MS does not expose ordinary external `DELETE /intentManagement/v5/intent/{intentId}/intentReport/{id}` through NGW or public TMF-facing consumer APIs by default.
+IC MS does not expose ordinary external `DELETE /intentManagement/v5/intent/{intentId}/intentReport/{id}` through NGW or public TMF-compliant consumer APIs by default.
 
 External consumers can list and retrieve `IntentReport` records only. `IntentReport` is a read-only curated report/projection/audit resource for ordinary consumers. It represents externalised assurance and lifecycle reporting history derived from IA MS assurance truth, not a mutable business resource with an independent lifecycle.
 
@@ -1212,7 +1212,7 @@ If an implementation must expose the TMF report delete route for compatibility, 
 
 ### Event posture:
 
-`IntentReportDeleteEvent` remains part of the external TMF-style event vocabulary for `IntentReport` alignment.
+`IntentReportDeleteEvent` remains part of the external TMF-aligned event vocabulary for `IntentReport` alignment.
 
 IC MS emits `IntentReportDeleteEvent` only after successful governed internal/admin removal, where notification is allowed by policy. Valid trigger examples include retention purge, legal deletion, platform administration, approved data correction, or policy-governed cleanup.
 
@@ -1296,7 +1296,7 @@ IntentReportDeleteEvent
 
 ### Hub notification delivery rule:
 
-Subscribed notifications are delivered as REST webhook callbacks. IC MS sends an HTTP `POST` to the subscriber callback URL using the corresponding external TMF-style event payload as the request body. Kafka and CloudEvents headers are not used for this external hub delivery path. Webhook requests use HTTP headers such as `Content-Type`, `X-Correlation-Id`, and subscriber-specific authentication headers where configured.
+Subscribed notifications are delivered as REST webhook callbacks. IC MS sends an HTTP `POST` to the subscriber callback URL using the corresponding external TMF-aligned event payload as the request body. Kafka and CloudEvents headers are not used for this external hub delivery path. Webhook requests use HTTP headers such as `Content-Type`, `X-Correlation-Id`, and subscriber-specific authentication headers where configured.
 
 IC MS records pending webhook deliveries in an IC MS-owned local delivery outbox and retries delivery according to platform retry policy. A subscriber listener should return `204 No Content` when the notification is accepted.
 
@@ -1487,13 +1487,13 @@ Content-Type: application/json
 
 ## 15A. External event timestamp rule:
 
-External TMF-facing event examples populate both `eventTime` and `timeOccurred` with the same canonical event occurrence timestamp. `timeOccurred` is the platform-corrected spelling used consistently across ID MS and IC MS external event examples. TMF921 examples contain the misspelled `timeOcurred`; this baseline intentionally uses the corrected spelling while preserving the same timestamp semantics.
+External TMF-aligned event examples populate both `eventTime` and `timeOccurred` with the same canonical event occurrence timestamp. `timeOccurred` is the platform-corrected spelling used consistently across ID MS and IC MS external event examples. TMF921 examples contain the misspelled `timeOcurred`; this baseline intentionally uses the corrected spelling while preserving the same timestamp semantics.
 
 ---
 
 ## 16. External Intent event family:
 
-IC MS emits external TMF-style resource events for `Intent` projection changes.
+IC MS emits external TMF-aligned resource events for `Intent` projection changes.
 
 | **Event** | **Trigger** |
 |---|---|
@@ -1672,7 +1672,7 @@ They must not expose raw telemetry, raw optimiser decisions, raw `t7.knowledge p
 
 ## 21. External IntentReport event family:
 
-IC MS emits external TMF-style resource events for `IntentReport` projection changes.
+IC MS emits external TMF-aligned resource events for `IntentReport` projection changes.
 
 | **Event** | **Trigger** |
 |---|---|
@@ -1680,7 +1680,7 @@ IC MS emits external TMF-style resource events for `IntentReport` projection cha
 | `IntentReportAttributeValueChangeEvent` | Existing `IntentReport` projection updated |
 | `IntentReportDeleteEvent` | Governed platform/internal retention purge, administrative removal, legal deletion, or approved data-correction handling |
 
-`IntentReportDeleteEvent` is part of the external TMF-style event vocabulary for `IntentReport` alignment. It is not emitted as the result of ordinary external consumer delete because ordinary external `IntentReport` delete is not exposed by default. Reports remain read-only curated projection/audit history for ordinary consumers and may be archived or purged only through governed internal retention or administrative policy where required.
+`IntentReportDeleteEvent` is part of the external TMF-aligned event vocabulary for `IntentReport` alignment. It is not emitted as the result of ordinary external consumer delete because ordinary external `IntentReport` delete is not exposed by default. Reports remain read-only curated projection/audit history for ordinary consumers and may be archived or purged only through governed internal retention or administrative policy where required.
 
 ---
 

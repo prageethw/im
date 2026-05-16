@@ -54,7 +54,7 @@ The callback Kafka topic is dedicated to raw callback facts. It is separate from
 6. ICB MS returns 202 Accepted only after durable commit succeeds.
 7. ICB outbox relay publishes an IntentCallbackEvent to t7.intent.management.events.callbacks.
 8. IA MS consumes the event, validates/correlates intentId, maps raw sourceState.state, and emits IntentAssuranceEvent where appropriate.
-9. IC MS consumes IntentAssuranceEvent and projects external TMF-facing intent lifecycle/status.
+9. IC MS consumes IntentAssuranceEvent and projects external TMF-compliant intent lifecycle/status.
 ```
 
 If the ICB persistence path is unavailable, ICB MS fails fast and does not accept the callback. If Kafka is unavailable after the callback has been durably accepted, the API path can still succeed and the outbox relay retries publication later.
@@ -80,7 +80,7 @@ If the ICB persistence path is unavailable, ICB MS fails fast and does not accep
 | Concern | Owning component |
 |---|---|
 | Runtime `Intent` resource API | IC MS |
-| External TMF-facing lifecycle projection | IC MS |
+| External TMF-compliant lifecycle projection | IC MS |
 | `IntentReport` projection | IC MS |
 | Runtime assurance truth | IA MS |
 | Callback state interpretation | IA MS |
@@ -529,7 +529,7 @@ Duplicate submissions must not create duplicate internal callback facts. The ser
 | 5 | IA MS | Handles unmapped/skip states according to IA policy with logging/audit. |
 | 6 | IA MS | Writes assurance outcome and IA outbox record. |
 | 7 | IA MS | Publishes `IntentAssuranceEvent` to the main internal event topic. |
-| 8 | IC MS | Consumes `IntentAssuranceEvent` and projects TMF-facing intent status/report state. |
+| 8 | IC MS | Consumes `IntentAssuranceEvent` and projects TMF-compliant intent status/report state. |
 
 ### IA MS mapping config (illustrative only):
 

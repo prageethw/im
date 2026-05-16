@@ -4,7 +4,7 @@
 
 Intent Intelligence MS (II MS) is the internal semantic interpretation and resolution service for admitted runtime intents. It consumes syntactically admitted intent facts from Intent Controller MS (IC MS), interprets the admitted expression using governed Knowledge Plane data, validates semantic feasibility, policy, capability, and resource context, and emits the next internal milestone event.
 
-II MS is not an external TMF-facing API service. It does not expose runtime Intent REST APIs, design-time IntentSpecification APIs, customer-facing lifecycle projections, callback endpoints, orchestration execution, or assurance truth. Its responsibility is to convert a syntactically accepted runtime intent into one of the following internal outcomes:
+II MS is not an external TMF-compliant API service. It does not expose runtime Intent REST APIs, design-time IntentSpecification APIs, customer-facing lifecycle projections, callback endpoints, orchestration execution, or assurance truth. Its responsibility is to convert a syntactically accepted runtime intent into one of the following internal outcomes:
 
 - `IntentRejectedEvent` when the admitted intent cannot be semantically, policy, or capability resolved.
 - `IntentResolvedEvent` when the admitted intent has been semantically resolved into a canonical intent context and a full, valid candidate resource set for downstream optimisation or fulfilment consideration.
@@ -119,13 +119,13 @@ II MS contracts are internal event contracts only.
 | `IntentResolvedEvent` | Outbound | `intent-intelligence-ms` | Optimiser / downstream fulfilment stage | Candidate-level semantic-resolution handoff. |
 | `IntentNetworkReadyEvent` | Outbound | `intent-intelligence-ms` | `intent-assurance-ms` | Service-ready orchestration and observation configuration handoff. |
 
-II MS has no external TMF-facing REST contract in the active baseline. Any health, readiness, or metrics endpoints are internal platform probes only and must not be treated as product APIs.
+II MS has no external TMF-compliant REST contract in the active baseline. Any health, readiness, or metrics endpoints are internal platform probes only and must not be treated as product APIs.
 
 II MS does not expose REST hub subscriptions and does not deliver external HTTP webhook notifications. All II-owned event contracts are internal Kafka event contracts only.
 
 ## Event delivery path:
 
-II MS has one event-delivery model in the active baseline: internal Kafka event processing. It consumes `IntentValidatedEvent` from the internal intent-management event topic and publishes II-owned milestone events through the II internal outbox relay to Kafka. These events use CloudEvents-style Kafka/platform headers and JSON bodies. II MS does not use the external REST hub/webhook notification model because it has no external TMF-facing API or subscriber callback contract.
+II MS has one event-delivery model in the active baseline: internal Kafka event processing. It consumes `IntentValidatedEvent` from the internal intent-management event topic and publishes II-owned milestone events through the II internal outbox relay to Kafka. These events use CloudEvents-style Kafka/platform headers and JSON bodies. II MS does not use the external REST hub/webhook notification model because it has no external TMF-compliant API or subscriber callback contract.
 
 ## Inbound internal Kafka event shape: IntentValidatedEvent:
 
@@ -685,7 +685,7 @@ Consumer rules:
 
 | Item | Decision |
 |---|---|
-| II MS is internal only. | Closed. No external TMF-facing API. |
+| II MS is internal only. | Closed. No external TMF-compliant API. |
 | II MS consumes `IntentValidatedEvent`. | Closed. |
 | II MS emits `IntentRejectedEvent`. | Closed. |
 | II MS emits `IntentResolvedEvent`. | Closed. |

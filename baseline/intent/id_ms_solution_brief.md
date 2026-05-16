@@ -84,7 +84,7 @@ ID MS is responsible for:
 | Mutability control | Allow material update only while the specification is `DRAFT`. |
 | Concurrency | Enforce strong `ETag` / `If-Match` behaviour on unsafe operations. |
 | Subscription management | Manage external `IntentSpecification` event subscriptions through domain-scoped hub routes. |
-| External events | Deliver TMF-style external resource-event notifications to registered hub subscriber callback URLs after successful specification changes. |
+| External events | Deliver TMF-aligned external resource-event notifications to registered hub subscriber callback URLs after successful specification changes. |
 | Retrieval support | Allow IC MS and authorised consumers to retrieve active specifications for runtime validation and discovery. |
 
 ## ID MS does not:
@@ -192,7 +192,7 @@ There is no `DELETED` lifecycle state. Delete is an operation/outcome, not a lif
 |---|---|---|
 | `offset` | List | Zero-based result offset for pagination. |
 | `limit` | List | Maximum number of results returned. |
-| `fields` | Create, list, retrieve, update | Optional TMF-style field selection/projection. |
+| `fields` | Create, list, retrieve, update | Optional TMF-aligned field selection/projection. |
 | `lifecycleStatus` | List | Filter specifications by lifecycle state. |
 | `name` | List | Filter specifications by name. |
 | `version` | List | Filter specifications by version. |
@@ -250,7 +250,7 @@ The implementation should create hub delivery work from committed state. Resourc
 
 ID MS uses `/intentSpecification/hub` as a REST webhook subscription mechanism. Subscribers register callback URLs and optional filters. After a committed `IntentSpecification` resource change, ID MS delivers matching `IntentSpecification` event notifications by HTTP `POST` to the registered subscriber callback URL.
 
-The delivery model is a TMF-style subscriber listener callback. Kafka is not used for ID MS hub notification delivery. There is no ID MS self-publish/self-consume Kafka loop and no dedicated Kafka topic for these external hub notifications. ID MS is both the event originator and the delivery owner.
+The delivery model is a TMF-aligned subscriber listener callback. Kafka is not used for ID MS hub notification delivery. There is no ID MS self-publish/self-consume Kafka loop and no dedicated Kafka topic for these external hub notifications. ID MS is both the event originator and the delivery owner.
 
 Events are external subscription notifications for specification-resource changes. They must not expose internal fulfilment, KP, optimiser, assurance, telemetry, callback, or candidate/resource scoring details.
 
@@ -271,7 +271,7 @@ Registered subscribers receive notifications through REST webhook callback deliv
 
 ## Event identity:
 
-External ID MS events use TMF-style event identity fields:
+External ID MS events use TMF-aligned event identity fields:
 
 | Field | Purpose |
 |---|---|

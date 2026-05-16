@@ -6,7 +6,7 @@ Intent Assurance MS (IA MS) is the internal runtime assurance truth service for 
 
 IA MS consumes `IntentNetworkReadyEvent`, `IntentCallbackEvent`, and runtime metrics/observation facts only. It correlates runtime state, normalises raw source callback states, evaluates observed resource metrics against resolved runtime targets and the stored applied assurance baseline, persists IA-owned assurance state, and publishes `IntentAssuranceEvent`.
 
-IA MS does not expose a TMF-facing API. IC MS remains the owner of externally visible runtime `Intent` lifecycle projection and external `IntentReport` resources. IC MS consumes IA MS assurance outcomes and projects the public TMF-facing state.
+IA MS does not expose a TMF-compliant API. IC MS remains the owner of externally visible runtime `Intent` lifecycle projection and external `IntentReport` resources. IC MS consumes IA MS assurance outcomes and projects the public TMF-compliant state.
 
 `IntentDriftOccurredEvent` is retired in the active baseline. Drift, degradation, failure, active, and terminated outcomes are represented through `IntentAssuranceEvent.lifecycleStatus`, `statusReason`, and resource-level metrics.
 
@@ -95,7 +95,7 @@ Derived evaluation blocks such as `current.evaluations` or `body.evaluations` ar
 |---|---|
 | Design-time `IntentSpecification` lifecycle | ID MS owns this. |
 | Runtime `Intent` REST API | IC MS owns this. |
-| External TMF-facing lifecycle projection | IC MS owns this. |
+| External TMF-compliant lifecycle projection | IC MS owns this. |
 | External `IntentReport` resource creation | IC MS owns this. |
 | Raw callback ingestion REST endpoint | ICB MS owns this. |
 | Callback outbox persistence | ICB MS owns this. |
@@ -110,7 +110,7 @@ Derived evaluation blocks such as `current.evaluations` or `body.evaluations` ar
 
 ## Contracts:
 
-IA MS has no external TMF-facing REST API in the active baseline.
+IA MS has no external TMF-compliant REST API in the active baseline.
 
 IA MS internal contracts are:
 
@@ -348,7 +348,7 @@ IA MS must not include the following by default in `IntentAssuranceEvent`:
 
 ## Authorisation:
 
-IA MS is an internal service. It does not expose an external TMF-facing API or OEX-facing user operation.
+IA MS is an internal service. It does not expose an external TMF-compliant API or OEX-facing user operation.
 
 Authorisation should follow internal service-to-service controls:
 
@@ -524,7 +524,7 @@ Other authorised internal decision components may consume `IntentAssuranceEvent`
 
 | Item | Decision |
 |---|---|
-| IA external API | IA MS has no external TMF-facing API. |
+| IA external API | IA MS has no external TMF-compliant API. |
 | IA input events | IA consumes `IntentNetworkReadyEvent`, `IntentCallbackEvent`, and runtime metrics/observation facts only. |
 | `IntentOptimisedEvent` as IA input | Not used. IA receives apply/assurance context through `IntentNetworkReadyEvent`. |
 | `IntentNetworkReadyEvent` owner | Produced by II MS, not IA MS. |
@@ -544,7 +544,7 @@ Other authorised internal decision components may consume `IntentAssuranceEvent`
 | Short name | IA MS |
 | Service name | `intent-assurance-ms` |
 | Domain | Intent Domain |
-| External API owner | No external TMF-facing API |
+| External API owner | No external TMF-compliant API |
 | Main responsibility | Runtime assurance truth, callback state normalisation, observation evaluation, and `IntentAssuranceEvent` publication |
 | Main input events | `IntentNetworkReadyEvent`, `IntentCallbackEvent` |
 | Main non-event input | Runtime metrics / observation facts from observability endpoints |

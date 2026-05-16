@@ -93,7 +93,7 @@ The following query parameters are supported where applicable:
 |---|---|---|
 | `offset` | List | Zero-based result offset for pagination |
 | `limit` | List | Maximum number of results returned |
-| `fields` | Create, list, retrieve, update | Optional TMF-style field selection / projection parameter |
+| `fields` | Create, list, retrieve, update | Optional TMF-aligned field selection / projection parameter |
 | `lifecycleStatus` | List | Filter specifications by lifecycle state |
 | `name` | List | Filter specifications by name |
 | `version` | List | Filter specifications by version |
@@ -1199,7 +1199,7 @@ GET /intentManagement/v5/intentSpecification/hub/{id}
 DELETE /intentManagement/v5/intentSpecification/hub/{id}
 ```
 
-Hub subscriptions are delivered as TMF-style REST webhook notifications.
+Hub subscriptions are delivered as TMF-aligned REST webhook notifications.
 ID MS stores the subscriber callback registration and, when a subscribed `IntentSpecification` event occurs, delivers the corresponding event payload by HTTP `POST` to the subscriber listener callback URL.
 Kafka is not used for external hub notification delivery because ID MS is both the event originator and the delivery owner, and no independent internal consumer requires a topic for these external notifications.
 Delivery reliability is handled by an ID MS-owned local delivery outbox and retry relay.
@@ -1408,7 +1408,7 @@ Retry-After: 30
 
 ## 15. External event family
 
-ID MS emits external TMF-style resource events for `IntentSpecification` changes.
+ID MS emits external TMF-aligned resource events for `IntentSpecification` changes.
 
 | **Event** | **Trigger** |
 |---|---|
@@ -1446,7 +1446,7 @@ Delete events are emitted only after successful delete and show the last known l
 
 ## 16. Event envelope pattern
 
-External TMF-facing event examples populate both `eventTime` and `timeOccurred` with the same canonical event occurrence timestamp.
+External TMF-aligned event examples populate both `eventTime` and `timeOccurred` with the same canonical event occurrence timestamp.
 `timeOccurred` is the platform-corrected spelling used consistently across ID MS and IC MS external event examples.
 TMF921 examples contain the misspelled `timeOcurred`; this baseline intentionally uses the corrected spelling while preserving the same timestamp semantics.
 
@@ -1745,9 +1745,9 @@ TMF921 examples contain the misspelled `timeOcurred`; this baseline intentionall
 - `If-None-Match` and `304 Not Modified` are not baselined.
 - Missing required `If-Match` returns `428 Precondition Required`.
 - Stale or mismatched `If-Match` returns `412 Precondition Failed`.
-- `fields` is supported as an optional TMF-style field selection parameter.
+- `fields` is supported as an optional TMF-aligned field selection parameter.
 - Activation is represented through PUT/PATCH lifecycle update, not a custom action endpoint.
-- External TMF-facing events include both `eventTime` and `timeOccurred` with the same canonical event occurrence timestamp.
+- External TMF-aligned events include both `eventTime` and `timeOccurred` with the same canonical event occurrence timestamp.
 - `timeOccurred` is the platform-corrected spelling used consistently across ID MS and IC MS external event examples. TMF921 examples contain the misspelled `timeOcurred`; this baseline intentionally uses the corrected spelling while preserving the same timestamp semantics.
 - `IntentSpecificationStatusChangeEvent` carries the current `intentSpecification.lifecycleStatus` snapshot and does not carry separate `previousLifecycleStatus` or `newLifecycleStatus` fields.
 
@@ -1755,9 +1755,9 @@ TMF921 examples contain the misspelled `timeOcurred`; this baseline intentionall
 
 ## TMF compliance and platform extension baseline
 
-### Strict TMF-facing baseline
+### Strict TMF-compliant baseline
 
-For strict TMF alignment, ID MS supports the TMF-style `IntentSpecification` operations:
+For strict TMF alignment, ID MS supports the TMF-aligned `IntentSpecification` operations:
 
 | **Operation** | **Endpoint** | **Position** |
 |---|---|---|
@@ -1842,7 +1842,7 @@ ID MS may use a local delivery outbox and retry relay for reliable webhook deliv
 
 ### External event timestamp rule
 
-For external TMF-facing resource events, ID MS populates both `eventTime` and `timeOccurred` with the same canonical event occurrence timestamp.
+For external TMF-aligned resource events, ID MS populates both `eventTime` and `timeOccurred` with the same canonical event occurrence timestamp.
 `timeOccurred` is the platform-corrected spelling used consistently across ID MS and IC MS external event examples.
 TMF921 examples contain the misspelled `timeOcurred`; this baseline intentionally uses the corrected spelling while preserving the same timestamp semantics.
 Internal events remain separate and continue to use the platform CloudEvents/header model plus the relevant internal body timestamp fields.

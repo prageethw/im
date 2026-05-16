@@ -10,7 +10,7 @@
 | Domain | Intent Domain |
 | Primary resource | `Intent` |
 | Secondary resource | `IntentReport` |
-| Primary responsibility | TMF-facing runtime intent controller and lifecycle/status projection |
+| Primary responsibility | TMF-compliant runtime intent controller and lifecycle/status projection |
 
 ## IC MS core purpose:
 
@@ -28,7 +28,7 @@ It is responsible for:
 | Internal state/progress event publication | Emit `IntentValidatedEvent` to the internal Kafka event backbone after syntactic validation succeeds |
 | Rejection projection | Consume rejection outcome from II MS and project `Rejected` |
 | Assurance projection | Consume `IntentAssuranceEvent` from IA MS and update external `Intent` / `IntentReport` |
-| External webhook notifications | Deliver TMF-style `Intent` and `IntentReport` notifications by HTTP POST to subscriber listener callback URLs |
+| External webhook notifications | Deliver TMF-aligned `Intent` and `IntentReport` notifications by HTTP POST to subscriber listener callback URLs |
 
 ## IC MS does not own:
 
@@ -171,7 +171,7 @@ Internal Kafka events use CloudEvents-style Kafka/platform headers.
 
 External `Intent` and `IntentReport` events are delivered through the REST hub subscription model. IC MS stores subscriber registrations and writes delivery work to a local webhook delivery outbox. A webhook delivery relay sends HTTP `POST` requests to subscriber listener callback URLs.
 
-External webhook notifications use HTTP headers and a TMF-style event payload body. They do not use Kafka topics or CloudEvents-style Kafka headers.
+External webhook notifications use HTTP headers and a TMF-aligned event payload body. They do not use Kafka topics or CloudEvents-style Kafka headers.
 
 ### External webhook HTTP headers:
 
@@ -262,7 +262,7 @@ IntentCallbackEvent
 
 ## External event family:
 
-IC MS emits TMF-style external events for `Intent` and `IntentReport` projection changes.
+IC MS emits TMF-aligned external events for `Intent` and `IntentReport` projection changes.
 
 ### Intent events:
 
@@ -285,7 +285,7 @@ IntentReportDeleteEvent
 
 ### External event timestamp rule:
 
-External TMF-facing event examples and emitted event envelopes populate both `eventTime` and `timeOccurred` with the same canonical event occurrence timestamp. `timeOccurred` is the corrected platform spelling used consistently across IC MS and ID MS external event examples.
+External TMF-aligned event examples and emitted event envelopes populate both `eventTime` and `timeOccurred` with the same canonical event occurrence timestamp. `timeOccurred` is the corrected platform spelling used consistently across IC MS and ID MS external event examples.
 
 These events are external projection/resource events only. They must not expose raw telemetry, raw optimiser decisions, raw `t7.knowledge plane` data, raw callback payloads, internal candidate scoring, internal Kafka event payloads, or full internal `IntentAssuranceEvent` body unless deliberately curated into `IntentReport`.
 
@@ -315,7 +315,7 @@ Consumers decide compliance from the facts. IntentReport should not expose raw t
 
 `IntentReport` is read-only from ordinary external API consumers.
 
-IC MS does not expose ordinary external `DELETE /intentManagement/v5/intent/{intentId}/intentReport/{id}` through NGW or public TMF-facing consumer APIs by default. External consumers can list and retrieve `IntentReport` records only.
+IC MS does not expose ordinary external `DELETE /intentManagement/v5/intent/{intentId}/intentReport/{id}` through NGW or public TMF-compliant consumer APIs by default. External consumers can list and retrieve `IntentReport` records only.
 
 Reason: `IntentReport` is a curated assurance/lifecycle report projection and audit/history record. Deleting it as a normal consumer operation would remove traceability and would require a separate report lifecycle such as `Archived` or `Deleted`, which is deliberately not baselined.
 
@@ -323,7 +323,7 @@ IC MS may provide an internal-only governed `IntentReport` delete/purge capabili
 
 If a deployment must expose the TMF report delete route for compatibility, it must be restricted/admin-only or return a policy error such as `403 Forbidden` or `405 Method Not Allowed` for ordinary consumers.
 
-`IntentReportDeleteEvent` remains part of the external TMF-style event vocabulary for `IntentReport` alignment. It may be emitted only after successful governed internal/admin removal where notification is allowed by policy. It is not emitted as the result of ordinary external consumer delete because ordinary report delete is not exposed.
+`IntentReportDeleteEvent` remains part of the external TMF-aligned event vocabulary for `IntentReport` alignment. It may be emitted only after successful governed internal/admin removal where notification is allowed by policy. It is not emitted as the result of ordinary external consumer delete because ordinary report delete is not exposed.
 
 No separate `IntentReport` lifecycle is baselined for ordinary consumer use because delete/purge is a governed administrative operation, not a normal report lifecycle transition.
 
@@ -358,7 +358,7 @@ Platform preference:
 
 ## IC MS boundary statement:
 
-**IC MS is the TMF-facing runtime intent controller. It owns external `Intent` and `IntentReport` resources, performs syntactic validation against active `IntentSpecification`, emits `IntentValidatedEvent` as an internal state/progress event, and projects external lifecycle/status from II MS rejection outcomes and IA MS assurance outcomes. IC MS does not perform semantic validation, policy validation, optimisation, network apply, runtime assurance, telemetry ingestion, or callback mediation.**
+**IC MS is the TMF-compliant runtime intent controller. It owns external `Intent` and `IntentReport` resources, performs syntactic validation against active `IntentSpecification`, emits `IntentValidatedEvent` as an internal state/progress event, and projects external lifecycle/status from II MS rejection outcomes and IA MS assurance outcomes. IC MS does not perform semantic validation, policy validation, optimisation, network apply, runtime assurance, telemetry ingestion, or callback mediation.**
 
 ## Lifecycle/status and versioning baseline:
 
@@ -865,7 +865,7 @@ If needed, version history may be exposed through one of the following:
 |---|---|
 | `IntentReport` | Curated external reporting/history projection |
 | Documented platform extension | Explicit version inspection endpoint if required later |
-| Internal operational tooling | Operator/debug use without changing external TMF-facing resource shape |
+| Internal operational tooling | Operator/debug use without changing external TMF-compliant resource shape |
 
 ### Baseline statement:
 
@@ -1358,7 +1358,7 @@ The domain payload sits inside `expression.expressionValue.context`:
 Design rules:
 
 - IC MS validates syntactic shape against the active ID MS `IntentSpecification.expressionSpecification` and `targetEntitySchema` contract.
-- IC MS preserves the external TMF expression wrapper on TMF-facing `Intent` resources.
+- IC MS preserves the external TMF expression wrapper on TMF-compliant `Intent` resources.
 - IC MS emits `IntentValidatedEvent` with the admitted expression as internal native JSON using the same canonical `targets`, `constraints`, and `preferences` buckets, without the external TMF expression wrapper.
 - `location`, `serviceType`, and `serviceClass` sit under `context.constraints`; they are not peer fields beside `targets`, `constraints`, and `preferences`.
 - IC MS does not perform semantic/KP validation.
@@ -1382,7 +1382,7 @@ Internal `IntentValidatedEvent.body.expression` carries the admitted expression 
 
 ## TMF fields and precondition response alignment:
 
-IC MS supports the optional TMF-style `fields` query parameter on create/list/retrieve/update operations where applicable, including `IntentReport` list/retrieve projections.
+IC MS supports the optional TMF-aligned `fields` query parameter on create/list/retrieve/update operations where applicable, including `IntentReport` list/retrieve projections.
 
 Unsafe operations requiring optimistic concurrency use `If-Match`. Missing required `If-Match` returns `428 Precondition Required`. Stale or mismatched `If-Match` returns `412 Precondition Failed`.
 

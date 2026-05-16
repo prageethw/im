@@ -29,7 +29,7 @@ II MS does not own runtime `Intent` REST APIs, external lifecycle projection, do
 
 ## 1. External API
 
-II MS has no external TMF-facing API and no consumer-facing REST contract in the active baseline. II MS is not exposed through NGW, OEX, public API gateways, or partner-facing API channels.
+II MS has no external TMF-compliant API and no consumer-facing REST contract in the active baseline. II MS is not exposed through NGW, OEX, public API gateways, or partner-facing API channels.
 
 Operational probes such as health, readiness, and metrics are platform-internal only. They are for Kubernetes/platform operations and must not be treated as external product APIs or TMF921 resource APIs.
 

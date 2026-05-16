@@ -8,7 +8,7 @@
 | Short name | IA MS |
 | Service name | `intent-assurance-ms` |
 | Domain | Intent Domain |
-| External API owner | No external TMF-facing API |
+| External API owner | No external TMF-compliant API |
 | Main responsibility | Runtime assurance truth, callback state normalisation, observation evaluation, and `IntentAssuranceEvent` publication |
 | Main output event | `IntentAssuranceEvent` |
 | Retired event | `IntentDriftOccurredEvent` is not used |
@@ -29,7 +29,7 @@ IA MS does **not** consume `IntentOptimisedEvent` in the active baseline.
 
 Optimisation output may influence the service-ready configuration produced upstream, but IA receives its assurance/apply context through `IntentNetworkReadyEvent.serviceConfiguration` and IA stored/applied assurance state.
 
-IC MS consumes `IntentAssuranceEvent` and projects the external TMF-facing `Intent.lifecycleStatus` and `IntentReport.expression.expressionValue`.
+IC MS consumes `IntentAssuranceEvent` and projects the external TMF-compliant `Intent.lifecycleStatus` and `IntentReport.expression.expressionValue`.
 
 IA MS does not own external TMF APIs, runtime `Intent` resources, design-time `IntentSpecification`, semantic interpretation, optimisation decisions, callback ingestion, or network orchestration/apply execution.
 
@@ -50,7 +50,7 @@ IA MS uses the active internal event style:
 | Correlation | `correlationId` propagated end-to-end |
 | Kafka key | Prefer `intentId` for intent-scoped events |
 
-Internal IA events must not use external TMF `IntentExpression` wrappers. Those wrappers are used only in external IC MS REST resources and external TMF-style events.
+Internal IA events must not use external TMF `IntentExpression` wrappers. Those wrappers are used only in external IC MS REST resources and external TMF-aligned events.
 
 ---
 
@@ -743,4 +743,4 @@ IA MS owns its own PostgreSQL-compatible persistence boundary.
 
 ## 11. Final baseline statement
 
-IA MS is the internal runtime assurance truth service. It consumes `IntentNetworkReadyEvent`, `IntentCallbackEvent`, and runtime metrics/observation facts only; normalises callback and runtime state; updates IA-owned assurance state; and emits curated generic `IntentAssuranceEvent` outcomes. IC MS consumes these outcomes to project external TMF-facing `Intent` and `IntentReport` resources.
+IA MS is the internal runtime assurance truth service. It consumes `IntentNetworkReadyEvent`, `IntentCallbackEvent`, and runtime metrics/observation facts only; normalises callback and runtime state; updates IA-owned assurance state; and emits curated generic `IntentAssuranceEvent` outcomes. IC MS consumes these outcomes to project external TMF-compliant `Intent` and `IntentReport` resources.

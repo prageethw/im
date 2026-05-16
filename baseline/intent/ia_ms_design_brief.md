@@ -45,7 +45,7 @@ II MS or another authorised decision component reads the assurance event state a
 |---|---|
 | Design-time `IntentSpecification` lifecycle | ID MS |
 | Runtime `Intent` resource API | IC MS |
-| External TMF-facing lifecycle projection | IC MS |
+| External TMF-compliant lifecycle projection | IC MS |
 | Raw callback ingestion API | ICB MS |
 | Callback outbox persistence | ICB MS |
 | Network apply/orchestration execution | Orchestration layer / network orchestrator |
@@ -129,7 +129,7 @@ IA MS obtains runtime metrics from observability/observation endpoints. The obse
 
 ## Final baseline statement
 
-IA MS is the runtime assurance truth service. It consumes `IntentNetworkReadyEvent`, `IntentCallbackEvent`, and observation facts only; maps raw callback state; evaluates runtime observations against resolved runtime targets and the stored applied assurance baseline; and emits curated generic `IntentAssuranceEvent` outcomes. IC MS consumes `IntentAssuranceEvent` to project external TMF-facing `Intent` lifecycle and `IntentReport` resources.
+IA MS is the runtime assurance truth service. It consumes `IntentNetworkReadyEvent`, `IntentCallbackEvent`, and observation facts only; maps raw callback state; evaluates runtime observations against resolved runtime targets and the stored applied assurance baseline; and emits curated generic `IntentAssuranceEvent` outcomes. IC MS consumes `IntentAssuranceEvent` to project external TMF-compliant `Intent` lifecycle and `IntentReport` resources.
 
 ## Metrics-first IntentAssuranceEvent refinement
 

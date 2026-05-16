@@ -10,7 +10,7 @@ II MS receives syntactically admitted intent facts from IC MS, interprets and va
 - `IntentResolvedEvent` for candidate-level semantic resolution
 - `IntentNetworkReadyEvent` for service-ready preparation to IA MS
 
-II MS is internal only. It does not expose a TMF-facing REST API and is not exposed through NGW, OEX, public API gateways, or partner-facing API channels.
+II MS is internal only. It does not expose a TMF-compliant REST API and is not exposed through NGW, OEX, public API gateways, or partner-facing API channels.
 
 ## Service identity
 
@@ -73,7 +73,7 @@ II MS owns:
 
 II MS consumes `IntentValidatedEvent` from the internal event backbone.
 
-`IntentValidatedEvent` contains the admitted runtime expression in native internal JSON form. IC MS has already translated the external TMF-facing `Intent.expression.expressionValue` into internal event form.
+`IntentValidatedEvent` contains the admitted runtime expression in native internal JSON form. IC MS has already translated the external TMF-compliant `Intent.expression.expressionValue` into internal event form.
 
 II MS expects the admitted expression to preserve the canonical ID/IC semantic grouping:
 
@@ -248,7 +248,7 @@ Internal II events do not use the TMF external `Intent.expression` wrapper, but 
 
 ## API stance
 
-II MS has no external TMF-facing API and no consumer-facing REST contract. It is not exposed through NGW, OEX, public API gateways, or partner-facing API channels.
+II MS has no external TMF-compliant API and no consumer-facing REST contract. It is not exposed through NGW, OEX, public API gateways, or partner-facing API channels.
 
 Operational probes such as `/health`, `/ready`, and `/metrics`, if implemented, are platform-internal only. They are for Kubernetes/platform operations and must not be presented as TMF921 resource APIs or externally exposed service APIs.
 
