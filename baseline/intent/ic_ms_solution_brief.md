@@ -79,7 +79,7 @@ IC MS owns the externally visible runtime projection, not the full internal fulf
 3. When a subscribed `Intent` or `IntentReport` event occurs, IC MS creates the TMF-style event payload.
 4. IC MS writes webhook delivery work to its own local delivery outbox.
 5. The IC MS delivery relay posts the event payload to the subscriber listener callback URL using HTTP `POST`.
-6. The subscriber listener acknowledges delivery with an HTTP success response, normally `204 No Content` where aligned to TMF listener behaviour.
+6. The subscriber listener acknowledges delivery with an HTTP success response, normally `204 No Content`, where aligned to TMF listener behaviour.
 7. IC MS retries failed callback deliveries according to the delivery policy.
 
 Kafka is not used for external hub notification delivery. IC MS does not create a self-publish/self-consume Kafka loop for hub notifications, in which it is both the event originator and the delivery owner.
