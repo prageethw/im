@@ -381,7 +381,7 @@ Persistence rules:
 - IA state updates and outbox writes should be transactional where possible;
 - unpublished outbox rows must remain durable until successfully published or governed by explicit operational policy.
 
-## Kafka publication:
+## Internal Kafka publication:
 
 IA MS publishes `IntentAssuranceEvent` to the internal event backbone through its outbox relay.
 
@@ -395,7 +395,7 @@ Publication rules:
 - breaking changes require versioning;
 - payloads must not include secrets, tokens, credentials, or raw internal stack traces.
 
-## Topics:
+## Internal Kafka topics:
 
 | Topic | Direction | Purpose |
 |---|---|---|
@@ -419,7 +419,7 @@ Exact topic naming should remain aligned with the environment-specific platform 
 | Delivery model | At-least-once |
 | Consumer behaviour | Idempotent consumption required |
 
-## CloudEvents headers:
+## Internal Kafka CloudEvents headers:
 
 IA MS uses CloudEvents-style metadata in Kafka/message headers with a plain JSON body.
 
@@ -437,7 +437,7 @@ content-type: application/json
 
 Internal events are not external TMF listener events and are not wrapped in TMF event structures.
 
-## Message shape:
+## Internal Kafka message body:
 
 The active IA event message shape is:
 
