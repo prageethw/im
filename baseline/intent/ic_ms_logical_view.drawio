@@ -7,7 +7,7 @@
         <mxCell id="zone_external" parent="1" style="swimlane;startSize=30;fillColor=#dae8fc;strokeColor=default;fontStyle=1;fontSize=13;horizontal=1;container=0;" value="External Zone" vertex="1">
           <mxGeometry height="280" width="340" x="40" y="40" as="geometry" />
         </mxCell>
-        <mxCell id="zone_gateway" parent="1" style="swimlane;startSize=30;fillColor=#dae8fc;strokeColor=default;fontStyle=1;fontSize=13;horizontal=1;container=0;" value="Platform Gateway" vertex="1">
+        <mxCell id="zone_gateway" parent="1" style="swimlane;startSize=30;fillColor=#dae8fc;strokeColor=default;fontStyle=1;fontSize=13;horizontal=1;container=0;" value="Gateway" vertex="1">
           <mxGeometry height="280" width="220" x="440" y="40" as="geometry" />
         </mxCell>
         <mxCell id="zone_icms" parent="1" style="swimlane;startSize=30;fillColor=#d5e8d4;strokeColor=default;fontStyle=1;fontSize=13;horizontal=1;container=0;" value="IC MS — Runtime API &amp; Projection Boundary" vertex="1">
