@@ -1,4 +1,6 @@
-@startuml II MS - Sequence Flow
+@startuml
+title Intent Intelligence MS (II MS) — Semantic Interpretation Sequence Flow
+
 !theme plain
 skinparam sequenceMessageAlign center
 skinparam backgroundColor #FFFFFF
@@ -10,138 +12,171 @@ skinparam noteBackgroundColor #fff2cc
 skinparam dividerBackgroundColor #f0f0f0
 skinparam sequenceGroupBackgroundColor #f9f9f9
 
-title Intent Intelligence MS (II MS) — Semantic Interpretation Sequence Flow
-
 participant "Kafka\n(internal event backbone)" as KAFKA
 participant "Intent Intelligence MS\n(II MS)" as IIMS
 participant "Knowledge Plane\n(KP)" as KP
 database "II MS Store\n(semantic state + outbox)" as STORE
 participant "Outbox Relay\n(background worker)" as RELAY
 participant "IC MS" as ICMS
-participant "Optimiser/IA MS/etc" as DS
+participant "Downstream services\n(optimiser / IA / change execution)" as DS
 
 == 1. Consume IntentValidatedEvent ==
+
 KAFKA -> IIMS : IntentValidatedEvent\n{ cloudEventsId, intentId, version, body.expression.context }
 IIMS -> STORE : check deduplication record\n(cloudEventsId + intentId)
 
 alt already processed (duplicate)
-    STORE --> IIMS : duplicate found
-    IIMS -> KAFKA : ack (idempotent — no reprocessing)
+  STORE --> IIMS : duplicate found
+  IIMS -> KAFKA : ack (idempotent — no reprocessing)
 else not yet processed
-    STORE --> IIMS : no duplicate — proceed
+  STORE --> IIMS : no duplicate — proceed
 
-    == 2. Parse Expression Context ==
-    IIMS -> IIMS : parse body.expression.context.targets\n(latency, availability, jitter, packet loss, ...)
-    IIMS -> IIMS : parse body.expression.context.constraints\n(location, service class, priority,\nredundancy, time window, ...)
-    IIMS -> IIMS : parse body.expression.context.preferences\n(soft selection guidance)
+  == 2. Parse Expression Context ==
 
-    == 3. Knowledge Plane Resolution ==
-    IIMS -> KP : resolve location context
-    KP --> IIMS : location scope + region metadata
-    IIMS -> KP : resolve service type + service class
-    KP --> IIMS : service type definition + class capabilities
-    IIMS -> KP : resolve capability context\n(what the network can currently deliver)
-    KP --> IIMS : capability profile { latency, availability, jitter, packet loss }
-    IIMS -> KP : resolve policy context\n(scope filters, constraint promotion rules)
-    KP --> IIMS : applicable policies + constraint promotion set
-    IIMS -> KP : resolve resource context\n(candidate resource set pre-filter)
-    KP --> IIMS : raw candidate resource set
+  IIMS -> IIMS : parse body.expression.context.targets\n(latency, availability, jitter, packet loss, ...)
+  IIMS -> IIMS : parse body.expression.context.constraints\n(location, service class, priority,\nredundancy, time window, ...)
+  IIMS -> IIMS : parse body.expression.context.preferences\n(soft selection guidance)
 
-    == 4. Hard Constraint Validation ==
-    note over IIMS : Hard constraints must be satisfiable within resolved capability context
-    IIMS -> IIMS : validate location constraint\nagainst resolved location scope
-    IIMS -> IIMS : validate service class constraint\nagainst capability profile
-    IIMS -> IIMS : validate priority constraint
-    IIMS -> IIMS : validate redundancy constraint
-    IIMS -> IIMS : validate time window constraint
+  == 3. Knowledge Plane Resolution ==
 
-    alt any hard constraint unsatisfiable
-        IIMS -> IIMS : semantic rejection — hard constraint failure
+  IIMS -> KP : resolve location context
+  KP --> IIMS : location scope + region metadata
+
+  IIMS -> KP : resolve service type + service class
+  KP --> IIMS : service type definition + class capabilities
+
+  IIMS -> KP : resolve capability context\n(what the network can currently deliver)
+  KP --> IIMS : capability profile { latency, availability, jitter, packet loss }
+
+  IIMS -> KP : resolve policy context\n(scope filters, constraint promotion rules)
+  KP --> IIMS : applicable policies + constraint promotion set
+
+  IIMS -> KP : resolve resource context\n(candidate resource set pre-filter)
+  KP --> IIMS : raw candidate resource set
+
+  == 4. Hard Constraint Validation ==
+
+  note over IIMS
+    Hard constraints must be satisfiable within
+    resolved capability context.
+  end note
+
+  IIMS -> IIMS : validate location constraint\nagainst resolved location scope
+  IIMS -> IIMS : validate service class constraint\nagainst capability profile
+  IIMS -> IIMS : validate priority constraint
+  IIMS -> IIMS : validate redundancy constraint
+  IIMS -> IIMS : validate time window constraint
+
+  alt any hard constraint unsatisfiable
+    IIMS -> IIMS : semantic rejection — hard constraint failure
+    group Atomic DB transaction
+      IIMS -> STORE : persist semantic decision trail\n{ reason: CONSTRAINT_VIOLATION, detail }
+      IIMS -> STORE : write IntentRejectedEvent to outbox\n{ intentId, rejectionClass: CONSTRAINT, reason }
+    end
+    RELAY -> STORE : poll → IntentRejectedEvent
+    RELAY -> KAFKA : publish IntentRejectedEvent
+    KAFKA -> ICMS : IntentRejectedEvent\n→ IC MS updates Intent projection (Rejected)
+  else all hard constraints satisfiable
+
+    == 5. Measurable Target Validation ==
+
+    note over IIMS
+      Targets are validated against known
+      capability context from KP.
+    end note
+
+    IIMS -> IIMS : validate latency target\nvs capability profile
+    IIMS -> IIMS : validate availability target\nvs capability profile
+    IIMS -> IIMS : validate jitter target\nvs capability profile
+    IIMS -> IIMS : validate packet loss target\nvs capability profile
+
+    alt any measurable target outside capability context
+      IIMS -> IIMS : semantic rejection — capability not met
+      group Atomic DB transaction
+        IIMS -> STORE : persist semantic decision trail\n{ reason: CAPABILITY_EXCEEDED, detail }
+        IIMS -> STORE : write IntentRejectedEvent to outbox\n{ intentId, rejectionClass: CAPABILITY, reason }
+      end
+      RELAY -> STORE : poll → IntentRejectedEvent
+      RELAY -> KAFKA : publish IntentRejectedEvent
+      KAFKA -> ICMS : IntentRejectedEvent\n→ IC MS updates Intent projection (Rejected)
+    else all targets within capability context
+
+      == 6. Preference Handling ==
+
+      note over IIMS
+        Preferences are soft guidance unless policy
+        explicitly promotes them to hard constraints.
+      end note
+
+      IIMS -> IIMS : evaluate preferences against policy promotion rules
+
+      alt policy promotes preference to hard constraint
+        IIMS -> IIMS : re-validate as hard constraint\n(steps 4-5 apply)
+      else preference remains soft
+        IIMS -> IIMS : preserve preference as soft selection guidance\nfor candidate ranking
+      end
+
+      == 7. Canonicalisation ==
+
+      IIMS -> IIMS : normalise canonical semantic buckets\n• targets → normalised measurement set\n• constraints → validated hard set\n• preferences → ranked soft guidance set
+
+      == 8. Candidate Discovery ==
+
+      IIMS -> IIMS : apply scope + policy filters\nto raw candidate resource set from KP
+      IIMS -> IIMS : resolve complete valid candidate resource set\nfor current semantic context
+
+      alt no valid candidates found after filtering
+        IIMS -> IIMS : semantic rejection — no candidates
         group Atomic DB transaction
-            IIMS -> STORE : persist semantic decision trail\n{ reason: CONSTRAINT_VIOLATION, detail }
-            IIMS -> STORE : write IntentRejectedEvent to outbox\n{ intentId, rejectionClass: CONSTRAINT, reason }
+          IIMS -> STORE : persist semantic decision trail\n{ reason: NO_CANDIDATES, detail }
+          IIMS -> STORE : write IntentRejectedEvent to outbox\n{ intentId, rejectionClass: POLICY, reason }
         end
         RELAY -> STORE : poll → IntentRejectedEvent
         RELAY -> KAFKA : publish IntentRejectedEvent
         KAFKA -> ICMS : IntentRejectedEvent\n→ IC MS updates Intent projection (Rejected)
-    else all hard constraints satisfiable
+      else valid candidates resolved
 
-        == 5. Measurable Target Validation ==
-        note over IIMS : Targets validated against known capability context from KP
-        IIMS -> IIMS : validate latency target\nvs capability profile
-        IIMS -> IIMS : validate availability target\nvs capability profile
-        IIMS -> IIMS : validate jitter target\nvs capability profile
-        IIMS -> IIMS : validate packet loss target\nvs capability profile
+        == 9. Record Semantic Decision + Emit Resolution Event ==
 
-        alt any measurable target outside capability context
-            IIMS -> IIMS : semantic rejection — capability not met
-            group Atomic DB transaction
-                IIMS -> STORE : persist semantic decision trail\n{ reason: CAPABILITY_EXCEEDED, detail }
-                IIMS -> STORE : write IntentRejectedEvent to outbox\n{ intentId, rejectionClass: CAPABILITY, reason }
-            end
-            RELAY -> STORE : poll → IntentRejectedEvent
-            RELAY -> KAFKA : publish IntentRejectedEvent
-            KAFKA -> ICMS : IntentRejectedEvent\n→ IC MS updates Intent projection (Rejected)
-        else all targets within capability context
-
-            == 6. Preference Handling ==
-            note over IIMS : Preferences are soft guidance unless policy explicitly promotes to hard constraint
-            IIMS -> IIMS : evaluate preferences against policy promotion rules
-            alt policy promotes preference to hard constraint
-                IIMS -> IIMS : re-validate as hard constraint (steps 4-5 apply)
-            else preference remains soft
-                IIMS -> IIMS : preserve preference as soft selection guidance\nfor candidate ranking
-            end
-
-            == 7. Canonicalisation ==
-            IIMS -> IIMS : normalise canonical semantic buckets\n• targets → normalised measurement set\n• constraints → validated hard set\n• preferences → ranked soft guidance set
-
-            == 8. Candidate Discovery ==
-            IIMS -> IIMS : apply scope + policy filters\nto raw candidate resource set from KP
-            IIMS -> IIMS : resolve complete valid candidate resource set\nfor current semantic context
-
-            alt no valid candidates found after filtering
-                IIMS -> IIMS : semantic rejection — no candidates
-                group Atomic DB transaction
-                    IIMS -> STORE : persist semantic decision trail\n{ reason: NO_CANDIDATES, detail }
-                    IIMS -> STORE : write IntentRejectedEvent to outbox\n{ intentId, rejectionClass: POLICY, reason }
-                end
-                RELAY -> STORE : poll → IntentRejectedEvent
-                RELAY -> KAFKA : publish IntentRejectedEvent
-                KAFKA -> ICMS : IntentRejectedEvent\n→ IC MS updates Intent projection (Rejected)
-            else valid candidates resolved
-
-                == 9. Record Semantic Decision + Emit Resolution Event ==
-                group Atomic DB transaction
-                    IIMS -> STORE : persist semantic decision trail\n{ candidateSet, canonicalTargets,\n  canonicalConstraints, canonicalPreferences }
-                    IIMS -> STORE : write IntentResolvedEvent to outbox\n{ intentId, candidateSet, canonicalContext }
-                    IIMS -> STORE : write deduplication record\n(cloudEventsId + intentId → PROCESSED)
-                end
-
-                == 10. Outbox Relay — Publish to Kafka ==
-                RELAY -> STORE : poll PENDING outbox rows
-                STORE --> RELAY : [IntentResolvedEvent]
-                RELAY -> KAFKA : publish IntentResolvedEvent
-                STORE <- RELAY : mark row DELIVERED
-
-                == 11. Service-Ready Preparation (if applicable) ==
-                note over IIMS : When service configuration is prepared for\norchestration and assurance observation
-                IIMS -> IIMS : prepare service configuration\nfrom resolved candidate set
-                group Atomic DB transaction
-                    IIMS -> STORE : update semantic decision trail\n{ serviceConfig, readyState }
-                    IIMS -> STORE : write IntentNetworkReadyEvent to outbox\n{ intentId, serviceConfig }
-                end
-                RELAY -> STORE : poll → IntentNetworkReadyEvent
-                RELAY -> KAFKA : publish IntentNetworkReadyEvent
-                STORE <- RELAY : mark row DELIVERED
-
-                == 12. Downstream Consumers Continue Workflow ==
-                KAFKA -> ICMS : IntentResolvedEvent / IntentNetworkReadyEvent\n→ IC MS updates Intent projection
-                KAFKA -> DS : IntentResolvedEvent → Optimiser continues
-                KAFKA -> DS : IntentNetworkReadyEvent → Orchestration + IA MS\n  begins assurance observation
-            end
+        group Atomic DB transaction
+          IIMS -> STORE : persist semantic decision trail\n{ candidateSet, canonicalTargets,\n canonicalConstraints, canonicalPreferences }
+          IIMS -> STORE : write IntentResolvedEvent to outbox\n{ intentId, candidateSet, canonicalContext }
+          IIMS -> STORE : write deduplication record\n(cloudEventsId + intentId → PROCESSED)
         end
+
+        == 10. Outbox Relay — Publish to Kafka ==
+
+        RELAY -> STORE : poll PENDING outbox rows
+        STORE --> RELAY : [IntentResolvedEvent]
+        RELAY -> KAFKA : publish IntentResolvedEvent
+        STORE <- RELAY : mark row DELIVERED
+
+        == 11. Service-Ready Preparation (if applicable) ==
+
+        note over IIMS
+          When service configuration is prepared for
+          downstream change execution and assurance observation.
+        end note
+
+        IIMS -> IIMS : prepare service configuration\nfrom resolved candidate set
+
+        group Atomic DB transaction
+          IIMS -> STORE : update semantic decision trail\n{ serviceConfig, readyState }
+          IIMS -> STORE : write IntentNetworkReadyEvent to outbox\n{ intentId, serviceConfig }
+        end
+
+        RELAY -> STORE : poll → IntentNetworkReadyEvent
+        RELAY -> KAFKA : publish IntentNetworkReadyEvent
+        STORE <- RELAY : mark row DELIVERED
+
+        == 12. Downstream Consumers Continue Workflow ==
+
+        KAFKA -> ICMS : IntentResolvedEvent / IntentNetworkReadyEvent\n→ IC MS updates Intent projection
+        KAFKA -> DS : IntentResolvedEvent\n→ optimisation or downstream decisioning continues
+        KAFKA -> DS : IntentNetworkReadyEvent\n→ change execution and IA MS\ncontinue assurance observation
+      end
     end
+  end
 end
 
 @enduml
