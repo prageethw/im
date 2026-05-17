@@ -101,6 +101,28 @@ class ImageRef:
     attachment_id: Optional[str] = None  # filled after upload
 
 
+# Wrap a rendered <table>...</table> so it sits in a centred container.
+# Confluence's storage format honours `align="center"` on <table> and also
+# accepts a wrapping <div class="table-wrap" style="text-align: center;">.
+# We use both for maximum tenant compatibility.
+def _centre_table(table_html: str) -> str:
+    # Inject align="center" on the opening <table ...> tag
+    if table_html.startswith("<table"):
+        end = table_html.find(">")
+        if end != -1:
+            opening = table_html[:end]
+            if 'align=' not in opening:
+                opening += ' align="center"'
+            if 'style=' not in opening:
+                opening += ' style="margin-left: auto; margin-right: auto;"'
+            table_html = opening + table_html[end:]
+    return (
+        '<div class="table-wrap" style="text-align: center;">'
+        f'{table_html}'
+        '</div>'
+    )
+
+
 class StorageRenderer(mistune.HTMLRenderer):
     """
     Custom mistune renderer emitting Confluence Storage Format (XHTML).
@@ -151,40 +173,57 @@ class StorageRenderer(mistune.HTMLRenderer):
         )
 
     # ---- images ------------------------------------------------------------
+    # Confluence's <ac:image> is an inline element; to centre it we emit the
+    # `ac:align="center"` attribute (which Confluence recognises natively)
+    # AND wrap the image in a centred <p> so older renderers still align it.
     def image(self, text: str, url: str, title: Optional[str] = None) -> str:
-        # `text` is the alt text in mistune 3.x
         alt = text or ""
         parsed = urlparse(url)
         is_remote = parsed.scheme in ("http", "https")
 
+        title_attr = f' ac:title="{html.escape(title)}"' if title else ""
+        alt_attr = f' ac:alt="{html.escape(alt)}"' if alt else ""
+        align_attr = ' ac:align="center" ac:layout="center"'
+
         if is_remote:
-            title_attr = f' ac:title="{html.escape(title)}"' if title else ""
-            alt_attr = f' ac:alt="{html.escape(alt)}"' if alt else ""
-            return (
-                f'<ac:image{alt_attr}{title_attr}>'
+            inner = (
+                f'<ac:image{alt_attr}{title_attr}{align_attr}>'
                 f'<ri:url ri:value="{html.escape(url, quote=True)}"/>'
                 '</ac:image>'
             )
+        else:
+            abs_path = (self.source_dir / url).resolve()
+            key = str(abs_path)
+            if key not in self._image_by_abs:
+                # Disambiguate filename so two folders with `diagram.png` don't collide
+                stem_hash = hashlib.sha1(key.encode("utf-8")).hexdigest()[:8]
+                safe_name = f"{abs_path.stem}-{stem_hash}{abs_path.suffix}"
+                ref = ImageRef(src=url, abs_path=abs_path, filename=safe_name,
+                               alt=alt, title=title)
+                self._image_by_abs[key] = ref
+                self.image_refs.append(ref)
+            ref = self._image_by_abs[key]
+            inner = (
+                f'<ac:image{alt_attr}{title_attr}{align_attr}>'
+                f'<ri:attachment ri:filename="{html.escape(ref.filename, quote=True)}"/>'
+                '</ac:image>'
+            )
 
-        abs_path = (self.source_dir / url).resolve()
-        key = str(abs_path)
-        if key not in self._image_by_abs:
-            # Disambiguate filename so two folders with `diagram.png` don't collide
-            stem_hash = hashlib.sha1(key.encode("utf-8")).hexdigest()[:8]
-            safe_name = f"{abs_path.stem}-{stem_hash}{abs_path.suffix}"
-            ref = ImageRef(src=url, abs_path=abs_path, filename=safe_name,
-                           alt=alt, title=title)
-            self._image_by_abs[key] = ref
-            self.image_refs.append(ref)
-        ref = self._image_by_abs[key]
+        # Mark this image so the surrounding paragraph renderer can centre it
+        return f'\x00CENTERED_IMG\x00{inner}\x00END_IMG\x00'
 
-        title_attr = f' ac:title="{html.escape(title)}"' if title else ""
-        alt_attr = f' ac:alt="{html.escape(alt)}"' if alt else ""
-        return (
-            f'<ac:image{alt_attr}{title_attr}>'
-            f'<ri:attachment ri:filename="{html.escape(ref.filename, quote=True)}"/>'
-            '</ac:image>'
-        )
+    # If a paragraph contains *only* a centred image marker, emit a centred
+    # <p> wrapper. Otherwise leave the paragraph alone.
+    def paragraph(self, text: str) -> str:
+        stripped = text.strip()
+        if (stripped.startswith("\x00CENTERED_IMG\x00")
+                and stripped.endswith("\x00END_IMG\x00")
+                and stripped.count("\x00CENTERED_IMG\x00") == 1):
+            inner = stripped[len("\x00CENTERED_IMG\x00"):-len("\x00END_IMG\x00")]
+            return f'<p style="text-align: center;">{inner}</p>'
+        # Strip markers if image appears mid-paragraph (rare)
+        cleaned = text.replace("\x00CENTERED_IMG\x00", "").replace("\x00END_IMG\x00", "")
+        return f"<p>{cleaned}</p>"
 
     # ---- blockquotes: detect GFM-style admonitions ------------------------
     def block_quote(self, text: str) -> str:
@@ -208,6 +247,15 @@ class StorageRenderer(mistune.HTMLRenderer):
     def task_list_item(self, text: str, checked: bool = False) -> str:
         box = "\u2611" if checked else "\u2610"  # ballot box (with check)
         return f"<li>{box}&nbsp;{text}</li>"
+
+    # ---- tables: centre via the table plugin's renderer hook --------------
+    # mistune's `table` plugin calls `self.table(...)` with the already-
+    # rendered <thead>/<tbody> children. We wrap the result in a centred
+    # container and add inline alignment attributes to the <table> itself.
+    # Cell text alignment is left to Confluence's defaults / the author's
+    # explicit Markdown column alignment.
+    def table(self, text: str) -> str:
+        return _centre_table(f"<table>\n{text}</table>")
 
 
 def render_markdown(md_text: str, source_dir: Path) -> Tuple[str, List[ImageRef]]:
