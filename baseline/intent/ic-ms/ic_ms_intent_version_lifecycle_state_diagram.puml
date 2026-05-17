@@ -1,90 +1,127 @@
 @startuml
-title IC MS — Intent-Version Lifecycle State Diagram
+' IC MS Intent Version Lifecycle State Diagram
 
-skinparam backgroundColor #FFFFFF
+hide empty description
 skinparam shadowing false
-skinparam roundcorner 14
+skinparam backgroundColor #FAFAFA
 
 skinparam state {
-  BackgroundColor #F8FAFC
-  BorderColor #334155
-  FontColor #111827
-  FontStyle bold
+  BackgroundColor #FFFFFF
+  BorderColor #5a7a9a
+  FontSize 12
+  FontColor #1a1a2e
+  ArrowColor #5a7a9a
+  ArrowFontSize 11
+  ArrowFontColor #333366
+  AttributeFontSize 11
 }
 
 skinparam note {
-  BackgroundColor #FEF3C7
-  BorderColor #D97706
-  FontColor #111827
+  BackgroundColor #fffde7
+  BorderColor #d6b656
+  FontSize 11
+  FontColor #333300
 }
 
-[*] --> Acknowledged : version created /\nTMF-compliant syntactic admission
+skinparam legend {
+  BackgroundColor #f0f4f8
+  BorderColor #5a7a9a
+  FontSize 11
+}
 
-Acknowledged --> Rejected : semantic / policy\nrejection projected by IC MS
-Acknowledged --> InProgress : fulfilment starts
+title <b>IC MS — Intent Version Lifecycle State Diagram</b>
 
-InProgress --> Active : apply + assurance\nconfirmed
-InProgress --> Failed : apply / fulfilment\nfailed
-InProgress --> Rejected : semantic / policy\nrejection projected by IC MS
+' ── Entry ──────────────────────────────────────────────────────────────────
+[*] --> Acknowledged : version accepted
 
-Active --> Degraded : IA-assessed assurance\ndegraded
-Degraded --> Active : IA-assessed assurance\nrecovered
+' ── States ────────────────────────────────────────────────────────────────
+state Acknowledged #d4e6f1 : Syntactically admitted,\nawaiting orchestration
 
-Active --> Standby : newer version becomes Active
-Degraded --> Standby : newer version becomes Active\nwhile old version degraded
+state InProgress #d5f5e3 : Orchestration underway
 
-Standby --> InProgress : rollback / reactivation\nrequested
-InProgress --> Active : rollback / reactivation\napply confirmed
+state Active #2ecc71 : Network / service confirmed\n(activeVersion)
 
-Active --> Paused : pause outcome
-Paused --> Active : resume outcome
-Paused --> Failed : failure outcome
+state Degraded #f9e79f : Assurance degradation\ndetected
 
-Active --> Terminated : Intent termination accepted
-Degraded --> Terminated : Intent termination accepted
-Standby --> Terminated : Intent termination accepted
-InProgress --> Terminated : Intent termination accepted
-Paused --> Terminated : Intent termination accepted
-Failed --> Terminated : Intent termination accepted
-Rejected --> Terminated : Intent termination accepted
+state Paused #e8daef : Controlled pause
 
-Standby --> Retired : explicit retirement /\nremoved from future use
-Failed --> Retired : explicit retirement
-Rejected --> Retired : explicit retirement
-Terminated --> Retired : explicit retirement\nif policy allows
+state Standby #d6eaf8 : Non-active retained\nversion (fallback candidate)
 
-Retired --> [*]
-Terminated --> [*]
+state Rejected #f5cba7 : Validation / policy\nrejection
 
-note right of Standby
-Standby means:
-not currently active, but still valid
-for rollback or future reactivation.
+state Failed #f1948a : Orchestration or runtime\nfailure
+
+state Terminated #aab7b8 : Closed — no longer\nruntime-active
+
+state Retired #d5d8dc : Administrative /\nversion-governance archive
+
+' ── Transitions ───────────────────────────────────────────────────────────
+Acknowledged --> InProgress : orchestration starts
+
+InProgress --> Active     : network/service confirmed
+InProgress --> Failed     : orchestration failed
+InProgress --> Rejected   : validation / policy rejection
+
+Active --> Degraded   : assurance degradation
+Active --> Paused     : controlled pause
+Active --> Failed     : runtime failure
+Active --> Terminated : teardown / delete completed
+Active --> Standby    : newer version becomes activeVersion
+
+Degraded --> Active     : recovered
+Degraded --> Paused     : controlled pause
+Degraded --> Failed     : unrecoverable failure
+Degraded --> Terminated : teardown / delete completed
+Degraded --> Standby    : newer version becomes activeVersion
+
+Paused --> Active     : resumed
+Paused --> Failed     : unrecoverable failure
+Paused --> Terminated : teardown / delete completed
+Paused --> Standby    : newer version becomes activeVersion
+
+Rejected  --> Terminated : close rejected version
+Failed    --> Terminated : close failed version
+
+Standby --> Acknowledged : restart version lifecycle
+Standby --> Terminated   : explicit termination / no longer retained
+
+Terminated --> Retired : administrative archive decision
+Retired    --> [*]
+
+' ── Notes ─────────────────────────────────────────────────────────────────
+note top of Acknowledged
+  Do not allow a new candidate version when a newer
+  version already exists in <b>Acknowledged</b> or <b>InProgress</b>.
+end note
+
+note right of Active
+  <b>activeVersion</b> points to the version currently
+  confirmed as active by IC MS projection from IA outcomes.
+end note
+
+note bottom of Standby
+  Standby is a non-active retained Intent version.
+  May be used as a fallback / restartable candidate,
+  but must re-enter through <b>Acknowledged</b>.
+  No direct Standby to Active transition.
+  No direct Standby to Retired transition.
 end note
 
 note right of Retired
-Retired is terminal.
-A retired version is permanently removed
-from future active-candidate use.
+  Retired is an administrative / version-governance
+  archival state — not a runtime/network state.
+  Only <b>Terminated</b> may transition to Retired.
+  No other state may transition directly to Retired.
 end note
 
-note bottom of Active
-activeVersion points to the version currently
-confirmed active.
-
-activeVersion records the version that became
-effective in the network. Once a version becomes
-Active it becomes activeVersion, even if it later
-degrades, fails, or is terminated; reverting to an
-older version requires a new orchestration cycle.
-end note
-
-note bottom
-This is an IC MS projection lifecycle for external
-Intent version state. IC MS projects state from
-internal outcomes; it does not own semantic reasoning,
-optimisation, orchestration execution, assurance truth,
-or runtime metrics.
-end note
+legend right
+  <b>Version replacement behaviour</b>
+  ──────────────────────────────────────────────
+  When a newer version becomes activeVersion:
+  • Previous Active / Degraded / Paused  to Standby
+  • Previous Rejected / Failed           to Terminated
+  • Standby can restart only via         Acknowledged
+  • Only Terminated can move to          Retired
+endlegend
 
 @enduml
