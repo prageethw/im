@@ -5,18 +5,18 @@ skinparam backgroundColor #FFFFFF
 skinparam shadowing false
 skinparam roundcorner 14
 skinparam state {
-  BackgroundColor #F8FAFC
-  BorderColor #334155
-  FontColor #111827
-  FontStyle bold
+ BackgroundColor #F8FAFC
+ BorderColor #334155
+ FontColor #111827
+ FontStyle bold
 }
 skinparam note {
-  BackgroundColor #FEF3C7
-  BorderColor #D97706
-  FontColor #111827
+ BackgroundColor #FEF3C7
+ BorderColor #D97706
+ FontColor #111827
 }
 
-[*] --> Acknowledged : POST /intent passes\nsyntactic validation
+[*] --> Acknowledged : POST /intent passes\nTMF-compliant syntactic validation
 
 Acknowledged --> Rejected : II MS semantic/policy\nrejection outcome
 Acknowledged --> InProgress : downstream fulfilment\nstarts
@@ -47,14 +47,17 @@ Rejected --> Terminated : termination request\naccepted, if retained\nas termina
 Terminated --> [*]
 
 note right of Terminated
-  Runtime Intent records are retained.
-  DELETE /intent/{id} is treated as
-  termination, not physical delete.
+ Runtime Intent records are retained.
+ DELETE /intent/{id} is treated as
+ termination, not physical delete.
+ No external IntentReport delete API is exposed.
 end note
 
 note bottom of Active
-  IC MS owns external lifecycle projection.
-  Runtime truth comes from IA MS.
+ IC MS owns external Intent and IntentReport
+ lifecycle projection.
+ Runtime truth comes from IA MS assurance outcomes,
+ accepted callbacks, and observed metrics.
 end note
 
 @enduml
