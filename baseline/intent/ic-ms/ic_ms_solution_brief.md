@@ -2,13 +2,17 @@
 
 ## Summary:
 
-Intent Controller MS (IC MS) is the TMF-compliant runtime intent controller for the Intent Enabler. It owns the external `Intent` and `IntentReport` resource boundary, admits syntactically valid runtime intent requests, projects external lifecycle/status state, and publishes curated external runtime intent events. IC MS is deliberately not the owner of semantic, optimisation, orchestration, callback, or runtime assurance.
+Intent Controller MS (IC MS) is the TMF-compliant runtime intent controller for the Intent Enabler. It owns the external `Intent` and `IntentReport` resource boundary, admits syntactically valid runtime intent requests, projects external lifecycle/status state, and publishes curated external runtime intent events.
 
-Its main purpose is to provide a stable external runtime API and event projection layer while delegating deeper decisioning and assurance responsibilities to the appropriate downstream services.
+IC MS is deliberately not the owner of semantic validation, optimisation, callback ingestion, change execution, or runtime assurance truth.
+
+Its main purpose is to provide a stable external runtime API and event projection layer while delegating deeper decisioning, change handling, and assurance responsibilities to the appropriate downstream services.
 
 ## Logical View:
 
-IC MS sits between external intent consumers, the definition-time specification catalogue, and the internal intent fulfilment pipeline. It is the runtime API and projection boundary for `Intent` and `IntentReport`; it is not the owner of semantic interpretation, optimisation, orchestration, callback ingestion, or runtime assurance truth.
+IC MS sits between external intent consumers, the definition-time specification catalogue, and the internal intent fulfilment pipeline.
+
+It is the runtime API and projection boundary for `Intent` and `IntentReport`; it is not the owner of semantic interpretation, optimisation, callback ingestion, change execution, or runtime assurance truth.
 
 ![alt text](ic_ms_logical_view.svg)
 
@@ -35,7 +39,9 @@ IC MS -> webhook_delivery_outbox -> HTTP POST -> external subscriber listener ca
 IC MS owns the externally visible runtime projection, not the full internal fulfilment state machine. The external `Intent` record is the current consumer-facing state of the runtime intent. Historical versions, standby states, rollback candidates, internal resource candidates, optimiser scoring, and raw assurance detail remain internal unless projected through `IntentReport` or another documented platform extension.
 
 ## Process View:
+
 ![alt text](intent_creation_ms_sequence.svg)
+
 ### Runtime intent creation:
 
 1. A consumer submits `POST /intentManagement/v5/intent` with a runtime `Intent` request.
@@ -46,7 +52,7 @@ IC MS owns the externally visible runtime projection, not the full internal fulf
 6. If validation succeeds, IC MS persists the external `Intent` projection.
 7. IC MS sets the initial projected lifecycle state to `Acknowledged`.
 8. IC MS emits `IntentValidatedEvent` as an internal state/progress event.
-9. Downstream services continue semantic interpretation, optimisation, orchestration preparation, apply, callback interpretation, and assurance.
+9. Downstream services continue semantic interpretation, optimisation where applicable, change preparation, apply, callback interpretation, and assurance.
 10. IC MS consumes downstream outcome/projection events and updates the external `Intent` and `IntentReport` views.
 
 ### Runtime intent update:
@@ -57,6 +63,20 @@ IC MS owns the externally visible runtime projection, not the full internal fulf
 4. Meaningful runtime content changes create a new runtime intent version.
 5. The new version is admitted through the same syntactic validation and downstream fulfilment flow.
 6. IC MS projects the current runtime version externally while retaining internal version history for audit and traceability.
+
+A new runtime version must not be created while there is already a newer candidate version in `Acknowledged` or `InProgress`.
+
+When a newer version becomes `activeVersion`, the previous version transition rule is:
+
+| Previous version state | Transition when newer version becomes `activeVersion` |
+|---|---|
+| `Active` | `Standby` |
+| `Degraded` | `Standby` |
+| `Paused` | `Standby` |
+| `Rejected` | `Terminated` |
+| `Failed` | `Terminated` |
+
+`Standby` versions must re-enter the Intent version change lifecycle through `Acknowledged`, then `InProgress`, before they can become `Active` again. `Retired` is reachable only from `Terminated`.
 
 ### Runtime intent termination:
 
@@ -84,11 +104,15 @@ IC MS owns the externally visible runtime projection, not the full internal fulf
 6. The subscriber listener acknowledges delivery with an HTTP success response, normally `204 No Content`, where aligned to TMF listener behaviour.
 7. IC MS retries failed callback deliveries according to the delivery policy.
 
-Kafka is not used for external hub notification delivery. IC MS does not create a self-publish/self-consume Kafka loop for hub notifications, in which it is both the event originator and the delivery owner.
+Kafka is not used for external hub notification delivery.
+
+IC MS does not create a self-publish/self-consume Kafka loop for hub notifications, in which it is both the event originator and the delivery owner.
 
 ## Solution Elaboration:
 
-IC MS is the runtime equivalent of a controlled admission and projection layer. It accepts runtime intent requests only when the incoming payload is structurally valid and references a concrete active `IntentSpecification`. It does not interpret whether the intent is semantically achievable, feasible, optimal, policy-compliant, or currently assured.
+IC MS is the runtime equivalent of a controlled admission and projection layer. It accepts runtime intent requests only when the incoming payload is structurally valid and references a concrete active `IntentSpecification`.
+
+It does not interpret whether the intent is semantically achievable, feasible, optimal, policy-compliant, or currently assured.
 
 The design intentionally separates these concerns:
 
@@ -98,11 +122,13 @@ The design intentionally separates these concerns:
 | Intent definition/specification contract | ID MS |
 | Semantic interpretation and network-ready preparation | II MS |
 | Optimisation | Optimiser services |
-| Orchestration/network apply | Orchestration layer / network orchestrator |
+| Network change execution | Change execution layer / network orchestrator |
 | Callback ingestion | ICB MS |
 | Callback interpretation and runtime assurance truth | IA MS |
 
-IC MS therefore exposes a stable TMF-aligned resource API while avoiding leakage of internal fulfilment mechanics. It is responsible for correct external lifecycle/status representation, consumer-safe reports, event subscription handling, ETag concurrency, and error consistency.
+IC MS therefore exposes a stable TMF-compliant resource API while avoiding leakage of internal fulfilment mechanics.
+
+It is responsible for correct external lifecycle/status representation, consumer-safe reports, event subscription handling, ETag concurrency, and error consistency.
 
 ## Responsibilities:
 
@@ -133,7 +159,7 @@ IC MS does not own:
 | Policy validation | II MS and Knowledge Plane support |
 | Knowledge resolution | II MS and Knowledge Plane support |
 | Optimisation | Optimiser services |
-| Network apply / orchestration execution | Orchestration layer / network orchestrator |
+| Network change execution | Change execution layer / network orchestrator |
 | Apply outcome interpretation | IA MS |
 | Runtime assurance truth | IA MS |
 | Real-time telemetry | Telemetry platform consumed by IA MS |
@@ -149,19 +175,19 @@ IC MS also does not resolve an `IntentSpecification` by `familyId`, name, key, o
 
 | Purpose | Method | Endpoint | Position |
 |---|---:|---|---|
-| Create runtime intent | `POST` | `/intentManagement/v5/intent` | TMF-aligned |
-| List runtime intents | `GET` | `/intentManagement/v5/intent` | TMF-aligned |
-| Retrieve runtime intent by ID | `GET` | `/intentManagement/v5/intent/{id}` | TMF-aligned |
+| Create runtime intent | `POST` | `/intentManagement/v5/intent` | TMF-compliant |
+| List runtime intents | `GET` | `/intentManagement/v5/intent` | TMF-compliant |
+| Retrieve runtime intent by ID | `GET` | `/intentManagement/v5/intent/{id}` | TMF-compliant |
 | Full replace runtime intent | `PUT` | `/intentManagement/v5/intent/{id}` | Platform extension |
-| Partial update runtime intent | `PATCH` | `/intentManagement/v5/intent/{id}` | TMF-aligned |
-| Terminate runtime intent | `DELETE` | `/intentManagement/v5/intent/{id}` | TMF-aligned delete verb; platform behaviour is termination, not physical deletion |
+| Partial update runtime intent | `PATCH` | `/intentManagement/v5/intent/{id}` | TMF-compliant |
+| Terminate runtime intent | `DELETE` | `/intentManagement/v5/intent/{id}` | TMF-compliant delete verb; platform behaviour is termination, not physical deletion |
 
 ### IntentReport APIs:
 
 | Purpose | Method | Endpoint | Position |
 |---|---:|---|---|
-| List reports for intent | `GET` | `/intentManagement/v5/intent/{intentId}/intentReport` | Platform/TMF-aligned nested report projection |
-| Retrieve report by ID | `GET` | `/intentManagement/v5/intent/{intentId}/intentReport/{id}` | Platform/TMF-aligned nested report projection |
+| List reports for intent | `GET` | `/intentManagement/v5/intent/{intentId}/intentReport` | Platform/TMF-compliant nested report projection |
+| Retrieve report by ID | `GET` | `/intentManagement/v5/intent/{intentId}/intentReport/{id}` | Platform/TMF-compliant nested report projection |
 
 Ordinary external consumers do not receive a public `DELETE /intentManagement/v5/intent/{intentId}/intentReport/{id}` capability. Governed internal/admin purge may exist, but is not exposed through NGW/public consumer APIs by default.
 
@@ -194,7 +220,7 @@ A runtime intent create/update request must include:
 | `description` | Optional descriptive text. |
 | `humanExpression` | Human-readable expression of the requested outcome. |
 | `intentSpecification.id` | Required concrete active specification ID. |
-| `expression` | Required TMF-aligned `JsonLdExpression`. |
+| `expression` | Required TMF-compliant `JsonLdExpression`. |
 | `expression.expressionValue.context.targets` | Required measurable outcome/SLA objectives where defined by the specification. |
 | `expression.expressionValue.context.constraints` | Required or optional hard constraints as defined by the specification. |
 | `expression.expressionValue.context.preferences` | Optional soft selection guidance as defined by the specification. |
@@ -260,6 +286,8 @@ Unsupported specification references:
 
 ### Intent-level lifecycleStatus values:
 
+The Intent-level `lifecycleStatus` is the externally visible lifecycle projection for the `Intent` resource. It normally reflects the current `activeVersion` and keeps TMF-compliant external consumers insulated from internal version history.
+
 ```text
 Acknowledged
 InProgress
@@ -270,9 +298,12 @@ Rejected
 Failed
 Terminated
 ```
+
 ![alt text](ic_ms_intent_lifecycle_state_diagram.svg)
 
 ### Intent-version lifecycleStatus values:
+
+The Intent-version-level `lifecycleStatus` is the lifecycle truth for each individual runtime version. It supports version history, rollback/restart, audit, and governance.
 
 ```text
 Acknowledged
@@ -286,9 +317,21 @@ Failed
 Terminated
 Retired
 ```
+
 ![alt text](ic_ms_intent_version_lifecycle_state_diagram.svg)
 
 External `GET /intent/{id}` returns the current projected `Intent` state. It does not return the full internal version aggregate by default.
+
+### Intent-version lifecycle rules:
+
+| Rule | Baseline |
+|---|---|
+| New version gating | Do not create another newer version while there is already a newer candidate version in `Acknowledged` or `InProgress`. |
+| New version becomes `activeVersion` after previous `Active` / `Degraded` / `Paused` | Previous version moves to `Standby`. |
+| New version becomes `activeVersion` after previous `Rejected` / `Failed` | Previous version moves to `Terminated`. |
+| Standby reactivation | `Standby -> Acknowledged -> InProgress -> Active`. |
+| Retirement | Only `Terminated -> Retired`; no direct `Standby`, `Failed`, or `Rejected` to `Retired`. |
+| Retired | Administrative/version-governance archival state, not a runtime/network operational state. |
 
 ### IntentReport projection fields:
 
@@ -323,7 +366,9 @@ IC MS should reject or ignore unsupported external request fields according to t
 
 ## Authorisation:
 
-IC MS is exposed through the platform gateway boundary and must enforce standard platform access controls before accepting runtime intent operations. Authorisation responsibilities include:
+IC MS is exposed through the platform gateway boundary and must enforce standard platform access controls before accepting runtime intent operations.
+
+Authorisation responsibilities include:
 
 | Area | Behaviour |
 |---|---|
@@ -408,9 +453,9 @@ External `Intent` and `IntentReport` notifications are delivered to subscriber l
 |---|---|---|
 | Subscriber callback URL | External event delivery target configured through `/hub` or `/intent/hub`; the URL is subscriber-owned; notification payloads follow TMF-aligned event patterns so subscribers can use common TMF listener conventions. | HTTP `POST`. |
 
-IC MS writes webhook delivery work to a local webhook delivery outbox and an HTTP delivery relay posts the TMF-aligned event body to the subscriber listener callback URL. Kafka is not used for external hub notification delivery.
+IC MS writes webhook delivery work to a local webhook delivery outbox and an HTTP delivery relay posts the TMF-aligned event body to the subscriber listener callback URL.
 
-External events must not expose raw telemetry, raw optimiser decisions, raw Knowledge Plane data, raw callback payloads, internal candidate scoring, or internal Kafka payloads.
+Kafka is not used for external hub notification delivery. External events must not expose raw telemetry, raw optimiser decisions, raw Knowledge Plane data, raw callback payloads, internal candidate scoring, or internal Kafka payloads.
 
 ## Event identity:
 
@@ -449,7 +494,11 @@ Status-change events carry the current `intent.lifecycleStatus` snapshot in the 
 
 ## Internal Kafka CloudEvents headers:
 
-For internal Kafka event backbone delivery, IC MS should use the common platform CloudEvents envelope where applicable. These headers apply to internal Kafka events such as `IntentValidatedEvent`; they do not apply to external webhook notifications. Typical CloudEvents headers include:
+For internal Kafka event backbone delivery, IC MS should use the common platform CloudEvents envelope where applicable.
+
+These headers apply to internal Kafka events such as `IntentValidatedEvent`; they do not apply to external webhook notifications.
+
+Typical CloudEvents headers include:
 
 | Header | Meaning |
 |---|---|
@@ -603,6 +652,7 @@ Webhook notifications use HTTP headers, not Kafka CloudEvents headers.
 | Unsafe operation missing required `If-Match` | Return `428 PRECONDITION_REQUIRED` with reason `IF_MATCH_REQUIRED`. |
 | Stale or mismatched ETag | Return `412 PRECONDITION_FAILED` with reason `ETAG_MISMATCH`. |
 | Valid material update | Create/project a new runtime version and re-enter admitted lifecycle. |
+| Newer candidate already exists | Reject/defer another newer version while the existing candidate is `Acknowledged` or `InProgress`. |
 | `PATCH` usage | Supported for TMF compatibility, but `PUT` is preferred for deterministic full update. |
 
 ### Caching behaviour:
@@ -652,7 +702,7 @@ External consumers can rely on IC MS to provide:
 
 | Contract item | Guarantee |
 |---|---|
-| Stable runtime `Intent` API | TMF-aligned create, list, retrieve, update, patch, and termination routes. |
+| Stable runtime `Intent` API | TMF-compliant create, list, retrieve, update, patch, and termination routes. |
 | Concrete spec reference requirement | Runtime requests must reference `intentSpecification.id`. |
 | External status projection | `lifecycleStatus`, `statusReason`, and `statusChangeDate` are IC MS-owned projections. |
 | Report read model | `IntentReport` is a read-only curated projection/audit resource for ordinary consumers. |
