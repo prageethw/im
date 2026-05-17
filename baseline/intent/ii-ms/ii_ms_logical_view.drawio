@@ -1,19 +1,19 @@
 <mxfile host="65bd71144e">
     <diagram name="II MS - Logical View" id="ii-ms-logical-view">
-        <mxGraphModel dx="2383" dy="633" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1654" pageHeight="1169" math="0" shadow="0">
+        <mxGraphModel dx="2315" dy="633" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1654" pageHeight="1169" math="0" shadow="0">
             <root>
                 <mxCell id="0"/>
                 <mxCell id="1" parent="0"/>
                 <mxCell id="zone_icms" value="Upstream — IC MS" style="swimlane;startSize=30;fillColor=#d5e8d4;strokeColor=default;fontStyle=1;fontSize=13;container=0;fontColor=default;" parent="1" vertex="1">
                     <mxGeometry x="-34" y="40" width="240" height="160" as="geometry"/>
                 </mxCell>
-                <mxCell id="zone_kafka" value="Internal Event Backbone" style="swimlane;startSize=30;fillColor=#e1d5e7;strokeColor=default;fontStyle=1;fontSize=13;container=0;fontColor=default;" parent="1" vertex="1">
+                <mxCell id="zone_kafka" value="Internal Event Backbone" style="swimlane;startSize=30;fillColor=#d5e8d4;strokeColor=default;fontStyle=1;fontSize=13;container=0;" parent="1" vertex="1">
                     <mxGeometry x="340" y="42" width="200" height="160" as="geometry"/>
                 </mxCell>
-                <mxCell id="zone_iims" value="II MS — Semantic Interpretation and KP-Backed Resolution" style="swimlane;startSize=30;fillColor=#dae8fc;strokeColor=default;fontStyle=1;fontSize=13;container=0;fontColor=default;" parent="1" vertex="1">
+                <mxCell id="zone_iims" value="II MS — Semantic Interpretation and KP-Backed Resolution" style="swimlane;startSize=30;fillColor=#d5e8d4;strokeColor=default;fontStyle=1;fontSize=13;container=0;" parent="1" vertex="1">
                     <mxGeometry x="600" y="50" width="760" height="1030" as="geometry"/>
                 </mxCell>
-                <mxCell id="zone_downstream" value="Downstream — Optimiser /Assurance/etc" style="swimlane;startSize=30;fillColor=#ffe6cc;strokeColor=default;fontStyle=1;fontSize=13;container=0;fontColor=default;" parent="1" vertex="1">
+                <mxCell id="zone_downstream" value="Downstream — Optimiser /Assurance/etc" style="swimlane;startSize=30;fillColor=#d5e8d4;strokeColor=default;fontStyle=1;fontSize=13;container=0;" parent="1" vertex="1">
                     <mxGeometry x="1380" y="52" width="400" height="860" as="geometry"/>
                 </mxCell>
                 <mxCell id="zone_icms_fb" value="IC MS (projection update)" style="swimlane;startSize=25;fillColor=#d5e8d4;strokeColor=default;fontStyle=1;fontSize=12;container=0;fontColor=default;" parent="1" vertex="1">
@@ -103,25 +103,25 @@
                 <mxCell id="icms_box" value="Intent Creation MS&#xa;(IC MS)&#xa;Syntactic admission + persistence" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=default;fontSize=11;container=0;fontColor=default;" parent="1" vertex="1">
                     <mxGeometry x="-14" y="90" width="200" height="70" as="geometry"/>
                 </mxCell>
-                <mxCell id="kafka" value="Kafka&#xa;(internal event bus)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#e1d5e7;strokeColor=default;fontStyle=1;fontSize=12;container=0;fontColor=default;" parent="1" vertex="1">
+                <mxCell id="kafka" value="Kafka&#xa;(internal event bus)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=default;fontStyle=1;fontSize=12;container=0;" parent="1" vertex="1">
                     <mxGeometry x="360" y="97" width="160" height="55" as="geometry"/>
                 </mxCell>
-                <mxCell id="iims_core" value="Intent Interpretation MS (II MS)&#xa;&#xa;Runtime input: consumes IntentValidatedEvent&#xa;Idempotent consumption + outbox-backed publication" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=default;fontStyle=1;fontSize=12;align=left;spacingLeft=10;container=0;fontColor=default;" parent="1" vertex="1">
+                <mxCell id="iims_core" value="Intent Intelligence MS (II MS)&lt;br&gt;&lt;br&gt;Runtime input: consumes IntentValidatedEvent&lt;br&gt;Idempotent consumption + outbox-backed publication" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=default;fontStyle=1;fontSize=12;align=left;spacingLeft=10;container=0;" parent="1" vertex="1">
                     <mxGeometry x="630" y="105" width="700" height="70" as="geometry"/>
                 </mxCell>
-                <mxCell id="grp_stages" value="Semantic Processing Pipeline" style="swimlane;startSize=25;fillColor=#eff7ff;strokeColor=default;fontStyle=1;fontSize=12;container=0;fontColor=default;" parent="1" vertex="1">
+                <mxCell id="grp_stages" value="Semantic Processing Pipeline" style="swimlane;startSize=25;fillColor=#d5e8d4;strokeColor=default;fontStyle=1;fontSize=12;container=0;" parent="1" vertex="1">
                     <mxGeometry x="630" y="220" width="700" height="460" as="geometry"/>
                 </mxCell>
-                <mxCell id="audit_store" value="Semantic Decision Trail&#xa;(audit persistence store)" style="shape=cylinder3;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=default;fontStyle=1;fontSize=12;container=0;fontColor=default;" parent="1" vertex="1">
+                <mxCell id="audit_store" value="Semantic Decision Trail&#xa;(audit persistence store)" style="shape=cylinder3;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=default;fontStyle=1;fontSize=12;container=0;" parent="1" vertex="1">
                     <mxGeometry x="630" y="740" width="200" height="94" as="geometry"/>
                 </mxCell>
-                <mxCell id="event_outbox" value="internal_event_outbox&#xa;(idempotent, outbox-backed)" style="shape=cylinder3;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=default;fontStyle=1;fontSize=12;container=0;fontColor=default;" parent="1" vertex="1">
+                <mxCell id="event_outbox" value="internal_event_outbox&#xa;(idempotent, outbox-backed)" style="shape=cylinder3;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=default;fontStyle=1;fontSize=12;container=0;" parent="1" vertex="1">
                     <mxGeometry x="870" y="740" width="200" height="94" as="geometry"/>
                 </mxCell>
-                <mxCell id="dispatcher" value="Outbox Dispatcher&#xa;(background relay worker)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=default;fontStyle=1;fontSize=12;container=0;fontColor=default;" parent="1" vertex="1">
+                <mxCell id="dispatcher" value="Outbox Dispatcher&#xa;(background relay worker)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=default;fontStyle=1;fontSize=12;container=0;" parent="1" vertex="1">
                     <mxGeometry x="1110" y="750" width="200" height="64" as="geometry"/>
                 </mxCell>
-                <mxCell id="grp_events" value="Published Output Events (via Kafka)" style="swimlane;startSize=25;fillColor=#f8cecc;strokeColor=default;fontStyle=1;fontSize=12;container=0;fontColor=default;" parent="1" vertex="1">
+                <mxCell id="grp_events" value="Published Output Events (via Kafka)" style="swimlane;startSize=25;fillColor=#d5e8d4;strokeColor=default;fontStyle=1;fontSize=12;container=0;" parent="1" vertex="1">
                     <mxGeometry x="620" y="897" width="710" height="173" as="geometry"/>
                 </mxCell>
                 <mxCell id="a_s1s2" style="edgeStyle=orthogonalEdgeStyle;rounded=0;fontColor=default;" parent="1" source="stage_interp" target="stage_kp" edge="1">
@@ -184,37 +184,37 @@
                 <mxCell id="a7_lbl" value="publish to Kafka" style="edgeLabel;fontSize=10;fontStyle=2;container=0;fontColor=default;" parent="a7" vertex="1" connectable="0">
                     <mxGeometry relative="0.5" as="geometry"/>
                 </mxCell>
-                <mxCell id="stage_interp" value="1. Semantic Interpretation&#xa;&#xa;Interpret admitted expression.context model." style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=default;fontSize=11;align=left;spacingLeft=8;container=0;fontColor=default;" parent="1" vertex="1">
+                <mxCell id="stage_interp" value="1. Semantic Interpretation&#xa;&#xa;Interpret admitted expression.context model." style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=default;fontSize=11;align=left;spacingLeft=8;container=0;" parent="1" vertex="1">
                     <mxGeometry x="650" y="280" width="300" height="65" as="geometry"/>
                 </mxCell>
-                <mxCell id="stage_kp" value="2. Knowledge Plane Validation&#xa;&#xa;Resolve and validate: location, service type,&#xa;service class, targets, constraints, preferences,&#xa;policy, and capability context." style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=default;fontSize=11;align=left;spacingLeft=8;container=0;fontColor=default;" parent="1" vertex="1">
+                <mxCell id="stage_kp" value="2. Knowledge Plane Validation&#xa;&#xa;Resolve and validate: location, service type,&#xa;service class, targets, constraints, preferences,&#xa;policy, and capability context." style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=default;fontSize=11;align=left;spacingLeft=8;container=0;" parent="1" vertex="1">
                     <mxGeometry x="1000" y="270" width="310" height="85" as="geometry"/>
                 </mxCell>
-                <mxCell id="stage_canon" value="3. Canonicalisation&#xa;&#xa;Preserve and normalise canonical&#xa;semantic buckets: targets, constraints,&#xa;and preferences." style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=default;fontSize=11;align=left;spacingLeft=8;container=0;fontColor=default;" parent="1" vertex="1">
+                <mxCell id="stage_canon" value="3. Canonicalisation&#xa;&#xa;Preserve and normalise canonical&#xa;semantic buckets: targets, constraints,&#xa;and preferences." style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=default;fontSize=11;align=left;spacingLeft=8;container=0;" parent="1" vertex="1">
                     <mxGeometry x="650" y="400" width="300" height="85" as="geometry"/>
                 </mxCell>
-                <mxCell id="stage_candidate" value="4. Candidate Discovery&#xa;&#xa;Resolve full valid candidate resource set&#xa;for resolved context after scope /&#xa;policy filtering." style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=default;fontSize=11;align=left;spacingLeft=8;container=0;fontColor=default;" parent="1" vertex="1">
+                <mxCell id="stage_candidate" value="4. Candidate Discovery&#xa;&#xa;Resolve full valid candidate resource set&#xa;for resolved context after scope /&#xa;policy filtering." style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=default;fontSize=11;align=left;spacingLeft=8;container=0;" parent="1" vertex="1">
                     <mxGeometry x="1000" y="400" width="310" height="85" as="geometry"/>
                 </mxCell>
-                <mxCell id="stage_decision" value="5. Rejection / Resolution Decision&#xa;&#xa;Evaluate semantic, policy, capability,&#xa;and processing conditions to determine&#xa;outcome path." style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=default;fontSize=11;align=left;spacingLeft=8;container=0;fontColor=default;" parent="1" vertex="1">
+                <mxCell id="stage_decision" value="5. Rejection / Resolution Decision&#xa;&#xa;Evaluate semantic, policy, capability,&#xa;and processing conditions to determine&#xa;outcome path." style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=default;fontSize=11;align=left;spacingLeft=8;container=0;" parent="1" vertex="1">
                     <mxGeometry x="650" y="565" width="300" height="75" as="geometry"/>
                 </mxCell>
-                <mxCell id="stage_ready" value="6. Service-Ready Preparation&#xa;&#xa;Prepare service configuration for&#xa;orchestration and assurance observation." style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=default;fontSize=11;align=left;spacingLeft=8;container=0;fontColor=default;" parent="1" vertex="1">
+                <mxCell id="stage_ready" value="6. Service-Ready Preparation&#xa;&#xa;Prepare service configuration for&#xa;orchestration and assurance observation." style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=default;fontSize=11;align=left;spacingLeft=8;container=0;" parent="1" vertex="1">
                     <mxGeometry x="1000" y="565" width="310" height="75" as="geometry"/>
                 </mxCell>
-                <mxCell id="evt_rejected" value="IntentRejectedEvent&#xa;&#xa;Semantic / policy / capability&#xa;/ processing rejection." style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f8cecc;strokeColor=default;fontSize=11;align=left;spacingLeft=8;container=0;fontColor=default;" parent="1" vertex="1">
+                <mxCell id="evt_rejected" value="IntentRejectedEvent&#xa;&#xa;Semantic / policy / capability&#xa;/ processing rejection." style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=default;fontSize=11;align=left;spacingLeft=8;container=0;" parent="1" vertex="1">
                     <mxGeometry x="645" y="985" width="200" height="75" as="geometry"/>
                 </mxCell>
-                <mxCell id="evt_resolved" value="IntentResolvedEvent&#xa;&#xa;Candidate-level semantic&#xa;resolution handoff." style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f8cecc;strokeColor=default;fontSize=11;align=left;spacingLeft=8;container=0;fontColor=default;" parent="1" vertex="1">
+                <mxCell id="evt_resolved" value="IntentResolvedEvent&#xa;&#xa;Candidate-level semantic&#xa;resolution handoff." style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=default;fontSize=11;align=left;spacingLeft=8;container=0;" parent="1" vertex="1">
                     <mxGeometry x="880" y="985" width="200" height="75" as="geometry"/>
                 </mxCell>
-                <mxCell id="evt_ready" value="IntentNetworkReadyEvent&#xa;&#xa;Service config ready for&#xa;orchestration + assurance." style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f8cecc;strokeColor=default;fontSize=11;align=left;spacingLeft=8;container=0;fontColor=default;" parent="1" vertex="1">
+                <mxCell id="evt_ready" value="IntentNetworkReadyEvent&#xa;&#xa;Service config ready for&#xa;orchestration + assurance." style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=default;fontSize=11;align=left;spacingLeft=8;container=0;" parent="1" vertex="1">
                     <mxGeometry x="1115" y="985" width="200" height="75" as="geometry"/>
                 </mxCell>
-                <mxCell id="ds_optimiser" value="Optimiser" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffe6cc;strokeColor=default;fontSize=11;container=0;fontColor=default;" parent="1" vertex="1">
+                <mxCell id="ds_optimiser" value="Optimiser" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=default;fontSize=11;container=0;" parent="1" vertex="1">
                     <mxGeometry x="1570" y="252" width="160" height="45" as="geometry"/>
                 </mxCell>
-                <mxCell id="ds_assurance" value="Assurance (IA MS)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffe6cc;strokeColor=default;fontSize=11;container=0;fontColor=default;" parent="1" vertex="1">
+                <mxCell id="ds_assurance" value="Assurance (IA MS)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=default;fontSize=11;container=0;" parent="1" vertex="1">
                     <mxGeometry x="1570" y="432" width="160" height="45" as="geometry"/>
                 </mxCell>
                 <mxCell id="icms_fb" value="IC MS updates external&#xa;Intent projection + IntentReport" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=default;fontSize=11;container=0;fontColor=default;" parent="1" vertex="1">
