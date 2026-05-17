@@ -4,29 +4,31 @@ title IC MS — Intent-Version Lifecycle State Diagram
 skinparam backgroundColor #FFFFFF
 skinparam shadowing false
 skinparam roundcorner 14
+
 skinparam state {
   BackgroundColor #F8FAFC
   BorderColor #334155
   FontColor #111827
   FontStyle bold
 }
+
 skinparam note {
   BackgroundColor #FEF3C7
   BorderColor #D97706
   FontColor #111827
 }
 
-[*] --> Acknowledged : version created /\nsyntactically admitted
+[*] --> Acknowledged : version created /\nTMF-compliant syntactic admission
 
-Acknowledged --> Rejected : semantic/policy\nrejection
+Acknowledged --> Rejected : semantic / policy\nrejection projected by IC MS
 Acknowledged --> InProgress : fulfilment starts
 
 InProgress --> Active : apply + assurance\nconfirmed
 InProgress --> Failed : apply / fulfilment\nfailed
-InProgress --> Rejected : semantic/policy\nrejection
+InProgress --> Rejected : semantic / policy\nrejection projected by IC MS
 
-Active --> Degraded : assurance degraded
-Degraded --> Active : assurance recovered
+Active --> Degraded : IA-assessed assurance\ndegraded
+Degraded --> Active : IA-assessed assurance\nrecovered
 
 Active --> Standby : newer version becomes Active
 Degraded --> Standby : newer version becomes Active\nwhile old version degraded
@@ -34,10 +36,9 @@ Degraded --> Standby : newer version becomes Active\nwhile old version degraded
 Standby --> InProgress : rollback / reactivation\nrequested
 InProgress --> Active : rollback / reactivation\napply confirmed
 
-Standby --> Retired : explicit retirement /\nremoved from future use
-Failed --> Retired : explicit retirement
-Rejected --> Retired : explicit retirement
-Terminated --> Retired : explicit retirement\nif policy allows
+Active --> Paused : pause outcome
+Paused --> Active : resume outcome
+Paused --> Failed : failure outcome
 
 Active --> Terminated : Intent termination accepted
 Degraded --> Terminated : Intent termination accepted
@@ -47,29 +48,43 @@ Paused --> Terminated : Intent termination accepted
 Failed --> Terminated : Intent termination accepted
 Rejected --> Terminated : Intent termination accepted
 
-Active --> Paused : pause outcome
-Paused --> Active : resume outcome
-Paused --> Failed : failure outcome
+Standby --> Retired : explicit retirement /\nremoved from future use
+Failed --> Retired : explicit retirement
+Rejected --> Retired : explicit retirement
+Terminated --> Retired : explicit retirement\nif policy allows
 
 Retired --> [*]
 Terminated --> [*]
 
 note right of Standby
-  Standby means:
-  not currently active,
-  but still valid for rollback or
-  future reactivation.
+Standby means:
+not currently active, but still valid
+for rollback or future reactivation.
 end note
 
 note right of Retired
-  Retired is terminal.
-  A retired version is permanently
-  removed from future active-candidate use.
+Retired is terminal.
+A retired version is permanently removed
+from future active-candidate use.
 end note
 
 note bottom of Active
-  activeVersion points to the version
-  currently confirmed active.
+activeVersion points to the version currently
+confirmed active.
+
+activeVersion records the version that became
+effective in the network. Once a version becomes
+Active it becomes activeVersion, even if it later
+degrades, fails, or is terminated; reverting to an
+older version requires a new orchestration cycle.
+end note
+
+note bottom
+This is an IC MS projection lifecycle for external
+Intent version state. IC MS projects state from
+internal outcomes; it does not own semantic reasoning,
+optimisation, orchestration execution, assurance truth,
+or runtime metrics.
 end note
 
 @enduml
