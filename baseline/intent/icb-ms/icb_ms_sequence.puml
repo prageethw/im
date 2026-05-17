@@ -1,0 +1,102 @@
+@startuml ICB MS - Sequence Flow
+!theme plain
+skinparam sequenceMessageAlign center
+skinparam backgroundColor #FFFFFF
+skinparam participantBackgroundColor #dae8fc
+skinparam participantBorderColor #6c8ebf
+skinparam sequenceArrowColor #333333
+skinparam noteBorderColor #d6b656
+skinparam noteBackgroundColor #fff2cc
+skinparam dividerBackgroundColor #f0f0f0
+skinparam sequenceGroupBackgroundColor #f9f9f9
+
+title Intent Callback MS (ICB MS) — Callback Submission Sequence Flow
+
+actor "External Orchestration\n/ Apply System" as EXT
+participant "NGW" as GW
+participant "Intent Callback MS\n(ICB MS)" as ICBMS
+database "ICB MS Store\n(submissions + outbox)" as STORE
+participant "Outbox Relay\n(background worker)" as RELAY
+participant "Kafka\nt7.intent.management.events.callbacks" as KAFKA
+participant "Intent Assurance MS\n(IA MS)" as IAMS
+participant "Intent Creation MS\n(IC MS)" as ICMS
+
+== 1. External Callback Submission ==
+EXT -> GW : POST /intentManagement/v5/intentCallback\n{ intentId, sourceState.state, callbackSource, timestamp, ... }
+
+== 2. API Gateway — Authentication + Trusted Context ==
+GW -> GW : authenticate caller\n(mTLS / OAuth2 / platform token)
+alt authentication fails
+    GW --> EXT : 401 Unauthorized
+else authenticated
+    GW -> ICBMS : forward request + trusted caller context\n{ callerId, callerScope, sourceSystem }
+
+    == 3. ICB MS — Authorisation ==
+    ICBMS -> ICBMS : authorise callback submission\nfor caller / source context
+    alt not authorised
+        ICBMS --> GW : 403 Forbidden
+        GW --> EXT : 403 Forbidden
+    else authorised
+
+        == 4. Structure and Syntax Validation ==
+        ICBMS -> ICBMS : validate structure and syntax only\n(no semantic interpretation,\n no intentId correlation here)
+        alt structure / syntax invalid
+            ICBMS --> GW : 400 Bad Request { validationErrors }
+            GW --> EXT : 400 Bad Request
+        else structure valid
+
+            == 5. Durable Persistence — Single DB Transaction ==
+            note over ICBMS, STORE : Callback submission and outbox record written\nin one atomic DB transaction.\nIf persistence is unavailable, ICB MS fails fast\nand does not accept the callback.
+            group Atomic DB transaction
+                ICBMS -> STORE : write callback submission record\n{ intentId, sourceState.state, callbackSource,\n  callerId, timestamp, raw payload }
+                ICBMS -> STORE : write ICB outbox record\n{ eventType: IntentCallbackEvent,\n  status: PENDING, payload }
+                alt DB commit succeeds
+                    STORE --> ICBMS : committed
+                else DB unavailable / commit fails
+                    STORE --> ICBMS : error
+                    ICBMS --> GW : 503 Service Unavailable\n(fail fast — callback not accepted)
+                    GW --> EXT : 503 Service Unavailable
+                end
+            end
+
+            == 6. Return 202 Accepted ==
+            note over ICBMS : 202 Accepted is returned ONLY after\ndurable commit succeeds.
+            ICBMS --> GW : 202 Accepted { correlationId }
+            GW --> EXT : 202 Accepted { correlationId }
+
+            == 7. Outbox Relay Publishes IntentCallbackEvent ==
+            note over RELAY, KAFKA : Kafka availability does not affect the 202 response.\nIf Kafka is unavailable, the relay retries publication\nfrom the durable outbox later.
+            RELAY -> STORE : poll PENDING outbox records
+            STORE --> RELAY : [ICB outbox record { IntentCallbackEvent }]
+            RELAY -> KAFKA : publish IntentCallbackEvent\nt7.intent.management.events.callbacks\n{ intentId, sourceState.state, callbackSource,\n  callerId, timestamp }
+            alt Kafka available
+                KAFKA --> RELAY : ack
+                RELAY -> STORE : mark outbox record DELIVERED
+            else Kafka unavailable
+                KAFKA --> RELAY : error / timeout
+                RELAY -> STORE : increment retry count\n(exponential back-off)
+                note over RELAY : Retries until Kafka recovers.\nCallback already durably stored.
+            end
+
+            == 8. IA MS Consumes and Correlates ==
+            KAFKA -> IAMS : IntentCallbackEvent\n{ intentId, sourceState.state, callbackSource, timestamp }
+            IAMS -> IAMS : validate intentId against IA-owned state
+            alt intentId not found in IA state
+                IAMS -> IAMS : log unresolvable callback (audit)
+            else intentId resolved
+                IAMS -> IAMS : map raw sourceState.state\n→ IA-owned lifecycle + assurance meaning
+                IAMS -> IAMS : correlate with observer scope + runtime context
+                IAMS -> IAMS : evaluate assurance outcome
+                IAMS -> IAMS : write IntentAssuranceEvent to IA outbox
+                IAMS -> KAFKA : publish IntentAssuranceEvent\n(via IA outbox relay)
+
+                == 9. IC MS Projects External State ==
+                KAFKA -> ICMS : IntentAssuranceEvent\n{ intentId, lifecycleStatus, assuranceStatus,\n  metricSnapshot, reportData }
+                ICMS -> ICMS : update external Intent lifecycle state projection
+                ICMS -> ICMS : create / update IntentReport projection\n(TMF-compliant)
+            end
+        end
+    end
+end
+
+@enduml
