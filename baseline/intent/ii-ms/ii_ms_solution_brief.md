@@ -13,7 +13,7 @@ II MS is not an external TMF-compliant API service. It does not expose runtime I
 `IntentResolvedEvent` and `IntentNetworkReadyEvent` are intentionally different milestones. `IntentResolvedEvent` is the candidate-level semantic-resolution handoff. `IntentNetworkReadyEvent` is the service-ready preparation handoff to IA MS and means the service configuration/resource set has been prepared for orchestration/apply and assurance observation. It does not mean the network application has succeeded.
 
 ## Logical View:
-
+![alt text](ii_ms_logical_view.svg)
 II MS sits after IC MS in the runtime intent processing flow and before optimiser/orchestration/assurance execution stages.
 
 ```text
@@ -40,7 +40,7 @@ Logical responsibilities:
 | Audit | Persist the semantic decision trail where required. |
 
 ## Process View:
-
+![alt text](ii_ms_sequence.svg)
 1. II MS consumes `IntentValidatedEvent` from the internal Kafka event backbone.
 2. It deduplicates the input event using CloudEvents identity and runtime intent identity.
 3. It parses `body.expression.context.targets`, `body.expression.context.constraints`, and `body.expression.context.preferences`.
