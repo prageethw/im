@@ -2,9 +2,9 @@
 ' IC MS Intent Version Lifecycle State Diagram
 
 hide empty description
+
 skinparam shadowing false
 skinparam backgroundColor #FAFAFA
-
 skinparam state {
   BackgroundColor #FFFFFF
   BorderColor #5a7a9a
@@ -15,113 +15,98 @@ skinparam state {
   ArrowFontColor #333366
   AttributeFontSize 11
 }
-
 skinparam note {
   BackgroundColor #fffde7
   BorderColor #d6b656
   FontSize 11
   FontColor #333300
 }
-
 skinparam legend {
   BackgroundColor #f0f4f8
   BorderColor #5a7a9a
   FontSize 11
 }
 
-title <b>IC MS — Intent Version Lifecycle State Diagram</b>
+title IC MS — Intent Version Lifecycle State Diagram
 
 ' ── Entry ──────────────────────────────────────────────────────────────────
 [*] --> Acknowledged : version accepted
 
 ' ── States ────────────────────────────────────────────────────────────────
-state Acknowledged #d4e6f1 : Syntactically admitted,\nawaiting Change
-
-state InProgress #d5f5e3 : Change underway
-
+state Acknowledged #d4e6f1 : Syntactically admitted,\nawaiting change handling
+state InProgress #d5f5e3 : Change execution\nin progress
 state Active #2ecc71 : Network / service confirmed\n(activeVersion)
-
 state Degraded #f9e79f : Assurance degradation\ndetected
-
 state Paused #e8daef : Controlled pause
-
 state Standby #d6eaf8 : Non-active retained\nversion (fallback candidate)
-
 state Rejected #f5cba7 : Validation / policy\nrejection
-
 state Failed #f1948a : Change or runtime\nfailure
-
 state Terminated #aab7b8 : Closed — no longer\nruntime-active
-
 state Retired #d5d8dc : Administrative /\nversion-governance archive
 
 ' ── Transitions ───────────────────────────────────────────────────────────
-Acknowledged --> InProgress : Change starts
+Acknowledged --> InProgress : change starts
+InProgress --> Active : network/service confirmed
+InProgress --> Failed : change failed
+InProgress --> Rejected : validation / policy rejection
 
-InProgress --> Active     : network/service confirmed
-InProgress --> Failed     : Change failed
-InProgress --> Rejected   : validation / policy rejection
-
-Active --> Degraded   : assurance degradation
-Active --> Paused     : controlled pause
-Active --> Failed     : runtime failure
+Active --> Degraded : assurance degradation
+Active --> Paused : controlled pause
+Active --> Failed : runtime failure
 Active --> Terminated : teardown / delete completed
-Active --> Standby    : newer version becomes activeVersion
+Active --> Standby : newer version becomes activeVersion
 
-Degraded --> Active     : recovered
-Degraded --> Paused     : controlled pause
-Degraded --> Failed     : unrecoverable failure
+Degraded --> Active : recovered
+Degraded --> Paused : controlled pause
+Degraded --> Failed : unrecoverable failure
 Degraded --> Terminated : teardown / delete completed
-Degraded --> Standby    : newer version becomes activeVersion
+Degraded --> Standby : newer version becomes activeVersion
 
-Paused --> Active     : resumed
-Paused --> Failed     : unrecoverable failure
+Paused --> Active : resumed
+Paused --> Failed : unrecoverable failure
 Paused --> Terminated : teardown / delete completed
-Paused --> Standby    : newer version becomes activeVersion
+Paused --> Standby : newer version becomes activeVersion
 
-Rejected  --> Terminated : close rejected version
-Failed    --> Terminated : close failed version
+Rejected --> Terminated : close rejected version
+Failed --> Terminated : close failed version
 
-Standby --> Acknowledged : restart version lifecycle
-Standby --> Terminated   : explicit termination / no longer retained
+Standby --> Acknowledged : restart Intent version change lifecycle
+Standby --> Terminated : explicit termination / no longer retained
 
 Terminated --> Retired : administrative archive decision
-Retired    --> [*]
+Retired --> [*]
 
 ' ── Notes ─────────────────────────────────────────────────────────────────
 note top of Acknowledged
-  Do not allow a new candidate version when a newer
-  version already exists in <b>Acknowledged</b> or <b>InProgress</b>.
+Do not allow another newer candidate version when a newer version already exists in Acknowledged or InProgress.
 end note
 
 note right of Active
-  <b>activeVersion</b> points to the version currently
-  confirmed as active by IC MS projection from IA outcomes.
+activeVersion points to the version currently confirmed as active by IC MS projection from IA outcomes.
 end note
 
 note bottom of Standby
-  Standby is a non-active retained Intent version.
-  May be used as a fallback / restartable candidate,
-  but must re-enter through <b>Acknowledged</b>.
-  No direct Standby to Active transition.
-  No direct Standby to Retired transition.
+Standby is a non-active retained Intent version.
+It may be used as a fallback / restartable candidate,
+but must re-enter through Acknowledged.
+No direct Standby to Active transition.
+No direct Standby to Retired transition.
 end note
 
 note right of Retired
-  Retired is an administrative / version-governance
-  archival state — not a runtime/network state.
-  Only <b>Terminated</b> may transition to Retired.
-  No other state may transition directly to Retired.
+Retired is an administrative / version-governance archival state — not a runtime/network state.
+Only Terminated may transition to Retired.
+No other state may transition directly to Retired.
 end note
 
 legend right
-  <b>Version replacement behaviour</b>
-  ──────────────────────────────────────────────
-  When a newer version becomes activeVersion:
-  • Previous Active / Degraded / Paused  to Standby
-  • Previous Rejected / Failed           to Terminated
-  • Standby can restart only via         Acknowledged
-  • Only Terminated can move to          Retired
+Version replacement behaviour
+──────────────────────────────────────────────
+When a newer version becomes activeVersion:
+• Previous Active / Degraded / Paused to Standby
+• Previous Rejected / Failed to Terminated
+• Standby can restart only via Acknowledged
+• Only Terminated can move to Retired
 endlegend
 
 @enduml
