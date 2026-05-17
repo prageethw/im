@@ -1,6 +1,5 @@
 @startuml
 ' IC MS Intent Version Lifecycle State Diagram
-
 hide empty description
 
 skinparam shadowing false
@@ -44,12 +43,13 @@ state Failed #f1948a : Change or runtime\nfailure
 state Terminated #aab7b8 : Closed — no longer\nruntime-active
 state Retired #d5d8dc : Administrative /\nversion-governance archive
 
-' ── Transitions ───────────────────────────────────────────────────────────
+' ── Primary version change lifecycle ───────────────────────────────────────
 Acknowledged --> InProgress : change starts
 InProgress --> Active : network/service confirmed
 InProgress --> Failed : change failed
 InProgress --> Rejected : validation / policy rejection
 
+' ── Operational runtime lifecycle ──────────────────────────────────────────
 Active --> Degraded : assurance degradation
 Active --> Paused : controlled pause
 Active --> Failed : runtime failure
@@ -67,12 +67,11 @@ Paused --> Failed : unrecoverable failure
 Paused --> Terminated : teardown / delete completed
 Paused --> Standby : newer version becomes activeVersion
 
+' ── Closure and governance lifecycle ───────────────────────────────────────
 Rejected --> Terminated : close rejected version
 Failed --> Terminated : close failed version
-
 Standby --> Acknowledged : restart Intent version change lifecycle
 Standby --> Terminated : explicit termination / no longer retained
-
 Terminated --> Retired : administrative archive decision
 Retired --> [*]
 
