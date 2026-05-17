@@ -39,7 +39,7 @@ It is responsible for:
 | Policy validation | II MS + lightweight II MS KP + `t7.knowledge plane` |
 | Knowledge resolution | II MS + `t7.knowledge plane` |
 | Optimisation | `optimiser-controller-ms` using optimiser backends such as `t7-gurobi-optimiser` where relevant |
-| Network apply / orchestration execution | Orchestration layer / network orchestrator |
+| Network change execution | Orchestration layer / network orchestrator |
 | Apply outcome interpretation | IA MS |
 | Runtime assurance truth | IA MS |
 | Real-time telemetry | `t7.telemetry` consumed by IA MS |
@@ -400,9 +400,9 @@ Retired
 |---|---|
 | `Acknowledged` | Version accepted after syntactic validation |
 | `InProgress` | Version is being semantically resolved, optimised, applied, or assured |
-| `Active` | Version is currently active/effective in the network/service |
-| `Standby` | Version is not currently active/effective, but is retained as a valid rollback or future reactivation candidate |
-| `Degraded` | Version is still active/effective, but runtime assurance is degraded |
+| `Active` | Version is currently active in the network/service |
+| `Standby` | Version is not currently active, but is retained as a valid rollback or future reactivation candidate |
+| `Degraded` | Version is still active, but runtime assurance is degraded |
 | `Paused` | Version is temporarily paused where applicable |
 | `Rejected` | Version was rejected before successful fulfilment |
 | `Failed` | Version failed during fulfilment, apply, or runtime processing |
@@ -439,7 +439,7 @@ or:
 
 | **Term** | **Decision** | **Reason** |
 |---|---|---|
-| `activeVersion` | Use | Natural and clearly points to the version currently active/effective in the network/service |
+| `activeVersion` | Use | Natural and clearly points to the version currently active in the network/service |
 | `effectiveVersion` | Do not use | Accurate, but less natural |
 | `currentVersion` | Do not use | Ambiguous; could mean latest submitted, latest edited, latest stored, or active |
 
@@ -609,9 +609,9 @@ The retained `Intent` record remains available for:
 
 ### Final baseline statements:
 
-**Use `activeVersion`, not `effectiveVersion` or `currentVersion`, for the Intent version currently confirmed active/effective in the network/service.**
+**Use `activeVersion`, not `effectiveVersion` or `currentVersion`, for the Intent version currently confirmed active in the network/service.**
 
-**When a newer Intent version becomes `Active`, IC MS moves `activeVersion` to the newer version and transitions the previously active version to `Standby`. `Standby` means the version is no longer currently active/effective, but is retained as a valid rollback or future reactivation candidate.**
+**When a newer Intent version becomes `Active`, IC MS moves `activeVersion` to the newer version and transitions the previously active version to `Standby`. `Standby` means the version is no longer currently active, but is retained as a valid rollback or future reactivation candidate.**
 
 **`Retired` is terminal and means the version is permanently removed from future active-candidate use. Once a version is `Retired`, its lifecycle state cannot change again.**
 
@@ -658,10 +658,9 @@ Terminated
 Retired
 ```
 
-### Key lifecycle rules:
-
 | **Rule** | **Baseline** |
 |---|---|
+| New version gating | A new Intent version must not be created while the current in-flight version is `Acknowledged` or `InProgress` |
 | Initial syntactic success | Intent/version starts as `Acknowledged` |
 | Semantic/policy rejection | Moves to `Rejected` |
 | Fulfilment/apply starts | Moves to `InProgress` |
@@ -786,7 +785,7 @@ Retired --> [*]
 Terminated --> [*]
 
 note right of Standby
-Standby means: not currently active/effective,
+Standby means: not currently active,
 but still valid for rollback or future reactivation.
 end note
 
@@ -797,7 +796,7 @@ end note
 
 note bottom of Active
 activeVersion points to the version currently
-confirmed active/effective.
+confirmed active.
 end note
 @enduml
 ```
@@ -1016,8 +1015,8 @@ Rules:
 | `InProgress` | `Terminated` |
 | `Degraded` | `Terminated` |
 | `Paused` | `Terminated` |
-| `Rejected` | Remains `Rejected` |
-| `Failed` | Remains `Failed` |
+| `Rejected` | `Terminated` |
+| `Failed` | `Terminated` |
 | `Retired` | Remains `Retired` |
 
 Reason: Termination closes live/candidate versions, but should not rewrite final historical outcomes such as `Rejected`, `Failed`, or `Retired`.
