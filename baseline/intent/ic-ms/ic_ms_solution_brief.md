@@ -35,7 +35,7 @@ IC MS -> webhook_delivery_outbox -> HTTP POST -> external subscriber listener ca
 IC MS owns the externally visible runtime projection, not the full internal fulfilment state machine. The external `Intent` record is the current consumer-facing state of the runtime intent. Historical versions, standby states, rollback candidates, internal resource candidates, optimiser scoring, and raw assurance detail remain internal unless projected through `IntentReport` or another documented platform extension.
 
 ## Process View:
-![alt text](ic_ms_sequence.svg)
+![alt text](intent_creation_ms_sequence.svg)
 ### Runtime intent creation:
 
 1. A consumer submits `POST /intentManagement/v5/intent` with a runtime `Intent` request.
