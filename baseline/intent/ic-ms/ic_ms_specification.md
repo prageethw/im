@@ -31,14 +31,14 @@ IC MS does not own:
 - semantic validation
 - policy validation
 - optimisation
-- network apply / orchestration execution
+- network or platform change execution
 - apply outcome interpretation
 - runtime assurance truth
 - real-time telemetry
 - callback ingestion
 - raw orchestrator callback interpretation
 
-Network apply/orchestration execution is owned by the orchestration layer / network orchestrator. IA MS interprets apply outcomes and owns runtime assurance truth; IC MS only projects the resulting lifecycle/status changes.
+Network or platform change execution is owned by the downstream change execution layer, which may be a network orchestrator or another authorised fulfilment component depending on the Intent domain. IA MS interprets change outcomes and owns runtime assurance truth; IC MS only projects the resulting lifecycle/status changes.
 
 ---
 
@@ -178,24 +178,44 @@ Terminated
 Acknowledged
 InProgress
 Active
-Standby
 Degraded
 Paused
+Standby
 Rejected
 Failed
 Terminated
 Retired
 ```
 
-### External projection rule:
+### LifecycleStatus purpose and projection rule:
 
-`GET /intent/{id}` returns the current projected `Intent` state for that Intent ID.
+`Intent.lifecycleStatus` is the externally visible lifecycle projection for the `Intent` resource. It keeps TMF-facing clients simple by exposing the current public state of the Intent rather than every historical or candidate version state.
 
-It does not return the full internal version aggregate by default.
+Each internal Intent version also has its own version-level `lifecycleStatus`. Version-level lifecycle state is used for version history, restart/reuse decisions, audit, governance, and safe handling of previous versions while another version is the `activeVersion`.
 
-The returned `version` is the projected runtime version.
+`activeVersion` is the pointer to the Intent version currently driving the top-level `Intent.lifecycleStatus` projection. Do not use `effectiveVersion` or `currentVersion` for this pointer.
+
+`GET /intent/{id}` returns the current projected `Intent` state for that Intent ID. It does not return the full internal version aggregate by default. The returned `version` is the projected runtime version.
 
 Historical version state such as `Standby`, `Retired`, rollback candidates, and previous versions remains internal unless exposed through `IntentReport` or a documented platform extension.
+
+### Intent version transition rules:
+
+IC MS must not create another newer version while there is already a newer candidate version in `Acknowledged` or `InProgress`. These states represent an admitted version change that has not yet resolved.
+
+When a newer version becomes the `activeVersion`, previous versions transition as follows:
+
+| Previous version lifecycleStatus | Transition when newer version becomes `activeVersion` |
+|---|---|
+| `Active` | `Standby` |
+| `Degraded` | `Standby` |
+| `Paused` | `Standby` |
+| `Rejected` | `Terminated` |
+| `Failed` | `Terminated` |
+
+`Standby` is a non-active retained version state. It may later re-enter the Intent version change lifecycle only through `Acknowledged`, then `InProgress`, then `Active`. `Standby` may also be explicitly moved to `Terminated`.
+
+`Retired` is an administrative/version-governance archival state. It is reachable only from `Terminated`; it is not a runtime/network operational state and is not exposed as an ordinary external API action.
 
 ### Termination rule:
 
@@ -1815,7 +1835,7 @@ IC MS publishes `IntentValidatedEvent` internally after syntactic validation and
 
 This is not a point-to-point command for a single consumer.
 
-It is a platform state/progress event meaning the runtime Intent has passed IC MS syntactic validation and has been admitted into the intent lifecycle.
+It is a platform state/progress event meaning the runtime Intent has passed IC MS syntactic validation and has been admitted into the Intent lifecycle.
 
 Current primary consumer is II MS / `intent-intelligence-ms`, but the event may be consumed by other authorised internal consumers where useful.
 
@@ -1991,4 +2011,4 @@ IC MS accepts and projects runtime Intent resources using the external runtime e
 - `location`, `serviceType`, and `serviceClass` sit under `context.constraints`.
 - `IntentValidatedEvent.body.expression` carries the same canonical semantic buckets internally without the external TMF expression wrapper.
 - IC MS validates syntactic shape against the active ID MS `expressionSpecification` and `targetEntitySchema`.
-- IC MS does not perform semantic/KP validation, optimisation, orchestration, or assurance.
+- IC MS does not perform semantic/KP validation, optimisation, change execution, or assurance.
