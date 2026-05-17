@@ -35,9 +35,9 @@ title <b>IC MS — Intent Version Lifecycle State Diagram</b>
 [*] --> Acknowledged : version accepted
 
 ' ── States ────────────────────────────────────────────────────────────────
-state Acknowledged #d4e6f1 : Syntactically admitted,\nawaiting orchestration
+state Acknowledged #d4e6f1 : Syntactically admitted,\nawaiting Change
 
-state InProgress #d5f5e3 : Orchestration underway
+state InProgress #d5f5e3 : Change underway
 
 state Active #2ecc71 : Network / service confirmed\n(activeVersion)
 
@@ -49,17 +49,17 @@ state Standby #d6eaf8 : Non-active retained\nversion (fallback candidate)
 
 state Rejected #f5cba7 : Validation / policy\nrejection
 
-state Failed #f1948a : Orchestration or runtime\nfailure
+state Failed #f1948a : Change or runtime\nfailure
 
 state Terminated #aab7b8 : Closed — no longer\nruntime-active
 
 state Retired #d5d8dc : Administrative /\nversion-governance archive
 
 ' ── Transitions ───────────────────────────────────────────────────────────
-Acknowledged --> InProgress : orchestration starts
+Acknowledged --> InProgress : Change starts
 
 InProgress --> Active     : network/service confirmed
-InProgress --> Failed     : orchestration failed
+InProgress --> Failed     : Change failed
 InProgress --> Rejected   : validation / policy rejection
 
 Active --> Degraded   : assurance degradation
