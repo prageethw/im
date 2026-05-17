@@ -1,4 +1,5 @@
-@startuml Intent Definition MS - Sequence Flow
+@startuml
+' Intent Definition MS - Sequence Flow
 !theme plain
 skinparam sequenceMessageAlign center
 skinparam backgroundColor #FFFFFF
@@ -10,155 +11,223 @@ skinparam noteBackgroundColor #fff2cc
 skinparam dividerBackgroundColor #f0f0f0
 skinparam sequenceGroupBackgroundColor #f9f9f9
 
-title Intent Definition MS (ID MS) — Primary Process Sequence Flows
+title Intent Definition MS (ID MS): Primary Process Sequence Flows:
 
-actor "External Client\n/ OEX / Auth Platform" as Client
-participant "NGW / API Gateway" as GW
+actor "External Client\n/ OEX / Authorised Platform" as Client
+participant "NGW\n(user context terminates here)" as GW
 participant "Intent Definition MS\n(ID MS)" as IDMS
-collections "IntentSpec\nCatalogue" as CAT
+collections "IntentSpecification\nCatalogue" as CAT
 database "Outbox Table\n(DB)" as OUTBOX
 database "Subscription\nRegistry (DB)" as SUBREG
 participant "Outbox Dispatcher\n(background worker)" as DISPATCHER
 actor "External Subscriber\nSystem" as SUB
 
-== 1. Create New Draft IntentSpecification ==
-Client -> GW : POST /intentManagement/v5/intentSpecification\n{ name, version, familyId, lifecycleStatus: "Draft", ... }
-GW -> IDMS : forward request
-group Atomic DB transaction
-    IDMS -> CAT : persist new draft IntentSpecification
-    IDMS -> OUTBOX : write IntentSpecificationCreateEvent row { status: PENDING }
+note over GW, IDMS
+  NGW forwards trusted system/service context downstream.
+  End-user context does not propagate past NGW.
+end note
+
+== 1. Create New Draft IntentSpecification: ==
+Client -> GW : POST /intentManagement/v5/intentSpecification\nTMF-compliant IntentSpecification request\n{ name, version, familyId, lifecycleStatus: "DRAFT", ... }
+GW -> IDMS : Forward request using system/service identity
+
+group Atomic DB transaction:
+  IDMS -> CAT : Persist new DRAFT IntentSpecification
+  IDMS -> OUTBOX : Write IntentSpecificationCreateEvent row\n{ status: PENDING }
 end
-IDMS --> GW : 201 Created { intentSpecification }
-GW --> Client : 201 Created { intentSpecification }
+
+IDMS --> GW : 201 Created\nETag + Location + TMF-compliant IntentSpecification
+GW --> Client : 201 Created\nETag + Location + TMF-compliant IntentSpecification
+
 |||
-DISPATCHER -> OUTBOX : poll for PENDING event rows
+DISPATCHER -> OUTBOX : Poll for PENDING event rows
 OUTBOX --> DISPATCHER : [IntentSpecificationCreateEvent]
-DISPATCHER -> SUBREG : lookup subscriptions matching eventType
+DISPATCHER -> SUBREG : Lookup subscriptions matching eventType
 SUBREG --> DISPATCHER : [{ subscriptionId, callbackUrl }]
-loop for each matched subscription
-    DISPATCHER -> SUB : HTTPS POST {callbackUrl}\n{ event: IntentSpecificationCreateEvent, resourceId, timestamp }
-    alt HTTP 2xx
-        SUB --> DISPATCHER : 200 OK
-        DISPATCHER -> OUTBOX : mark event row DELIVERED
-    else HTTP error / timeout
-        SUB --> DISPATCHER : 4xx / 5xx / timeout
-        DISPATCHER -> OUTBOX : increment retry count\n(exponential back-off, dead-letter after max retries)
-    end
+loop for each matched subscription:
+  DISPATCHER -> SUB : HTTPS POST to subscriber-owned callbackUrl\nHTTP webhook; no external Kafka\nTMF-aligned event payload\n{ eventType: IntentSpecificationCreateEvent, event, eventId, eventTime, ... }
+  alt HTTP 2xx:
+    SUB --> DISPATCHER : 200 OK / 202 Accepted
+    DISPATCHER -> OUTBOX : Mark event row DELIVERED
+  else HTTP error / timeout:
+    SUB --> DISPATCHER : 4xx / 5xx / timeout
+    DISPATCHER -> OUTBOX : Increment retry count\nexponential back-off; dead-letter after max retries
+  end
 end
 
-== 2. Retrieve / List IntentSpecifications ==
-Client -> GW : GET /intentManagement/v5/intentSpecification\n  or GET /.../{id}
-GW -> IDMS : forward request
-IDMS -> CAT : query catalogue (discovery / runtime validation)
-CAT --> IDMS : [IntentSpecification] or single record
-IDMS --> GW : 200 OK { result }
-GW --> Client : 200 OK { result }
-note over Client, CAT : Read-only — no outbox event written
+== 2. Retrieve / List IntentSpecifications: ==
+Client -> GW : GET /intentManagement/v5/intentSpecification\nor GET /intentManagement/v5/intentSpecification/{id}
+GW -> IDMS : Forward request using system/service identity
+IDMS -> CAT : Query catalogue for discovery / validation support
+CAT --> IDMS : IntentSpecification list or single resource
+IDMS --> GW : 200 OK\nETag + TMF-compliant IntentSpecification representation
+GW --> Client : 200 OK\nETag + TMF-compliant IntentSpecification representation
+note over Client, CAT : Read-only operation — no outbox event written.
 
-== 3a. Full-Replacement Update (preferred — PUT) ==
-note over Client, IDMS : Caller submits complete resource representation
-Client -> GW : PUT /intentManagement/v5/intentSpecification/{id}\n{ full resource body }
-GW -> IDMS : forward request
-group Atomic DB transaction
-    IDMS -> CAT : replace draft IntentSpecification
-    IDMS -> OUTBOX : write IntentSpecificationAttributeValueChangeEvent row
+== 3a. Full-Replacement Update (preferred PUT): ==
+note over Client, IDMS
+  PUT is the preferred platform extension for deterministic full replacement.
+  Specification must be DRAFT.
+  If-Match is required.
+end note
+Client -> GW : PUT /intentManagement/v5/intentSpecification/{id}\nIf-Match: "<etag>"\n{ complete IntentSpecification resource }
+GW -> IDMS : Forward request using system/service identity
+alt Missing If-Match:
+  IDMS --> GW : 428 Precondition Required\n{ code: PRECONDITION_REQUIRED, reason: IF_MATCH_REQUIRED }
+  GW --> Client : 428 Precondition Required
+else Stale / mismatched ETag:
+  IDMS --> GW : 412 Precondition Failed\n{ code: PRECONDITION_FAILED, reason: ETAG_MISMATCH }
+  GW --> Client : 412 Precondition Failed
+else If-Match valid and resource is DRAFT:
+  group Atomic DB transaction:
+    IDMS -> CAT : Replace DRAFT IntentSpecification
+    IDMS -> OUTBOX : Write IntentSpecificationAttributeValueChangeEvent row
+  end
+  IDMS --> GW : 200 OK\nETag + TMF-compliant IntentSpecification
+  GW --> Client : 200 OK\nETag + TMF-compliant IntentSpecification
 end
-IDMS --> GW : 200 OK { intentSpecification }
-GW --> Client : 200 OK { intentSpecification }
+
 |||
-DISPATCHER -> OUTBOX : poll → PENDING AttributeValueChangeEvent
+DISPATCHER -> OUTBOX : Poll for PENDING AttributeValueChangeEvent
 OUTBOX --> DISPATCHER : [IntentSpecificationAttributeValueChangeEvent]
-DISPATCHER -> SUBREG : lookup matching subscriptions
+DISPATCHER -> SUBREG : Lookup matching subscriptions
 SUBREG --> DISPATCHER : [{ callbackUrl }]
-DISPATCHER -> SUB : HTTPS POST {callbackUrl}\n{ event: IntentSpecificationAttributeValueChangeEvent }
-SUB --> DISPATCHER : 200 OK
-DISPATCHER -> OUTBOX : mark DELIVERED
+DISPATCHER -> SUB : HTTPS POST to subscriber-owned callbackUrl\nTMF-aligned webhook event payload\nNo external Kafka delivery
+SUB --> DISPATCHER : 200 OK / 202 Accepted
+DISPATCHER -> OUTBOX : Mark DELIVERED
 
-== 3b. Partial Update (TMF-strict PATCH) ==
-note over Client, IDMS : Tightly controlled fields only; spec must be in Draft state
-Client -> GW : PATCH /intentManagement/v5/intentSpecification/{id}\n{ partial fields }
-GW -> IDMS : forward request
-group Atomic DB transaction
-    IDMS -> CAT : apply partial update to draft IntentSpecification
-    IDMS -> OUTBOX : write IntentSpecificationAttributeValueChangeEvent row
+== 3b. Partial Update (supported but discouraged PATCH): ==
+note over Client, IDMS
+  PATCH is supported for TMF compatibility but discouraged for ordinary edits.
+  Specification must be DRAFT.
+  If-Match is required.
+end note
+Client -> GW : PATCH /intentManagement/v5/intentSpecification/{id}\nIf-Match: "<etag>"\n{ partial fields }
+GW -> IDMS : Forward request using system/service identity
+alt Missing If-Match:
+  IDMS --> GW : 428 Precondition Required\n{ code: PRECONDITION_REQUIRED, reason: IF_MATCH_REQUIRED }
+  GW --> Client : 428 Precondition Required
+else Stale / mismatched ETag:
+  IDMS --> GW : 412 Precondition Failed\n{ code: PRECONDITION_FAILED, reason: ETAG_MISMATCH }
+  GW --> Client : 412 Precondition Failed
+else If-Match valid and resource is DRAFT:
+  group Atomic DB transaction:
+    IDMS -> CAT : Apply controlled partial update to DRAFT IntentSpecification
+    IDMS -> OUTBOX : Write IntentSpecificationAttributeValueChangeEvent row
+  end
+  IDMS --> GW : 200 OK\nETag + TMF-compliant IntentSpecification
+  GW --> Client : 200 OK\nETag + TMF-compliant IntentSpecification
 end
-IDMS --> GW : 200 OK { intentSpecification }
-GW --> Client : 200 OK { intentSpecification }
-|||
-DISPATCHER -> OUTBOX : poll → deliver AttributeValueChangeEvent to SUB (same as 3a)
 
-== 4 + 5. Activate Draft → "Active" + Auto-Retire Previous ==
-note over Client, IDMS : Activation via lifecycle field update only.\nService MUST NOT expose POST .../intentSpecification/{id}/activate
-Client -> GW : PUT /intentManagement/v5/intentSpecification/{id} { lifecycleStatus: "Active" }\nor PATCH ... { lifecycleStatus: "Active" }
-GW -> IDMS : forward request
-group Atomic DB transaction
-    IDMS -> CAT : set target spec lifecycleStatus → "Active"
-    IDMS -> CAT : find previous Active spec with same familyId → set "Retired"
-    IDMS -> OUTBOX : write IntentSpecificationStateChangeEvent { status: Activated }
-    IDMS -> OUTBOX : write IntentSpecificationStateChangeEvent { status: Retired, previousSpecId }
+== 4. Activate Draft and Auto-Retire Previous Active Version: ==
+note over Client, IDMS
+  Activation is represented as lifecycleStatus change.
+  Service does not expose POST .../intentSpecification/{id}/activate.
+  Active lifecycle values are DRAFT, ACTIVE, and RETIRED.
+  DELETED is not an IntentSpecification lifecycleStatus.
+end note
+Client -> GW : PUT or PATCH /intentManagement/v5/intentSpecification/{id}\nIf-Match: "<etag>"\n{ lifecycleStatus: "ACTIVE" }
+GW -> IDMS : Forward request using system/service identity
+alt Missing If-Match:
+  IDMS --> GW : 428 Precondition Required
+  GW --> Client : 428 Precondition Required
+else Stale / mismatched ETag:
+  IDMS --> GW : 412 Precondition Failed
+  GW --> Client : 412 Precondition Failed
+else If-Match valid:
+  group Atomic DB transaction:
+    IDMS -> CAT : Set target spec lifecycleStatus = ACTIVE
+    IDMS -> CAT : Find previous ACTIVE spec with same familyId and set RETIRED
+    IDMS -> OUTBOX : Write IntentSpecificationStatusChangeEvent\n{ lifecycleStatus: ACTIVE }
+    IDMS -> OUTBOX : Write IntentSpecificationStatusChangeEvent\n{ lifecycleStatus: RETIRED, previousSpecId }
+  end
+  IDMS --> GW : 200 OK\nETag + TMF-compliant IntentSpecification
+  GW --> Client : 200 OK\nETag + TMF-compliant IntentSpecification
 end
-IDMS --> GW : 200 OK { intentSpecification, lifecycleStatus: "Active" }
-GW --> Client : 200 OK { intentSpecification }
+
 |||
-DISPATCHER -> OUTBOX : poll → 2 PENDING StateChangeEvents
-OUTBOX --> DISPATCHER : [StateChangeEvent(Activated), StateChangeEvent(Retired)]
-DISPATCHER -> SUBREG : lookup matching subscriptions
+DISPATCHER -> OUTBOX : Poll for PENDING status-change events
+OUTBOX --> DISPATCHER : [StatusChange(ACTIVE), StatusChange(RETIRED)]
+DISPATCHER -> SUBREG : Lookup matching subscriptions
 SUBREG --> DISPATCHER : [{ callbackUrl }]
-DISPATCHER -> SUB : HTTPS POST {callbackUrl}\n{ event: StateChangeEvent, lifecycleStatus: "Active" }
-SUB --> DISPATCHER : 200 OK
-DISPATCHER -> SUB : HTTPS POST {callbackUrl}\n{ event: StateChangeEvent, lifecycleStatus: "Retired", id: previousSpecId }
-SUB --> DISPATCHER : 200 OK
-DISPATCHER -> OUTBOX : mark both events DELIVERED
+DISPATCHER -> SUB : HTTPS POST to subscriber-owned callbackUrl\nTMF-aligned IntentSpecificationStatusChangeEvent\n{ lifecycleStatus: "ACTIVE" }
+SUB --> DISPATCHER : 200 OK / 202 Accepted
+DISPATCHER -> SUB : HTTPS POST to subscriber-owned callbackUrl\nTMF-aligned IntentSpecificationStatusChangeEvent\n{ lifecycleStatus: "RETIRED", id: previousSpecId }
+SUB --> DISPATCHER : 200 OK / 202 Accepted
+DISPATCHER -> OUTBOX : Mark both events DELIVERED
 
-== 6. Delete Unused Draft IntentSpecification ==
-note over Client, IDMS : Allowed only when retention & runtime-reference rules permit
-Client -> GW : DELETE /intentManagement/v5/intentSpecification/{id}
-GW -> IDMS : forward request
-IDMS -> CAT : validate Draft status & no active runtime references
-alt deletion permitted
-    group Atomic DB transaction
-        IDMS -> CAT : remove IntentSpecification
-        IDMS -> OUTBOX : write IntentSpecificationDeleteEvent row
-    end
-    IDMS --> GW : 204 No Content
-    GW --> Client : 204 No Content
-    |||
-    DISPATCHER -> OUTBOX : poll → PENDING DeleteEvent
-    OUTBOX --> DISPATCHER : [IntentSpecificationDeleteEvent]
-    DISPATCHER -> SUBREG : lookup matching subscriptions
-    SUBREG --> DISPATCHER : [{ callbackUrl }]
-    DISPATCHER -> SUB : HTTPS POST {callbackUrl}\n{ event: IntentSpecificationDeleteEvent }
-    SUB --> DISPATCHER : 200 OK
-    DISPATCHER -> OUTBOX : mark DELIVERED
-else retention / reference rule violation
-    CAT --> IDMS : conflict
-    IDMS --> GW : 409 Conflict { reason }
-    GW --> Client : 409 Conflict { reason }
+== 5. Delete Unused Draft IntentSpecification: ==
+note over Client, IDMS
+  Delete is an operation/outcome, not a DELETED lifecycle state.
+  Allowed only for DRAFT resources when retention and runtime-reference rules permit.
+  If-Match is required.
+end note
+Client -> GW : DELETE /intentManagement/v5/intentSpecification/{id}\nIf-Match: "<etag>"
+GW -> IDMS : Forward request using system/service identity
+alt Missing If-Match:
+  IDMS --> GW : 428 Precondition Required\n{ code: PRECONDITION_REQUIRED, reason: IF_MATCH_REQUIRED }
+  GW --> Client : 428 Precondition Required
+else Stale / mismatched ETag:
+  IDMS --> GW : 412 Precondition Failed\n{ code: PRECONDITION_FAILED, reason: ETAG_MISMATCH }
+  GW --> Client : 412 Precondition Failed
+else Retention / runtime-reference rule violation:
+  IDMS -> CAT : Validate DRAFT status and no active runtime references
+  CAT --> IDMS : Conflict
+  IDMS --> GW : 409 Conflict\n{ reason }
+  GW --> Client : 409 Conflict\n{ reason }
+else Deletion permitted:
+  group Atomic DB transaction:
+    IDMS -> CAT : Remove IntentSpecification / apply retention policy
+    IDMS -> OUTBOX : Write IntentSpecificationDeleteEvent row
+  end
+  IDMS --> GW : 204 No Content
+  GW --> Client : 204 No Content
 end
 
-== 7a. Register External Event Subscription ==
-note over Client, SUBREG : Client registers a callback URL to receive future event POSTs\nvia strict TMF /hub or platform extension
-Client -> GW : POST /intentManagement/v5/hub\n{ callback: "https://subscriber.example/notify", query: "eventType=..." }
-GW -> IDMS : forward request
-IDMS -> SUBREG : persist { subscriptionId, callbackUrl, filter, deliveryMetadata }
-SUBREG --> IDMS : 201 { subscriptionId }
-IDMS --> GW : 201 Created { subscriptionId, callbackUrl }
-GW --> Client : 201 Created { subscription }
+|||
+DISPATCHER -> OUTBOX : Poll for PENDING DeleteEvent
+OUTBOX --> DISPATCHER : [IntentSpecificationDeleteEvent]
+DISPATCHER -> SUBREG : Lookup matching subscriptions
+SUBREG --> DISPATCHER : [{ callbackUrl }]
+DISPATCHER -> SUB : HTTPS POST to subscriber-owned callbackUrl\nTMF-aligned IntentSpecificationDeleteEvent\nNo external Kafka delivery
+SUB --> DISPATCHER : 200 OK / 202 Accepted
+DISPATCHER -> OUTBOX : Mark DELIVERED
 
-== 7b. Retrieve External Event Subscription ==
-Client -> GW : GET /intentManagement/v5/hub/{id}
-GW -> IDMS : forward request
-IDMS -> SUBREG : lookup subscription record
-SUBREG --> IDMS : subscription
-IDMS --> GW : 200 OK { subscription }
-GW --> Client : 200 OK { subscription }
+== 6a. Register External Event Subscription: ==
+note over Client, SUBREG
+  ID MS uses the domain-scoped hub route for IntentSpecification events.
+  Subscriber callback URLs are subscriber-owned.
+  Hub notifications are delivered as REST webhooks, not Kafka.
+end note
+Client -> GW : POST /intentManagement/v5/intentSpecification/hub\n{ callback: "https://subscriber.example/notify",\n  query: "eventType=IntentSpecificationCreateEvent" }
+GW -> IDMS : Forward request using system/service identity
+IDMS -> SUBREG : Persist { subscriptionId, callbackUrl, filter, deliveryMetadata }
+SUBREG --> IDMS : Created subscription
+IDMS --> GW : 201 Created\nLocation + ETag + subscription representation
+GW --> Client : 201 Created\nLocation + ETag + subscription representation
 
-== 7c. Delete External Event Subscription ==
-Client -> GW : DELETE /intentManagement/v5/hub/{id}
-GW -> IDMS : forward request
-IDMS -> SUBREG : remove subscription record
-SUBREG --> IDMS : confirmed
-IDMS --> GW : 204 No Content
-GW --> Client : 204 No Content
+== 6b. Retrieve External Event Subscription: ==
+Client -> GW : GET /intentManagement/v5/intentSpecification/hub/{id}
+GW -> IDMS : Forward request using system/service identity
+IDMS -> SUBREG : Lookup subscription record
+SUBREG --> IDMS : Subscription
+IDMS --> GW : 200 OK\nETag + subscription representation
+GW --> Client : 200 OK\nETag + subscription representation
+
+== 6c. Delete External Event Subscription: ==
+Client -> GW : DELETE /intentManagement/v5/intentSpecification/hub/{id}\nIf-Match: "<etag>"
+GW -> IDMS : Forward request using system/service identity
+alt Missing If-Match:
+  IDMS --> GW : 428 Precondition Required\n{ code: PRECONDITION_REQUIRED, reason: IF_MATCH_REQUIRED }
+  GW --> Client : 428 Precondition Required
+else Stale / mismatched ETag:
+  IDMS --> GW : 412 Precondition Failed\n{ code: PRECONDITION_FAILED, reason: ETAG_MISMATCH }
+  GW --> Client : 412 Precondition Failed
+else If-Match valid:
+  IDMS -> SUBREG : Remove subscription record
+  SUBREG --> IDMS : Removed
+  IDMS --> GW : 204 No Content
+  GW --> Client : 204 No Content
+end
 
 @enduml
