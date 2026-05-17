@@ -1,63 +1,95 @@
 @startuml
-title IC MS — Intent-Level Lifecycle State Diagram
+' IC MS — Intent-Level Lifecycle State Diagram
 
-skinparam backgroundColor #FFFFFF
+hide empty description
 skinparam shadowing false
-skinparam roundcorner 14
+skinparam backgroundColor #FAFAFA
+
 skinparam state {
- BackgroundColor #F8FAFC
- BorderColor #334155
- FontColor #111827
- FontStyle bold
+  BackgroundColor #FFFFFF
+  BorderColor #5a7a9a
+  FontSize 12
+  FontColor #1a1a2e
+  ArrowColor #5a7a9a
+  ArrowFontSize 11
+  ArrowFontColor #333366
 }
+
 skinparam note {
- BackgroundColor #FEF3C7
- BorderColor #D97706
- FontColor #111827
+  BackgroundColor #fffde7
+  BorderColor #d6b656
+  FontSize 11
+  FontColor #333300
 }
 
-[*] --> Acknowledged : POST /intent passes\nTMF-compliant syntactic validation
+title <b>IC MS — Intent-Level Lifecycle State Diagram</b>
 
-Acknowledged --> Rejected : II MS semantic/policy\nrejection outcome
-Acknowledged --> InProgress : downstream fulfilment\nstarts
+' ── States ────────────────────────────────────────────────────────────────
+state Acknowledged #d4e6f1 : Syntactically admitted\nawaiting fulfilment
+state InProgress   #d5f5e3 : Change execution\nunderway
+state Active       #2ecc71 : Change applied and\nassurance confirmed
+state Degraded     #f9e79f : Assurance degradation\ndetected
+state Paused       #e8daef : Paused outcome\nreported by IA MS
+state Failed       #f1948a : Change or runtime\nfailure reported
+state Rejected     #f5cba7 : Semantic / policy\nrejection
+state Terminated   #aab7b8 : Retained — no longer\nruntime-active
 
-InProgress --> Rejected : semantic/policy\nrejection outcome
-InProgress --> Active : IA MS confirms apply /\nassurance active
-InProgress --> Failed : IA MS apply / runtime\nfailure outcome
+' ── Entry ─────────────────────────────────────────────────────────────────
+[*] --> Acknowledged : POST /intent passes\nTMF syntactic validation
 
-Active --> Degraded : IA MS reports\ndegraded assurance
-Degraded --> Active : IA MS reports\nrecovered assurance
-Degraded --> InProgress : re-decision /\nre-optimisation starts
+' ── Acknowledged ──────────────────────────────────────────────────────────
+Acknowledged --> InProgress : change execution starts
+Acknowledged --> Rejected   : II MS semantic / policy rejection
+Acknowledged --> Terminated : termination request accepted
 
-Active --> Paused : IA MS reports\npaused outcome
-Paused --> Active : IA MS reports\nresumed / active
-Paused --> Failed : IA MS reports\nfailure
+' ── InProgress ────────────────────────────────────────────────────────────
+InProgress --> Active     : IA MS confirms change applied and assured
+InProgress --> Failed     : IA MS reports change or runtime failure
+InProgress --> Rejected   : semantic / policy rejection outcome
+InProgress --> Terminated : termination request accepted
 
-Active --> Failed : IA MS reports\nruntime failure
-Degraded --> Failed : IA MS reports\nfailure
+' ── Active ────────────────────────────────────────────────────────────────
+Active --> Degraded   : IA MS reports degraded assurance
+Active --> Paused     : IA MS reports paused outcome
+Active --> Failed     : IA MS reports runtime failure
+Active --> Terminated : termination request accepted
 
-Acknowledged --> Terminated : termination request\naccepted
-InProgress --> Terminated : termination request\naccepted
-Active --> Terminated : termination request\naccepted
-Degraded --> Terminated : termination request\naccepted
-Paused --> Terminated : termination request\naccepted
-Failed --> Terminated : termination request\naccepted
-Rejected --> Terminated : termination request\naccepted, if retained\nas terminated
+' ── Degraded ──────────────────────────────────────────────────────────────
+Degraded --> Active     : IA MS reports recovered assurance
+Degraded --> InProgress : change re-evaluation starts
+Degraded --> Failed     : IA MS reports failure
+Degraded --> Terminated : termination request accepted
+
+' ── Paused ────────────────────────────────────────────────────────────────
+Paused --> Active     : IA MS reports resumed / active
+Paused --> Failed     : IA MS reports failure
+Paused --> Terminated : termination request accepted
+
+' ── Terminal ──────────────────────────────────────────────────────────────
+Failed    --> Terminated : termination request accepted
+Rejected  --> Terminated : termination request accepted\n(if retained as terminated)
 
 Terminated --> [*]
 
+' ── Notes ─────────────────────────────────────────────────────────────────
 note right of Terminated
- Runtime Intent records are retained.
- DELETE /intent/{id} is treated as
- termination, not physical delete.
- No external IntentReport delete API is exposed.
+  Runtime Intent records are retained.
+  DELETE /intent/{id} is treated as termination,
+  not physical delete.
+  No external IntentReport delete API is exposed.
 end note
 
 note bottom of Active
- IC MS owns external Intent and IntentReport
- lifecycle projection.
- Runtime truth comes from IA MS assurance outcomes,
- accepted callbacks, and observed metrics.
+  This diagram shows the <b>Intent-level lifecycleStatus</b> only.
+  It represents the externally visible lifecycle projection
+  of the Intent resource.
+
+  Version-specific states (Standby, Retired) belong to the
+  Intent-version lifecycle — not this diagram.
+
+  IC MS owns the external Intent and IntentReport projection.
+  Runtime truth comes from IA MS assurance outcomes,
+  accepted callbacks, and observed metrics.
 end note
 
 @enduml
