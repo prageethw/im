@@ -38,9 +38,9 @@ Consumer -> GW : POST /intentManagement/v5/intent\n{ intentSpecification.id, exp
 GW -> ICMS : mTLS forward request\n(system/service context)
 
 group TMF-compliant resource and syntax validation
-  ICMS -> ICMS : validate TMF-compliant Intent resource shape
   ICMS -> IDMS : GET /intentManagement/v5/intentSpecification/{id}\nverify referenced specification is ACTIVE
   IDMS --> ICMS : IntentSpecification { lifecycleStatus: ACTIVE, schema/definition }
+  ICMS -> ICMS : validate TMF-compliant Intent resource shape
   ICMS -> ICMS : validate expression syntax against active IntentSpecification
 end
 
