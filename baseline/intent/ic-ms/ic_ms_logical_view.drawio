@@ -19,6 +19,11 @@
                 <mxCell id="0MlcjW0cjBZ2ITzH3IxV-1" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;entryX=1;entryY=0.75;entryDx=0;entryDy=0;fillColor=#d5e8d4;strokeColor=default;" parent="1" source="zone_internal" target="icms_core" edge="1">
                     <mxGeometry relative="1" as="geometry"/>
                 </mxCell>
+                <mxCell id="2" value="consume&lt;div&gt;&lt;span style=&quot;color: rgb(0, 0, 0); font-size: 10px; font-style: italic; text-align: left;&quot;&gt;IntentRejectedEvent&amp;nbsp;&lt;br&gt;&lt;span style=&quot;color: rgb(0, 0, 0);&quot;&gt;IntentAssuranceEvent&lt;/span&gt;&lt;/span&gt;&lt;/div&gt;" style="edgeLabel;html=1;align=center;verticalAlign=middle;resizable=0;points=[];" vertex="1" connectable="0" parent="0MlcjW0cjBZ2ITzH3IxV-1">
+                    <mxGeometry x="0.4455" y="-1" relative="1" as="geometry">
+                        <mxPoint x="50" as="offset"/>
+                    </mxGeometry>
+                </mxCell>
                 <mxCell id="zone_internal" value="Internal Fulfilment Pipeline (not owned by IC MS)" style="swimlane;startSize=30;fillColor=#d5e8d4;strokeColor=default;fontStyle=1;fontSize=13;horizontal=1;container=0;" parent="1" vertex="1">
                     <mxGeometry x="1230" y="270" width="360" height="330" as="geometry"/>
                 </mxCell>
@@ -75,7 +80,7 @@
                 </mxCell>
                 <mxCell id="e7_lbl" value="consumes&#xa;IntentValidatedEvent" style="edgeLabel;fontSize=10;fontStyle=2;container=0;" parent="e7" connectable="0" vertex="1">
                     <mxGeometry relative="0.5" as="geometry">
-                        <mxPoint x="-147" y="-4" as="offset"/>
+                        <mxPoint x="-150" y="-6" as="offset"/>
                     </mxGeometry>
                 </mxCell>
                 <mxCell id="e8" style="edgeStyle=orthogonalEdgeStyle;rounded=0;dashed=1;fillColor=#d5e8d4;strokeColor=default;" parent="1" source="iims" target="kafka" edge="1">
@@ -87,9 +92,9 @@
                         </Array>
                     </mxGeometry>
                 </mxCell>
-                <mxCell id="e8_lbl" value="IntentRejectedEvent / network-ready outcomes" style="edgeLabel;fontSize=10;fontStyle=2;container=0;" parent="e8" connectable="0" vertex="1">
+                <mxCell id="e8_lbl" value="IntentRejectedEvent " style="edgeLabel;fontSize=10;fontStyle=2;container=0;" parent="e8" connectable="0" vertex="1">
                     <mxGeometry relative="0.5" as="geometry">
-                        <mxPoint x="-130" y="-30" as="offset"/>
+                        <mxPoint x="-96" y="-29" as="offset"/>
                     </mxGeometry>
                 </mxCell>
                 <mxCell id="e9" style="edgeStyle=orthogonalEdgeStyle;rounded=0;dashed=1;fillColor=#d5e8d4;strokeColor=default;" parent="1" source="iams" target="kafka" edge="1">
@@ -100,7 +105,7 @@
                         </Array>
                     </mxGeometry>
                 </mxCell>
-                <mxCell id="e9_lbl" value="IntentAssuranceEvent outcomes" style="edgeLabel;fontSize=10;fontStyle=2;container=0;" parent="e9" connectable="0" vertex="1">
+                <mxCell id="e9_lbl" value="IntentAssuranceEvent" style="edgeLabel;fontSize=10;fontStyle=2;container=0;" parent="e9" connectable="0" vertex="1">
                     <mxGeometry relative="0.5" as="geometry">
                         <mxPoint x="-58" y="-10" as="offset"/>
                     </mxGeometry>
