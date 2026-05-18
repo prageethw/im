@@ -31,7 +31,7 @@ Optimisation output may influence the service-ready configuration produced upstr
 
 IC MS consumes `IntentAssuranceEvent` and projects the external TMF-compliant `Intent.lifecycleStatus` and `IntentReport.expression.expressionValue`.
 
-IA MS does not own external TMF APIs, runtime `Intent` resources, design-time `IntentSpecification`, semantic interpretation, optimisation decisions, callback ingestion, or network orchestration/apply execution.
+IA MS does not own external TMF APIs, runtime `Intent` resources, design-time `IntentSpecification`, semantic interpretation, optimisation decisions, callback ingestion, or network change execution/apply.
 
 ---
 
@@ -82,7 +82,7 @@ content-type: application/json
     "intentId": "INT-HOSP-2026-001",
     "version": "v1",
     "lifecycleStatus": "InProgress",
-    "statusReason": "Service configuration has been prepared for orchestration/apply.",
+    "statusReason": "Service configuration has been prepared for change execution/apply.",
     "context": {
       "targets": {
         "maxLatencyMs": 10,
@@ -323,7 +323,7 @@ IA MS obtains runtime metrics from observability/observation endpoints that are 
 
 | **Raw `sourceState.state`** | **IA treatment** | **Typical `IntentAssuranceEvent.lifecycleStatus`** |
 |---|---|---|
-| `APPLY_ACCEPTED` | Apply request accepted by source/orchestration layer | `InProgress` |
+| `APPLY_ACCEPTED` | Apply request accepted by source/change execution layer | `InProgress` |
 | `APPLY_IN_PROGRESS` | Apply still underway | `InProgress` |
 | `APPLIED` | Apply completed; runtime observations may further confirm health | `Active` |
 | `APPLY_REJECTED` | Apply request rejected before successful application | `Failed` |
