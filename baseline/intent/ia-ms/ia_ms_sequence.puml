@@ -20,7 +20,7 @@ participant "Outbox Relay\n(background worker)" as RELAY
 participant "IC MS" as ICMS
 
 == 1. Consume IntentNetworkReadyEvent ==
-KAFKA -> IAMS : IntentNetworkReadyEvent\n{ intentId, serviceConfiguration: {\n    orchestratorConfiguration.resources,\n    observerConfiguration.resources\n  }, runtimeContext }
+IAMS -> KAFKA : consume event
 
 IAMS -> STORE : check idempotency record (intentId + eventId)
 alt already processed (duplicate)
@@ -41,7 +41,7 @@ else not yet processed
 end
 
 == 3. Consume IntentCallbackEvent ==
-KAFKA -> IAMS : IntentCallbackEvent\n{ intentId, sourceState.state, callbackSource, timestamp }
+IAMS -> KAFKA : consume event
 
 IAMS -> STORE : check idempotency record (intentId + callbackEventId)
 alt duplicate callback
@@ -97,7 +97,7 @@ else new callback event
         RELAY -> STORE : mark row DELIVERED
 
         == 10. IC MS Consumes and Projects ==
-        KAFKA -> ICMS : IntentAssuranceEvent\n{ intentId, lifecycleStatus, assuranceStatus,\n  metricSnapshot, reportData }
+        ICMS -> KAFKA : consume event
         ICMS -> ICMS : update external Intent lifecycle state projection
         ICMS -> ICMS : create / update IntentReport projection
         note over ICMS : IC MS does not feed back into IA MS.\nIA MS has an independent internal event publication path.
@@ -117,6 +117,6 @@ group Atomic DB transaction
 end
 RELAY -> STORE : poll → deliver updated IntentAssuranceEvent to Kafka
 RELAY -> KAFKA : publish IntentAssuranceEvent (state change)
-KAFKA -> ICMS : IntentAssuranceEvent → IC MS updates projection
+ICMS -> KAFKA : consume event
 
 @enduml
