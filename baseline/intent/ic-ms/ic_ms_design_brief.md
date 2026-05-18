@@ -39,7 +39,7 @@ It is responsible for:
 | Policy validation | II MS + lightweight II MS KP + `t7.knowledge plane` |
 | Knowledge resolution | II MS + `t7.knowledge plane` |
 | Optimisation | `optimiser-controller-ms` using optimiser backends such as `t7-gurobi-optimiser` where relevant |
-| Network change execution | Orchestration layer / network orchestrator |
+| Network change execution | Change execution layer / network orchestrator |
 | Apply outcome interpretation | IA MS |
 | Runtime assurance truth | IA MS |
 | Real-time telemetry | `t7.telemetry` consumed by IA MS |
@@ -399,7 +399,7 @@ Retired
 | **Version lifecycleStatus** | **Meaning** |
 |---|---|
 | `Acknowledged` | Version accepted after syntactic validation |
-| `InProgress` | Version is being semantically resolved, optimised, applied, or assured |
+| `InProgress` | Version change handling is in progress, including semantic resolution, optimisation where applicable, apply/change execution, or assurance confirmation |
 | `Active` | Version is currently active in the network/service |
 | `Standby` | Version is not currently active, but is retained as a valid rollback or future reactivation candidate |
 | `Degraded` | Version is still active, but runtime assurance is degraded |
@@ -407,7 +407,7 @@ Retired
 | `Rejected` | Version was rejected before successful fulfilment |
 | `Failed` | Version failed during fulfilment, apply, or runtime processing |
 | `Terminated` | Version was stopped because the Intent/service was terminated |
-| `Retired` | Version is permanently removed from future active-candidate use; terminal |
+| `Retired` | Administrative/version-governance archival state; reachable only from `Terminated`; terminal |
 
 ### Version pointer:
 
@@ -466,12 +466,12 @@ Runtime truth comes from:
 | 4 | Runtime degradation reported by IA MS | `v1` | `Degraded` | `v1` | Intent degraded, but `v1` remains `activeVersion` |
 | 5 | Meaningful update accepted, creates new version | `v2` | `Acknowledged` / `InProgress` | `v1` | New version being processed; service still running on `v1` |
 | 6 | IA MS confirms updated apply active | `v2` | `Active` | `v2` | `v2` becomes `activeVersion` |
-| 7 | `v2` becomes `activeVersion` | `v1` | `Standby` | `v2` | `v1` no longer active/effective, but remains a rollback candidate |
-| 8 | Rollback requested | `v1` | `InProgress` | `v2` | `v1` being reapplied; `v2` still active until rollback is confirmed |
-| 9 | Rollback apply confirmed | `v1` | `Active` | `v1` | `v1` becomes `activeVersion` again |
-| 10 | Rollback completes | `v2` | `Standby` | `v1` | `v2` no longer active, but remains a future candidate |
-| 11 | Version explicitly removed from future use | `v2` | `Retired` | `v1` | `v2` is terminal and cannot become active again |
-| 12 | Termination request accepted | active version | `Terminated` | last active version retained | Intent projection moves to `Terminated`; record retained |
+| 7 | `v2` becomes `activeVersion` | `v1` | `Standby` | `v2` | `v1` no longer active, but remains a rollback/restart candidate |
+| 8 | Rollback/restart requested | `v1` | `Acknowledged` | `v2` | `v1` re-enters the Intent version change lifecycle; `v2` remains active until the restart is confirmed |
+| 9 | Rollback/restart change execution begins | `v1` | `InProgress` | `v2` | `v1` is being applied; `v2` remains active until the restart is confirmed |
+| 10 | Rollback/restart confirmed | `v1` | `Active` | `v1` | `v1` becomes `activeVersion` again; previous active version moves to `Standby` where applicable |
+| 11 | Version explicitly terminated | `v2` | `Terminated` | `v1` | `v2` is no longer a restart candidate |
+| 12 | Administrative retirement after termination | `v2` | `Retired` | `v1` | `v2` is archived for governance/audit and cannot become active again |
 
 ### Example JSON — while v2 is still being processed:
 
@@ -513,7 +513,7 @@ Runtime truth comes from:
 }
 ```
 
-### Example JSON — during rollback to v1:
+### Example JSON — after rollback/restart to v1 is acknowledged:
 
 ```json
 {
@@ -523,7 +523,7 @@ Runtime truth comes from:
   "versions": [
     {
       "version": "v1",
-      "lifecycleStatus": "InProgress"
+      "lifecycleStatus": "Acknowledged"
     },
     {
       "version": "v2",
@@ -553,7 +553,7 @@ Runtime truth comes from:
 }
 ```
 
-### Example JSON — after v2 is retired from future use:
+### Example JSON — after v2 is terminated and then retired from future use:
 
 ```json
 {
@@ -613,7 +613,7 @@ The retained `Intent` record remains available for:
 
 **When a newer Intent version becomes `Active`, IC MS moves `activeVersion` to the newer version and transitions the previously active version to `Standby`. `Standby` means the version is no longer currently active, but is retained as a valid rollback or future reactivation candidate.**
 
-**`Retired` is terminal and means the version is permanently removed from future active-candidate use. Once a version is `Retired`, its lifecycle state cannot change again.**
+**`Retired` is an administrative/version-governance archival state. It is terminal and reachable only from `Terminated`; no operational version state moves directly to `Retired`.**
 
 **IC MS does not physically delete runtime `Intent` records by default. Termination transitions the retained Intent projection to `Terminated` for audit, reporting, lifecycle history, and traceability.**
 
@@ -658,9 +658,10 @@ Terminated
 Retired
 ```
 
+### Key lifecycle rules:
+
 | **Rule** | **Baseline** |
 |---|---|
-| New version gating | A new Intent version must not be created while the current in-flight version is `Acknowledged` or `InProgress` |
 | Initial syntactic success | Intent/version starts as `Acknowledged` |
 | Semantic/policy rejection | Moves to `Rejected` |
 | Fulfilment/apply starts | Moves to `InProgress` |
@@ -668,8 +669,8 @@ Retired
 | Runtime degradation | Active version can move to `Degraded` while remaining `activeVersion` |
 | Recovery from degradation | `Degraded -> Active` |
 | New version becomes active | New version becomes `Active`; previous active version moves to `Standby` |
-| Rollback | `Standby -> InProgress -> Active`; previous active version moves to `Standby` |
-| Explicit retirement | Version moves to `Retired`; terminal |
+| Rollback/restart | `Standby -> Acknowledged -> InProgress -> Active`; previous active version moves to `Standby` only after the restarted version becomes active |
+| Explicit retirement | Only `Terminated -> Retired`; `Retired` is administrative/version-governance archival state |
 | Termination | Intent-level moves to `Terminated`; active version moves to `Terminated`; records retained |
 | Physical delete | Not baselined for runtime `Intent` |
 
@@ -765,12 +766,11 @@ Active --> Degraded : assurance degraded
 Degraded --> Active : assurance recovered
 Active --> Standby : newer version becomes Active
 Degraded --> Standby : newer version becomes Active\nwhile old version degraded
-Standby --> InProgress : rollback / reactivation\nrequested
-InProgress --> Active : rollback / reactivation\napply confirmed
-Standby --> Retired : explicit retirement /\nremoved from future use
-Failed --> Retired : explicit retirement
-Rejected --> Retired : explicit retirement
-Terminated --> Retired : explicit retirement\nif policy allows
+Paused --> Standby : newer version becomes Active\nwhile old version paused
+Standby --> Acknowledged : rollback / restart\nrequested
+Acknowledged --> InProgress : change handling starts
+InProgress --> Active : rollback / restart\nconfirmed active
+Terminated --> Retired : administrative retirement\nafter termination
 Active --> Terminated : Intent termination accepted
 Degraded --> Terminated : Intent termination accepted
 Standby --> Terminated : Intent termination accepted
@@ -807,8 +807,9 @@ end note
 v1 Active, activeVersion = v1
 -> v2 created, v2 InProgress, activeVersion still v1
 -> v2 Active, activeVersion = v2, v1 moves to Standby
--> rollback requested, v1 InProgress, activeVersion still v2
--> rollback confirmed, v1 Active, activeVersion = v1, v2 moves to Standby
+-> rollback/restart requested, v1 Acknowledged, activeVersion still v2
+-> rollback/restart starts, v1 InProgress, activeVersion still v2
+-> rollback/restart confirmed, v1 Active, activeVersion = v1, v2 moves to Standby
 ```
 
 ### Baseline statement:
@@ -1015,11 +1016,11 @@ Rules:
 | `InProgress` | `Terminated` |
 | `Degraded` | `Terminated` |
 | `Paused` | `Terminated` |
-| `Rejected` | `Terminated` |
-| `Failed` | `Terminated` |
+| `Rejected` | Remains `Rejected` |
+| `Failed` | Remains `Failed` |
 | `Retired` | Remains `Retired` |
 
-Reason: Termination closes live/candidate versions, but should not rewrite final historical outcomes such as `Rejected`, `Failed`, or `Retired`.
+Reason: Termination closes live/candidate versions and failed/rejected candidates where a retained version record must be closed. `Retired` remains an administrative archival state and is not rewritten.
 
 ### Baseline statement:
 
