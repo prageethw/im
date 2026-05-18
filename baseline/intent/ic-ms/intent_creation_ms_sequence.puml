@@ -1,5 +1,6 @@
 @startuml
 ' IC MS - Runtime Intent Sequence Flows
+
 !theme plain
 skinparam sequenceMessageAlign center
 skinparam backgroundColor #FFFFFF
@@ -54,7 +55,7 @@ else Validation succeeds
   end
 
   ICMS -> KAFKA : publish IntentValidatedEvent\ninternal platform event
-  KAFKA -> IIMS : consume for semantic interpretation\nand downstream change handling
+  IIMS -> KAFKA : consume event
 
   ICMS --> GW : 201 Created\n{ intent, lifecycleStatus: Acknowledged, activeVersion: 1 }
   GW --> Consumer : 201 Created { intent }
@@ -64,6 +65,7 @@ else Validation succeeds
   RELAY -> SUBREG : lookup matching subscriptions
   SUBREG --> RELAY : [{ callbackUrl }]
   RELAY -> SUB : HTTPS POST to subscriber-owned callbackUrl\nTMF-aligned event payload
+
   alt HTTP 2xx
     SUB --> RELAY : 204 No Content
     RELAY -> OUTBOX : mark DELIVERED
@@ -77,8 +79,7 @@ end
 
 note over Consumer, ICMS
 Unsafe operations require If-Match header.
-A newer version must not be created if an existing newer candidate version is already
-Acknowledged or InProgress.
+A newer version must not be created if an existing newer candidate version is already Acknowledged or InProgress.
 end note
 
 Consumer -> GW : PUT /intentManagement/v5/intent/{id}\nor PATCH /intentManagement/v5/intent/{id}\nHeaders: If-Match: "{currentETag}"
@@ -109,7 +110,7 @@ else ETag matches and no newer candidate is in flight
     end
 
     ICMS -> KAFKA : publish IntentValidatedEvent for version n+1
-    KAFKA -> IIMS : handle version n+1 change lifecycle
+    IIMS -> KAFKA : consume event
 
     note over ICMS, STORE
     When version n+1 later becomes activeVersion:
@@ -118,7 +119,6 @@ else ETag matches and no newer candidate is in flight
     - Standby may re-enter through Acknowledged, or move to Terminated
     - only Terminated may later move to Retired
     end note
-
   else Minor / non-content change
     ICMS -> STORE : update projection in place\n(no new runtime version)
     ICMS -> OUTBOX : write IntentAttributeValueChangeEvent\n{ status: PENDING }
@@ -151,6 +151,7 @@ group Atomic DB transaction
 end
 
 ICMS -> KAFKA : publish internal termination/change event if downstream teardown is required
+
 ICMS --> GW : 202 Accepted\n{ lifecycleStatus: Terminated }
 GW --> Consumer : 202 Accepted { intent }
 
@@ -170,7 +171,7 @@ IC MS consumes curated assurance outcomes and projects external IntentReport sta
 end note
 
 IAMS -> KAFKA : publish IntentAssuranceEvent\ninternal platform event
-KAFKA -> ICMS : consume assurance outcome
+ICMS -> KAFKA : consume event
 ICMS -> STORE : create / update IntentReport projection\n{ intentId, reportId, assuranceStatus, timestamp }
 ICMS -> OUTBOX : write IntentReportCreateEvent\nor IntentReportAttributeValueChangeEvent
 
