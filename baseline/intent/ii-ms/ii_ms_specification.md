@@ -21,9 +21,9 @@ II MS emits:
 
 - `IntentRejectedEvent` when the intent cannot be semantically, policy, or capability resolved
 - `IntentResolvedEvent` when the intent can proceed to the next internal fulfilment stage as a candidate-level semantic-resolution handoff
-- `IntentNetworkReadyEvent` when service-ready preparation has produced the concrete orchestration and observation configuration required by IA MS
+- `IntentNetworkReadyEvent` when service-ready preparation has produced the concrete change-execution and observation configuration required by IA MS
 
-II MS does not own runtime `Intent` REST APIs, external lifecycle projection, downstream selection/fulfilment decisions, assurance truth, callback ingestion, orchestration execution, or KP governance.
+II MS does not own runtime `Intent` REST APIs, external lifecycle projection, downstream selection/fulfilment decisions, assurance truth, callback ingestion, change execution, or KP governance.
 
 ---
 
@@ -721,9 +721,9 @@ intent-assurance-ms
 
 ### Meaning
 
-II MS emits `IntentNetworkReadyEvent` after semantic resolution and service-ready preparation have produced the concrete orchestration and observation configuration required by IA MS.
+II MS emits `IntentNetworkReadyEvent` after semantic resolution and service-ready preparation have produced the concrete change-execution and observation configuration required by IA MS.
 
-`IntentNetworkReadyEvent` does not mean network apply has succeeded. It means the service configuration/resource set has been prepared for orchestration/apply and assurance observation.
+`IntentNetworkReadyEvent` does not mean network apply has succeeded. It means the service configuration/resource set has been prepared for change execution/apply and assurance observation.
 
 ### Example headers
 
@@ -737,7 +737,7 @@ ce-subject: INT-HOSP-2026-001
 content-type: application/json
 ```
 
-### Example body — network ready for orchestration and assurance
+### Example body — network ready for change execution and assurance
 
 ```json
 {
@@ -895,9 +895,9 @@ content-type: application/json
 - `IntentNetworkReadyEvent` is consumed by `intent-assurance-ms`.
 - Consumer identity does not change producer ownership.
 - IA MS consumes this event; IA MS must not produce it.
-- `IntentNetworkReadyEvent` means service configuration is ready for orchestration/apply, not that apply has succeeded.
+- `IntentNetworkReadyEvent` means service configuration is ready for change execution/apply, not that apply has succeeded.
 - Carry the resolved runtime `body.context` with `targets`, `constraints`, and `preferences`; IA MS stores this as assurance context.
-- Use `serviceConfiguration.orchestratorConfiguration` for apply/orchestration details.
+- Use `serviceConfiguration.orchestratorConfiguration` for apply/change-execution details.
 - Use `serviceConfiguration.observerConfiguration` for assurance/monitoring details.
 - `serviceConfiguration.orchestratorConfiguration.resources[]` carries only the optimiser-selected network-ready configuration/resources that must be applied by the orchestrator; it includes resource details, topology, roles, and orchestrator-relevant information, but not metric values.
 - `serviceConfiguration.observerConfiguration.resources[]` carries the full assurance observation scope, including selected resources and any additional primary/secondary alternatives that IA must observe; it uses `metrics` as a list of metric names IA should observe, not a value object.
@@ -1007,4 +1007,4 @@ II MS consumes `IntentValidatedEvent`, validates and resolves the admitted expre
 
 `IntentResolvedEvent` is the candidate-level semantic-resolution handoff. It carries canonical service context and the full valid/applicable/applyable resource set for downstream consideration by `optimiser-controller-ms`. It includes generic metric values for applicable resources using neutral metric names such as `latencyMs`, `availabilityPercent`, `jitterMs`, and `packetLossPercent`. It is not the final service-ready/apply-ready handoff.
 
-`IntentNetworkReadyEvent` is the service-ready preparation handoff to IA MS. It carries the optimiser-selected apply configuration in `serviceConfiguration.orchestratorConfiguration` and the full assurance observation scope in `serviceConfiguration.observerConfiguration`, and it does not mean network apply has succeeded. It does not carry metric values in `serviceConfiguration.orchestratorConfiguration.resources[]`; `serviceConfiguration.observerConfiguration.resources[].metrics` names the metrics IA should observe.
+`IntentNetworkReadyEvent` is the service-ready preparation handoff to IA MS. It carries the optimiser-selected apply/change-execution configuration in `serviceConfiguration.orchestratorConfiguration` and the full assurance observation scope in `serviceConfiguration.observerConfiguration`, and it does not mean network apply has succeeded. It does not carry metric values in `serviceConfiguration.orchestratorConfiguration.resources[]`; `serviceConfiguration.observerConfiguration.resources[].metrics` names the metrics IA should observe.
