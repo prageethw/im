@@ -4,24 +4,24 @@
 
 Intent Intelligence MS (II MS) is the internal semantic interpretation and resolution service for admitted runtime intents. It consumes syntactically admitted intent facts from Intent Controller MS (IC MS), interprets the admitted expression using governed Knowledge Plane data, validates semantic feasibility, policy, capability, and resource context, and emits the next internal milestone event.
 
-II MS is not an external TMF-compliant API service. It does not expose runtime Intent REST APIs, design-time IntentSpecification APIs, customer-facing lifecycle projections, callback endpoints, orchestration execution, or assurance truth. Its responsibility is to convert a syntactically accepted runtime intent into one of the following internal outcomes:
+II MS is not an external TMF-compliant API service. It does not expose runtime Intent REST APIs, design-time IntentSpecification APIs, customer-facing lifecycle projections, callback endpoints, network change execution, or assurance truth.
+
+Its responsibility is to convert a syntactically accepted runtime intent into one of the following internal outcomes:
 
 - `IntentRejectedEvent` when the admitted intent cannot be semantically, policy, or capability resolved.
 - `IntentResolvedEvent` when the admitted intent has been semantically resolved into a canonical intent context and a full, valid candidate resource set for downstream optimisation or fulfilment consideration.
-- `IntentNetworkReadyEvent` when II MS has prepared the concrete service configuration needed for orchestration/apply, and assurance observation.
+- `IntentNetworkReadyEvent` when II MS has prepared the concrete service configuration needed for change execution and assurance observation.
 
-`IntentResolvedEvent` and `IntentNetworkReadyEvent` are intentionally different milestones. `IntentResolvedEvent` is the candidate-level semantic-resolution handoff. `IntentNetworkReadyEvent` is the service-ready preparation handoff to IA MS and means the service configuration/resource set has been prepared for orchestration/apply and assurance observation. It does not mean the network application has succeeded.
+`IntentResolvedEvent` and `IntentNetworkReadyEvent` are intentionally different milestones. `IntentResolvedEvent` is the candidate-level semantic-resolution handoff. `IntentNetworkReadyEvent` is the service-ready preparation handoff to IA MS and means the service configuration/resource set has been prepared for change execution and assurance observation. It does not mean the network application has succeeded.
 
 ## Logical View:
+
 ![alt text](ii_ms_logical_view.svg)
-II MS sits after IC MS in the runtime intent processing flow and before optimiser/orchestration/assurance execution stages.
+
+II MS sits after IC MS in the runtime intent processing flow and before optimiser, change-execution, and assurance stages.
 
 ```text
-External Intent API
-  -> IC MS syntactic admission and persistence
-  -> IntentValidatedEvent
-  -> II MS semantic interpretation and KP-backed resolution
-  -> IntentRejectedEvent | IntentResolvedEvent | IntentNetworkReadyEvent
+External Intent API -> IC MS syntactic admission and persistence -> IntentValidatedEvent -> II MS semantic interpretation and KP-backed resolution -> IntentRejectedEvent | IntentResolvedEvent | IntentNetworkReadyEvent
 ```
 
 Logical responsibilities:
@@ -35,12 +35,14 @@ Logical responsibilities:
 | Candidate discovery | Resolve the full valid candidate resource set known for the resolved context after scope/policy filtering. |
 | Rejection decision | Emit `IntentRejectedEvent` for semantic, policy, capability, or processing rejection. |
 | Resolution handoff | Emit `IntentResolvedEvent` for candidate-level semantic resolution. |
-| Service-ready handoff | Emit `IntentNetworkReadyEvent` when service configuration is prepared for orchestration and assurance observation. |
+| Service-ready handoff | Emit `IntentNetworkReadyEvent` when service configuration is prepared for change execution and assurance observation. |
 | Reliability | Use idempotent consumption and outbox-backed publication. |
 | Audit | Persist the semantic decision trail where required. |
 
 ## Process View:
+
 ![alt text](ii_ms_sequence.svg)
+
 1. II MS consumes `IntentValidatedEvent` from the internal Kafka event backbone.
 2. It deduplicates the input event using CloudEvents identity and runtime intent identity.
 3. It parses `body.expression.context.targets`, `body.expression.context.constraints`, and `body.expression.context.preferences`.
@@ -55,9 +57,11 @@ Logical responsibilities:
 
 ## Solution Elaboration:
 
-II MS exists because IC MS admission validation is intentionally syntactic and contract-focused. IC MS can confirm that an external runtime Intent request is structurally valid and references an active IntentSpecification, but it should not decide whether the requested outcome is semantically possible, policy-allowed, supported by the Knowledge Plane, or resolvable into a candidate resource set.
+II MS exists because IC MS admission validation is intentionally syntactic and contract-focused.
 
-II MS performs that semantic decision step. It treats the admitted expression as an internal runtime intent fact model, not as a customer-facing API payload. The canonical semantic structure is preserved across the pipeline:
+IC MS can confirm that an external runtime Intent request is structurally valid and references an active IntentSpecification, but it should not decide whether the requested outcome is semantically possible, policy-allowed, supported by the Knowledge Plane, or resolvable into a candidate resource set. II MS performs that semantic decision step. It treats the admitted expression as an internal runtime intent fact model, not as a customer-facing API payload.
+
+The canonical semantic structure is preserved across the pipeline:
 
 ```text
 expression.context.targets
@@ -84,7 +88,7 @@ II MS owns:
 | Candidate resource resolution | Build the full, valid candidate resource set after applicable scope and policy filtering. |
 | Semantic rejection | Emit `IntentRejectedEvent` with intent-domain reason codes. |
 | Candidate-level resolution | Emit `IntentResolvedEvent` for downstream optimisation/fulfilment consideration. |
-| Service-ready preparation | Emit `IntentNetworkReadyEvent` with prepared orchestration and observation configuration. |
+| Service-ready preparation | Emit `IntentNetworkReadyEvent` with prepared change-execution and observation configuration. |
 | Idempotency | Deduplicate consumed events and avoid duplicate milestone outcomes. |
 | Persistence | Store current semantic resolution state, decision audit, idempotency records, and outbox entries. |
 | Event publication | Publish II-owned events reliably using the outbox relay pattern. |
@@ -100,7 +104,7 @@ II MS owns:
 | External TMF subscription APIs | IC MS / ID MS depending on resource |
 | External consumer authorisation | Gateway / OEX / domain-facing API layer before the internal event flow |
 | Downstream optimisation algorithm ownership | Optimiser service |
-| Network orchestration/apply execution | Orchestration layer / network orchestrator |
+| Network change execution | Change execution layer / network orchestrator |
 | Apply outcome truth | IA MS |
 | Runtime assurance truth | IA MS |
 | Callback ingestion | ICB MS |
@@ -117,7 +121,7 @@ II MS contracts are internal event contracts only.
 | `IntentValidatedEvent` | Inbound | `intent-controller-ms` | `intent-intelligence-ms` | Tells II MS that IC MS admitted a runtime Intent syntactically. |
 | `IntentRejectedEvent` | Outbound | `intent-intelligence-ms` | `intent-controller-ms` | Tells IC MS that the admitted intent is semantically/policy/capability rejected. |
 | `IntentResolvedEvent` | Outbound | `intent-intelligence-ms` | Optimiser / downstream fulfilment stage | Candidate-level semantic-resolution handoff. |
-| `IntentNetworkReadyEvent` | Outbound | `intent-intelligence-ms` | `intent-assurance-ms` | Service-ready orchestration and observation configuration handoff. |
+| `IntentNetworkReadyEvent` | Outbound | `intent-intelligence-ms` | `intent-assurance-ms` | Service-ready change-execution and observation configuration handoff. |
 
 II MS has no external TMF-compliant REST contract in the active baseline. Any health, readiness, or metrics endpoints are internal platform probes only and must not be treated as product APIs.
 
@@ -125,9 +129,13 @@ II MS does not expose REST hub subscriptions and does not deliver external HTTP 
 
 ## Event delivery path:
 
-II MS has one event-delivery model in the active baseline: internal Kafka event processing. It consumes `IntentValidatedEvent` from the internal intent-management event topic and publishes II-owned milestone events through the II internal outbox relay to Kafka. These events use CloudEvents-style Kafka/platform headers and JSON bodies. II MS does not use the external REST hub/webhook notification model because it has no external TMF-compliant API or subscriber callback contract.
+II MS has one event-delivery model in the active baseline: internal Kafka event processing. It consumes `IntentValidatedEvent` from the internal intent-management event topic and publishes II-owned milestone events through the II internal outbox relay to Kafka.
 
-## Inbound internal Kafka event shape: IntentValidatedEvent:
+These events use CloudEvents-style Kafka/platform headers and JSON bodies. II MS does not use the external REST hub/webhook notification model because it has no external TMF-compliant API or subscriber callback contract.
+
+## Inbound internal Kafka event shape:
+
+### IntentValidatedEvent:
 
 The inbound event is consumed from Kafka and uses CloudEvents-style Kafka/platform headers with a plain JSON body.
 
@@ -230,7 +238,9 @@ II MS should reject or ignore unexpected fields according to its schema and comp
 
 ## Authorisation:
 
-II MS is internal only. It is not exposed through NGW, OEX, public API gateways, partner channels, or external TMF APIs.
+II MS is internal only.
+
+It is not exposed through NGW, OEX, public API gateways, partner channels, or external TMF APIs.
 
 Security and authorisation rules:
 
@@ -245,7 +255,9 @@ Security and authorisation rules:
 
 ## Persistence / state / outbox model:
 
-II MS should use source-of-truth persistence for semantic resolution state and reliable event publication. A PostgreSQL-compatible relational store is suitable because II MS needs transactional state transitions, idempotency, auditability, and reliable outbox behaviour.
+II MS should use source-of-truth persistence for semantic resolution state and reliable event publication.
+
+A PostgreSQL-compatible relational store is suitable because II MS needs transactional state transitions, idempotency, auditability, and reliable outbox behaviour.
 
 Suggested tables:
 
@@ -494,7 +506,7 @@ Rules:
 
 ## Internal Kafka message body: IntentNetworkReadyEvent:
 
-`IntentNetworkReadyEvent` is the service-ready preparation handoff to IA MS. It carries the service configuration required for orchestration/apply and assurance observation. It does not mean network apply succeeded.
+`IntentNetworkReadyEvent` is the service-ready preparation handoff to IA MS. It carries the service configuration required for change execution and assurance observation. It does not mean network apply succeeded.
 
 ```json
 {
@@ -600,7 +612,7 @@ Rules:
 
 - `IntentNetworkReadyEvent` is produced by `intent-intelligence-ms`.
 - IA MS consumes `IntentNetworkReadyEvent`; IA MS must not produce it.
-- Use `serviceConfiguration.orchestratorConfiguration` for apply/orchestration details.
+- Use `serviceConfiguration.orchestratorConfiguration` for selected apply/change-execution details.
 - Use `serviceConfiguration.observerConfiguration` for assurance/monitoring details.
 - `serviceConfiguration.resources[]` carries network-ready resource details, topology, roles, and orchestrator/observer-relevant information.
 - `serviceConfiguration.resources[]` must not carry observed metric values.
@@ -620,7 +632,9 @@ When an admitted intent is syntactically valid but cannot be semantically, polic
 
 ### Service-ready preparation:
 
-When the service configuration required for orchestration/apply and assurance observation is prepared, II MS emits `IntentNetworkReadyEvent`. This event carries `serviceConfiguration.orchestratorConfiguration` and `serviceConfiguration.observerConfiguration`.
+When the service configuration required for change execution and assurance observation is prepared, II MS emits `IntentNetworkReadyEvent`.
+
+This event carries `serviceConfiguration.orchestratorConfiguration` and `serviceConfiguration.observerConfiguration`.
 
 ### Idempotency:
 
@@ -628,7 +642,9 @@ II MS must support at-least-once delivery. It deduplicates consumed events by Cl
 
 ### Ordering:
 
-II MS must not allow stale events for older runtime intent versions to overwrite newer semantic resolution state. Where runtime versioning is active, state transitions are keyed by `intentId` and version.
+II MS must not allow stale events for older runtime intent versions to overwrite newer semantic resolution state.
+
+Where runtime versioning is active, state transitions are keyed by `intentId` and version.
 
 ### Dependency failure:
 
