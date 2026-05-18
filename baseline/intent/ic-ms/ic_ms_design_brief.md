@@ -873,41 +873,46 @@ If needed, version history may be exposed through one of the following:
 
 ## Operation behaviour and IntentSpecification reference baseline:
 
-### IntentSpecification reference rule:
+### IntentSpecification and expression IRI resolution rule:
 
-IC MS supports only a concrete `IntentSpecification.id` reference in runtime `Intent` create/update requests.
+Runtime `Intent` create/update requests must carry `expression.iri`.
 
-Supported:
+`expression.iri` is mandatory because it identifies the expression language / ontology / expression contract used for runtime expression validation. It is the default runtime validation discriminator when an explicit `intentSpecification.id` is not supplied.
+
+`intentSpecification.id`, `intentSpecification.familyId`, and `intentSpecification.name` are optional in runtime `Intent` create/update requests.
+
+When `intentSpecification.id` is supplied, it is authoritative. IC MS resolves that exact `IntentSpecification`, confirms it is `ACTIVE`, confirms the supplied `expression.iri` is consistent with the specification's `expressionSpecification.iri`, and validates the runtime expression against that specification.
+
+Supported explicit reference:
 
 ```json
 {
   "intentSpecification": {
     "id": "hospital-surgical-slice-spec-v1.20"
+  },
+  "expression": {
+    "iri": "https://mycsp.com.au/tio/hospital-surgical-slice/v1.0"
   }
 }
 ```
 
-Not supported:
+Supported implicit resolution when unambiguous:
 
 ```json
 {
-  "intentSpecification": {
-    "familyId": "hospital-surgical-slice-spec"
+  "expression": {
+    "iri": "https://mycsp.com.au/tio/hospital-surgical-slice/v1.0"
   }
 }
 ```
 
-Not supported:
+When `intentSpecification.id` is omitted, IC MS resolves the applicable active `IntentSpecification` by `expression.iri`. Under normal ID MS governance there should be exactly one `ACTIVE` `IntentSpecification` for the expression IRI.
 
-```json
-{
-  "intentSpecification": {
-    "name": "Hospital Surgical Slice Intent Specification"
-  }
-}
-```
+If zero or multiple `ACTIVE` `IntentSpecification` records match the supplied `expression.iri`, IC MS rejects the request and requires an explicit `intentSpecification.id`.
 
-IC MS does not resolve `IntentSpecification` by family, key, name, or inferred payload shape.
+`intentSpecification.familyId` and `intentSpecification.name` are optional descriptive/discovery hints only. They are not mandatory and are not authoritative runtime validation keys. If supplied, IC MS may use them for consistency checking or narrowing where supported.
+
+IC MS must not resolve `IntentSpecification` by family, key, name, or inferred payload shape alone.
 
 ### Two separate version concepts:
 
@@ -920,33 +925,29 @@ IC MS does not resolve `IntentSpecification` by family, key, name, or inferred p
 
 | **Operation** | **Behaviour** |
 |---|---|
-| `POST /intent` | Requires concrete `intentSpecification.id`; validates against that exact spec; referenced spec must be `ACTIVE`; creates projected runtime version `v1` |
+| `POST /intent` | Requires `expression.iri`; resolves applicable active `IntentSpecification` by authoritative `intentSpecification.id` when supplied, otherwise by unambiguous `expression.iri`; creates projected runtime version `v1` |
 | `GET /intent/{id}` | Returns current projected Intent state for that Intent ID, not the full internal version aggregate |
 | `GET /intent` | Lists current projected Intent states for retained Intent IDs |
-| `PUT /intent/{id}` | Platform extension for deterministic full replacement; if meaningful runtime content changes, creates a new runtime version; requires concrete `intentSpecification.id`; validates against that exact active spec |
-| `PATCH /intent/{id}` | TMF-compatible partial update; if meaningful runtime content changes, creates a new runtime version; requires concrete `intentSpecification.id` when runtime content needs validation |
+| `PUT /intent/{id}` | Platform extension for deterministic full replacement; if meaningful runtime content changes, creates a new runtime version; requires `expression.iri`; resolves active validation contract by authoritative `intentSpecification.id` when supplied, otherwise by unambiguous `expression.iri` |
+| `PATCH /intent/{id}` | TMF-compatible partial update; if meaningful runtime content changes, creates a new runtime version; requires `expression.iri` when runtime content needs validation; resolves active validation contract by authoritative `intentSpecification.id` when supplied, otherwise by unambiguous `expression.iri` |
 | `DELETE /intent/{id}` | Treated as termination, not physical delete; retained Intent projection moves to `Terminated` |
 
 ### POST /intent rule:
 
-On create, IC MS requires:
-
-```json
-{
-  "intentSpecification": {
-    "id": "hospital-surgical-slice-spec-v1.20"
-  }
-}
-```
+On create, IC MS requires `expression.iri`.
 
 Rules:
 
-- IC MS resolves exactly `hospital-surgical-slice-spec-v1.20`.
-- The referenced `IntentSpecification` must be `ACTIVE`.
-- IC MS validates runtime `Intent` content against that exact spec.
-- IC MS stores the concrete spec ID/version on the created projected Intent version.
+- If `intentSpecification.id` is supplied, IC MS resolves exactly that specification.
+- The resolved `IntentSpecification` must be `ACTIVE`.
+- IC MS validates that the supplied `expression.iri` is consistent with the resolved specification's `expressionSpecification.iri`.
+- If `intentSpecification.id` is omitted, IC MS resolves the active specification by `expression.iri`.
+- Under normal governance, exactly one active specification should match the supplied `expression.iri`.
+- If zero or multiple active specifications match the supplied `expression.iri`, IC MS rejects and requires explicit `intentSpecification.id`.
+- `intentSpecification.familyId` and `intentSpecification.name` are optional hints only.
+- IC MS validates runtime `Intent` content against the resolved active specification.
+- IC MS stores the resolved concrete spec ID/version on the created projected Intent version.
 - Create starts projected runtime Intent version `v1`.
-- If no concrete `intentSpecification.id` is provided, IC MS rejects the request.
 
 ### PUT /intent/{id} rule:
 
@@ -957,9 +958,11 @@ Rules:
 - Operates on the retained Intent identified by `{id}`.
 - Requires `If-Match`.
 - If meaningful runtime content changes, IC MS creates a new runtime Intent version.
-- The request must include concrete `intentSpecification.id`.
-- The referenced `IntentSpecification` must be `ACTIVE`.
-- IC MS validates the new runtime version against that exact spec.
+- The request must include `expression.iri` for runtime validation.
+- If supplied, `intentSpecification.id` is authoritative.
+- If `intentSpecification.id` is omitted, IC MS resolves the active specification by `expression.iri`.
+- The resolved `IntentSpecification` must be `ACTIVE`.
+- IC MS validates the new runtime version against the resolved active specification.
 - The previous projected active version remains active while the new version is `Acknowledged` / `InProgress`.
 - IC MS stores the concrete spec ID/version on the new runtime Intent version.
 
@@ -972,9 +975,11 @@ Rules:
 - Operates on the retained Intent identified by `{id}`.
 - Requires `If-Match`.
 - If the patch changes meaningful runtime content, IC MS creates a new runtime Intent version.
-- The patch must include concrete `intentSpecification.id` when runtime content needs spec validation.
-- The referenced `IntentSpecification` must be `ACTIVE`.
-- IC MS validates the new runtime version against that exact spec.
+- The patch must include `expression.iri` when runtime content needs spec validation.
+- If supplied, `intentSpecification.id` is authoritative.
+- If `intentSpecification.id` is omitted, IC MS resolves the active specification by `expression.iri`.
+- The resolved `IntentSpecification` must be `ACTIVE`.
+- IC MS validates the new runtime version against the resolved active specification.
 - If the patch only changes non-runtime metadata, it may update the current projection without creating a new runtime version, subject to governance rules.
 
 ### GET rules:
@@ -1024,9 +1029,9 @@ Reason: Termination closes live/candidate versions and failed/rejected candidate
 
 ### Baseline statement:
 
-**IC MS supports only concrete `intentSpecification.id` references in runtime `Intent` create/update requests. IC MS does not resolve `IntentSpecification` by family, key, name, or inferred payload shape.**
+**Runtime `Intent` create/update requests require `expression.iri`. `intentSpecification.id`, `intentSpecification.familyId`, and `intentSpecification.name` are optional. `intentSpecification.id` is authoritative when supplied. If it is omitted, IC MS resolves the applicable active `IntentSpecification` by `expression.iri`; zero or multiple active matches require explicit `intentSpecification.id`. Family/name are hints only and are not authoritative validation keys.**
 
-**For `POST`, `PUT`, and runtime-content-changing `PATCH`, IC MS validates runtime Intent content against the exact referenced `IntentSpecification.id`, and that specification must be `ACTIVE`.**
+**For `POST`, `PUT`, and runtime-content-changing `PATCH`, IC MS validates runtime Intent content against the resolved active `IntentSpecification`, using authoritative `intentSpecification.id` when supplied or unambiguous `expression.iri` resolution when it is omitted.**
 
 **`GET` operations return current projected Intent state, not internal version aggregates, and do not resolve or mutate specification versions.**
 
@@ -1096,7 +1101,7 @@ DELETE /intentManagement/v5/intent/{id}
 
 ### ID MS dependency rule:
 
-For `POST`, `PUT`, and runtime-content-changing `PATCH`, IC MS must validate against the exact referenced `intentSpecification.id`.
+For `POST`, `PUT`, and runtime-content-changing `PATCH`, IC MS must validate against the resolved active `IntentSpecification`, using authoritative `intentSpecification.id` when supplied or unambiguous `expression.iri` resolution when omitted.
 
 If ID MS cannot confirm that spec is `ACTIVE`:
 
@@ -1149,7 +1154,7 @@ Retry-After: 30
 
 **IC MS caching applies only to GET responses. Clients either use cached GET responses within TTL or request a fresh copy using `Cache-Control: no-cache`. ETag is used only for unsafe-operation concurrency through `If-Match`. No caching strategy is baselined for non-GET operations.**
 
-**For runtime-content admission, IC MS must confirm the exact referenced active `IntentSpecification.id` from ID MS or a valid fresh cached active specification. If it cannot confirm the active specification, IC MS fails closed and does not admit the runtime Intent or runtime version.**
+**For runtime-content admission, IC MS must confirm the resolved active `IntentSpecification` from ID MS or a valid fresh cached active specification. If it cannot confirm the active specification, IC MS fails closed and does not admit the runtime Intent or runtime version.**
 
 **IC MS uses dependency-specific circuit-breaker behaviour. DB failure is hard fail-fast and returns `503 Service Unavailable`. Cache failure is graceful/silent. Kafka/event-broker failure is handled through internal event outbox. External webhook callback failure is asynchronous and does not affect the original API response.**
 
