@@ -143,14 +143,14 @@ Idempotency-Key: cb-EXT-ORCH-001-INT-HOSP-2026-003-0001
   "callbackTimestamp": "2026-04-18T12:22:00+10:00",
   "sourceState": {
     "state": "APPLY_FAILED",
-    "reason": "Network apply failed in orchestration layer."
+    "reason": "Network apply failed in change-execution layer."
   },
   "sourceReference": {
     "id": "orch-job-9003",
     "href": "https://orchestrator.example.com/jobs/orch-job-9003"
   },
   "details": {
-    "message": "Network apply failed in orchestration layer.",
+    "message": "Network apply failed in change-execution layer.",
     "errorCode": "ORCH_APPLY_TIMEOUT"
   },
   "@type": "IntentCallbackSubmission"
@@ -291,7 +291,7 @@ content-type: application/json
     "callbackTimestamp": "2026-04-18T12:22:00+10:00",
     "sourceState": {
       "state": "APPLY_FAILED",
-      "reason": "Network apply failed in orchestration layer."
+      "reason": "Network apply failed in change-execution layer."
     },
     "sourceReference": {
       "id": "orch-job-9003",
@@ -299,7 +299,7 @@ content-type: application/json
     },
     "receivedAt": "2026-04-18T12:22:03+10:00",
     "details": {
-      "message": "Network apply failed in orchestration layer.",
+      "message": "Network apply failed in change-execution layer.",
       "errorCode": "ORCH_APPLY_TIMEOUT"
     },
     "references": {

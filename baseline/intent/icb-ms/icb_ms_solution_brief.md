@@ -16,7 +16,7 @@ The current solution deliberately keeps ICB MS implementation-oriented and narro
 ## Logical View:
 
 ```text
-External orchestration/apply system
+External change-execution/apply system
         |
         | POST /intent-callback/v1/submissions
         v
@@ -46,7 +46,7 @@ The callback Kafka topic is dedicated to raw callback facts. It is separate from
 ## Process View:
 
 ```text
-1. External orchestration/apply system submits a callback.
+1. External change-execution/apply system submits a callback.
 2. API Gateway authenticates the caller and forwards the trusted caller context.
 3. ICB MS authorises the callback submission for the caller/source context.
 4. ICB MS validates only structure and syntax.
@@ -89,7 +89,7 @@ If the ICB persistence path is unavailable, ICB MS fails fast and does not accep
 | Semantic interpretation/resolution | II MS |
 | Optimisation decision | `optimiser-controller-ms` |
 | Optimiser solver/backend execution | `t7-gurobi-optimiser`, where applicable |
-| Network apply/orchestration execution | External orchestration/apply system |
+| Network apply/change-execution execution | External change-execution/apply system |
 | KP config/governance | Knowledge Plane operating model |
 
 ICB MS must not validate that `intentId` exists in the platform. It validates only that the `intentId` field is structurally present and non-empty. IA MS owns correlation, unknown-intent handling, and downstream assurance outcome decisions.
@@ -189,7 +189,7 @@ ETag: "callback-submission-cb-sub-0001-v1"
 | `orchestratorState` | Retired legacy shape. Use `sourceState.state`. |
 | `source` | Retired legacy shape. Use `callbackSource`. |
 | `timestamp` | Retired legacy shape. Use `callbackTimestamp`. |
-| `orchestratorType` | IA MS derives source/orchestrator type from its own state/configuration where required. |
+| `orchestratorType` | IA MS derives source/change-execution type from its own state/configuration where required. |
 | `lifecycleStatus` | ICB MS does not accept or emit lifecycle state. |
 | `assuranceStatus` | ICB MS does not accept or emit assurance state. |
 | `targets`, `constraints`, `preferences` | These are intent expression/optimisation concepts and must not be included in callback events. |

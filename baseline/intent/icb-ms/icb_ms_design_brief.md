@@ -2,7 +2,7 @@
 
 ## Purpose:
 
-Intent Callback MS, referred to as ICB MS, owns thin callback ingestion for external orchestration/apply systems. ICB MS accepts callback submissions from trusted external systems through the API Gateway, performs technical authorisation and structural validation, durably records the callback fact through an outbox pattern, and publishes a raw internal `IntentCallbackEvent` to the callback Kafka topic for IA MS.
+Intent Callback MS, referred to as ICB MS, owns thin callback ingestion for external change-execution/apply systems. ICB MS accepts callback submissions from trusted external systems through the API Gateway, performs technical authorisation and structural validation, durably records the callback fact through an outbox pattern, and publishes a raw internal `IntentCallbackEvent` to the callback Kafka topic for IA MS.
 
 ICB MS does not interpret lifecycle, assurance, degradation, optimisation, or service meaning.
 
@@ -14,7 +14,7 @@ ICB MS does not interpret lifecycle, assurance, degradation, optimisation, or se
 | Service name | `intent-callback-ms` |
 | Short name | ICB MS |
 | Main responsibility | Thin callback ingestion and raw callback event relay |
-| Primary external input | Callback submission from external orchestration/apply system |
+| Primary external input | Callback submission from external change-execution/apply system |
 | Primary internal output | `IntentCallbackEvent` |
 | Internal callback topic | `t7.intent.management.events.callbacks` |
 | Source-of-truth persistence | Managed PostgreSQL / PostgreSQL-compatible RDBMS |
@@ -28,7 +28,7 @@ External system -> API Gateway -> ICB MS -> Outbox DB -> Kafka callback topic ->
 
 | **Step** | **Responsibility** |
 |---|---|
-| External system | Sends callback submission after orchestration/apply progress or outcome |
+| External system | Sends callback submission after change-execution/apply progress or outcome |
 | API Gateway | Authenticates the caller and forwards trusted identity/claims |
 | ICB MS | Authorises callback submission, validates structure, and writes a durable outbox record |
 | Outbox DB | Stores callback submission and pending internal callback event durably |
@@ -47,7 +47,7 @@ ICB MS must not decide whether a callback means `Active`, `Failed`, `Terminated`
 |---|---|
 | Callback API exposure | Exposes callback submission endpoint behind API Gateway |
 | Caller trust handling | Consumes trusted identity/claims forwarded by API Gateway |
-| Technical authorisation | Checks the authenticated caller is allowed to submit callback facts for the relevant orchestrator/source context |
+| Technical authorisation | Checks the authenticated caller is allowed to submit callback facts for the relevant change-execution/source context |
 | Structural validation | Validates request syntax, required fields, timestamps, idempotency key, and allowed structural shape |
 | Durable persistence | Writes callback submission and outbox event in one DB transaction |
 | Raw event publication | Publishes `IntentCallbackEvent` to `t7.intent.management.events.callbacks` through outbox relay |
@@ -67,12 +67,12 @@ ICB MS must not decide whether a callback means `Active`, `Failed`, `Terminated`
 | Semantic interpretation/resolution | II MS |
 | Optimisation decision | `optimiser-controller-ms` |
 | Optimiser solver/backend target | `t7-gurobi-optimiser`, where applicable |
-| Network apply/orchestration execution | External orchestration/apply system |
+| Network apply/change-execution execution | External change-execution/apply system |
 | KP config/governance | Knowledge Plane operating model |
 
 ## Callback submission model:
 
-The external callback submission contains raw orchestration/apply facts.
+The external callback submission contains raw change-execution/apply facts.
 
 Typical callback facts include:
 
