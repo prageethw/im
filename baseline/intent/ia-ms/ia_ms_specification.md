@@ -31,7 +31,7 @@ Optimisation output may influence the service-ready configuration produced upstr
 
 IC MS consumes `IntentAssuranceEvent` and projects the external TMF-compliant `Intent.lifecycleStatus` and `IntentReport.expression.expressionValue`.
 
-IA MS does not own external TMF APIs, runtime `Intent` resources, design-time `IntentSpecification`, semantic interpretation, optimisation decisions, callback ingestion, or network change execution/apply.
+IA MS does not own external TMF APIs, runtime `Intent` resources, design-time `IntentSpecification`, semantic interpretation, optimisation decisions, callback ingestion, or network change-execution/apply execution.
 
 ---
 
@@ -82,7 +82,7 @@ content-type: application/json
     "intentId": "INT-HOSP-2026-001",
     "version": "v1",
     "lifecycleStatus": "InProgress",
-    "statusReason": "Service configuration has been prepared for change execution/apply.",
+    "statusReason": "Service configuration has been prepared for change-execution/apply.",
     "context": {
       "targets": {
         "maxLatencyMs": 10,
@@ -214,15 +214,15 @@ The canonical callback fields are:
 - `callbackTimestamp`
 - `sourceState`
 
-`sourceState.state` carries the raw source/orchestrator state value such as `APPLIED`, `APPLY_FAILED`, or `TERMINATED`.
+`sourceState.state` carries the raw source/change-execution state value such as `APPLIED`, `APPLY_FAILED`, or `TERMINATED`.
 
-Do not use `orchestratorState`, `orchestratorSource`, or `orchestratorTimestamp` as the baseline callback field names.
+Do not use retired source-specific callback state/source/timestamp field names as the baseline callback field names.
 
 #### Example headers
 
 ```http
 ce-specversion: 1.0
-ce-type: au.com.mycsp.intent.callback.v1
+ce-type: IntentCallbackEvent
 ce-source: intent-callback-ms
 ce-id: evt-intent-callback-001
 ce-time: 2026-04-18T12:15:00+10:00
@@ -235,17 +235,19 @@ content-type: application/json
 ```json
 {
   "body": {
-    "eventType": "IntentCallbackEvent",
-    "eventVersion": "1.0",
-    "source": "intent-callback-ms",
-    "eventTime": "2026-04-18T12:15:00+10:00",
-    "correlationId": "corr-intent-callback-001",
     "intentId": "INT-HOSP-2026-001",
     "callbackSource": "t7-network-orchestrator",
     "callbackTimestamp": "2026-04-18T12:14:58+10:00",
     "sourceState": {
       "state": "APPLIED",
       "reason": "Configuration applied successfully."
+    },
+    "references": {
+      "correlationId": "corr-intent-callback-001",
+      "intent": {
+        "id": "INT-HOSP-2026-001",
+        "href": "/intentManagement/v5/intent/INT-HOSP-2026-001"
+      }
     }
   }
 }
@@ -254,7 +256,7 @@ content-type: application/json
 #### IA handling rules
 
 - Validate/correlate `intentId` against IA state and platform context.
-- Derive source/orchestrator type from IA/platform context where required, not from ICB MS.
+- Derive source/change-execution type from IA/platform context where required, not from ICB MS.
 - Map raw `sourceState.state` into IA lifecycle/assurance meaning.
 - Do not expose raw callback payloads in `IntentAssuranceEvent`.
 - ICB MS remains the owner of callback ingestion and callback outbox persistence.
@@ -323,7 +325,7 @@ IA MS obtains runtime metrics from observability/observation endpoints that are 
 
 | **Raw `sourceState.state`** | **IA treatment** | **Typical `IntentAssuranceEvent.lifecycleStatus`** |
 |---|---|---|
-| `APPLY_ACCEPTED` | Apply request accepted by source/change execution layer | `InProgress` |
+| `APPLY_ACCEPTED` | Apply request accepted by source/change-execution layer | `InProgress` |
 | `APPLY_IN_PROGRESS` | Apply still underway | `InProgress` |
 | `APPLIED` | Apply completed; runtime observations may further confirm health | `Active` |
 | `APPLY_REJECTED` | Apply request rejected before successful application | `Failed` |

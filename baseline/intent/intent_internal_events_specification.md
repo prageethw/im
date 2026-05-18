@@ -80,7 +80,7 @@ Do not repeat `orchestrator` or `observer` prefixes inside their own configurati
 
 ### Service-ready configuration rule
 
-`IntentNetworkReadyEvent` means the service configuration has been prepared for change execution/apply. It does not mean the service has already been applied. Use `serviceConfiguration` to carry the service apply and observation plan.
+`IntentNetworkReadyEvent` means the service configuration has been prepared for change-execution/apply. It does not mean the service has already been applied. Use `serviceConfiguration` to carry the service apply and observation plan.
 
 `serviceConfiguration.orchestratorConfiguration.resources[]` contains only the optimiser-selected resources/configuration ready for apply.
 
@@ -110,7 +110,7 @@ content-type: application/json
 | `IntentRejectedEvent` | `intent-intelligence-ms` | `intent-controller-ms` | Semantic/policy validation rejected the admitted Intent |
 | `IntentResolvedEvent` | `intent-intelligence-ms` | `optimiser-controller-ms` | Intent was semantically resolved into a canonical internal handoff with applicable resources for optimisation |
 | `IntentOptimisedEvent` | `optimiser-controller-ms` | `intent-intelligence-ms` / service-ready preparation path | Optimisation completed and selected resources/outcome are available for service-ready preparation |
-| `IntentNetworkReadyEvent` | `intent-intelligence-ms` | `intent-assurance-ms` | Optimised resource set has been projected into service configuration ready for change execution/apply; apply success is not yet confirmed |
+| `IntentNetworkReadyEvent` | `intent-intelligence-ms` | `intent-assurance-ms` | Optimised resource set has been projected into service configuration ready for change-execution/apply; apply success is not yet confirmed |
 | `IntentAssuranceEvent` | `intent-assurance-ms` | `intent-controller-ms` | Assurance/apply/runtime outcome truth for external Intent and IntentReport projection |
 | `IntentCallbackEvent` | `intent-callback-ms` | `intent-assurance-ms` | Accepted raw callback relayed to the internal event backbone |
 
@@ -692,7 +692,7 @@ intent-assurance-ms
 
 ### Meaning
 
-`IntentNetworkReadyEvent` is an internal milestone event indicating that the service configuration/resource set has been prepared for change execution/apply.
+`IntentNetworkReadyEvent` is an internal milestone event indicating that the service configuration/resource set has been prepared for change-execution/apply.
 
 It does not mean the service has already been applied.
 
@@ -716,7 +716,7 @@ content-type: application/json
     "intentId": "INT-HOSP-2026-001",
     "version": "v1",
     "lifecycleStatus": "InProgress",
-    "statusReason": "Service configuration has been prepared for change execution/apply.",
+    "statusReason": "Service configuration has been prepared for change-execution/apply.",
     "location": {
       "locationId": "AU-NSW-SYD-HOSP-001",
       "displayName": "Sydney-Main-Hospital"
@@ -792,7 +792,7 @@ content-type: application/json
 
 ### Event-specific rules
 
-- `IntentNetworkReadyEvent` means service configuration is ready for change execution/apply, not that apply has succeeded.
+- `IntentNetworkReadyEvent` means service configuration is ready for change-execution/apply, not that apply has succeeded.
 - Use direct `location`, `serviceType`, and `serviceClass` fields; do not wrap them in `context` or `serviceContext`.
 - Use `serviceConfiguration` because the event carries the service apply and observation plan rather than low-level network configuration.
 - Use `serviceConfiguration.orchestratorConfiguration` for apply/change-execution details.
@@ -803,7 +803,7 @@ content-type: application/json
 - `serviceConfiguration.observerConfiguration.resources[]` contains the full assurance observation scope that IA/observer should monitor, including selected and non-selected resources.
 - `serviceConfiguration.observerConfiguration.resources[].metrics` is a list of metric names to observe, not metric values.
 - Do not include `applyOutcome`.
-- Do not include service-apply QoS internals, bandwidth, routing policy, hops, or service attributes by default unless they are required by the orchestrator contract.
+- Do not include service-apply QoS internals, bandwidth, routing policy, hops, or service attributes by default unless they are required by the change-execution contract.
 - IA MS consumes this event; IA MS does not produce it.
 
 ## IntentAssuranceEvent
@@ -1099,7 +1099,7 @@ content-type: application/json
 - - Use `callbackSource` for the external system/component that submitted the callback.
 - Use `callbackTimestamp` for the timestamp supplied by that callback source.
 - Use `sourceState` for the raw state/payload supplied by the callback source.
-- Avoid `orchestratorSource`, `orchestratorTimestamp`, and `orchestratorState`; use `callbackSource`, `callbackTimestamp`, and `sourceState` because callback sources may not always be orchestrators.
+- Avoid retired source-specific callback state/source/timestamp fields; use `callbackSource`, `callbackTimestamp`, and `sourceState`.
 - Do not include lifecycle, service, optimisation, service-configuration, or assurance interpretation fields in this event.
 
 ### ICB MS ownership boundary

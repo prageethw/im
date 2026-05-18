@@ -171,7 +171,7 @@ The Intent Enabler uses three distinct delivery models. They must not be collaps
 |---|---|---|---|
 | Internal platform events | Internal workflow facts such as `IntentValidatedEvent`, `IntentRejectedEvent`, `IntentResolvedEvent`, `IntentNetworkReadyEvent`, `IntentCallbackEvent`, and `IntentAssuranceEvent` | Service-owned internal event outbox, relay, Kafka topic, idempotent internal consumers | CloudEvents-style Kafka/platform headers |
 | External hub notifications | Subscriber notifications for `IntentSpecification`, `Intent`, and `IntentReport` resource events | Service-owned webhook delivery outbox, HTTP retry relay, HTTP `POST` to subscriber listener callback URL | HTTP headers such as `Content-Type`, `X-Correlation-Id`, and subscriber callback authentication where configured |
-| Callback ingestion | Source/orchestrator callback submission into the platform | REST `POST` to ICB MS, callback persistence, callback outbox, internal Kafka publication to IA MS | HTTP headers on inbound callback; CloudEvents-style Kafka/platform headers on internal `IntentCallbackEvent` |
+| Callback ingestion | Source/change-execution callback submission into the platform | REST `POST` to ICB MS, callback persistence, callback outbox, internal Kafka publication to IA MS | HTTP headers on inbound callback; CloudEvents-style Kafka/platform headers on internal `IntentCallbackEvent` |
 
 ID MS and IC MS hub notifications are REST webhook callbacks with TMF-aligned event payloads. Kafka is not used for external hub notification delivery. Subscriber callback URLs are subscriber-owned; the platform defines the subscription API, delivery rules, retry behaviour, and TMF-aligned notification payload shape.
 
@@ -329,14 +329,14 @@ Canonical callback fields:
 | Field | Purpose |
 |---|---|
 | `intentId` | Runtime intent identifier, syntax-only in ICB. |
-| `callbackSource` | External source/orchestrator identifier. |
+| `callbackSource` | External source/change-execution identifier. |
 | `callbackTimestamp` | Source-reported callback time. |
 | `sourceState.state` | Raw source-owned state to be interpreted by IA MS. |
 | `sourceState.reason` | Optional raw source reason. |
 | `sourceReference` | Optional external source reference. |
 | `details` | Safe structured callback detail, subject to policy and size limits. |
 
-Legacy fields such as `orchestratorState`, `source`, `timestamp`, and `callbackType` must not be used as active ICB contract fields.
+Legacy callback state/source/timestamp fields and `callbackType` must not be used as active ICB contract fields.
 
 ## Capability matrix:
 
@@ -508,7 +508,7 @@ Expected platform controls include:
 - Specifications, design briefs, and solution briefs must remain aligned but distinct.
 - External TMF resource boundaries should remain stable.
 - Internal event contracts should evolve additively where possible.
-- Stale terms such as `priority_level`, `trafficClass`, `orchestratorState`, and callback `source/timestamp` legacy fields should not be reintroduced.
+- Stale terms such as `priority_level`, `trafficClass`, `callbackType`, and legacy callback source/timestamp/state fields should not be reintroduced.
 
 ## Risks:
 
