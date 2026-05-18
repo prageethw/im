@@ -30,7 +30,7 @@ Primary collaborators:
 
 | Collaborator | Relationship |
 |---|---|
-| II MS | Produces `IntentNetworkReadyEvent` with service-ready orchestration and observation configuration. |
+| II MS | Produces `IntentNetworkReadyEvent` with service-ready change-execution and observation configuration. |
 | ICB MS | Accepts external callbacks and relays raw `IntentCallbackEvent` to the dedicated callback topic. |
 | Observability platform | Provides runtime metric facts for observer-scope resources. |
 | IC MS | Consumes `IntentAssuranceEvent` and projects external `Intent` and `IntentReport` state. |
@@ -99,7 +99,7 @@ Derived evaluation blocks such as `current.evaluations` or `body.evaluations` ar
 | External `IntentReport` resource creation | IC MS owns this. |
 | Raw callback ingestion REST endpoint | ICB MS owns this. |
 | Callback outbox persistence | ICB MS owns this. |
-| Network apply/orchestration execution | Orchestration layer / network orchestrator owns this. |
+| Network change execution / apply execution | Change execution layer / network orchestrator owns this. |
 | Intent interpretation and semantic resolution | II MS owns this. |
 | Optimisation decision | Optimiser / IO context owns this. |
 | Knowledge Plane config CRUD/governance | Knowledge Plane operating model owns this. |
@@ -116,8 +116,8 @@ IA MS internal contracts are:
 
 | Contract | Direction | Source / target | Purpose |
 |---|---|---|---|
-| `IntentNetworkReadyEvent` | Input | II MS | Service-ready orchestration and observation configuration. |
-| `IntentCallbackEvent` | Input | ICB MS | Raw callback state relayed from source/orchestration systems. |
+| `IntentNetworkReadyEvent` | Input | II MS | Service-ready change-execution and observation configuration. |
+| `IntentCallbackEvent` | Input | ICB MS | Raw callback state relayed from source/change-execution systems. |
 | Observation endpoint metric facts | Input | Observability platform | Runtime metrics for observer-scope resources. |
 | `IntentAssuranceEvent` | Output | Internal event backbone, consumed by IC MS | Curated assurance outcome used for external projection. |
 
@@ -136,14 +136,14 @@ Required handling fields:
 | `body.location` | Location context for assurance. |
 | `body.serviceType` | Service type context for assurance. |
 | `body.serviceClass` | Service class context for assurance. |
-| `body.serviceConfiguration.orchestratorConfiguration` | Selected apply/orchestration configuration. |
+| `body.serviceConfiguration.orchestratorConfiguration` | Selected apply/change-execution configuration. |
 | `body.serviceConfiguration.orchestratorConfiguration.resources[]` | Optimiser-selected resources/configuration ready for apply. |
 | `body.serviceConfiguration.observerConfiguration` | Assurance/monitoring configuration. |
 | `body.serviceConfiguration.observerConfiguration.resources[]` | Full observer scope IA/observer should monitor. |
 | `body.serviceConfiguration.observerConfiguration.resources[].metrics` | List of metric names to observe, not metric values. |
 | `body.references` | Correlation and resource references. |
 
-`IntentNetworkReadyEvent` means service configuration is ready for orchestration/apply. It does not mean the service has already been applied.
+`IntentNetworkReadyEvent` means service configuration is ready for change execution/apply. It does not mean the service has already been applied.
 
 ## IntentCallbackEvent input shape:
 
@@ -204,7 +204,7 @@ IA MS owns raw callback state mapping. ICB MS must not map raw source states int
 
 | Raw `sourceState.state` | IA MS treatment | Typical `IntentAssuranceEvent.lifecycleStatus` |
 |---|---|---|
-| `APPLY_ACCEPTED` | Apply request accepted by source/orchestration layer. | `InProgress` |
+| `APPLY_ACCEPTED` | Apply request accepted by source/change execution layer. | `InProgress` |
 | `APPLY_IN_PROGRESS` | Apply still underway. | `InProgress` |
 | `APPLIED` | Apply completed; runtime observations may further confirm health. | `Active` |
 | `APPLY_REJECTED` | Apply request rejected before successful application. | `Failed` |
