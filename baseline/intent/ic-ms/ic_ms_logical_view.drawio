@@ -16,12 +16,20 @@
                 <mxCell id="zone_idms" value="Upstream Dependency" style="swimlane;startSize=30;fillColor=#d5e8d4;strokeColor=default;fontStyle=1;fontSize=13;horizontal=1;container=0;" parent="1" vertex="1">
                     <mxGeometry x="1328" y="40" width="260" height="180" as="geometry"/>
                 </mxCell>
-                <mxCell id="0MlcjW0cjBZ2ITzH3IxV-1" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;entryX=1;entryY=0.75;entryDx=0;entryDy=0;fillColor=#d5e8d4;strokeColor=default;" parent="1" source="zone_internal" target="icms_core" edge="1">
-                    <mxGeometry relative="1" as="geometry"/>
+                <mxCell id="0MlcjW0cjBZ2ITzH3IxV-1" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;fillColor=#d5e8d4;strokeColor=default;exitX=0.25;exitY=0;exitDx=0;exitDy=0;entryX=1;entryY=0.75;entryDx=0;entryDy=0;" parent="1" source="kafka" target="icms_core" edge="1">
+                    <mxGeometry relative="1" as="geometry">
+                        <mxPoint x="1400" y="310" as="sourcePoint"/>
+                        <mxPoint x="1130" y="230" as="targetPoint"/>
+                        <Array as="points">
+                            <mxPoint x="1383" y="230"/>
+                            <mxPoint x="1180" y="230"/>
+                            <mxPoint x="1180" y="173"/>
+                        </Array>
+                    </mxGeometry>
                 </mxCell>
                 <mxCell id="2" value="consume&lt;div&gt;&lt;span style=&quot;color: rgb(0, 0, 0); font-size: 10px; font-style: italic; text-align: left;&quot;&gt;IntentRejectedEvent&amp;nbsp;&lt;br&gt;&lt;span style=&quot;color: rgb(0, 0, 0);&quot;&gt;IntentAssuranceEvent&lt;/span&gt;&lt;/span&gt;&lt;/div&gt;" style="edgeLabel;html=1;align=center;verticalAlign=middle;resizable=0;points=[];" vertex="1" connectable="0" parent="0MlcjW0cjBZ2ITzH3IxV-1">
                     <mxGeometry x="0.4455" y="-1" relative="1" as="geometry">
-                        <mxPoint x="50" as="offset"/>
+                        <mxPoint x="52" y="-24" as="offset"/>
                     </mxGeometry>
                 </mxCell>
                 <mxCell id="zone_internal" value="Internal Fulfilment Pipeline (not owned by IC MS)" style="swimlane;startSize=30;fillColor=#d5e8d4;strokeColor=default;fontStyle=1;fontSize=13;horizontal=1;container=0;" parent="1" vertex="1">
