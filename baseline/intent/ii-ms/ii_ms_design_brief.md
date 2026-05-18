@@ -339,6 +339,6 @@ II MS is the internal semantic interpretation, resolution, and service-ready pre
 
 It consumes `IntentValidatedEvent`, validates and resolves the admitted expression using Knowledge Plane/domain knowledge, preserves the canonical `expression.context.targets`, `expression.context.constraints`, and `expression.context.preferences` buckets, and emits `IntentRejectedEvent`, `IntentResolvedEvent`, or `IntentNetworkReadyEvent` depending on the resolved milestone. II MS emits neutral event-facing resource and metric structures.
 
-`IntentResolvedEvent.resources[]` carries the full applicable/applyable resource set with metric values for downstream optimisation/selection. `IntentNetworkReadyEvent.orchestratorConfiguration.resources[]` carries only the selected apply/change-execution configuration, while `observerConfiguration.resources[]` carries the full IA observation scope with metric names to observe.
+`IntentResolvedEvent.resources[]` carries the full applicable/applyable resource set with metric values for downstream optimisation/selection. `IntentNetworkReadyEvent.serviceConfiguration.orchestratorConfiguration.resources[]` carries only the selected apply/change-execution configuration, while `serviceConfiguration.observerConfiguration.resources[]` carries the full IA observation scope with metric names to observe.
 
 II MS does not own external TMF APIs, runtime Intent lifecycle projection, downstream apply execution, assurance truth, callback ingestion, or KP governance.

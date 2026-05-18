@@ -616,7 +616,7 @@ Rules:
 - Use `serviceConfiguration.observerConfiguration` for assurance/monitoring details.
 - `serviceConfiguration.resources[]` carries network-ready resource details, topology, roles, and orchestrator/observer-relevant information.
 - `serviceConfiguration.resources[]` must not carry observed metric values.
-- In `observerConfiguration.resources[]`, `metrics` is a list of metric names IA MS should observe, not a value object.
+- In `serviceConfiguration.observerConfiguration.resources[]`, `metrics` is a list of metric names IA MS should observe, not a value object.
 - Do not include `applyOutcome`.
 - Do not treat this event as proof that network apply succeeded.
 
