@@ -14,7 +14,7 @@ ID MS owns the definition-time `IntentSpecification` resource and related hub su
 
 ID MS owns definition-time `IntentSpecification` contracts and subscription management for specification events.
 It validates syntax and resource shape, enforces specification lifecycle/version governance, and delivers external specification lifecycle notifications to subscribed REST webhook listener callbacks.
-ID MS does not validate runtime semantic feasibility, policy fulfilment, network topology, optimisation, assurance, telemetry, orchestration callbacks, or runtime intent lifecycle truth.
+ID MS does not validate runtime semantic feasibility, policy fulfilment, network topology, optimisation, assurance, telemetry, change-execution callbacks, or runtime intent lifecycle truth.
 
 ## TMF compliance and platform extension baseline:
 
@@ -524,7 +524,7 @@ Common errors:
 
 **ID MS owns definition-time `IntentSpecification` contracts and subscription management for specification events.
 It validates syntax and resource shape, enforces specification lifecycle/version governance, and delivers external specification lifecycle notifications to subscribed REST webhook listener callbacks.
-It does not validate runtime semantic feasibility, policy fulfilment, network topology, optimisation, assurance, telemetry, orchestration callbacks, or callback ingestion.**
+It does not validate runtime semantic feasibility, policy fulfilment, network topology, optimisation, assurance, telemetry, change-execution callbacks, or callback ingestion.**
 
 ## Lifecycle and versioning rules:
 
