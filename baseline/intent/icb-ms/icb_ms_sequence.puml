@@ -12,7 +12,7 @@ skinparam sequenceGroupBackgroundColor #f9f9f9
 
 title Intent Callback MS (ICB MS) — Callback Submission Sequence Flow
 
-actor "External Orchestration\n/ Apply System" as EXT
+actor "External Change Execution\n/ Apply System" as EXT
 participant "NGW" as GW
 participant "Intent Callback MS\n(ICB MS)" as ICBMS
 database "ICB MS Store\n(submissions + outbox)" as STORE
@@ -79,7 +79,7 @@ else authenticated
             end
 
             == 8. IA MS Consumes and Correlates ==
-            KAFKA -> IAMS : IntentCallbackEvent\n{ intentId, sourceState.state, callbackSource, timestamp }
+            IAMS -> KAFKA : consume event
             IAMS -> IAMS : validate intentId against IA-owned state
             alt intentId not found in IA state
                 IAMS -> IAMS : log unresolvable callback (audit)
@@ -91,7 +91,7 @@ else authenticated
                 IAMS -> KAFKA : publish IntentAssuranceEvent\n(via IA outbox relay)
 
                 == 9. IC MS Projects External State ==
-                KAFKA -> ICMS : IntentAssuranceEvent\n{ intentId, lifecycleStatus, assuranceStatus,\n  metricSnapshot, reportData }
+                ICMS -> KAFKA : consume event
                 ICMS -> ICMS : update external Intent lifecycle state projection
                 ICMS -> ICMS : create / update IntentReport projection\n(TMF-compliant)
             end

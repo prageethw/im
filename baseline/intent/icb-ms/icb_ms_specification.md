@@ -68,7 +68,6 @@ Idempotency-Key: cb-EXT-ORCH-001-INT-HOSP-2026-001-0001
 ```json
 {
   "intentId": "INT-HOSP-2026-001",
-  "callbackType": "APPLY_COMPLETED",
   "callbackSource": "external-orchestrator-001",
   "callbackTimestamp": "2026-04-18T12:18:00+10:00",
   "sourceState": {
@@ -114,7 +113,6 @@ ETag: "callback-submission-cb-sub-0001-v1"
   "status": "Accepted",
   "statusReason": "Callback submission accepted and queued for internal publication.",
   "intentId": "INT-HOSP-2026-001",
-  "callbackType": "APPLY_COMPLETED",
   "receivedAt": "2026-04-18T12:18:03+10:00",
   "@type": "IntentCallbackSubmissionStatus",
   "_links": {
@@ -138,7 +136,6 @@ Idempotency-Key: cb-EXT-ORCH-001-INT-HOSP-2026-003-0001
 ```json
 {
   "intentId": "INT-HOSP-2026-003",
-  "callbackType": "APPLY_FAILED",
   "callbackSource": "external-orchestrator-001",
   "callbackTimestamp": "2026-04-18T12:22:00+10:00",
   "sourceState": {
@@ -192,7 +189,6 @@ Cache-Control: private, max-age=60
   "status": "Published",
   "statusReason": "Callback submission was published to the internal callback topic.",
   "intentId": "INT-HOSP-2026-001",
-  "callbackType": "APPLY_COMPLETED",
   "receivedAt": "2026-04-18T12:18:03+10:00",
   "publishedAt": "2026-04-18T12:18:04+10:00",
   "@type": "IntentCallbackSubmissionStatus",
@@ -243,7 +239,6 @@ content-type: application/json
   "body": {
     "callbackId": "cb-sub-0001",
     "intentId": "INT-HOSP-2026-001",
-    "callbackType": "APPLY_COMPLETED",
     "callbackSource": "external-orchestrator-001",
     "callbackTimestamp": "2026-04-18T12:18:00+10:00",
     "sourceState": {
@@ -286,7 +281,6 @@ content-type: application/json
   "body": {
     "callbackId": "cb-sub-0003",
     "intentId": "INT-HOSP-2026-003",
-    "callbackType": "APPLY_FAILED",
     "callbackSource": "external-orchestrator-001",
     "callbackTimestamp": "2026-04-18T12:22:00+10:00",
     "sourceState": {
@@ -329,7 +323,6 @@ Required request fields:
 | **Field** | **Rule** |
 |---|---|
 | `intentId` | Required, non-empty string |
-| `callbackType` | Required, non-empty string |
 | `callbackSource` | Required, non-empty string; gateway identity remains authoritative |
 | `callbackTimestamp` | Required ISO-8601 date-time |
 | `sourceState.state` | Required, non-empty string; interpreted by IA MS, not ICB MS |
@@ -337,6 +330,8 @@ Required request fields:
 | `Idempotency-Key` | Strongly recommended for external retry safety; may be required by platform policy |
 
 ICB MS validates syntax and structure only. It does not validate service feasibility, lifecycle meaning, assurance meaning, or optimiser outcomes.
+
+Do not use `callbackType` as an ICB contract field. Raw callback meaning is carried by `sourceState.state` and interpreted by IA MS.
 
 ## Standard errors:
 
