@@ -48,7 +48,7 @@ II MS or another authorised decision component reads the assurance event state a
 | External TMF-compliant lifecycle projection | IC MS |
 | Raw callback ingestion API | ICB MS |
 | Callback outbox persistence | ICB MS |
-| Network apply/orchestration execution | Orchestration layer / network orchestrator |
+| Network change execution / apply execution | Change execution layer / network orchestrator |
 | Intent interpretation/resolution | II MS |
 | Optimisation decision | Optimiser / IO context |
 | Knowledge Plane config CRUD/governance | Knowledge Plane operating model |
@@ -115,9 +115,7 @@ The active generic body shape uses:
 
 Reusable resource entries use `roles`, `resourceId`, `resourceType`, `resourceClass`, `resourceAttributes`, `relationships`, and `metrics`.
 
-Metric names are neutral and use names such as `latencyMs`, `availabilityPercent`, `jitterMs`, and `packetLossPercent`. Do not use metric origin wrappers or context-encoded field names such as `metrics.benchmark`, `metrics.telemetry`, `latencyBenchmarkMs`, `currentLatencyMs`, or `observedLatencyMs` in `IntentAssuranceEvent`.
-
-IA MS does not emit `IntentDriftOccurredEvent` in the active baseline.
+Metric names are neutral and use names such as `latencyMs`, `availabilityPercent`, `jitterMs`, and `packetLossPercent`. Do not use metric origin wrappers or context-encoded field names such as `metrics.benchmark`, `metrics.telemetry`, `latencyBenchmarkMs`, `currentLatencyMs`, or `observedLatencyMs` in `IntentAssuranceEvent`. IA MS does not emit `IntentDriftOccurredEvent` in the active baseline.
 
 Drift/degradation is represented through `IntentAssuranceEvent.lifecycleStatus`, `statusReason`, `context`, and resource-level `metrics` in `current.resources`. IA MS does not include raw callback payloads, raw telemetry dumps, optimiser scoring, solver internals, `provider`, `current.evaluations`, `body.evaluations`, default `requiresReoptimisation`, `selectionStatus`, `assuranceStatus`, or a default `candidates` block in `IntentAssuranceEvent`.
 
@@ -125,12 +123,18 @@ For `Active`, `Degraded`, and `Failed`, `current.resources[]` should carry the f
 
 ## Observation endpoint baseline
 
-IA MS obtains runtime metrics from observability/observation endpoints. The observation endpoints are informed by `IntentNetworkReadyEvent.serviceConfiguration.observerConfiguration`. IA evaluates returned metric facts against resolved runtime targets and the IA stored applied assurance baseline. KP/rules may support mapping and evaluation policy but are not the source of truth for every assurance decision.
+IA MS obtains runtime metrics from observability/observation endpoints. The observation endpoints are informed by `IntentNetworkReadyEvent.serviceConfiguration.observerConfiguration`.
+
+IA evaluates returned metric facts against resolved runtime targets and the IA stored applied assurance baseline. KP/rules may support mapping and evaluation policy but are not the source of truth for every assurance decision.
 
 ## Final baseline statement
 
-IA MS is the runtime assurance truth service. It consumes `IntentNetworkReadyEvent`, `IntentCallbackEvent`, and observation facts only; maps raw callback state; evaluates runtime observations against resolved runtime targets and the stored applied assurance baseline; and emits curated generic `IntentAssuranceEvent` outcomes. IC MS consumes `IntentAssuranceEvent` to project external TMF-compliant `Intent` lifecycle and `IntentReport` resources.
+IA MS is the runtime assurance truth service.
+
+It consumes `IntentNetworkReadyEvent`, `IntentCallbackEvent`, and observation facts only; maps raw callback state; evaluates runtime observations against resolved runtime targets and the stored applied assurance baseline; and emits curated generic `IntentAssuranceEvent` outcomes. IC MS consumes `IntentAssuranceEvent` to project external TMF-compliant `Intent` lifecycle and `IntentReport` resources.
 
 ## Metrics-first IntentAssuranceEvent refinement
 
-`IntentAssuranceEvent` is metrics-first by default. Do not include `current.evaluations` or `body.evaluations` unless a future policy explicitly requires derived evaluation objects. `lifecycleStatus` and `statusReason` explain the outcome; resource-level `metrics` provide the factual observed data needed by IC MS, II MS, and authorised decision components.
+`IntentAssuranceEvent` is metrics-first by default.
+
+Do not include `current.evaluations` or `body.evaluations` unless a future policy explicitly requires derived evaluation objects. `lifecycleStatus` and `statusReason` explain the outcome; resource-level `metrics` provide the factual observed data needed by IC MS, II MS, and authorised decision components.
