@@ -23,7 +23,7 @@ This specification uses `/intentManagement/v5` in examples as the platform base 
 
 IC MS owns the external runtime `Intent` and `IntentReport` resources.
 
-IC MS validates runtime `Intent` request shape against a concrete active `IntentSpecification.id`, admits syntactically valid runtime intents, emits `IntentValidatedEvent` as an internal state/progress event, projects external lifecycle/status based on downstream outcomes, and exposes curated `IntentReport` projections.
+IC MS validates runtime `Intent` request shape against the applicable active `IntentSpecification` resolved from an explicit `intentSpecification.id` where supplied, or from mandatory `expression.iri` where resolution is unambiguous. IC MS admits syntactically valid runtime intents, emits `IntentValidatedEvent` as an internal state/progress event, projects external lifecycle/status based on downstream outcomes, and exposes curated `IntentReport` projections.
 
 IC MS does not own:
 
@@ -123,21 +123,42 @@ Hub notification delivery is REST webhook delivery to subscriber listener callba
 
 ## 2. Common conventions:
 
-### Concrete IntentSpecification reference rule:
+### Runtime IntentSpecification and expression IRI resolution rule:
 
-Runtime `Intent` create/update requests must reference a concrete `IntentSpecification.id`.
+Runtime `Intent` create/update requests must carry `expression.iri`.
 
-Supported:
+`expression.iri` is mandatory because it identifies the expression language / ontology / expression contract used for runtime expression validation. It enables IC MS to validate the runtime expression against the applicable `IntentSpecification.expressionSpecification` and expression schema contract.
+
+`intentSpecification.id`, `intentSpecification.familyId`, and `intentSpecification.name` are optional in runtime `Intent` create/update requests. When `intentSpecification.id` is supplied, it is the authoritative explicit `IntentSpecification` reference. IC MS must resolve the supplied ID, confirm that the referenced `IntentSpecification` is `ACTIVE`, confirm that the runtime `expression.iri` is consistent with that specification's `expressionSpecification.iri`, and validate the runtime expression against that specification.
+
+Supported explicit reference:
 
 ```json
 {
   "intentSpecification": {
     "id": "hospital-surgical-slice-spec-v1.19"
+  },
+  "expression": {
+    "iri": "https://mycsp.com.au/tio/hospital-surgical-slice/v1.0"
   }
 }
 ```
 
-Not supported:
+Supported implicit resolution when unambiguous:
+
+```json
+{
+  "expression": {
+    "iri": "https://mycsp.com.au/tio/hospital-surgical-slice/v1.0"
+  }
+}
+```
+
+When `intentSpecification.id` is omitted, IC MS resolves the applicable active `IntentSpecification` by `expression.iri`. Under normal ID MS governance there should be one `ACTIVE` `IntentSpecification` for the expression IRI. If zero or multiple active specifications match the IRI, IC MS must reject the request and require an explicit `intentSpecification.id`.
+
+`intentSpecification.familyId` and `intentSpecification.name` are optional descriptive/discovery hints only. They are not mandatory and are not authoritative runtime validation keys. If supplied, IC MS may use them for consistency checking or narrowing where supported, but they must not replace either explicit `intentSpecification.id` resolution or unambiguous active-spec resolution by `expression.iri`.
+
+Unsupported as authoritative validation keys:
 
 ```json
 {
@@ -147,8 +168,6 @@ Not supported:
 }
 ```
 
-Not supported:
-
 ```json
 {
   "intentSpecification": {
@@ -157,7 +176,14 @@ Not supported:
 }
 ```
 
-IC MS does not resolve `IntentSpecification` by family, key, name, or inferred payload shape.
+IC MS must not resolve `IntentSpecification` by family, key, name, or inferred payload shape alone.
+
+Baseline:
+- `expression.iri` is mandatory.
+- `intentSpecification.id` is optional and authoritative when supplied.
+- `intentSpecification.familyId` and `intentSpecification.name` are optional hints only.
+- `expression.iri` is the default runtime validation discriminator when `intentSpecification.id` is not supplied.
+- Normal governance expects one matching `ACTIVE` `IntentSpecification` per expression IRI; ambiguity or no match is rejected.
 
 ### Intent-level lifecycleStatus values:
 
@@ -291,7 +317,7 @@ Do not use string placeholders for array/object fields.
 | `409` | `INVALID_STATE_TRANSITION` | Requested lifecycle/version transition is not allowed |
 | `409` | `RESOURCE_CONFLICT` | Runtime update conflicts with current projection state |
 | `412` | `PRECONDITION_FAILED` | Supplied `If-Match` does not match the current resource version |
-| `422` | `VALIDATION_FAILED` | Runtime Intent fails request-shape/spec validation |
+| `422` | `VALIDATION_FAILED` | Runtime Intent fails request-shape/spec validation, misses mandatory `expression.iri`, or cannot be resolved to one active validation contract |
 | `422` | `INTENT_SPECIFICATION_NOT_ACTIVE` | Referenced IntentSpecification is not active |
 | `428` | `PRECONDITION_REQUIRED` | Required `If-Match` header is missing for an unsafe operation |
 | `503` | `SERVICE_UNAVAILABLE` | IC MS DB unavailable or active spec cannot be confirmed |
@@ -1430,7 +1456,7 @@ HTTP/1.1 204 No Content
 
 ## 15. Validation and dependency error examples:
 
-### Missing concrete IntentSpecification ID:
+### Missing expression IRI:
 
 ```http
 HTTP/1.1 422 Unprocessable Entity
@@ -1440,8 +1466,26 @@ Content-Type: application/json
 ```json
 {
   "code": "VALIDATION_FAILED",
-  "reason": "CONCRETE_INTENT_SPECIFICATION_ID_REQUIRED",
-  "message": "Runtime Intent create/update requests must include a concrete intentSpecification.id.",
+  "reason": "EXPRESSION_IRI_REQUIRED",
+  "message": "Runtime Intent create/update requests must include expression.iri so IC MS can resolve the applicable expression contract for runtime validation.",
+  "status": 422,
+  "referenceError": "https://mycsp.com.au/errors/VALIDATION_FAILED",
+  "@type": "Error"
+}
+```
+
+### Ambiguous IntentSpecification resolution:
+
+```http
+HTTP/1.1 422 Unprocessable Entity
+Content-Type: application/json
+```
+
+```json
+{
+  "code": "VALIDATION_FAILED",
+  "reason": "INTENT_SPECIFICATION_RESOLUTION_AMBIGUOUS",
+  "message": "The supplied expression.iri resolves to zero or multiple active IntentSpecifications. Provide intentSpecification.id to identify the intended runtime validation contract.",
   "status": 422,
   "referenceError": "https://mycsp.com.au/errors/VALIDATION_FAILED",
   "@type": "Error"
@@ -1478,7 +1522,7 @@ Retry-After: 30
 {
   "code": "SERVICE_UNAVAILABLE",
   "reason": "INTENT_SPECIFICATION_LOOKUP_UNAVAILABLE",
-  "message": "Intent creation or update cannot be accepted because the referenced active IntentSpecification could not be confirmed.",
+  "message": "Intent creation or update cannot be accepted because the applicable active IntentSpecification could not be confirmed.",
   "status": 503,
   "referenceError": "https://mycsp.com.au/errors/SERVICE_UNAVAILABLE",
   "@type": "Error"
@@ -1862,8 +1906,20 @@ External hub notifications do not use these Kafka headers. They are HTTP webhook
 
 - `GET /intent/{id}` returns current projected Intent state, not a full internal version aggregate.
 - `GET /intent` lists current projected Intent states for retained Intent IDs.
-- Runtime create/update requires concrete `intentSpecification.id`.
-- IC MS does not resolve `IntentSpecification` by family, key, name, or inferred payload shape.
+- Runtime create/update requires mandatory `expression.iri` for expression contract resolution.
+- `intentSpecification.id`, `intentSpecification.familyId`, and `intentSpecification.name` are optional in runtime Intent requests.
+- `intentSpecification.id` is authoritative when supplied.
+- If `intentSpecification.id` is omitted, IC MS resolves by `expression.iri`; under normal governance exactly one matching `ACTIVE` IntentSpecification should exist for that IRI.
+- If zero or multiple matching `ACTIVE` IntentSpecifications exist for the supplied `expression.iri`, IC MS rejects and requires explicit `intentSpecification.id`.
+- `intentSpecification.familyId` and `intentSpecification.name` are optional hints only and are not authoritative runtime validation keys.
+- IC MS must not resolve `IntentSpecification` by family, key, name, or inferred payload shape alone.
+
+Baseline:
+- `expression.iri` is mandatory.
+- `intentSpecification.id` is optional and authoritative when supplied.
+- `intentSpecification.familyId` and `intentSpecification.name` are optional hints only.
+- `expression.iri` is the default runtime validation discriminator when `intentSpecification.id` is not supplied.
+- Normal governance expects one matching `ACTIVE` `IntentSpecification` per expression IRI; ambiguity or no match is rejected.
 - `DELETE /intent/{id}` is termination, not physical deletion.
 - `PUT /intent/{id}` is a platform extension for deterministic full replacement.
 - `PATCH /intent/{id}` is supported for TMF compatibility but not encouraged for ordinary edits.
