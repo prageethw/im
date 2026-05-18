@@ -22,7 +22,7 @@ participant "Downstream services\n(optimiser / IA / change execution)" as DS
 
 == 1. Consume IntentValidatedEvent ==
 
-KAFKA -> IIMS : IntentValidatedEvent\n{ cloudEventsId, intentId, version, body.expression.context }
+IIMS -> KAFKA : consume event
 IIMS -> STORE : check deduplication record\n(cloudEventsId + intentId)
 
 alt already processed (duplicate)
@@ -41,16 +41,12 @@ else not yet processed
 
   IIMS -> KP : resolve location context
   KP --> IIMS : location scope + region metadata
-
   IIMS -> KP : resolve service type + service class
   KP --> IIMS : service type definition + class capabilities
-
   IIMS -> KP : resolve capability context\n(what the network can currently deliver)
   KP --> IIMS : capability profile { latency, availability, jitter, packet loss }
-
   IIMS -> KP : resolve policy context\n(scope filters, constraint promotion rules)
   KP --> IIMS : applicable policies + constraint promotion set
-
   IIMS -> KP : resolve resource context\n(candidate resource set pre-filter)
   KP --> IIMS : raw candidate resource set
 
@@ -75,7 +71,7 @@ else not yet processed
     end
     RELAY -> STORE : poll → IntentRejectedEvent
     RELAY -> KAFKA : publish IntentRejectedEvent
-    KAFKA -> ICMS : IntentRejectedEvent\n→ IC MS updates Intent projection (Rejected)
+    ICMS -> KAFKA : consume event
   else all hard constraints satisfiable
 
     == 5. Measurable Target Validation ==
@@ -98,7 +94,7 @@ else not yet processed
       end
       RELAY -> STORE : poll → IntentRejectedEvent
       RELAY -> KAFKA : publish IntentRejectedEvent
-      KAFKA -> ICMS : IntentRejectedEvent\n→ IC MS updates Intent projection (Rejected)
+      ICMS -> KAFKA : consume event
     else all targets within capability context
 
       == 6. Preference Handling ==
@@ -133,7 +129,7 @@ else not yet processed
         end
         RELAY -> STORE : poll → IntentRejectedEvent
         RELAY -> KAFKA : publish IntentRejectedEvent
-        KAFKA -> ICMS : IntentRejectedEvent\n→ IC MS updates Intent projection (Rejected)
+        ICMS -> KAFKA : consume event
       else valid candidates resolved
 
         == 9. Record Semantic Decision + Emit Resolution Event ==
@@ -171,9 +167,9 @@ else not yet processed
 
         == 12. Downstream Consumers Continue Workflow ==
 
-        KAFKA -> ICMS : IntentResolvedEvent / IntentNetworkReadyEvent\n→ IC MS updates Intent projection
-        KAFKA -> DS : IntentResolvedEvent\n→ optimisation or downstream decisioning continues
-        KAFKA -> DS : IntentNetworkReadyEvent\n→ change execution and IA MS\ncontinue assurance observation
+        ICMS -> KAFKA : consume event
+        DS -> KAFKA : consume event
+        DS -> KAFKA : consume event
       end
     end
   end
