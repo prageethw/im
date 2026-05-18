@@ -23,7 +23,7 @@ The Intent Enabler is a multi-microservice solution built around external TMF-co
 3. IC MS emits `IntentValidatedEvent` after admission.
 4. II MS consumes the admitted intent, performs semantic and policy interpretation, and either rejects, resolves, or prepares network-ready service configuration.
 5. II MS emits `IntentRejectedEvent`, `IntentResolvedEvent`, and/or `IntentNetworkReadyEvent` according to the workflow milestone.
-6. ICB MS receives external callback submissions from trusted orchestration/apply systems, validates only structure, persists the callback, and publishes raw `IntentCallbackEvent`.
+6. ICB MS receives external callback submissions from trusted change-execution/apply systems, validates only structure, persists the callback, and publishes raw `IntentCallbackEvent`.
 7. IA MS consumes `IntentNetworkReadyEvent`, `IntentCallbackEvent`, and runtime observation facts, then emits `IntentAssuranceEvent`.
 8. IC MS consumes curated downstream outcomes and updates the external `Intent` and `IntentReport` projection.
 
@@ -84,11 +84,11 @@ II MS consumes `IntentValidatedEvent`, interprets the admitted expression, resol
 
 ### Prepare service-ready configuration:
 
-II MS prepares service configuration for orchestration/apply and assurance observation. It emits `IntentNetworkReadyEvent` with `serviceConfiguration.orchestratorConfiguration` and `serviceConfiguration.observerConfiguration`. This event means configuration is ready for orchestration and observation; it does not mean the network apply succeeded.
+II MS prepares service configuration for change-execution/apply and assurance observation. It emits `IntentNetworkReadyEvent` with `serviceConfiguration.orchestratorConfiguration` and `serviceConfiguration.observerConfiguration`. This event means configuration is ready for change execution and observation; it does not mean the network apply succeeded.
 
 ### Ingest external apply callback:
 
-An external orchestration/apply system submits a callback to ICB MS. ICB MS validates only technical and structural properties, stores the callback, and publishes a raw `IntentCallbackEvent` to the dedicated callback topic.
+An external change-execution/apply system submits a callback to ICB MS. ICB MS validates only technical and structural properties, stores the callback, and publishes a raw `IntentCallbackEvent` to the dedicated callback topic.
 
 ### Assure runtime intent:
 
@@ -202,7 +202,7 @@ ID MS and IC MS hub notifications are REST webhook callbacks with TMF-aligned ev
 7. II MS emits IntentRejectedEvent if rejected.
 8. II MS emits IntentResolvedEvent when candidate-level resolution is complete.
 9. II MS emits IntentNetworkReadyEvent when service configuration is ready for application and observation.
-10. External orchestration/apply system submits a callback to ICB MS.
+10. External change-execution/apply system submits a callback to ICB MS.
 11. ICB MS persists the callback and emits IntentCallbackEvent.
 12. IA MS consumes IntentNetworkReadyEvent, IntentCallbackEvent, and observation metrics.
 13. IA MS emits IntentAssuranceEvent.
@@ -320,7 +320,7 @@ ICB MS exposes:
 POST /intent-callback/v1/submissions
 ```
 
-ICB MS sits behind the API Gateway. It accepts callback submissions from trusted external orchestration/apply systems. It validates only technical and structural properties, such as required fields, non-empty strings, ISO timestamp format, request size, trusted caller/source authorisation, and idempotency, where required.
+ICB MS sits behind the API Gateway. It accepts callback submissions from trusted external change-execution/apply systems. It validates only technical and structural properties, such as required fields, non-empty strings, ISO timestamp format, request size, trusted caller/source authorisation, and idempotency, where required.
 
 ICB MS does not validate that `intentId` exists. IA MS owns intent correlation and unknown-intent handling after consuming `IntentCallbackEvent`.
 
@@ -383,7 +383,7 @@ External runtime and definition-time API access is limited to the services that 
 
 - ID MS for `IntentSpecification` and specification hub subscriptions.
 - IC MS for runtime `Intent`, `IntentReport`, and runtime intent hub subscriptions.
-- ICB MS only for trusted external orchestration/apply callback submission through its callback API.
+- ICB MS only for trusted external change-execution/apply callback submission through its callback API.
 
 II MS and IA MS remain internal-only microservices.
 
@@ -651,11 +651,6 @@ IntentCallbackEvent
 IntentAssuranceEvent
 ```
 
-Retired event:
-
-```text
-IntentDriftOccurredEvent
-```
 
 ### Worker instructions:
 
@@ -776,6 +771,6 @@ Terminated
 | `IntentRejectedEvent` | `intent-intelligence-ms` | `intent-controller-ms` | Semantic, policy, or capability rejection. |
 | `IntentResolvedEvent` | `intent-intelligence-ms` | Optimiser / downstream fulfilment path | Candidate-level semantic-resolution handoff. |
 | `IntentOptimisedEvent` | Optimiser | `intent-intelligence-ms` / service-ready path | Optimisation completed and selected resources are available. |
-| `IntentNetworkReadyEvent` | `intent-intelligence-ms` | `intent-assurance-ms` | Service configuration ready for orchestration/apply and observation. |
+| `IntentNetworkReadyEvent` | `intent-intelligence-ms` | `intent-assurance-ms` | Service configuration ready for change execution/apply and observation. |
 | `IntentCallbackEvent` | `intent-callback-ms` | `intent-assurance-ms` | Raw accepted callback fact. |
 | `IntentAssuranceEvent` | `intent-assurance-ms` | `intent-controller-ms` | Assurance/apply/runtime outcome truth for external projection. |

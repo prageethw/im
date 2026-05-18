@@ -80,7 +80,7 @@ Do not repeat `orchestrator` or `observer` prefixes inside their own configurati
 
 ### Service-ready configuration rule
 
-`IntentNetworkReadyEvent` means the service configuration has been prepared for orchestration/apply. It does not mean the service has already been applied. Use `serviceConfiguration` to carry the service apply and observation plan.
+`IntentNetworkReadyEvent` means the service configuration has been prepared for change execution/apply. It does not mean the service has already been applied. Use `serviceConfiguration` to carry the service apply and observation plan.
 
 `serviceConfiguration.orchestratorConfiguration.resources[]` contains only the optimiser-selected resources/configuration ready for apply.
 
@@ -110,7 +110,7 @@ content-type: application/json
 | `IntentRejectedEvent` | `intent-intelligence-ms` | `intent-controller-ms` | Semantic/policy validation rejected the admitted Intent |
 | `IntentResolvedEvent` | `intent-intelligence-ms` | `optimiser-controller-ms` | Intent was semantically resolved into a canonical internal handoff with applicable resources for optimisation |
 | `IntentOptimisedEvent` | `optimiser-controller-ms` | `intent-intelligence-ms` / service-ready preparation path | Optimisation completed and selected resources/outcome are available for service-ready preparation |
-| `IntentNetworkReadyEvent` | `intent-intelligence-ms` | `intent-assurance-ms` | Optimised resource set has been projected into service configuration ready for orchestration/apply; apply success is not yet confirmed |
+| `IntentNetworkReadyEvent` | `intent-intelligence-ms` | `intent-assurance-ms` | Optimised resource set has been projected into service configuration ready for change execution/apply; apply success is not yet confirmed |
 | `IntentAssuranceEvent` | `intent-assurance-ms` | `intent-controller-ms` | Assurance/apply/runtime outcome truth for external Intent and IntentReport projection |
 | `IntentCallbackEvent` | `intent-callback-ms` | `intent-assurance-ms` | Accepted raw callback relayed to the internal event backbone |
 
@@ -159,25 +159,27 @@ content-type: application/json
       "id": "hospital-surgical-slice-spec-v1.20"
     },
     "expression": {
-      "location": {
-        "locationId": "AU-NSW-SYD-HOSP-001",
-        "locationType": "hospital",
-        "geographicScope": "campus"
-      },
-      "serviceType": "surgical-connectivity",
-      "serviceClass": "critical-gold",
-      "targets": {
-        "maxLatencyMs": 10,
-        "minAvailabilityPercent": 99.99,
-        "maxJitterMs": 2,
-        "maxPacketLossPercent": 0.01
-      },
-      "constraints": {
-        "priority": "critical",
-        "redundancyRequired": true
-      },
-      "preferences": {
-        "preferredAccessTechnology": "5G"
+      "context": {
+        "targets": {
+          "maxLatencyMs": 10,
+          "minAvailabilityPercent": 99.99,
+          "maxJitterMs": 2,
+          "maxPacketLossPercent": 0.01
+        },
+        "constraints": {
+          "location": {
+            "locationId": "AU-NSW-SYD-HOSP-001",
+            "locationType": "hospital",
+            "geographicScope": "campus"
+          },
+          "serviceType": "surgical-connectivity",
+          "serviceClass": "critical-gold",
+          "priority": "critical",
+          "redundancyRequired": true
+        },
+        "preferences": {
+          "preferredAccessTechnology": "5G"
+        }
       }
     },
     "references": {
@@ -198,12 +200,12 @@ content-type: application/json
 ### Event-specific rules
 
 - `IntentValidatedEvent` is the lean IC MS admission-focused event.
-- It carries the admitted runtime `expression`.
-- The admitted expression uses the shared semantic buckets: `targets`, `constraints`, and `preferences`.
-- It includes `serviceType`.
-- It keeps `redundancyRequired` under `expression.constraints` when it came from expression mapping/defaults.
-- It does not include KP `benchmarks`, optimiser details, orchestration details, assurance details, or a `validation` object.
-- It uses canonical `location.locationId` in the baseline event example.
+- It carries the admitted runtime `expression.context`.
+- The admitted expression uses the shared semantic buckets: `expression.context.targets`, `expression.context.constraints`, and `expression.context.preferences`.
+- It includes `serviceType` under `expression.context.constraints`.
+- It keeps `redundancyRequired` under `expression.context.constraints` when it came from expression mapping/defaults.
+- It does not include KP `benchmarks`, optimiser details, change-execution details, assurance details, or a `validation` object.
+- It uses canonical `expression.context.constraints.location.locationId` in the baseline event example.
 
 ## IntentRejectedEvent
 
@@ -277,7 +279,7 @@ content-type: application/json
 - Use `reasonCode: SERVICE_NOT_AVAILABLE` when the requested service is not currently available for the resolved service/location.
 - Do not include a `serviceContext` or generic `context` wrapper.
 - Do not include an `evaluations` block unless multiple checks or detailed rejection evidence is genuinely useful.
-- Do not include optimiser, orchestration, or assurance payloads.
+- Do not include optimiser, change-execution, or assurance payloads.
 
 ## IntentResolvedEvent
 
@@ -462,7 +464,7 @@ intent-intelligence-ms / service-ready preparation path
 
 ### Meaning
 
-Optimisation completed and selected resources/outcome are available for II MS to prepare the service-ready configuration for downstream orchestration/apply and assurance setup.
+Optimisation completed and selected resources/outcome are available for II MS to prepare the service-ready configuration for downstream change-execution/apply and assurance setup.
 
 ### Example headers
 
@@ -690,7 +692,7 @@ intent-assurance-ms
 
 ### Meaning
 
-`IntentNetworkReadyEvent` is an internal milestone event indicating that the service configuration/resource set has been prepared for orchestration/apply.
+`IntentNetworkReadyEvent` is an internal milestone event indicating that the service configuration/resource set has been prepared for change execution/apply.
 
 It does not mean the service has already been applied.
 
@@ -714,7 +716,7 @@ content-type: application/json
     "intentId": "INT-HOSP-2026-001",
     "version": "v1",
     "lifecycleStatus": "InProgress",
-    "statusReason": "Service configuration has been prepared for orchestration/apply.",
+    "statusReason": "Service configuration has been prepared for change execution/apply.",
     "location": {
       "locationId": "AU-NSW-SYD-HOSP-001",
       "displayName": "Sydney-Main-Hospital"
@@ -790,16 +792,16 @@ content-type: application/json
 
 ### Event-specific rules
 
-- `IntentNetworkReadyEvent` means service configuration is ready for orchestration/apply, not that apply has succeeded.
+- `IntentNetworkReadyEvent` means service configuration is ready for change execution/apply, not that apply has succeeded.
 - Use direct `location`, `serviceType`, and `serviceClass` fields; do not wrap them in `context` or `serviceContext`.
 - Use `serviceConfiguration` because the event carries the service apply and observation plan rather than low-level network configuration.
-- Use `serviceConfiguration.orchestratorConfiguration` for apply/orchestration details.
+- Use `serviceConfiguration.orchestratorConfiguration` for apply/change-execution details.
 - Use `serviceConfiguration.observerConfiguration` for assurance/monitoring details.
 - Use `orchestratorConfiguration.target`, `orchestratorConfiguration.profile`, and `orchestratorConfiguration.resources`; do not repeat the `orchestrator` prefix inside the block.
 - Use `observerConfiguration.target`, `observerConfiguration.profile`, and `observerConfiguration.resources`; do not repeat the `observer` prefix inside the block.
-- `orchestratorConfiguration.resources[]` contains only the optimiser-selected resources/configuration ready for apply.
-- `observerConfiguration.resources[]` contains the full assurance observation scope that IA/observer should monitor, including selected and non-selected resources.
-- `observerConfiguration.resources[].metrics` is a list of metric names to observe, not metric values.
+- `serviceConfiguration.orchestratorConfiguration.resources[]` contains only the optimiser-selected resources/configuration ready for apply.
+- `serviceConfiguration.observerConfiguration.resources[]` contains the full assurance observation scope that IA/observer should monitor, including selected and non-selected resources.
+- `serviceConfiguration.observerConfiguration.resources[].metrics` is a list of metric names to observe, not metric values.
 - Do not include `applyOutcome`.
 - Do not include service-apply QoS internals, bandwidth, routing policy, hops, or service attributes by default unless they are required by the orchestrator contract.
 - IA MS consumes this event; IA MS does not produce it.
@@ -1043,20 +1045,20 @@ intentId
 ### CloudEvents type
 
 ```text
-au.com.mycsp.intent.callback.v1
+IntentCallbackEvent
 ```
 
 ### Meaning
 
 ICB MS publishes accepted raw callbacks to Kafka as `IntentCallbackEvent`.
 
-IA MS consumes this event, validates/correlates intent state, maps raw orchestrator state into lifecycle/assurance meaning, and emits assurance outcomes where applicable.
+IA MS consumes this event, validates/correlates intent state, maps raw source state into lifecycle/assurance meaning, and emits assurance outcomes where applicable.
 
 ### Example headers
 
 ```http
 ce-specversion: 1.0
-ce-type: au.com.mycsp.intent.callback.v1
+ce-type: IntentCallbackEvent
 ce-source: intent-callback-ms
 ce-id: evt-intent-callback-001
 ce-time: 2026-04-18T12:15:00+10:00
@@ -1069,11 +1071,6 @@ content-type: application/json
 ```json
 {
   "body": {
-    "eventType": "IntentCallbackEvent",
-    "eventVersion": "1.0",
-    "source": "intent-callback-ms",
-    "eventTime": "2026-04-18T12:15:00+10:00",
-    "correlationId": "corr-intent-callback-001",
     "intentId": "INT-HOSP-2026-001",
     "callbackSource": "t7-network-orchestrator",
     "callbackTimestamp": "2026-04-18T12:14:58+10:00",
@@ -1081,6 +1078,13 @@ content-type: application/json
       "state": "APPLIED",
       "details": {
         "message": "Raw callback payload retained by ICB MS"
+      }
+    },
+    "references": {
+      "correlationId": "corr-intent-callback-001",
+      "intent": {
+        "id": "INT-HOSP-2026-001",
+        "href": "/intentManagement/v5/intent/INT-HOSP-2026-001"
       }
     }
   }
@@ -1092,11 +1096,10 @@ content-type: application/json
 - `IntentCallbackEvent` is a raw callback relay event.
 - ICB MS only accepts, persists, and publishes the callback.
 - IA MS owns intent correlation, source-state mapping, skip/dead-letter decisions, and downstream assurance outcome publication.
-- Use `source` for the event producer, which is `intent-callback-ms`.
-- Use `callbackSource` for the external system/component that submitted the callback.
+- - Use `callbackSource` for the external system/component that submitted the callback.
 - Use `callbackTimestamp` for the timestamp supplied by that callback source.
 - Use `sourceState` for the raw state/payload supplied by the callback source.
-- Avoid `orchestratorSource`, `orchestratorTimestamp`, and `orchestratorState` because callback sources may not always be orchestrators.
+- Avoid `orchestratorSource`, `orchestratorTimestamp`, and `orchestratorState`; use `callbackSource`, `callbackTimestamp`, and `sourceState` because callback sources may not always be orchestrators.
 - Do not include lifecycle, service, optimisation, service-configuration, or assurance interpretation fields in this event.
 
 ### ICB MS ownership boundary
