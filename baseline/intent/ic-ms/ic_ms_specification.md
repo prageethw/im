@@ -132,7 +132,7 @@ Supported:
 ```json
 {
   "intentSpecification": {
-    "id": "hospital-surgical-slice-spec-v1.20"
+    "id": "hospital-surgical-slice-spec-v1.19"
   }
 }
 ```
