@@ -1,0 +1,56 @@
+@startuml
+title IntentSpecification mandatory profile proposal
+
+skinparam shadowing false
+skinparam defaultTextAlignment center
+skinparam packageStyle rectangle
+
+rectangle "TMF921 IntentSpecification\nbase resource model" as TMF #EEF2FF
+
+rectangle "Platform mandatory profile\nTMF-aligned, not TMF-minimal" as PROFILE #E8F5E9
+
+TMF --> PROFILE : platform conformance\nadds lifecycle-aware rules
+
+rectangle "DRAFT IntentSpecification" as DRAFT #FFF8E1 {
+  rectangle "Minimum mandatory fields\n\n- id\n- href\n- name\n- familyId\n- version\n- lifecycleStatus = DRAFT\n- isBundle\n- @type\n- @baseType" as DRAFT_FIELDS
+  rectangle "Allowed to be incomplete\nwhile authored" as DRAFT_INCOMPLETE
+}
+
+rectangle "Activation gate" as GATE #FFE0B2 {
+  rectangle "Validate ACTIVE profile\n\nReject with 422 if required\nACTIVE fields are missing" as VALIDATE
+}
+
+rectangle "ACTIVE IntentSpecification" as ACTIVE #E0F2F1 {
+  rectangle "Minimum mandatory fields\n\nDRAFT mandatory fields plus:\n- validFor.startDateTime\n- expressionSpecification\n- expressionSpecification.iri\n- expressionSpecification.expressionLanguage\n- targetEntitySchema\n- specCharacteristic" as ACTIVE_FIELDS
+  rectangle "Published runtime contract\nfor discovery, governance,\nvalidation, and resolution" as ACTIVE_CONTRACT
+}
+
+rectangle "Runtime intent processing\nseparate API decision" as RUNTIME #F3E5F5 {
+  rectangle "Runtime request may reference\nintentSpecification.id\nor may be resolved by\nexpression.iri if unambiguous" as RUNTIME_RULE
+}
+
+PROFILE --> DRAFT : create / edit as DRAFT
+DRAFT --> GATE : request activation
+GATE --> ACTIVE : profile satisfied
+GATE -[#red,dashed]-> DRAFT : missing required ACTIVE fields
+ACTIVE --> RUNTIME : provides active semantic\nand validation contract
+
+note right of ACTIVE
+expressionSpecification is mandatory
+when expressionSpecification.iri
+is mandatory.
+
+targetEntitySchema is the
+machine-readable validation contract.
+
+specCharacteristic is the
+catalogue/governance view.
+end note
+
+note bottom of RUNTIME
+This diagram captures the proposal only.
+Runtime intent resolution rules belong
+in a separate runtime/API decision.
+end note
+
+@enduml
