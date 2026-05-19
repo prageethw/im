@@ -2,18 +2,18 @@
 
 ## 1. Decision summary:
 
-This proposal defines the minimum mandatory attribute profile for `IntentSpecification` resources on this platform, layered on top of TMF921.
+This proposal defines the minimum mandatory attribute profile for `IntentSpecification` resources on this intent enabler entity, layered on top of TMF921.
 
 TMF921 provides the generic `IntentSpecification` resource model, operation pattern, and event pattern. It does not prescribe the complete mandatory attribute profile required by every implementation.
 
-This platform therefore defines a stricter profile so that `IntentSpecification` resources are usable for catalogue governance, lifecycle management, runtime expression validation, and runtime intent resolution.
+This intent enabler entity therefore defines a stricter profile so that `IntentSpecification` resources are usable for catalogue governance, lifecycle management, runtime expression validation, and runtime intent resolution.
 
 The key proposals are:
 
 - define the minimum mandatory attributes for a persisted `DRAFT` `IntentSpecification`
 - define the minimum mandatory attributes for an `ACTIVE` `IntentSpecification`
 
-This proposal defines a candidate platform profile rule. It does not claim that TMF921 universally mandates the same fields for every implementation.
+This proposal defines a candidate intent enabler entity profile rule. It does not claim that TMF921 universally mandates the same fields for every implementation.
 
 ## 2. Proposal flow diagram:
 
@@ -23,11 +23,11 @@ This proposal defines a candidate platform profile rule. It does not claim that 
 
 TMF921 intentionally leaves implementation flexibility in the `IntentSpecification` model. That is useful for broad interoperability, because different organisations may need different levels of catalogue detail, lifecycle governance, schema discipline, and runtime coupling.
 
-However, for this platform, an `IntentSpecification` is not only a descriptive catalogue record. Once active, it becomes a published runtime contract used by downstream consumers to understand, validate, and resolve submitted runtime intents.
+However, for this intent enabler entity, an `IntentSpecification` is not only a descriptive catalogue record. Once active, it becomes a published runtime contract used by downstream consumers to understand, validate, and resolve submitted runtime intents.
 
 If too many fields are treated as optional, downstream runtime behaviour becomes ambiguous.
 
-The platform must be able to answer questions such as:
+The intent enabler entity must be able to answer questions such as:
 
 - Which specification defines the submitted runtime expression?
 - Which semantic contract does the expression follow?
@@ -37,7 +37,7 @@ The platform must be able to answer questions such as:
 - Can a runtime intent be resolved by expression IRI when an explicit specification reference is not supplied?
 - Can event subscribers interpret specification events without an authoritative resource identity?
 
-Therefore, the platform needs a mandatory profile that is stricter than the minimum generic TMF shape.
+Therefore, the intent enabler entity needs a mandatory profile that is stricter than the minimum generic TMF shape.
 
 ## 4. Decision drivers:
 
@@ -57,9 +57,9 @@ The proposal is driven by the following architecture needs:
 
 ### 5.1 TMF-aligned, not TMF-minimal:
 
-The platform remains TMF-aligned by using the TMF921 `IntentSpecification` resource model, including TMF-style identity, lifecycle status, specification characteristics, expression specification, target entity schema, related parties, relationships, and events.
+The intent enabler entity remains TMF-aligned by using the TMF921 `IntentSpecification` resource model, including TMF-style identity, lifecycle status, specification characteristics, expression specification, target entity schema, related parties, relationships, and events.
 
-However, the platform does not adopt a TMF-minimal interpretation where most fields are treated as operationally optional. Instead, the platform applies a mandatory profile appropriate for its runtime architecture.
+However, the intent enabler entity does not adopt a TMF-minimal interpretation where most fields are treated as operationally optional. Instead, the intent enabler entity applies a mandatory profile appropriate for its runtime architecture.
 
 The rule is:
 
@@ -99,7 +99,7 @@ This table is the core architectural proposal.
 
 The create operation may support either of the following patterns:
 
-- the platform generates the `id`
+- the intent enabler entity generates the `id`
 - an authorised client supplies the `id`, subject to governance rules
 
 After creation, `id` is immutable.
@@ -186,13 +186,13 @@ The `iri` identifies the semantic/expression contract. It tells consumers which 
 
 The `expressionLanguage` identifies how the expression is represented and interpreted, for example JSON-LD.
 
-If `expressionSpecification.iri` is mandatory, then `expressionSpecification` itself is necessarily mandatory. The parent object cannot be optional when one of its child fields is required for platform behaviour.
+If `expressionSpecification.iri` is mandatory, then `expressionSpecification` itself is necessarily mandatory. The parent object cannot be optional when one of its child fields is required for intent enabler entity behaviour.
 
 ### 5.7 targetEntitySchema rule:
 
 For an `ACTIVE` `IntentSpecification`, `targetEntitySchema` is mandatory.
 
-`targetEntitySchema` is the authoritative machine-readable schema reference for validating runtime expression values. For this platform, it defines the allowed shape of:
+`targetEntitySchema` is the authoritative machine-readable schema reference for validating runtime expression values. For this intent enabler entity, it defines the allowed shape of:
 
 ```text
 expression.expressionValue.context
@@ -224,11 +224,11 @@ The preferred pattern is:
 
 ### 5.9 Lifecycle-aware validation:
 
-The platform applies lifecycle-aware validation.
+The intent enabler entity applies lifecycle-aware validation.
 
 Create and update operations may allow incomplete `DRAFT` resources. Activation to `ACTIVE` must validate the full ACTIVE mandatory profile.
 
-If a client attempts to activate a specification that does not satisfy the ACTIVE profile, the platform must reject the request.
+If a client attempts to activate a specification that does not satisfy the ACTIVE profile, the intent enabler entity must reject the request.
 
 The preferred response is:
 
@@ -236,124 +236,361 @@ The preferred response is:
 422 Unprocessable Entity
 ```
 
-This means the request is syntactically valid, but the resource cannot transition to the requested lifecycle state because it violates the platform `IntentSpecification` profile.
+This means the request is syntactically valid, but the resource cannot transition to the requested lifecycle state because it violates the intent enabler entity `IntentSpecification` profile.
 
 ## 6. Examples:
 
-The examples use a hospital surgical-slice use case where a hospital requires a connectivity service suitable for latency-sensitive surgical operations. The runtime intent expresses business and technical needs through canonical `targets`, `constraints`, and `preferences`, such as low latency, a specific hospital location, and a surgical service class. The `IntentSpecification` profile ensures this use case is governed by a stable specification identity, an expression contract IRI, and a machine-readable validation schema before the specification can become active.
+The examples use the current hospital surgical-slice payload pattern from the intent enabler entity baseline. The use case represents a hospital requesting a surgical-connectivity service with strict latency, availability, jitter, packet-loss, location, service-class, redundancy, and timing requirements. The examples show why an active `IntentSpecification` needs stable identity, an expression contract IRI, `targetEntitySchema`, and `specCharacteristic` before it can safely govern runtime intent submissions.
 
-### 6.1 Minimal DRAFT example:
+### 6.1 DRAFT IntentSpecification create request from the intent enabler entity baseline:
 
-This example shows a persisted draft with enough identity to be governed and edited, but not yet enough information to be activated.
+This example uses the current `POST /intentManagement/v5/intentSpecification` request body pattern from the ID MS specification. It shows a draft specification that already carries the expression contract, target entity schema, and discoverable context characteristic, even though the proposal only requires the lighter DRAFT minimum profile.
 
 ```json
 {
-  "id": "hospital-surgical-slice-spec-v1.20",
-  "href": "https://mycsp.com.au/tmf-api/intentManagement/v5/intentSpecification/hospital-surgical-slice-spec-v1.20",
-  "name": "Hospital Surgical Slice Specification",
   "familyId": "hospital-surgical-slice-spec",
-  "version": "1.20",
+  "name": "Hospital Surgical Slice Intent Specification",
+  "description": "Definition-time specification for hospital surgical slice intents.\nThis specification defines the allowed request shape for surgical connectivity intents.\nIt is syntax-first: ID MS validates structure and allowed fields, while II MS and the knowledge plane validate semantic meaning, policy, and fulfilment feasibility.",
+  "version": "1.19",
   "lifecycleStatus": "DRAFT",
   "isBundle": false,
-  "@type": "IntentSpecification",
-  "@baseType": "EntitySpecification"
-}
-```
-
-### 6.2 ACTIVE example excerpt:
-
-This example shows the important fields required before activation.
-
-```json
-{
-  "id": "hospital-surgical-slice-spec-v1.20",
-  "href": "https://mycsp.com.au/tmf-api/intentManagement/v5/intentSpecification/hospital-surgical-slice-spec-v1.20",
-  "name": "Hospital Surgical Slice Specification",
-  "familyId": "hospital-surgical-slice-spec",
-  "version": "1.20",
-  "lifecycleStatus": "ACTIVE",
-  "isBundle": false,
   "validFor": {
-    "startDateTime": "2026-04-17T10:00:00+10:00"
+    "startDateTime": "2026-04-18T12:00:00+10:00"
   },
-  "expressionSpecification": {
-    "@type": "ExpressionSpecification",
-    "expressionLanguage": "JSON-LD",
-    "iri": "http://tio.models.tmforum.org/tio/v2.0.0/IntentCommonModel/"
-  },
-  "targetEntitySchema": {
-    "@type": "TargetEntitySchema",
-    "@schemaLocation": "https://mycsp.com.au/schema/intent/hospital-surgical-slice-expression-value.schema.json"
-  },
-  "specCharacteristic": [
+  "relatedParty": [
     {
-      "name": "context",
-      "description": "Canonical runtime intent context containing targets, constraints, and preferences.",
-      "valueType": "object",
-      "configurable": true,
-      "@type": "CharacteristicSpecification"
+      "@type": "RelatedPartyRefOrPartyRoleRef",
+      "role": "Provider",
+      "partyOrPartyRole": {
+        "@type": "PartyRoleRef",
+        "id": "mycsp",
+        "name": "MyCSP",
+        "@referredType": "Provider"
+      }
     }
   ],
   "@type": "IntentSpecification",
-  "@baseType": "EntitySpecification"
-}
-```
-
-### 6.3 Runtime expression relationship example:
-
-An active specification defines the semantic contract:
-
-```json
-{
+  "@baseType": "EntitySpecification",
+  "@schemaLocation": "https://mycsp.com.au/schemas/intentManagement/v5/intentSpecification/hospital-surgical-slice-spec-v1.19.schema.json",
+  "specCharacteristic": [
+    {
+      "@type": "CharacteristicSpecification",
+      "id": "context",
+      "name": "context",
+      "description": "Top-level semantic context supported by this IntentSpecification.\nThe context contains canonical context.targets, context.constraints, and context.preferences.\nDetailed field rules are defined in the expression-value schema referenced by targetEntitySchema.@schemaLocation.",
+      "valueType": "object",
+      "configurable": true,
+      "minCardinality": 1,
+      "maxCardinality": 1,
+      "characteristicValueSpecification": [
+        {
+          "@type": "CharacteristicValueSpecification",
+          "valueType": "object",
+          "isDefault": true,
+          "value": {
+            "targets": {
+              "maxLatencyMs": 10,
+              "minAvailabilityPercent": 99.99,
+              "maxJitterMs": 2,
+              "maxPacketLossPercent": 0.01
+            },
+            "constraints": {
+              "location": {
+                "locationId": "AU-NSW-SYD-HOSP-001",
+                "locationType": "hospital",
+                "geographicScope": "campus"
+              },
+              "serviceType": "surgical-connectivity",
+              "serviceClass": "critical-gold",
+              "priority": "critical",
+              "redundancyRequired": true,
+              "timeWindow": {
+                "startDateTime": "2026-04-18T12:00:00+10:00"
+              }
+            },
+            "preferences": {
+              "preferredAccessTechnology": "5G"
+            }
+          }
+        }
+      ]
+    }
+  ],
   "expressionSpecification": {
+    "@type": "ExpressionSpecification",
     "expressionLanguage": "JSON-LD",
-    "iri": "http://tio.models.tmforum.org/tio/v2.0.0/IntentCommonModel/"
+    "iri": "https://mycsp.com.au/tio/hospital-surgical-slice/v1.0"
+  },
+  "targetEntitySchema": {
+    "@type": "TargetEntitySchema",
+    "@schemaLocation": "https://mycsp.com.au/schemas/intentManagement/v5/intentExpression/hospital-surgical-slice-spec-v1.19.expression.schema.json",
+    "schemaVersion": "1.19",
+    "schemaHash": "sha256:REPLACE_WITH_PUBLISHED_SCHEMA_HASH"
   }
 }
 ```
 
-A runtime intent can then use the corresponding expression IRI:
+### 6.2 Persisted DRAFT IntentSpecification response from the intent enabler entity baseline:
+
+This example uses the current `201 Created` response pattern from the ID MS specification. It shows that the client does not send `id` or `href`, but the persisted resource returned by the intent enabler entity has both, which supports the proposal that `id` and `href` are mandatory on persisted resources.
 
 ```json
 {
-  "expression": {
-    "@type": "JsonLdExpression",
-    "iri": "http://tio.models.tmforum.org/tio/v2.0.0/IntentCommonModel/",
-    "expressionValue": {
-      "context": {
-        "targets": [
-          {
-            "name": "low-latency-surgical-connectivity",
-            "targetType": "latency",
-            "operator": "lessThanOrEqualTo",
-            "value": 10,
-            "unit": "ms"
-          }
-        ],
-        "constraints": [
-          {
-            "name": "location",
-            "constraintType": "site",
-            "operator": "equals",
-            "value": "hospital-a-surgery-wing"
-          },
-          {
-            "name": "serviceClass",
-            "constraintType": "serviceClass",
-            "operator": "equals",
-            "value": "surgical"
-          }
-        ],
-        "preferences": [
-          {
-            "name": "prefer-resilient-path",
-            "preferenceType": "resilience",
-            "weight": 80
-          }
-        ]
+  "id": "hospital-surgical-slice-spec-v1.19",
+  "href": "/intentManagement/v5/intentSpecification/hospital-surgical-slice-spec-v1.19",
+  "familyId": "hospital-surgical-slice-spec",
+  "name": "Hospital Surgical Slice Intent Specification",
+  "description": "Definition-time specification for hospital surgical slice intents.\nThis specification defines the allowed request shape for surgical connectivity intents.\nIt is syntax-first: ID MS validates structure and allowed fields, while II MS and the knowledge plane validate semantic meaning, policy, and fulfilment feasibility.",
+  "version": "1.19",
+  "lifecycleStatus": "DRAFT",
+  "isBundle": false,
+  "validFor": {
+    "startDateTime": "2026-04-18T12:00:00+10:00"
+  },
+  "relatedParty": [
+    {
+      "@type": "RelatedPartyRefOrPartyRoleRef",
+      "role": "Provider",
+      "partyOrPartyRole": {
+        "@type": "PartyRoleRef",
+        "id": "mycsp",
+        "name": "MyCSP",
+        "@referredType": "Provider"
       }
     }
+  ],
+  "@type": "IntentSpecification",
+  "@baseType": "EntitySpecification",
+  "@schemaLocation": "https://mycsp.com.au/schemas/intentManagement/v5/intentSpecification/hospital-surgical-slice-spec-v1.19.schema.json",
+  "specCharacteristic": [
+    {
+      "@type": "CharacteristicSpecification",
+      "id": "context",
+      "name": "context",
+      "description": "Top-level semantic context supported by this IntentSpecification.\nThe context contains canonical context.targets, context.constraints, and context.preferences.\nDetailed field rules are defined in the expression-value schema referenced by targetEntitySchema.@schemaLocation.",
+      "valueType": "object",
+      "configurable": true,
+      "minCardinality": 1,
+      "maxCardinality": 1,
+      "characteristicValueSpecification": [
+        {
+          "@type": "CharacteristicValueSpecification",
+          "valueType": "object",
+          "isDefault": true,
+          "value": {
+            "targets": {
+              "maxLatencyMs": 10,
+              "minAvailabilityPercent": 99.99,
+              "maxJitterMs": 2,
+              "maxPacketLossPercent": 0.01
+            },
+            "constraints": {
+              "location": {
+                "locationId": "AU-NSW-SYD-HOSP-001",
+                "locationType": "hospital",
+                "geographicScope": "campus"
+              },
+              "serviceType": "surgical-connectivity",
+              "serviceClass": "critical-gold",
+              "priority": "critical",
+              "redundancyRequired": true,
+              "timeWindow": {
+                "startDateTime": "2026-04-18T12:00:00+10:00"
+              }
+            },
+            "preferences": {
+              "preferredAccessTechnology": "5G"
+            }
+          }
+        }
+      ]
+    }
+  ],
+  "expressionSpecification": {
+    "@type": "ExpressionSpecification",
+    "expressionLanguage": "JSON-LD",
+    "iri": "https://mycsp.com.au/tio/hospital-surgical-slice/v1.0"
+  },
+  "targetEntitySchema": {
+    "@type": "TargetEntitySchema",
+    "@schemaLocation": "https://mycsp.com.au/schemas/intentManagement/v5/intentExpression/hospital-surgical-slice-spec-v1.19.expression.schema.json",
+    "schemaVersion": "1.19",
+    "schemaHash": "sha256:REPLACE_WITH_PUBLISHED_SCHEMA_HASH"
+  },
+  "_links": {
+    "self": {
+      "href": "/intentManagement/v5/intentSpecification/hospital-surgical-slice-spec-v1.19"
+    },
+    "fullUpdate": {
+      "href": "/intentManagement/v5/intentSpecification/hospital-surgical-slice-spec-v1.19",
+      "method": "PUT"
+    },
+    "partialUpdate": {
+      "href": "/intentManagement/v5/intentSpecification/hospital-surgical-slice-spec-v1.19",
+      "method": "PATCH",
+      "warning": "PATCH is supported for compatibility but discouraged as a general update method.\nPrefer PUT for deterministic full replacement."
+    },
+    "delete": {
+      "href": "/intentManagement/v5/intentSpecification/hospital-surgical-slice-spec-v1.19",
+      "method": "DELETE"
+    }
   }
+}
+```
+
+### 6.3 ACTIVE IntentSpecification retrieve response from the intent enabler entity baseline:
+
+This example uses the current `GET /intentSpecification/{id}` success response pattern from the ID MS specification. It shows the active profile fields that must be present for runtime discovery, validation, and resolution.
+
+```json
+{
+  "id": "hospital-surgical-slice-spec-v1.19",
+  "href": "/intentManagement/v5/intentSpecification/hospital-surgical-slice-spec-v1.19",
+  "familyId": "hospital-surgical-slice-spec",
+  "name": "Hospital Surgical Slice Intent Specification",
+  "description": "Definition-time specification for hospital surgical slice intents.\nThis specification defines the allowed request shape for surgical connectivity intents.\nIt is syntax-first: ID MS validates structure and allowed fields, while II MS and the knowledge plane validate semantic meaning, policy, and fulfilment feasibility.",
+  "version": "1.19",
+  "lifecycleStatus": "ACTIVE",
+  "isBundle": false,
+  "validFor": {
+    "startDateTime": "2026-04-18T12:00:00+10:00"
+  },
+  "relatedParty": [
+    {
+      "@type": "RelatedPartyRefOrPartyRoleRef",
+      "role": "Provider",
+      "partyOrPartyRole": {
+        "@type": "PartyRoleRef",
+        "id": "mycsp",
+        "name": "MyCSP",
+        "@referredType": "Provider"
+      }
+    }
+  ],
+  "@type": "IntentSpecification",
+  "@baseType": "EntitySpecification",
+  "@schemaLocation": "https://mycsp.com.au/schemas/intentManagement/v5/intentSpecification/hospital-surgical-slice-spec-v1.19.schema.json",
+  "specCharacteristic": [
+    {
+      "@type": "CharacteristicSpecification",
+      "id": "context",
+      "name": "context",
+      "description": "Top-level semantic context supported by this IntentSpecification.\nThe context contains canonical context.targets, context.constraints, and context.preferences.\nDetailed field rules are defined in the expression-value schema referenced by targetEntitySchema.@schemaLocation.",
+      "valueType": "object",
+      "configurable": true,
+      "minCardinality": 1,
+      "maxCardinality": 1,
+      "characteristicValueSpecification": [
+        {
+          "@type": "CharacteristicValueSpecification",
+          "valueType": "object",
+          "isDefault": true,
+          "value": {
+            "targets": {
+              "maxLatencyMs": 10,
+              "minAvailabilityPercent": 99.99,
+              "maxJitterMs": 2,
+              "maxPacketLossPercent": 0.01
+            },
+            "constraints": {
+              "location": {
+                "locationId": "AU-NSW-SYD-HOSP-001",
+                "locationType": "hospital",
+                "geographicScope": "campus"
+              },
+              "serviceType": "surgical-connectivity",
+              "serviceClass": "critical-gold",
+              "priority": "critical",
+              "redundancyRequired": true,
+              "timeWindow": {
+                "startDateTime": "2026-04-18T12:00:00+10:00"
+              }
+            },
+            "preferences": {
+              "preferredAccessTechnology": "5G"
+            }
+          }
+        }
+      ]
+    }
+  ],
+  "expressionSpecification": {
+    "@type": "ExpressionSpecification",
+    "expressionLanguage": "JSON-LD",
+    "iri": "https://mycsp.com.au/tio/hospital-surgical-slice/v1.0"
+  },
+  "targetEntitySchema": {
+    "@type": "TargetEntitySchema",
+    "@schemaLocation": "https://mycsp.com.au/schemas/intentManagement/v5/intentExpression/hospital-surgical-slice-spec-v1.19.expression.schema.json",
+    "schemaVersion": "1.19",
+    "schemaHash": "sha256:REPLACE_WITH_PUBLISHED_SCHEMA_HASH"
+  },
+  "_links": {
+    "self": {
+      "href": "/intentManagement/v5/intentSpecification/hospital-surgical-slice-spec-v1.19"
+    },
+    "fullUpdate": {
+      "href": "/intentManagement/v5/intentSpecification/hospital-surgical-slice-spec-v1.19",
+      "method": "PUT"
+    },
+    "partialUpdate": {
+      "href": "/intentManagement/v5/intentSpecification/hospital-surgical-slice-spec-v1.19",
+      "method": "PATCH",
+      "warning": "PATCH is supported for compatibility but discouraged as a general update method.\nPrefer PUT for deterministic full replacement."
+    }
+  }
+}
+```
+
+### 6.4 Runtime Intent request body from the intent enabler entity baseline:
+
+This example uses the current complete `POST /intent` request body pattern from the IC MS specification. It shows how the runtime intent refers to an active specification and uses the same expression IRI and canonical `context.targets`, `context.constraints`, and `context.preferences` shape governed by the active `IntentSpecification`.
+
+```json
+{
+  "name": "Sydney Hospital Surgical Connection Intent",
+  "description": "Request for a surgical connection in Sydney Hospital.",
+  "humanExpression": "I need a surgical connection in Sydney Hospital with latency less than or equal to 10 ms and availability at least 99.99%.",
+  "intentSpecification": {
+    "id": "hospital-surgical-slice-spec-v1.20"
+  },
+  "expression": {
+    "@type": "JsonLdExpression",
+    "@baseType": "Expression",
+    "iri": "https://mycsp.com.au/tio/hospital-surgical-slice/v1.0",
+    "expressionValue": {
+      "context": {
+        "targets": {
+          "maxLatencyMs": 10,
+          "minAvailabilityPercent": 99.99,
+          "maxJitterMs": 2,
+          "maxPacketLossPercent": 0.01
+        },
+        "constraints": {
+          "location": {
+            "locationId": "AU-NSW-SYD-HOSP-001",
+            "locationType": "hospital",
+            "geographicScope": "campus"
+          },
+          "serviceType": "surgical-connectivity",
+          "serviceClass": "critical-gold",
+          "priority": "critical",
+          "redundancyRequired": true,
+          "timeWindow": {
+            "startDateTime": "2026-04-18T12:00:00+10:00"
+          }
+        },
+        "preferences": {
+          "preferredAccessTechnology": "5G"
+        }
+      }
+    }
+  },
+  "validFor": {
+    "startDateTime": "2026-04-18T12:00:00+10:00"
+  },
+  "@type": "Intent",
+  "@baseType": "Entity"
 }
 ```
 
@@ -361,11 +598,12 @@ A runtime API may choose to make explicit `intentSpecification.id` mandatory, or
 
 That runtime resolution rule is a separate API decision and is not decided by this specification-profile proposal.
 
+
 ## 7. Consequences:
 
 ### 7.1 Positive consequences:
 
-If accepted, this proposal gives the platform:
+If accepted, this proposal gives the intent enabler entity:
 
 - deterministic specification identity
 - stronger lifecycle governance
@@ -373,24 +611,24 @@ If accepted, this proposal gives the platform:
 - reliable runtime expression validation
 - clearer runtime resolution behaviour
 - better event payload consistency
-- clearer separation between TMF base optionality and platform conformance
+- clearer separation between TMF base optionality and intent enabler entity conformance
 - better support for catalogue discovery
 
 ### 7.2 Trade-offs:
 
 If accepted, this proposal also means:
 
-- the platform is stricter than a minimal TMF implementation
+- the intent enabler entity is stricter than a minimal TMF implementation
 - clients must provide more information before a specification can become active
 - activation validation becomes more important than simple create validation
-- the platform must maintain lifecycle-aware validation rules
+- the intent enabler entity must maintain lifecycle-aware validation rules
 - some clients may need to distinguish between creating a draft and publishing an active runtime contract
 
 These trade-offs are acceptable because active specifications are not just catalogue records. They are runtime contract definitions used by intent-processing components.
 
 ## 8. Alternatives considered:
 
-### 8.1 Treat TMF optional fields as platform optional:
+### 8.1 Treat TMF optional fields as intent enabler entity optional:
 
 This was rejected.
 
@@ -400,13 +638,13 @@ It would make create/update easier, but it would allow active specifications tha
 
 This was rejected.
 
-It would make the create operation too rigid and would make it harder to incrementally author a specification. The platform should allow controlled incomplete drafts.
+It would make the create operation too rigid and would make it harder to incrementally author a specification. The intent enabler entity should allow controlled incomplete drafts.
 
 ### 8.3 Make expressionSpecification.iri mandatory but not expressionSpecification:
 
 This was rejected as structurally inconsistent.
 
-A child field cannot be mandatory for platform behaviour while the parent object remains optional. Therefore, if `expressionSpecification.iri` is mandatory, `expressionSpecification` is mandatory too.
+A child field cannot be mandatory for intent enabler entity behaviour while the parent object remains optional. Therefore, if `expressionSpecification.iri` is mandatory, `expressionSpecification` is mandatory too.
 
 ### 8.4 Make runtime intentSpecification.id mandatory everywhere:
 
@@ -416,12 +654,12 @@ This proposal mandates `id` on every persisted `IntentSpecification`, but runtim
 
 ## 9. Proposal outcome:
 
-This proposal recommends adopting a platform `IntentSpecification` mandatory profile baseline.
+This proposal recommends adopting a intent enabler entity `IntentSpecification` mandatory profile baseline.
 
-If accepted, the platform will document and enforce a lifecycle-aware `IntentSpecification` mandatory profile:
+If accepted, the intent enabler entity will document and enforce a lifecycle-aware `IntentSpecification` mandatory profile:
 
 - `DRAFT` requires identity and lifecycle-management fields.
-- `ACTIVE` requires the full platform runtime contract profile.
+- `ACTIVE` requires the full intent enabler entity runtime contract profile.
 - `id` is mandatory and immutable on persisted resources.
 - `expressionSpecification` is mandatory for active resources.
 - `expressionSpecification.iri` and `expressionSpecification.expressionLanguage` are mandatory for active resources.
@@ -432,18 +670,18 @@ If accepted, the platform will document and enforce a lifecycle-aware `IntentSpe
 
 | Reference | URL | Relevance to this proposal |
 | --- | --- | --- |
-| TMF921 Intent Management API v5.0.0 specification | https://www.tmforum.org/resources/specification/tmf921-intent-management-api-v5-0-0/ | Defines the TMF921 Intent Management API and the `IntentSpecification` resource model used as the base for this platform profile. |
+| TMF921 Intent Management API v5.0.0 specification | https://www.tmforum.org/resources/specification/tmf921-intent-management-api-v5-0-0/ | Defines the TMF921 Intent Management API and the `IntentSpecification` resource model used as the base for this intent enabler entity profile. |
 | TMF921 Intent Management API v5.0.0 OpenAPI / Swagger artefact | https://www.tmforum.org/resources/specification/tmf921-intent-management-api-v5-0-0/ | Provides the OpenAPI resource and event schemas used to validate the TMF-facing API shape. |
-| TMF921 Intent Management API v5.0.0 conformance profile | https://www.tmforum.org/resources/specification/tmf921-intent-management-api-v5-0-0/ | Provides the TMF conformance context for the API while leaving implementation-specific mandatory profile choices to the platform. |
+| TMF921 Intent Management API v5.0.0 conformance profile | https://www.tmforum.org/resources/specification/tmf921-intent-management-api-v5-0-0/ | Provides the TMF conformance context for the API while leaving implementation-specific mandatory profile choices to the intent enabler entity. |
 | TR292 TM Forum Intent Ontology (TIO) v3.6.0 | https://www.tmforum.org/resources/standard/tr292-intent-ontology-tio-v3-6-0/ | Provides the intent ontology reference model and model-federation context behind semantic/expression contract identifiers. |
 | TR299 Intent Specification | https://www.tmforum.org/resources/standard/tr299-intent-specification/ | Provides the intent specification concept used to describe rules for well-formed intent and allowed intent content. |
-| Platform baseline repository | https://github.com/prageethw/im/tree/main/baseline/intent | Holds the platform intent architecture baseline and project-specific specification/profile artefacts. |
+| intent enabler entity baseline repository | https://github.com/prageethw/im/tree/main/baseline/intent | Holds the intent enabler entity intent architecture baseline and project-specific specification/profile artefacts. |
 
 ## 11. Follow-up work:
 
 After this proposal is reviewed and baselined, update the affected architecture and specification artifacts surgically:
 
-- document the platform mandatory profile
+- document the intent enabler entity mandatory profile
 - clarify DRAFT versus ACTIVE validation
 - clarify `id`, `expressionSpecification`, `expressionSpecification.iri`, and `expressionSpecification.expressionLanguage`
 - clarify activation failure behaviour
