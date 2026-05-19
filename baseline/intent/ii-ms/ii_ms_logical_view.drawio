@@ -199,7 +199,7 @@
                 <mxCell id="stage_decision" value="5. Rejection / Resolution Decision&#xa;&#xa;Evaluate semantic, policy, capability,&#xa;and processing conditions to determine&#xa;outcome path." style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=default;fontSize=11;align=left;spacingLeft=8;container=0;" parent="1" vertex="1">
                     <mxGeometry x="650" y="565" width="300" height="75" as="geometry"/>
                 </mxCell>
-                <mxCell id="stage_ready" value="6. Service-Ready Preparation&#xa;&#xa;Prepare service configuration for&#xa;orchestration and assurance observation." style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=default;fontSize=11;align=left;spacingLeft=8;container=0;" parent="1" vertex="1">
+                <mxCell id="stage_ready" value="6. Service-Ready Preparation&#xa;&#xa;Prepare service configuration for&#xa;change execution and assurance observation." style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=default;fontSize=11;align=left;spacingLeft=8;container=0;" parent="1" vertex="1">
                     <mxGeometry x="1000" y="565" width="310" height="75" as="geometry"/>
                 </mxCell>
                 <mxCell id="evt_rejected" value="IntentRejectedEvent&#xa;&#xa;Semantic / policy / capability&#xa;/ processing rejection." style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=default;fontSize=11;align=left;spacingLeft=8;container=0;" parent="1" vertex="1">
@@ -208,7 +208,7 @@
                 <mxCell id="evt_resolved" value="IntentResolvedEvent&#xa;&#xa;Candidate-level semantic&#xa;resolution handoff." style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=default;fontSize=11;align=left;spacingLeft=8;container=0;" parent="1" vertex="1">
                     <mxGeometry x="880" y="985" width="200" height="75" as="geometry"/>
                 </mxCell>
-                <mxCell id="evt_ready" value="IntentNetworkReadyEvent&#xa;&#xa;Service config ready for&#xa;orchestration + assurance." style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=default;fontSize=11;align=left;spacingLeft=8;container=0;" parent="1" vertex="1">
+                <mxCell id="evt_ready" value="IntentNetworkReadyEvent&#xa;&#xa;Service config ready for&#xa;change execution + assurance." style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=default;fontSize=11;align=left;spacingLeft=8;container=0;" parent="1" vertex="1">
                     <mxGeometry x="1115" y="985" width="200" height="75" as="geometry"/>
                 </mxCell>
                 <mxCell id="ds_optimiser" value="Optimiser" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=default;fontSize=11;container=0;" parent="1" vertex="1">

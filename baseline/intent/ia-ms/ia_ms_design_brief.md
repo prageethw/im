@@ -75,7 +75,7 @@ ce-source: intent-intelligence-ms
 
 `IntentNetworkReadyEvent.serviceConfiguration.orchestratorConfiguration.resources[]` carries the selected apply configuration. `IntentNetworkReadyEvent.serviceConfiguration.observerConfiguration.resources[]` carries the full assurance observation scope that IA MS must observe.
 
-Within `observerConfiguration.resources[]`, `metrics` is a list of metric names to observe, not metric values. Example metric names are `latencyMs`, `availabilityPercent`, `jitterMs`, and `packetLossPercent`.
+Within `serviceConfiguration.observerConfiguration.resources[]`, `metrics` is a list of metric names to observe, not metric values. Example metric names are `latencyMs`, `availabilityPercent`, `jitterMs`, and `packetLossPercent`.
 
 ## Callback handling baseline
 
@@ -88,14 +88,14 @@ Within `observerConfiguration.resources[]`, `metrics` is a list of metric names 
 | `IntentCallbackEvent` consumption | IA MS |
 | `intentId` existence/correlation validation | IA MS |
 | Unknown `intentId` dead-letter decision | IA MS |
-| Source/orchestrator type derivation | IA MS |
+| Source/change-execution type derivation | IA MS |
 | Raw `sourceState.state` mapping | IA MS |
 | Skip/unmapped callback handling | IA MS |
 | Assurance/lifecycle event publication | IA MS |
 
 The canonical `IntentCallbackEvent` fields consumed by IA are `callbackSource`, `callbackTimestamp`, and `sourceState`.
 
-`sourceState.state` carries the raw source/orchestrator state value. IA maps `sourceState.state` into lifecycle/assurance meaning.
+`sourceState.state` carries the raw source/change-execution state value. IA maps `sourceState.state` into lifecycle/assurance meaning.
 
 ## IntentAssuranceEvent baseline
 

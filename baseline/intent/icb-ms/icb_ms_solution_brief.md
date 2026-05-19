@@ -1,7 +1,7 @@
 # Intent Callback MS Solution Brief
 ## Summary:
 
-Intent Callback MS, referred to as ICB MS, is the thin callback ingestion service for the Intent Management Enabler platform. It accepts callback submissions from trusted external orchestration or application systems through the API Gateway, performs technical authorisation and structural validation, durably records the accepted callback fact, and publishes a raw internal `IntentCallbackEvent` to the dedicated callback Kafka topic for IA MS.
+Intent Callback MS, referred to as ICB MS, is the thin callback ingestion service for the Intent Management Enabler platform. It accepts callback submissions from trusted external change-execution or application systems through the API Gateway, performs technical authorisation and structural validation, durably records the accepted callback fact, and publishes a raw internal `IntentCallbackEvent` to the dedicated callback Kafka topic for IA MS.
 
 ICB MS does not interpret the callback meaning. It does not decide whether a callback means `Active`, `Failed`, `Terminated`, `Degraded`, or any other lifecycle or assurance outcome. IA MS is the normalisation and interpretation point. IA MS consumes `IntentCallbackEvent`, correlates the `intentId`, interprets raw `sourceState.state`, and emits lifecycle-driving `IntentAssuranceEvent` outcomes to the main internal event flow.
 
@@ -171,7 +171,7 @@ ETag: "callback-submission-cb-sub-0001-v1"
 | Field | Required | Validation | Notes |
 |---|---:|---|---|
 | `intentId` | Yes | Required, non-empty string | Syntax only. IA MS validates existence and correlation. |
-| `callbackSource` | Yes | Required, non-empty string | Identifies the external source/orchestrator instance. Gateway identity remains authoritative for trust. |
+| `callbackSource` | Yes | Required, non-empty string | Identifies the external source/change-execution instance. Gateway identity remains authoritative for trust. |
 | `callbackTimestamp` | Yes | ISO 8601 date-time | Source-reported callback time. Distinct from ICB receive time and Kafka publish time. |
 | `sourceState.state` | Yes | Required, non-empty string | Raw source-owned state. IA MS interprets it. ICB MS does not map it. |
 | `sourceState.reason` | No | String when supplied | Human-readable source reason or explanatory detail. |
@@ -186,10 +186,10 @@ ETag: "callback-submission-cb-sub-0001-v1"
 | Field | Reason |
 |---|---|
 | `callbackType` | Not an ICB contract field in the current design direction. ICB MS must not classify callback meaning through a platform callback vocabulary. Raw meaning is carried by `sourceState.state` and interpreted by IA MS. |
-| `orchestratorState` | Retired legacy shape. Use `sourceState.state`. |
+| `orchestratorState` | Retired legacy callback state field. Use `sourceState.state`. |
 | `source` | Retired legacy shape. Use `callbackSource`. |
 | `timestamp` | Retired legacy shape. Use `callbackTimestamp`. |
-| `orchestratorType` | IA MS derives source/change-execution type from its own state/configuration where required. |
+| `orchestratorType` | Retired legacy callback source-type field. IA MS derives source/change-execution type from its own state/configuration where required. |
 | `lifecycleStatus` | ICB MS does not accept or emit lifecycle state. |
 | `assuranceStatus` | ICB MS does not accept or emit assurance state. |
 | `targets`, `constraints`, `preferences` | These are intent expression/optimisation concepts and must not be included in callback events. |
@@ -259,7 +259,7 @@ ICB MS follows the IME DB baseline: managed PostgreSQL or PostgreSQL-compatible 
 |---|---|---|
 | `id` | UUID / platform identifier | Primary callback submission identifier. |
 | `intent_id` | VARCHAR | Copied from `intentId`; syntax only in ICB. |
-| `callback_source` | VARCHAR | External source/orchestrator identifier. |
+| `callback_source` | VARCHAR | External source/change-execution identifier. |
 | `callback_timestamp` | TIMESTAMPTZ | Source-reported callback time. |
 | `source_state` | VARCHAR | Raw `sourceState.state`. |
 | `source_reference_id` | VARCHAR | Optional external source reference identifier. |
@@ -428,7 +428,7 @@ value:
 |---|---:|---|---|
 | `body.callbackId` | Yes | String | ICB callback submission/outbox identifier. |
 | `body.intentId` | Yes | String | Present and non-empty; ICB checks syntax only. |
-| `body.callbackSource` | Yes | String | External source/orchestrator identifier. |
+| `body.callbackSource` | Yes | String | External source/change-execution identifier. |
 | `body.callbackTimestamp` | Yes | ISO 8601 date-time | Source-reported callback time. |
 | `body.sourceState.state` | Yes | String | Raw source state; not interpreted by ICB MS. |
 | `body.sourceState.reason` | No | String | Optional source-provided explanation. |
@@ -442,7 +442,7 @@ value:
 
 | Older draft item | Current baseline treatment |
 |---|---|
-| `orchestratorState` | Replaced by `sourceState.state`. |
+| Retired legacy callback state field | Replaced by `sourceState.state`. |
 | `source` | Replaced by `callbackSource`. |
 | `timestamp` | Replaced by `callbackTimestamp`. |
 | `callbackType` in request/event | Not used as an ICB classification field in this solution brief. |
@@ -526,7 +526,7 @@ Duplicate submissions must not create duplicate internal callback facts. The ser
 |---:|---|---|
 | 1 | IA MS | Consumes `IntentCallbackEvent` from `t7.intent.management.events.callbacks`. |
 | 2 | IA MS | Validates/correlates `intentId` against IA-owned state. |
-| 3 | IA MS | Resolves source/orchestrator context from IA-owned configuration/state where required. |
+| 3 | IA MS | Resolves source/change-execution context from IA-owned configuration/state where required. |
 | 4 | IA MS | Maps raw `sourceState.state` into assurance/lifecycle-driving outcome. |
 | 5 | IA MS | Handles unmapped/skip states according to IA policy with logging/audit. |
 | 6 | IA MS | Writes assurance outcome and IA outbox record. |
