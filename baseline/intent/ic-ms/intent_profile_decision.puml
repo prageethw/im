@@ -1,0 +1,89 @@
+@startuml
+title Intent mandatory profile proposal
+
+skinparam shadowing false
+skinparam defaultTextAlignment center
+skinparam packageStyle rectangle
+skinparam ArrowColor #424242
+skinparam RectangleBorderColor #424242
+
+rectangle "TMF921 Intent\nbase resource model" as TMF #EEF2FF
+
+rectangle "Intent management entity\nmandatory profile\n\nTMF-aligned, not TMF-minimal" as PROFILE #E8F5E9
+
+TMF --> PROFILE : intent management entity conformance\ndefines minimum runtime Intent profile
+
+rectangle "Minimal create request" as CREATE #FFF8E1 {
+  rectangle "Mandatory machine-readable fields\n\n- name\n- expression\n- expression.@type\n- expression.iri\n- expression.expressionValue\n- @type\n- @baseType" as CREATE_MIN
+
+  rectangle "Strongly recommended\nfor traceability and speed\n\n- humanExpression\n- intentSpecification.id" as CREATE_RECOMMENDED
+
+  rectangle "Optional / governed enrichment\n\n- description\n- validFor\n- relatedParty\n- priority\n- externalId" as CREATE_OPTIONAL
+}
+
+rectangle "IntentSpecification resolution" as RESOLUTION #FFE0B2 {
+  rectangle "If intentSpecification.id supplied\n\n- authoritative\n- must reference ACTIVE spec\n- must align with expression.iri" as SPEC_ID_SUPPLIED
+
+  rectangle "If intentSpecification.id omitted\n\nResolve ACTIVE IntentSpecification\nusing expression.iri" as SPEC_ID_OMITTED
+
+  rectangle "Reject request if\n\n- zero ACTIVE matches\n- multiple ACTIVE matches\n- supplied id conflicts with iri" as REJECT
+}
+
+rectangle "Persisted / admitted Intent" as PERSISTED #E0F2F1 {
+  rectangle "Mandatory persisted response fields\n\n- id\n- href\n- name\n- version\n- lifecycleStatus\n- statusReason\n- statusChangeDate\n- intentSpecification.id\n- expression\n- expression.@type\n- expression.iri\n- expression.expressionValue\n- @type\n- @baseType" as PERSISTED_MIN
+
+  rectangle "Resolved specification is recorded\n\nintentSpecification.id becomes\nmandatory after admission" as SPEC_RECORDED
+}
+
+rectangle "Lifecycle and version projection" as LIFECYCLE #E3F2FD {
+  rectangle "Top-level lifecycleStatus\n= external lifecycle projection" as STATUS
+  rectangle "version\n= projected runtime version" as VERSION
+  rectangle "activeVersion\n= version driving projection\nwhere a pointer is exposed" as ACTIVE_VERSION
+}
+
+rectangle "Fuller implementation profile" as FULLER #F3E5F5 {
+  rectangle "Useful enrichments\n\n- humanExpression\n- intentSpecification.href\n- description\n- validFor\n- relatedParty\n- priority\n- isBundle\n- _links" as FULLER_FIELDS
+}
+
+PROFILE --> CREATE : submit runtime Intent
+CREATE --> RESOLUTION : resolve governing specification
+RESOLUTION --> PERSISTED : admission succeeds
+RESOLUTION -[#red,dashed]-> CREATE : reject if resolution fails
+PERSISTED --> LIFECYCLE : project state and version
+PROFILE --> FULLER : may add richer\nimplementation fields
+
+note right of CREATE_RECOMMENDED
+humanExpression is not machine-authoritative,
+but improves human interpretation,
+audit, and triage.
+
+intentSpecification.id is not mandatory,
+but improves deterministic validation
+and traceability.
+end note
+
+note right of RESOLUTION
+expression.iri is mandatory.
+
+It is the default runtime
+semantic / expression discriminator
+when intentSpecification.id is omitted.
+end note
+
+note bottom of PERSISTED
+Create request may omit
+intentSpecification.id.
+
+Persisted/admitted response must
+record the resolved specification id.
+end note
+
+note bottom of LIFECYCLE
+Avoid ambiguous pointer names such as
+effectiveVersion or currentVersion.
+
+Use activeVersion where a runtime
+version pointer is exposed.
+end note
+
+@enduml
