@@ -1076,7 +1076,7 @@ Recommended metrics include:
 - `id_ms_cache_bypass_count`
 - `id_ms_cache_write_failure_count`
 - `id_ms_webhook_delivery_pending_count`
-- `id_ms_webhook_delivery_failure_count`
+- `id_ms_webhook_delivery_outbox_failure_count`
 - `id_ms_webhook_delivery_failure_count`
 
 ### Security posture:
@@ -1252,7 +1252,7 @@ Recommended metrics include:
 | `id_ms_cache_bypass_count` | Count of cache bypass events |
 | `id_ms_cache_write_failure_count` | Count of ignored cache-write failures |
 | `id_ms_webhook_delivery_pending_count` | Current pending outbox event count |
-| `id_ms_webhook_delivery_failure_count` | Count of outbox publish failures |
+| `id_ms_webhook_delivery_outbox_failure_count` | Count of outbox publish failures |
 | `id_ms_webhook_delivery_failure_count` | Count of callback/webhook delivery failures |
 | `id_ms_webhook_delivery_retry_count` | Count of callback/webhook retry attempts |
 

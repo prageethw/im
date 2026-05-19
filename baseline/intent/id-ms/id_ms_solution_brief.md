@@ -69,7 +69,7 @@ The baseline surgical hospital slice specification uses:
 - `priority` values of `critical`, `high`, and `standard`
 - canonical `context.targets`, `context.constraints`, and `context.preferences` semantics in the expression model
 
-ID MS validates resource structure, required fields, lifecycle rules, and syntax/schema references. It does not decide whether a submitted runtime intent is semantically feasible or fulfilable in the network. Semantic and policy validation belongs to II MS and the knowledge plane. Runtime assurance belongs to IA MS.
+ID MS validates resource structure, required fields, lifecycle rules, and syntax/schema references. It does not decide whether a submitted runtime intent is semantically feasible or fulfillable in the network. Semantic and policy validation belongs to II MS and the knowledge plane. Runtime assurance belongs to IA MS.
 
 ## Responsibilities:
 
