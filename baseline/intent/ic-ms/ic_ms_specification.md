@@ -133,7 +133,6 @@ Supported explicit reference:
 
 ```json
 {
-  "submit": false,
   "intentSpecification": {
     "id": "hospital-surgical-slice-spec-v1.19"
   },
@@ -978,6 +977,7 @@ If-Match: "intent-INT-HOSP-2026-001-v4"
 
 ```json
 {
+  "submit": false,
   "intentSpecification": {
     "id": "hospital-surgical-slice-spec-v1.20"
   },
