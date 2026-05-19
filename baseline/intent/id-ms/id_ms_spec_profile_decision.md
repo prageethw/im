@@ -1,17 +1,25 @@
-# IntentSpecification mandatory profile decision:
+# IntentSpecification mandatory profile proposal:
 
 ## 1. Decision summary:
 
-This decision defines the minimum mandatory attribute profile for `IntentSpecification` resources on this platform, layered on top of TMF921.
+This proposal defines the minimum mandatory attribute profile for `IntentSpecification` resources on this platform, layered on top of TMF921.
 
 TMF921 provides the generic `IntentSpecification` resource model, operation pattern, and event pattern. It does not prescribe the complete mandatory attribute profile required by every implementation. This platform therefore defines a stricter profile so that `IntentSpecification` resources are usable for catalogue governance, lifecycle management, runtime expression validation, and runtime intent resolution.
 
-The key decisions are:
+The key proposal is:
 
 - define the minimum mandatory attributes for a persisted `DRAFT` `IntentSpecification`
 - define the minimum mandatory attributes for an `ACTIVE` `IntentSpecification`
+- allow controlled incompleteness while a specification is in `DRAFT`
+- block activation unless the full `ACTIVE` mandatory profile is satisfied
+- make `id` mandatory and immutable on every persisted `IntentSpecification`
+- make `expressionSpecification` mandatory for an `ACTIVE` `IntentSpecification`
+- make `expressionSpecification.iri` mandatory inside `expressionSpecification` as the authoritative semantic/expression contract identifier
+- make `expressionSpecification.expressionLanguage` mandatory inside `expressionSpecification` so consumers know how the expression is represented and interpreted
+- make `targetEntitySchema` mandatory for an `ACTIVE` `IntentSpecification` as the authoritative machine-readable validation contract
+- make `specCharacteristic` mandatory for an `ACTIVE` `IntentSpecification` as the catalogue/governance view of supported characteristics
 
-This decision is a platform profile rule. It does not claim that TMF921 universally mandates the same fields for every implementation.
+This proposal defines a candidate platform profile rule. It does not claim that TMF921 universally mandates the same fields for every implementation.
 
 ## 2. Context:
 
@@ -35,7 +43,7 @@ Therefore, the platform needs a mandatory profile that is stricter than the mini
 
 ## 3. Decision drivers:
 
-The decision is driven by the following architecture needs:
+The proposal is driven by the following architecture needs:
 
 | Driver | Need |
 | --- | --- |
@@ -47,7 +55,7 @@ The decision is driven by the following architecture needs:
 | Semantic clarity | Ensure active specifications identify the semantic/expression contract they support. |
 | Evolvability | Allow incomplete drafts while preventing incomplete active contracts. |
 
-## 4. Decision:
+## 4. Proposal:
 
 ### 4.1 TMF-aligned, not TMF-minimal:
 
@@ -61,7 +69,7 @@ The rule is:
 
 ### 4.2 Minimum mandatory profile by lifecycle state:
 
-This decision defines different minimum mandatory profiles for `DRAFT` and `ACTIVE`.
+This proposal defines different minimum mandatory profiles for `DRAFT` and `ACTIVE`.
 
 A `DRAFT` specification must have enough information to be identified, versioned, edited, governed, and safely transitioned later.
 
@@ -85,7 +93,7 @@ An `ACTIVE` specification must have enough information to act as a published run
 | `@type` | Mandatory | Mandatory | TMF polymorphic resource type. |
 | `@baseType` | Mandatory | Mandatory | TMF base type alignment. |
 
-This table is the core architectural decision.
+This table is the core architectural proposal.
 
 ### 4.3 Persisted resource identity:
 
@@ -349,13 +357,13 @@ A runtime intent can then use the corresponding expression IRI:
 }
 ```
 
-A runtime API may choose to make explicit `intentSpecification.id` mandatory, or may choose to resolve the active specification from runtime `expression.iri` when the match is unambiguous. That runtime resolution rule is a separate API decision and is not decided by this specification-profile decision.
+A runtime API may choose to make explicit `intentSpecification.id` mandatory, or may choose to resolve the active specification from runtime `expression.iri` when the match is unambiguous. That runtime resolution rule is a separate API decision and is not decided by this specification-profile proposal.
 
 ## 6. Consequences:
 
 ### 6.1 Positive consequences:
 
-This decision gives the platform:
+If accepted, this proposal gives the platform:
 
 - deterministic specification identity
 - stronger lifecycle governance
@@ -368,7 +376,7 @@ This decision gives the platform:
 
 ### 6.2 Trade-offs:
 
-This decision also means:
+If accepted, this proposal also means:
 
 - the platform is stricter than a minimal TMF implementation
 - clients must provide more information before a specification can become active
@@ -402,13 +410,13 @@ A child field cannot be mandatory for platform behaviour while the parent object
 
 This is deferred to a separate runtime intent API decision.
 
-This decision mandates `id` on every persisted `IntentSpecification`, but runtime submission rules belong to the runtime intent API. A runtime API may still support resolution by runtime `expression.iri` where it is unambiguous.
+This proposal mandates `id` on every persisted `IntentSpecification`, but runtime submission rules belong to the runtime intent API. A runtime API may still support resolution by runtime `expression.iri` where it is unambiguous.
 
-## 8. Decision outcome:
+## 8. Proposal outcome:
 
-The decision is accepted as the platform `IntentSpecification` mandatory profile baseline.
+This proposal recommends adopting a platform `IntentSpecification` mandatory profile baseline.
 
-The platform will document and enforce a lifecycle-aware `IntentSpecification` mandatory profile:
+If accepted, the platform will document and enforce a lifecycle-aware `IntentSpecification` mandatory profile:
 
 - `DRAFT` requires identity and lifecycle-management fields.
 - `ACTIVE` requires the full platform runtime contract profile.
@@ -420,7 +428,7 @@ The platform will document and enforce a lifecycle-aware `IntentSpecification` m
 
 ## 9. Follow-up work:
 
-After this decision is baselined, update the affected architecture and specification artifacts surgically:
+After this proposal is reviewed and baselined, update the affected architecture and specification artifacts surgically:
 
 - document the platform mandatory profile
 - clarify DRAFT versus ACTIVE validation
