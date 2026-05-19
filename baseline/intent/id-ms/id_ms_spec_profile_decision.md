@@ -2,20 +2,22 @@
 
 ## 1. Decision summary
 
-This decision defines a platform-specific mandatory profile for `IntentSpecification`, layered on top of TMF921.
+This decision defines the minimum mandatory attribute profile for `IntentSpecification` resources on this platform, layered on top of TMF921.
 
 TMF921 provides the generic `IntentSpecification` resource model, operation pattern, and event pattern. It does not prescribe the complete mandatory attribute profile required by every implementation. This platform therefore defines a stricter profile so that `IntentSpecification` resources are usable for catalogue governance, lifecycle management, runtime expression validation, and runtime intent resolution.
 
 The key decision is:
 
-- TMF921 alignment is the base model.
-- Platform conformance defines the mandatory profile.
-- `DRAFT` specifications may be incomplete within controlled limits.
-- `ACTIVE` specifications must be complete enough to be safely discovered, governed, resolved, and used by runtime intent processing.
-- `id` is mandatory on every persisted `IntentSpecification` resource.
-- `expressionSpecification` is mandatory for an `ACTIVE` `IntentSpecification`.
-- `expressionSpecification.iri` is mandatory inside `expressionSpecification` and is the authoritative semantic/expression contract identifier.
-- `expressionSpecification.expressionLanguage` is mandatory inside `expressionSpecification` so consumers know how the expression is represented and interpreted.
+- define the minimum mandatory attributes for a persisted `DRAFT` `IntentSpecification`
+- define the minimum mandatory attributes for an `ACTIVE` `IntentSpecification`
+- allow controlled incompleteness while a specification is in `DRAFT`
+- block activation unless the full `ACTIVE` mandatory profile is satisfied
+- make `id` mandatory and immutable on every persisted `IntentSpecification`
+- make `expressionSpecification` mandatory for an `ACTIVE` `IntentSpecification`
+- make `expressionSpecification.iri` mandatory inside `expressionSpecification` as the authoritative semantic/expression contract identifier
+- make `expressionSpecification.expressionLanguage` mandatory inside `expressionSpecification` so consumers know how the expression is represented and interpreted
+- make `targetEntitySchema` mandatory for an `ACTIVE` `IntentSpecification` as the authoritative machine-readable validation contract
+- make `specCharacteristic` mandatory for an `ACTIVE` `IntentSpecification` as the catalogue/governance view of supported characteristics
 
 This decision is a platform profile rule. It does not claim that TMF921 universally mandates the same fields for every implementation.
 
@@ -65,7 +67,35 @@ The rule is:
 
 > TMF-aligned does not mean TMF-minimal.
 
-### 4.2 Persisted resource identity
+### 4.2 Minimum mandatory profile by lifecycle state
+
+This decision defines different minimum mandatory profiles for `DRAFT` and `ACTIVE`.
+
+A `DRAFT` specification must have enough information to be identified, versioned, edited, governed, and safely transitioned later.
+
+An `ACTIVE` specification must have enough information to act as a published runtime contract for discovery, validation, governance, and runtime resolution.
+
+| Field | DRAFT | ACTIVE | Reason |
+| --- | --- | --- | --- |
+| `id` | Mandatory | Mandatory | Stable immutable resource identity. |
+| `href` | Mandatory | Mandatory | Canonical resource URL for TMF-style navigation and references. |
+| `name` | Mandatory | Mandatory | Human-readable catalogue name. |
+| `familyId` | Mandatory | Mandatory | Groups versions of the same logical specification family. |
+| `version` | Mandatory | Mandatory | Version identity within the family. |
+| `lifecycleStatus` | Mandatory | Mandatory | Identifies whether the specification is draft, active, or retired. |
+| `isBundle` | Mandatory | Mandatory | Clarifies whether the specification is a bundle. |
+| `validFor.startDateTime` | Optional | Mandatory | Defines when the active contract becomes valid. |
+| `expressionSpecification` | Optional | Mandatory | Defines the expression contract metadata. |
+| `expressionSpecification.iri` | Optional | Mandatory | Authoritative semantic/expression contract identifier. |
+| `expressionSpecification.expressionLanguage` | Optional | Mandatory | Defines the expression representation and interpretation model. |
+| `targetEntitySchema` | Optional | Mandatory | Authoritative validation contract for runtime expression values. |
+| `specCharacteristic` | Optional | Mandatory | Catalogue/discovery/governance view of supported characteristics. |
+| `@type` | Mandatory | Mandatory | TMF polymorphic resource type. |
+| `@baseType` | Mandatory | Mandatory | TMF base type alignment. |
+
+This table is the core architectural decision.
+
+### 4.3 Persisted resource identity
 
 `id` is mandatory on every persisted `IntentSpecification` resource.
 
@@ -87,7 +117,7 @@ After creation, `id` is immutable.
 
 `href` is also mandatory on persisted and returned resources because it provides the canonical resource URL for TMF-style navigation and event references.
 
-### 4.3 DRAFT profile
+### 4.4 DRAFT profile
 
 A `DRAFT` specification may be incomplete because it is still being authored. However, it must contain enough information to be managed, versioned, and governed.
 
@@ -107,7 +137,7 @@ Mandatory fields for a persisted `DRAFT` `IntentSpecification`:
 
 A `DRAFT` may omit fields that are required later for activation, such as `targetEntitySchema`, complete `specCharacteristic`, or complete `expressionSpecification`, provided the resource is not activated until the ACTIVE profile is satisfied.
 
-### 4.4 ACTIVE profile
+### 4.5 ACTIVE profile
 
 An `ACTIVE` specification is a published runtime contract. It must be complete enough for discovery, governance, validation, and runtime resolution.
 
@@ -145,7 +175,7 @@ Optional TMF fields may still be used when relevant, including:
 
 These fields are not universally mandatory for every active specification unless a specific use case, product rule, governance rule, or integration rule requires them.
 
-### 4.5 expressionSpecification rule
+### 4.6 expressionSpecification rule
 
 For an `ACTIVE` `IntentSpecification`, `expressionSpecification` is mandatory.
 
@@ -160,7 +190,7 @@ The `expressionLanguage` identifies how the expression is represented and interp
 
 If `expressionSpecification.iri` is mandatory, then `expressionSpecification` itself is necessarily mandatory. The parent object cannot be optional when one of its child fields is required for platform behaviour.
 
-### 4.6 targetEntitySchema rule
+### 4.7 targetEntitySchema rule
 
 For an `ACTIVE` `IntentSpecification`, `targetEntitySchema` is mandatory.
 
@@ -180,7 +210,7 @@ preferences[]
 
 `targetEntitySchema` should not be replaced by `specCharacteristic`. The two fields serve different purposes.
 
-### 4.7 specCharacteristic rule
+### 4.8 specCharacteristic rule
 
 For an `ACTIVE` `IntentSpecification`, `specCharacteristic` is mandatory.
 
@@ -194,7 +224,7 @@ The preferred pattern is:
 - `targetEntitySchema` gives detailed machine validation
 - `expressionSpecification.iri` identifies the semantic/expression contract
 
-### 4.8 Lifecycle-aware validation
+### 4.9 Lifecycle-aware validation
 
 The platform applies lifecycle-aware validation.
 
