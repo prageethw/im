@@ -1,5 +1,3 @@
-# ic_ms_specification.md:
-
 ## IC MS Specification:
 
 ### Service identity:
@@ -135,6 +133,7 @@ Supported explicit reference:
 
 ```json
 {
+  "submit": false,
   "intentSpecification": {
     "id": "hospital-surgical-slice-spec-v1.19"
   },
@@ -188,6 +187,7 @@ Baseline:
 ### Intent-level lifecycleStatus values:
 
 ```text
+Draft
 Acknowledged
 InProgress
 Active
@@ -201,6 +201,7 @@ Terminated
 ### Intent-version lifecycleStatus values:
 
 ```text
+Draft
 Acknowledged
 InProgress
 Active
@@ -224,6 +225,24 @@ Each internal Intent version also has its own version-level `lifecycleStatus`. V
 `GET /intent/{id}` returns the current projected `Intent` state for that Intent ID. It does not return the full internal version aggregate by default. The returned `version` is the projected runtime version.
 
 Historical version state such as `Standby`, `Retired`, rollback candidates, and previous versions remains internal unless exposed through `IntentReport` or a documented platform extension.
+
+### Draft, submit, and external update rule:
+
+External consumers must not set or patch `lifecycleStatus`. `lifecycleStatus` is assigned, transitioned, and projected by the intent management entity. IA MS determines assurance/runtime meaning and IC MS exposes the projected TMF-facing lifecycle state.
+
+`submit` is an approved IC MS extension request-control field. It is not a lifecycle field. `submit: false` requests that the Intent be saved or kept as `Draft`. `submit: true` requests submission for admission.
+
+If `submit` is omitted on initial create, IC MS treats the request as `submit: true`. If an Intent is persisted with `submit: false`, later omission of `submit` must preserve draft handling and must not automatically submit the Intent. A draft Intent is submitted only when a later request explicitly sets `submit: true`.
+
+While `lifecycleStatus = Draft`, all attributes accepted by the `PUT` / `PATCH` request contract are mutable. The `PUT` / `PATCH` request contract must not expose `lifecycleStatus` as a writable attribute.
+
+`id` is immutable. If `id` appears in a full-replacement `PUT` request, it must match the path `id` and is used only for consistency checking; it cannot be changed.
+
+Response/projection fields such as `href`, `version`, `lifecycleStatus`, `statusReason`, `statusChangeDate`, `activeVersion`, and `_links` are not writable request fields unless explicitly documented otherwise.
+
+Once an Intent leaves `Draft`, general attribute update on that submitted version is not allowed. Material changes after submission require creating a new Draft version, editing that Draft version, and explicitly submitting it with `submit: true`.
+
+Draft Intents are authoring records only. They are not admitted, optimised, assured, sent to downstream change execution, or used to drive `activeVersion`.
 
 ### Intent version transition rules:
 
@@ -380,6 +399,7 @@ Accept: application/json
   "name": "Sydney Hospital Surgical Connection Intent",
   "description": "Request for a surgical connection in Sydney Hospital.",
   "humanExpression": "I need a surgical connection in Sydney Hospital with latency less than or equal to 10 ms and availability at least 99.99%.",
+  "submit": true,
   "intentSpecification": {
     "id": "hospital-surgical-slice-spec-v1.20"
   },
@@ -455,6 +475,7 @@ Last-Modified: Sat, 18 Apr 2026 02:00:00 GMT
   "name": "Sydney Hospital Surgical Connection Intent",
   "description": "Request for a surgical connection in Sydney Hospital.",
   "humanExpression": "I need a surgical connection in Sydney Hospital with latency less than or equal to 10 ms and availability at least 99.99%.",
+  "submit": true,
   "version": "v1",
   "lifecycleStatus": "Acknowledged",
   "statusReason": "Intent request accepted for semantic validation and fulfilment.",
@@ -530,9 +551,57 @@ Last-Modified: Sat, 18 Apr 2026 02:00:00 GMT
 }
 ```
 
+### Create as Draft example:
+
+A caller can create an Intent as a draft by setting `submit: false`. A Draft Intent is persisted for authoring only and is not admitted, optimised, assured, or sent to downstream change execution.
+
+```http
+POST /intentManagement/v5/intent?fields=id,href,name,humanExpression,submit,version,lifecycleStatus,statusReason,statusChangeDate,@type,@baseType
+Content-Type: application/json
+Accept: application/json
+```
+
+```json
+{
+  "name": "Sydney Hospital Surgical Connection Intent",
+  "humanExpression": "I need a surgical connection in Sydney Hospital with latency less than or equal to 10 ms.",
+  "submit": false,
+  "@type": "Intent",
+  "@baseType": "Entity"
+}
+```
+
+```http
+HTTP/1.1 201 Created
+Location: /intentManagement/v5/intent/INT-HOSP-2026-001
+Content-Type: application/json
+Content-Language: en-AU
+ETag: "intent-INT-HOSP-2026-001-v1"
+```
+
+```json
+{
+  "id": "INT-HOSP-2026-001",
+  "href": "/intentManagement/v5/intent/INT-HOSP-2026-001",
+  "name": "Sydney Hospital Surgical Connection Intent",
+  "humanExpression": "I need a surgical connection in Sydney Hospital with latency less than or equal to 10 ms.",
+  "submit": false,
+  "version": "v1",
+  "lifecycleStatus": "Draft",
+  "statusReason": "Intent saved as draft and not submitted for admission.",
+  "statusChangeDate": "2026-04-18T12:00:00+10:00",
+  "@type": "Intent",
+  "@baseType": "Entity"
+}
+```
+
 ### Create validation rule:
 
-IC MS emits `IntentValidatedEvent` after syntactic validation succeeds and the external Intent projection is persisted.
+If `submit` is omitted on create, IC MS treats the request as submitted for admission.
+
+If `submit: false` is supplied, IC MS persists the Intent as `Draft` and does not emit `IntentValidatedEvent`, optimise, assure, or send the Intent to downstream change execution.
+
+If `submit: true` is supplied, IC MS applies the runtime admission profile. IC MS emits `IntentValidatedEvent` after syntactic validation succeeds and the external Intent projection is persisted.
 
 `IntentValidatedEvent` is a state/progress event, not a point-to-point command for a specific consumer.
 
@@ -731,7 +800,7 @@ Content-Language: en-AU
 ### Request:
 
 ```http
-PUT /intentManagement/v5/intent/INT-HOSP-2026-001?fields=id,href,name,description,humanExpression,version,lifecycleStatus,statusReason,statusChangeDate,intentSpecification,expression,validFor,isBundle,priority,relatedParty,@type,@baseType
+PUT /intentManagement/v5/intent/INT-HOSP-2026-001?fields=id,href,name,description,humanExpression,submit,intentSpecification,expression,validFor,isBundle,priority,relatedParty,@type,@baseType
 Content-Type: application/json
 Accept: application/json
 If-Match: "intent-INT-HOSP-2026-001-v3"
@@ -743,6 +812,7 @@ If-Match: "intent-INT-HOSP-2026-001-v3"
   "name": "Sydney Hospital Surgical Connection Intent",
   "description": "Updated surgical connection request with lower latency target.",
   "humanExpression": "I need a surgical connection in Sydney Hospital with latency less than or equal to 8 ms and availability at least 99.99%.",
+  "submit": false,
   "intentSpecification": {
     "id": "hospital-surgical-slice-spec-v1.20"
   },
@@ -813,9 +883,10 @@ ETag: "intent-INT-HOSP-2026-001-v4"
   "name": "Sydney Hospital Surgical Connection Intent",
   "description": "Updated surgical connection request with lower latency target.",
   "humanExpression": "I need a surgical connection in Sydney Hospital with latency less than or equal to 8 ms and availability at least 99.99%.",
+  "submit": false,
   "version": "v4",
-  "lifecycleStatus": "Acknowledged",
-  "statusReason": "Updated intent version accepted for semantic validation and fulfilment.",
+  "lifecycleStatus": "Draft",
+  "statusReason": "Draft intent updated and not submitted for admission.",
   "statusChangeDate": "2026-04-18T12:00:00+10:00",
   "intentSpecification": {
     "id": "hospital-surgical-slice-spec-v1.20",
@@ -880,7 +951,17 @@ ETag: "intent-INT-HOSP-2026-001-v4"
 
 `PUT` is a platform extension for deterministic full replacement.
 
-If meaningful runtime content changes, IC MS creates a new runtime Intent version.
+`PUT` is allowed only while the current Intent version is in `Draft`.
+
+For a Draft Intent, all attributes accepted by the `PUT` request contract are mutable. The request contract does not expose `lifecycleStatus` as writable.
+
+`id` is immutable. If `id` is supplied in the `PUT` body, it must match the path `id`; otherwise IC MS returns `409 Conflict` or `400 Bad Request` depending on validation policy.
+
+If `submit: false` is supplied or `submit` is omitted on an existing Draft Intent, the Intent remains `Draft`.
+
+If `submit: true` is supplied, IC MS validates the runtime admission profile and, if accepted, moves the projected lifecycle to `Acknowledged`.
+
+Once an Intent leaves `Draft`, full replacement on that submitted version is not allowed. Material changes require creating a new Draft version.
 
 ---
 
@@ -889,7 +970,7 @@ If meaningful runtime content changes, IC MS creates a new runtime Intent versio
 ### Request:
 
 ```http
-PATCH /intentManagement/v5/intent/INT-HOSP-2026-001?fields=id,href,name,version,lifecycleStatus,statusReason,statusChangeDate,intentSpecification,expression,validFor,isBundle,priority,@type,@baseType
+PATCH /intentManagement/v5/intent/INT-HOSP-2026-001?fields=id,href,name,submit,intentSpecification,expression,validFor,isBundle,priority,@type,@baseType
 Content-Type: application/json
 Accept: application/json
 If-Match: "intent-INT-HOSP-2026-001-v4"
@@ -948,9 +1029,10 @@ ETag: "intent-INT-HOSP-2026-001-v5"
   "name": "Sydney Hospital Surgical Connection Intent",
   "description": "Patched surgical connection request with lower latency target.",
   "humanExpression": "I need a surgical connection in Sydney Hospital with latency less than or equal to 10 ms and availability at least 99.99%.",
+  "submit": false,
   "version": "v5",
-  "lifecycleStatus": "Acknowledged",
-  "statusReason": "Patched intent version accepted for semantic validation and fulfilment.",
+  "lifecycleStatus": "Draft",
+  "statusReason": "Draft intent patched and not submitted for admission.",
   "statusChangeDate": "2026-04-18T12:00:00+10:00",
   "intentSpecification": {
     "id": "hospital-surgical-slice-spec-v1.20",
@@ -1015,7 +1097,15 @@ ETag: "intent-INT-HOSP-2026-001-v5"
 
 `PATCH` is supported for TMF compatibility but is not encouraged for ordinary edits where deterministic full replacement through `PUT` is available.
 
-If the patch changes meaningful runtime content, IC MS creates a new runtime Intent version.
+`PATCH` is allowed only while the current Intent version is in `Draft`.
+
+For a Draft Intent, all attributes accepted by the `PATCH` request contract are mutable. The request contract does not expose `id` or `lifecycleStatus` as writable patch attributes.
+
+If `submit: false` is supplied or `submit` is omitted on an existing Draft Intent, the Intent remains `Draft`.
+
+If `submit: true` is supplied, IC MS validates the runtime admission profile and, if accepted, moves the projected lifecycle to `Acknowledged`.
+
+Once an Intent leaves `Draft`, partial update on that submitted version is not allowed. Material changes require creating a new Draft version.
 
 ---
 
@@ -1549,6 +1639,24 @@ Content-Type: application/json
 
 ---
 
+### Submitted Intent update not allowed:
+
+```http
+HTTP/1.1 409 Conflict
+Content-Type: application/json
+```
+
+```json
+{
+  "code": "INVALID_STATE_TRANSITION",
+  "reason": "INTENT_NOT_DRAFT",
+  "message": "Intent attributes can be updated only while the Intent is in Draft. Create a new Draft version for material changes after submission.",
+  "status": 409,
+  "referenceError": "https://mycsp.com.au/errors/INVALID_STATE_TRANSITION",
+  "@type": "Error"
+}
+```
+
 ## 15A. External event timestamp rule:
 
 External TMF-aligned event examples populate both `eventTime` and `timeOccurred` with the same canonical event occurrence timestamp. `timeOccurred` is the platform-corrected spelling used consistently across ID MS and IC MS external event examples. TMF921 examples contain the misspelled `timeOcurred`; this baseline intentionally uses the corrected spelling while preserving the same timestamp semantics.
@@ -1921,8 +2029,13 @@ Baseline:
 - `expression.iri` is the default runtime validation discriminator when `intentSpecification.id` is not supplied.
 - Normal governance expects one matching `ACTIVE` `IntentSpecification` per expression IRI; ambiguity or no match is rejected.
 - `DELETE /intent/{id}` is termination, not physical deletion.
-- `PUT /intent/{id}` is a platform extension for deterministic full replacement.
-- `PATCH /intent/{id}` is supported for TMF compatibility but not encouraged for ordinary edits.
+- `submit` is an approved IC MS extension request-control field; `submit: false` saves or keeps an Intent as `Draft`, and `submit: true` submits it for admission.
+- If `submit` is omitted on initial create, IC MS treats the request as submitted for admission.
+- If an Intent is already persisted with `submit: false`, later omission of `submit` preserves Draft handling and must not automatically submit the Intent.
+- External consumers must not set or patch `lifecycleStatus`; lifecycle is assigned, transitioned, and projected by the intent management entity.
+- `PUT /intent/{id}` is a platform extension for deterministic full replacement and is allowed only while the current Intent version is in `Draft`.
+- `PATCH /intent/{id}` is supported for TMF compatibility and is allowed only while the current Intent version is in `Draft`.
+- Once an Intent leaves `Draft`, material changes require creating a new Draft version.
 - ETag is used for unsafe-operation concurrency through `If-Match`.
 - GET responses may use bounded private caching.
 - Clients may request a fresh GET using `Cache-Control: no-cache`.
@@ -1963,6 +2076,7 @@ IC MS accepts and projects runtime Intent resources using the external runtime e
   "name": "Sydney Hospital Surgical Connection Intent",
   "description": "Request for a surgical connection in Sydney Hospital.",
   "humanExpression": "I need a surgical connection in Sydney Hospital with latency less than or equal to 10 ms and availability at least 99.99%.",
+  "submit": true,
   "intentSpecification": {
     "id": "hospital-surgical-slice-spec-v1.20"
   },
