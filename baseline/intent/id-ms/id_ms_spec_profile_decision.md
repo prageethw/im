@@ -6,18 +6,10 @@ This decision defines the minimum mandatory attribute profile for `IntentSpecifi
 
 TMF921 provides the generic `IntentSpecification` resource model, operation pattern, and event pattern. It does not prescribe the complete mandatory attribute profile required by every implementation. This platform therefore defines a stricter profile so that `IntentSpecification` resources are usable for catalogue governance, lifecycle management, runtime expression validation, and runtime intent resolution.
 
-The key decision is:
+The key decisions are:
 
 - define the minimum mandatory attributes for a persisted `DRAFT` `IntentSpecification`
 - define the minimum mandatory attributes for an `ACTIVE` `IntentSpecification`
-- allow controlled incompleteness while a specification is in `DRAFT`
-- block activation unless the full `ACTIVE` mandatory profile is satisfied
-- make `id` mandatory and immutable on every persisted `IntentSpecification`
-- make `expressionSpecification` mandatory for an `ACTIVE` `IntentSpecification`
-- make `expressionSpecification.iri` mandatory inside `expressionSpecification` as the authoritative semantic/expression contract identifier
-- make `expressionSpecification.expressionLanguage` mandatory inside `expressionSpecification` so consumers know how the expression is represented and interpreted
-- make `targetEntitySchema` mandatory for an `ACTIVE` `IntentSpecification` as the authoritative machine-readable validation contract
-- make `specCharacteristic` mandatory for an `ACTIVE` `IntentSpecification` as the catalogue/governance view of supported characteristics
 
 This decision is a platform profile rule. It does not claim that TMF921 universally mandates the same fields for every implementation.
 
