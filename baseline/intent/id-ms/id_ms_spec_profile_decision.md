@@ -12,6 +12,9 @@ The key proposals are:
 - define the minimum mandatory attributes for an `ACTIVE` `IntentSpecification`
 
 This proposal defines a candidate platform profile rule. It does not claim that TMF921 universally mandates the same fields for every implementation.
+## 2. Proposal flow diagram:
+
+![IntentSpecification mandatory profile proposal](id_ms_spec_profile_decision.svg)
 
 ## 2. Context:
 
