@@ -4,53 +4,68 @@ title IntentSpecification mandatory profile proposal
 skinparam shadowing false
 skinparam defaultTextAlignment center
 skinparam packageStyle rectangle
+skinparam ArrowColor #424242
+skinparam RectangleBorderColor #424242
 
 rectangle "TMF921 IntentSpecification\nbase resource model" as TMF #EEF2FF
 
-rectangle "Platform mandatory profile\nTMF-aligned, not TMF-minimal" as PROFILE #E8F5E9
+rectangle "Intent management entity\nmandatory profile\n\nTMF-aligned, not TMF-minimal" as PROFILE #E8F5E9
 
-TMF --> PROFILE : platform conformance\nadds lifecycle-aware rules
+TMF --> PROFILE : intent management entity conformance\ndefines minimum mandatory attributes
 
-rectangle "DRAFT IntentSpecification" as DRAFT #FFF8E1 {
-  rectangle "Minimum mandatory fields\n\n- id\n- href\n- name\n- familyId\n- version\n- lifecycleStatus = DRAFT\n- isBundle\n- @type\n- @baseType" as DRAFT_FIELDS
-  rectangle "Allowed to be incomplete\nwhile authored" as DRAFT_INCOMPLETE
+rectangle "Minimal DRAFT profile" as DRAFT #FFF8E1 {
+  rectangle "Create request minimum\n\n- name\n- version\n- lifecycleStatus = DRAFT\n- isBundle\n- @type\n- @baseType" as DRAFT_REQ
+  rectangle "Persisted response minimum\n\nRequest fields plus:\n- id\n- href" as DRAFT_RESP
+  rectangle "May omit until activation\n\n- validFor.startDateTime\n- expressionSpecification\n- expressionSpecification.iri\n- expressionSpecification.expressionLanguage\n- targetEntitySchema\n- specCharacteristic" as DRAFT_OMIT
 }
 
 rectangle "Activation gate" as GATE #FFE0B2 {
-  rectangle "Validate ACTIVE profile\n\nReject with 422 if required\nACTIVE fields are missing" as VALIDATE
+  rectangle "Validate ACTIVE minimum profile\n\nReject activation if required\nACTIVE fields are missing\n\nPreferred error:\n422 Unprocessable Entity" as VALIDATE
 }
 
-rectangle "ACTIVE IntentSpecification" as ACTIVE #E0F2F1 {
-  rectangle "Minimum mandatory fields\n\nDRAFT mandatory fields plus:\n- validFor.startDateTime\n- expressionSpecification\n- expressionSpecification.iri\n- expressionSpecification.expressionLanguage\n- targetEntitySchema\n- specCharacteristic" as ACTIVE_FIELDS
-  rectangle "Published runtime contract\nfor discovery, governance,\nvalidation, and resolution" as ACTIVE_CONTRACT
+rectangle "Minimal ACTIVE profile" as ACTIVE #E0F2F1 {
+  rectangle "Active request / response minimum\n\n- id\n- href\n- name\n- version\n- lifecycleStatus = ACTIVE\n- isBundle\n- validFor.startDateTime\n- expressionSpecification\n- expressionSpecification.iri\n- expressionSpecification.expressionLanguage\n- targetEntitySchema\n- specCharacteristic\n- @type\n- @baseType" as ACTIVE_FIELDS
+  rectangle "Published runtime contract\n\nUsable for discovery, governance,\nvalidation, and runtime resolution" as ACTIVE_CONTRACT
 }
 
-rectangle "Runtime intent processing\nseparate API decision" as RUNTIME #F3E5F5 {
-  rectangle "Runtime request may reference\nintentSpecification.id\nor may be resolved by\nexpression.iri if unambiguous" as RUNTIME_RULE
+rectangle "Recommended but not\nminimum mandatory" as OPTIONAL #F3E5F5 {
+  rectangle "Implementation-specific enrichments\n\n- familyId\n- description\n- relatedParty\n- @schemaLocation\n- validFor.endDateTime\n- schemaVersion / schemaHash\n- _links" as OPTIONAL_FIELDS
+}
+
+rectangle "Runtime intent API\nseparate decision" as RUNTIME #ECEFF1 {
+  rectangle "Runtime request rules are not\ndecided by this profile\n\nA runtime API may require\nintentSpecification.id, or may resolve\nby expression.iri when unambiguous." as RUNTIME_RULE
 }
 
 PROFILE --> DRAFT : create / edit as DRAFT
 DRAFT --> GATE : request activation
-GATE --> ACTIVE : profile satisfied
-GATE -[#red,dashed]-> DRAFT : missing required ACTIVE fields
+GATE --> ACTIVE : full ACTIVE profile satisfied
+GATE -[#red,dashed]-> DRAFT : required ACTIVE fields missing
 ACTIVE --> RUNTIME : provides active semantic\nand validation contract
+PROFILE --> OPTIONAL : may add richer\nimplementation profile fields
 
 note right of ACTIVE
 expressionSpecification is mandatory
-when expressionSpecification.iri
+for ACTIVE when expressionSpecification.iri
 is mandatory.
 
 targetEntitySchema is the
 machine-readable validation contract.
 
 specCharacteristic is the
-catalogue/governance view.
+catalogue / governance view.
+end note
+
+note bottom of OPTIONAL
+familyId is useful for version-family
+governance, but it is not part of the
+generic minimum mandatory profile.
 end note
 
 note bottom of RUNTIME
-This diagram captures the proposal only.
-Runtime intent resolution rules belong
-in a separate runtime/API decision.
+This diagram captures the
+IntentSpecification profile proposal only.
+Runtime Intent mandatory-profile rules
+belong in a separate proposal.
 end note
 
 @enduml
