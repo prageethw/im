@@ -1,4 +1,4 @@
-# Intent mandatory profile proposal:
+# Intent mandatory profile proposal
 
 | **Document status** | **Value** |
 | --- | --- |

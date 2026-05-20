@@ -1,4 +1,4 @@
-# IntentSpecification mandatory profile proposal:
+# IntentSpecification mandatory profile proposal
 
 | **Document status** | **Value** |
 | --- | --- |
