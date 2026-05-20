@@ -1,4 +1,41 @@
-# Intent mandatory profile proposal
+# Intent mandatory profile proposal:
+
+| **Document status** | **Value** |
+| --- | --- |
+| Status | Proposed decision paper |
+| Scope | Runtime Intent minimum data requirements |
+| Primary focus | Admission request profile, persisted response profile, Draft request/response minimums, optional enrichment separation |
+| Out of scope | Full lifecycle design, full version-history design, Draft lineage design, implementation routing details |
+| Source of truth after commit | GitHub `baseline/intent/ic-ms/intent_profile_decision.md` |
+
+## Table of contents:
+
+- [1. Decision summary](#1-decision-summary)
+- [2. Proposal flow diagram](#2-proposal-flow-diagram)
+- [3. Context](#3-context)
+- [4. Decision drivers](#4-decision-drivers)
+- [5. Proposal](#5-proposal)
+  - [5.1 TMF-aligned, not TMF-minimal](#51-tmf-aligned-not-tmf-minimal)
+  - [5.2 Runtime Intent admission profile](#52-runtime-intent-admission-profile)
+  - [5.3 Minimum attributes for Intent Draft creation](#53-minimum-attributes-for-intent-draft-creation)
+  - [5.4 Minimum response attributes for Intent Draft creation](#54-minimum-response-attributes-for-intent-draft-creation)
+  - [5.5 IntentSpecification resolution rule](#55-intentspecification-resolution-rule)
+  - [5.6 Persisted response profile after admission](#56-persisted-response-profile-after-admission)
+  - [5.7 Optional intent-management-entity governed enrichment fields](#57-optional-intent-management-entity-governed-enrichment-fields)
+  - [5.8 Lifecycle ownership guardrail](#58-lifecycle-ownership-guardrail)
+- [6. Examples](#6-examples)
+  - [6.1 Minimal admission request](#61-minimal-admission-request)
+  - [6.2 Minimal persisted response after admission](#62-minimal-persisted-response-after-admission)
+- [7. Consequences](#7-consequences)
+  - [7.1 Positive consequences](#71-positive-consequences)
+  - [7.2 Trade-offs](#72-trade-offs)
+- [8. Alternatives considered](#8-alternatives-considered)
+  - [8.1 Make intentSpecification.id mandatory in every admission request](#81-make-intentspecificationid-mandatory-in-every-admission-request)
+  - [8.2 Make humanExpression mandatory](#82-make-humanexpression-mandatory)
+  - [8.3 Allow admission request without expression.iri](#83-allow-admission-request-without-expressioniri)
+- [9. Proposal outcome](#9-proposal-outcome)
+- [10. References](#10-references)
+- [11. Follow-up work](#11-follow-up-work)
 
 ## 1. Decision summary:
 

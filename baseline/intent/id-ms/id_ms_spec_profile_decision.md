@@ -1,5 +1,46 @@
 # IntentSpecification mandatory profile proposal
 
+| **Document status** | **Value** |
+| --- | --- |
+| Status | Proposed decision paper |
+| Scope | IntentSpecification minimum data requirements |
+| Primary focus | DRAFT profile, ACTIVE profile, persisted identity, expression specification, schema, catalogue characteristics, optional/governed enrichment separation |
+| Out of scope | Runtime Intent admission rules, full runtime lifecycle design, implementation routing details |
+| Source of truth after commit | GitHub `baseline/intent/id-ms/id_ms_spec_profile_decision.md` |
+
+## Table of contents:
+
+- [1. Decision summary](#1-decision-summary)
+- [2. Proposal flow diagram](#2-proposal-flow-diagram)
+- [3. Context](#3-context)
+- [4. Decision drivers](#4-decision-drivers)
+- [5. Proposal](#5-proposal)
+  - [5.1 TMF-aligned, not TMF-minimal](#51-tmf-aligned-not-tmf-minimal)
+  - [5.2 Minimum mandatory profile by lifecycle state](#52-minimum-mandatory-profile-by-lifecycle-state)
+  - [5.3 Recommended but not minimum mandatory fields](#53-recommended-but-not-minimum-mandatory-fields)
+  - [5.4 Persisted resource identity](#54-persisted-resource-identity)
+  - [5.5 DRAFT profile](#55-draft-profile)
+  - [5.6 ACTIVE profile](#56-active-profile)
+  - [5.7 expressionSpecification rule](#57-expressionspecification-rule)
+  - [5.8 targetEntitySchema rule](#58-targetentityschema-rule)
+  - [5.9 specCharacteristic rule](#59-speccharacteristic-rule)
+  - [5.10 Lifecycle-aware validation](#510-lifecycle-aware-validation)
+- [6. Examples](#6-examples)
+  - [6.1 Minimal DRAFT create request and response](#61-minimal-draft-create-request-and-response)
+  - [6.2 Minimal ACTIVE update request and response](#62-minimal-active-update-request-and-response)
+  - [6.3 Fuller illustrative example with optional fields](#63-fuller-illustrative-example-with-optional-fields)
+- [7. Consequences](#7-consequences)
+  - [7.1 Positive consequences](#71-positive-consequences)
+  - [7.2 Trade-offs](#72-trade-offs)
+- [8. Alternatives considered](#8-alternatives-considered)
+  - [8.1 Treat TMF optional fields as intent management entity optional](#81-treat-tmf-optional-fields-as-intent-management-entity-optional)
+  - [8.2 Make every useful field mandatory at create time](#82-make-every-useful-field-mandatory-at-create-time)
+  - [8.3 Make expressionSpecification.iri mandatory but not expressionSpecification](#83-make-expressionspecificationiri-mandatory-but-not-expressionspecification)
+  - [8.4 Make runtime intentSpecification.id mandatory everywhere](#84-make-runtime-intentspecificationid-mandatory-everywhere)
+- [9. Proposal outcome](#9-proposal-outcome)
+- [10. References](#10-references)
+- [11. Follow-up work](#11-follow-up-work)
+
 ## 1. Decision summary:
 
 This proposal defines the minimum mandatory attribute profile for `IntentSpecification` resources on the intent management entity, layered on top of TMF921.
@@ -545,6 +586,11 @@ If accepted, the intent management entity will document and enforce a lifecycle-
 | **Reference** | **URL** | **Relevance to this proposal** |
 | --- | --- | --- |
 | TMF921 Intent Management API v5.0.0 specification | https://www.tmforum.org/resources/specification/tmf921-intent-management-api-v5-0-0/ | Defines the TMF921 Intent Management API and the `IntentSpecification` resource model used as the base for the intent management entity profile. |
+| TMF921 Intent Management API v5.0.0 OpenAPI / Swagger artefact | https://www.tmforum.org/resources/specification/tmf921-intent-management-api-v5-0-0/ | Provides the OpenAPI resource and event schemas used to validate the TMF-facing API shape. |
+| TMF921 Intent Management API v5.0.0 conformance profile | https://www.tmforum.org/resources/specification/tmf921-intent-management-api-v5-0-0/ | Provides the TMF conformance context while leaving implementation-specific mandatory profile choices to the intent management entity. |
+| TR292 TM Forum Intent Ontology (TIO) v3.6.0 | https://www.tmforum.org/resources/standard/tr292-intent-ontology-tio-v3-6-0/ | Provides the intent ontology reference model and model-federation context behind semantic/expression contract identifiers. |
+| TR299 Intent Specification | https://www.tmforum.org/resources/standard/tr299-intent-specification/ | Provides the intent specification concept used to describe rules for well-formed intent and allowed intent content. |
+| Intent architecture baseline repository | https://github.com/prageethw/im/tree/main/baseline/intent | Holds the intent architecture baseline and project-specific profile artefacts. |
 
 ## 11. Follow-up work:
 
