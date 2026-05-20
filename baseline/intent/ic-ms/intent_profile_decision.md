@@ -1,6 +1,43 @@
-# Intent mandatory profile proposal:
+# Intent mandatory profile proposal
 
-## 1. Decision summary:
+| **Document status** | **Value** |
+| --- | --- |
+| Status | Proposed decision paper |
+| Scope | Runtime Intent minimum data requirements |
+| Primary focus | Admission request profile, persisted response profile, Draft request/response minimums, optional enrichment separation |
+| Out of scope | Full lifecycle design, full version-history design, Draft lineage design, implementation routing details |
+| Source of truth after commit | GitHub `baseline/intent/ic-ms/intent_profile_decision.md` |
+
+## Table of contents:
+
+- [Decision summary](#decision-summary)
+- [Proposal flow diagram](#proposal-flow-diagram)
+- [Context](#context)
+- [Decision drivers](#decision-drivers)
+- [Proposal](#proposal)
+  - [TMF-aligned, not TMF-minimal](#tmf-aligned-not-tmf-minimal)
+  - [Runtime Intent admission profile](#runtime-intent-admission-profile)
+  - [Minimum attributes for Intent Draft creation](#minimum-attributes-for-intent-draft-creation)
+  - [Minimum response attributes for Intent Draft creation](#minimum-response-attributes-for-intent-draft-creation)
+  - [IntentSpecification resolution rule](#intentspecification-resolution-rule)
+  - [Persisted response profile after admission](#persisted-response-profile-after-admission)
+  - [Optional intent-management-entity governed enrichment fields](#optional-intent-management-entity-governed-enrichment-fields)
+  - [Lifecycle ownership guardrail](#lifecycle-ownership-guardrail)
+- [Examples](#examples)
+  - [Minimal admission request](#minimal-admission-request)
+  - [Minimal persisted response after admission](#minimal-persisted-response-after-admission)
+- [Consequences](#consequences)
+  - [Positive consequences](#positive-consequences)
+  - [Trade-offs](#trade-offs)
+- [Alternatives considered](#alternatives-considered)
+  - [Make intentSpecification.id mandatory in every admission request](#make-intentspecificationid-mandatory-in-every-admission-request)
+  - [Make humanExpression mandatory](#make-humanexpression-mandatory)
+  - [Allow admission request without expression.iri](#allow-admission-request-without-expressioniri)
+- [Proposal outcome](#proposal-outcome)
+- [References](#references)
+- [Follow-up work](#follow-up-work)
+
+## Decision summary:
 
 This proposal defines the minimum mandatory attribute profile for runtime `Intent` admission, layered on top of TMF921.
 
@@ -20,11 +57,11 @@ The key proposals are:
 
 This proposal defines a candidate intent management entity profile rule. It does not claim that TMF921 universally mandates the same fields for every implementation.
 
-## 2. Proposal flow diagram:
+## Proposal flow diagram:
 
 ![IntentSpecification mandatory profile proposal](intent_profile_decision.svg)
 
-## 2. Context:
+## Context:
 
 An `IntentSpecification` defines the reusable contract. A runtime `Intent` is a concrete request made against that contract, either by explicit reference to an `IntentSpecification` or by an expression IRI that can be resolved to one active specification.
 
@@ -42,7 +79,7 @@ The intent management entity must be able to answer questions such as:
 - Can the request be traced back to a human-readable business statement?
 - Can downstream consumers interpret the request without re-resolving ambiguous context?
 
-## 3. Decision drivers:
+## Decision drivers:
 
 | **Driver** | **Need** |
 | --- | --- |
@@ -54,9 +91,9 @@ The intent management entity must be able to answer questions such as:
 | Version governance | Ensure persisted intents expose the projected runtime version after admission is accepted. |
 | TMF alignment | Stay aligned to the TMF921 resource model while applying a stricter implementation profile where needed. |
 
-## 4. Proposal:
+## Proposal:
 
-### 4.1 TMF-aligned, not TMF-minimal:
+### TMF-aligned, not TMF-minimal:
 
 The intent management entity remains TMF-aligned by using the TMF921 runtime `Intent` resource model and operation pattern.
 
@@ -66,7 +103,7 @@ The rule is:
 
 > TMF-aligned does not mean TMF-minimal.
 
-### 4.2 Runtime Intent admission profile:
+### Runtime Intent admission profile:
 
 The runtime admission profile is the main profile in this paper.
 
@@ -91,13 +128,13 @@ The admission request is **strongly** encouraged to include:
 
 `intentSpecification.id` is strongly recommended because it removes resolution ambiguity, improves traceability, and allows faster interpretation by operators and downstream systems. It is not mandatory because the intent management entity can resolve the applicable active `IntentSpecification` using `expression.iri` when there is exactly one active match.
 
-### 4.3 Minimum attributes for Intent Draft creation:
+### Minimum attributes for Intent Draft creation:
 
 Draft is a pre-admission authoring convenience.
 
 A draft can be created just by setting `submit: false`.
 
-Draft is not the primary runtime profile. Draft is only a design-time authoring profile used before admission.
+Draft is not the primary runtime profile. Draft is only a design time authoring profile used before admission.
 
 Minimum Draft creation request attributes:
 
@@ -144,9 +181,9 @@ Recommended Draft creation request payload with `humanExpression`:
 }
 ```
 
-When a Draft is later moved into admission using `submit: true`, it must satisfy the normal runtime Intent admission profile defined in section 4.2.
+When a Draft is later moved into admission using `submit: true`, it must satisfy the normal runtime Intent admission profile defined in this paper.
 
-### 4.3A Minimum response attributes for Intent Draft creation:
+### Minimum response attributes for Intent Draft creation:
 
 A persisted Draft response should include enough information to identify, retrieve, edit, and understand the Draft state.
 
@@ -199,7 +236,7 @@ Recommended Draft creation response payload with `humanExpression` when supplied
 }
 ```
 
-### 4.4 IntentSpecification resolution rule:
+### IntentSpecification resolution rule:
 
 `expression.iri` is mandatory for admission.
 
@@ -221,7 +258,7 @@ If `intentSpecification.id` is omitted:
 
 After successful admission, `intentSpecification.id` becomes mandatory on the persisted `Intent` representation because the intent management entity must record which active specification governed validation and admission.
 
-### 4.5 Persisted response profile after admission:
+### Persisted response profile after admission:
 
 A persisted `Intent` response after admission is accepted must include:
 
@@ -244,7 +281,7 @@ The important distinction is:
 
 > `intentSpecification.id` is optional in the admission request, but mandatory in the persisted response after admission is accepted.
 
-### 4.6 Optional intent-management-entity governed enrichment fields:
+### Optional intent-management-entity governed enrichment fields:
 
 Optional enrichment fields are useful, but they are not part of the generic minimum mandatory profile.
 
@@ -263,17 +300,17 @@ Optional enrichment fields may be required by a specific implementation, product
 
 However, they are not part of the generic minimum mandatory profile defined by this proposal.
 
-### 4.7 Lifecycle ownership guardrail:
+### Lifecycle ownership guardrail:
 
 External consumers must not supply `lifecycleStatus` in any external write request.
 
 `lifecycleStatus` is assigned, transitioned, and projected by the intent management entity.
 
-## 5. Examples:
+## Examples:
 
-The examples use a hospital surgical-connectivity scenario only to make the profile concrete. Draft request/response payloads are shown in sections 4.3 and 4.3A. This section focuses on admission and the persisted response after admission.
+The examples use a hospital surgical-connectivity scenario only to make the profile concrete. Draft request/response payloads are shown in the Draft sections above. This section focuses on admission and the persisted response after admission.
 
-### 5.1 Minimal admission request:
+### Minimal admission request:
 
 This example supplies `intentSpecification.id`, which is strongly recommended but not mandatory when `expression.iri` resolves unambiguously.
 
@@ -311,7 +348,7 @@ This example supplies `intentSpecification.id`, which is strongly recommended bu
 }
 ```
 
-### 5.2 Minimal persisted response after admission:
+### Minimal persisted response after admission:
 
 ```json
 {
@@ -352,9 +389,9 @@ This example supplies `intentSpecification.id`, which is strongly recommended bu
 }
 ```
 
-## 6. Consequences:
+## Consequences:
 
-### 6.1 Positive consequences:
+### Positive consequences:
 
 If accepted, this proposal gives the intent management entity:
 
@@ -364,7 +401,7 @@ If accepted, this proposal gives the intent management entity:
 - stronger traceability after admission
 - clearer separation between minimum mandatory fields and optional enrichment
 
-### 6.2 Trade-offs:
+### Trade-offs:
 
 If accepted, this proposal also means:
 
@@ -375,27 +412,27 @@ If accepted, this proposal also means:
 
 These trade-offs are acceptable because admission requests should remain interoperable while persisted resources must be deterministic and traceable.
 
-## 7. Alternatives considered:
+## Alternatives considered:
 
-### 7.1 Make `intentSpecification.id` mandatory in every admission request:
+### Make `intentSpecification.id` mandatory in every admission request:
 
 This was rejected.
 
 It would make validation deterministic, but it would remove the useful runtime pattern where a requester submits a valid expression identified by `expression.iri` and lets the intent management entity resolve the active specification when the match is unambiguous.
 
-### 7.2 Make `humanExpression` mandatory:
+### Make `humanExpression` mandatory:
 
 This was rejected.
 
 `humanExpression` is valuable for traceability and human interpretation, but it is not machine-authoritative. Making it mandatory would make the API harder to use without improving machine validation.
 
-### 7.3 Allow admission request without `expression.iri`:
+### Allow admission request without `expression.iri`:
 
 This was rejected.
 
 `expression.iri` is the runtime discriminator for the semantic/expression contract. Without it, the intent management entity cannot safely resolve the applicable active specification or validate the expression.
 
-## 8. Proposal outcome:
+## Proposal outcome:
 
 This proposal recommends adopting a runtime `Intent` mandatory profile baseline.
 
@@ -410,7 +447,7 @@ If accepted, the intent management entity will document and enforce:
 - optional enrichment fields remain separate from the generic minimum mandatory profile
 - `lifecycleStatus` must not be supplied in any external write request
 
-## 9. References:
+## References:
 
 | **Reference** | **URL** | **Relevance to this proposal** |
 | --- | --- | --- |
@@ -421,7 +458,7 @@ If accepted, the intent management entity will document and enforce:
 | TR299 Intent Specification | https://www.tmforum.org/resources/standard/tr299-intent-specification/ | Provides the intent specification concept used to describe rules for well-formed intent and allowed intent content. |
 | Intent architecture baseline repository | https://github.com/prageethw/im/tree/main/baseline/intent | Holds the intent architecture baseline and project-specific profile artefacts. |
 
-## 10. Follow-up work:
+## Follow-up work:
 
 After this proposal is reviewed and baselined, update the affected architecture and specification artifacts surgically:
 
