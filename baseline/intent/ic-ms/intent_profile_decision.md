@@ -1,4 +1,4 @@
-# Intent mandatory profile proposal:
+# Intent mandatory profile proposal
 
 ## 1. Decision summary:
 
@@ -19,6 +19,10 @@ The key proposals are:
 - keep the minimum mandatory profile separate from optional intent-management-entity governed enrichment fields
 
 This proposal defines a candidate intent management entity profile rule. It does not claim that TMF921 universally mandates the same fields for every implementation.
+
+## 2. Proposal flow diagram:
+
+![IntentSpecification mandatory profile proposal](intent_profile_decision.svg)
 
 ## 2. Context:
 
