@@ -2,28 +2,31 @@
 
 ## 1. Decision summary:
 
-This proposal defines the minimum mandatory attribute profile for runtime `Intent` resources managed by an intent management entity, layered on top of TMF921.
+This proposal defines the minimum mandatory attribute profile for runtime `Intent` admission, layered on top of TMF921.
 
 TMF921 provides the generic runtime `Intent` resource model, operation pattern, and event pattern. It does not prescribe the complete mandatory attribute profile required by every implementation.
 
-This proposal defines a stricter and lifecycle-aware profile so that runtime `Intent` resources can be admitted, validated, resolved against an active `IntentSpecification`, traced, versioned, audited, and projected through lifecycle states.
+The primary profile in this paper is the runtime `Intent` admission profile. This is the profile that must be satisfied before an Intent enters runtime processing.
+
+Draft is treated only as a small pre-admission authoring context. Draft does not replace the runtime admission profile.
 
 The key proposals are:
 
-- define the minimum mandatory attributes for a runtime `Intent` create request
-- define the minimum mandatory attributes for a persisted/admitted `Intent` response
+- define the minimum mandatory attributes for runtime `Intent` admission
+- define the minimum mandatory attributes for a persisted Intent response after admission is accepted
+- define the minimum attributes for `Intent` Draft creation
+- define the minimum response attributes for `Intent` Draft creation
 - keep the minimum mandatory profile separate from optional intent-management-entity governed enrichment fields
 
 This proposal defines a candidate intent management entity profile rule. It does not claim that TMF921 universally mandates the same fields for every implementation.
-## 2. Proposal flow diagram:
-
-![Intent mandatory profile proposal](intent_profile_decision.svg)
 
 ## 2. Context:
 
-An `IntentSpecification` defines the reusable contract. A runtime `Intent` is a concrete request submitted against that contract, either by explicit reference to an `IntentSpecification` or by an expression IRI that can be resolved to one active specification.
+An `IntentSpecification` defines the reusable contract. A runtime `Intent` is a concrete request made against that contract, either by explicit reference to an `IntentSpecification` or by an expression IRI that can be resolved to one active specification.
 
-The create request must contain enough machine-readable information to resolve and validate the runtime request. The persisted/admitted `Intent` must contain enough information to trace the request, audit the decision, project lifecycle state, and support later version or update handling.
+The admission request must contain enough machine-readable information to resolve and validate the runtime request. The persisted Intent must contain enough information to trace the request, audit the decision, project lifecycle state, and support later version or update handling.
+
+Draft is a pre-admission authoring convenience. A Draft Intent may be incomplete because it is not admitted, not validated for runtime processing, and not sent downstream.
 
 The intent management entity must be able to answer questions such as:
 
@@ -39,7 +42,7 @@ The intent management entity must be able to answer questions such as:
 
 | **Driver** | **Need** |
 | --- | --- |
-| Runtime admission safety | Ensure create requests contain enough machine-readable content to validate the runtime intent. |
+| Runtime admission safety | Ensure admission requests contain enough machine-readable content to validate the runtime intent. |
 | Specification resolution | Support explicit `intentSpecification.id` where supplied, or unambiguous resolution by `expression.iri` where omitted. |
 | Traceability | Persist the resolved `intentSpecification.id` and lifecycle metadata after admission. |
 | Human readability | Strongly encourage `humanExpression` so operators and auditors can quickly understand the business request. |
@@ -59,31 +62,13 @@ The rule is:
 
 > TMF-aligned does not mean TMF-minimal.
 
-### 4.2 Minimum mandatory profile by operation/state:
+### 4.2 Runtime Intent admission profile:
 
-| **Field** | **Create request** | **Persisted/admitted response** | **Reason** |
-| --- | --- | --- | --- |
-| `id` | Not required | Mandatory | Generated or assigned persisted resource identity. |
-| `href` | Not required | Mandatory | Canonical resource URL for TMF-style navigation and references. |
-| `name` | Mandatory | Mandatory | Human-readable runtime intent name. |
-| `version` | Not required | Mandatory | Projected runtime intent version. |
-| `lifecycleStatus` | Not required | Mandatory | Externally visible lifecycle projection. |
-| `statusReason` | Not required | Mandatory | Human-readable reason for the projected lifecycle status. |
-| `statusChangeDate` | Not required | Mandatory | Timestamp of the latest lifecycle/status projection. |
-| `intentSpecification.id` | Strongly recommended | Mandatory | Explicit or resolved active specification that governed admission. |
-| `humanExpression` | Strongly recommended | Strongly recommended | Improves audit, triage, and human interpretation, but is not machine-authoritative. |
-| `expression` | Mandatory | Mandatory | Runtime expression object. |
-| `expression.@type` | Mandatory | Mandatory | Identifies the expression representation type. |
-| `expression.iri` | Mandatory | Mandatory | Authoritative semantic/expression contract identifier. |
-| `expression.expressionValue` | Mandatory | Mandatory | Machine-authoritative runtime intent content. |
-| `@type` | Mandatory | Mandatory | TMF polymorphic resource type. |
-| `@baseType` | Mandatory | Mandatory | TMF base type alignment. |
+The runtime admission profile is the main profile in this paper.
 
-This table is the core architectural proposal.
+Admission is the point where the intent management entity accepts the Intent into runtime processing. At this point, the request must be complete enough to resolve the active `IntentSpecification` and validate the submitted expression.
 
-### 4.3 Create request profile:
-
-The minimum create request must include:
+The minimum admission request must include:
 
 - `name`
 - `expression`
@@ -93,20 +78,129 @@ The minimum create request must include:
 - `@type`
 - `@baseType`
 
-The create request should strongly include:
+The admission request **strongly** encouraged to include:
 
 - `humanExpression`
 - `intentSpecification.id`
 
 `humanExpression` is strongly recommended because it improves human traceability, auditability, triage, and business-level interpretation. It is not mandatory because the authoritative validation input is the structured expression.
 
-`intentSpecification.id` is strongly recommended because it removes resolution ambiguity, improves traceability, and allows faster interpretation by operators and downstream systems. It is not mandatory because the intent management entity can resolve the applicable active `IntentSpecification` using `expression.iri` **when there is exactly one active match**.
+`intentSpecification.id` is strongly recommended because it removes resolution ambiguity, improves traceability, and allows faster interpretation by operators and downstream systems. It is not mandatory because the intent management entity can resolve the applicable active `IntentSpecification` using `expression.iri` when there is exactly one active match.
+
+### 4.3 Minimum attributes for Intent Draft creation:
+
+Draft is a pre-admission authoring convenience.
+
+A draft can be created just by setting `submit: false`.
+
+Draft is not the primary runtime profile. Draft is only a design time authoring profile used before admission.
+
+Minimum Draft creation request attributes:
+
+| **Attribute** | **Requirement** | **Reason** |
+| --- | --- | --- |
+| `name` | Mandatory | Gives the Draft a human-identifiable label. |
+| `submit` | Mandatory with value `false` | Explicitly requests Draft authoring rather than admission. |
+| `@type` | Mandatory | TMF polymorphic resource type. |
+| `@baseType` | Mandatory | TMF base type alignment. |
+
+**Strongly** recommended for Draft creation:
+
+| **Attribute** | **Reason** |
+| --- | --- |
+| `humanExpression` | Helps reviewers and operators understand the intended request before the structured expression is complete. |
+
+Draft creation does not require:
+
+- `expression`
+- `expression.iri`
+- `expression.expressionValue`
+- `intentSpecification.id`
+
+Minimal Draft creation request payload:
+
+```json
+{
+  "name": "Sydney Hospital Surgical Connection Intent",
+  "submit": false,
+  "@type": "Intent",
+  "@baseType": "Entity"
+}
+```
+
+Recommended Draft creation request payload with `humanExpression`:
+
+```json
+{
+  "name": "Sydney Hospital Surgical Connection Intent",
+  "humanExpression": "I need a surgical connection in Sydney Hospital with latency less than or equal to 10 ms.",
+  "submit": false,
+  "@type": "Intent",
+  "@baseType": "Entity"
+}
+```
+
+When a Draft is later moved into admission using `submit: true`, it must satisfy the normal runtime Intent admission profile defined in section 4.2.
+
+### 4.3A Minimum response attributes for Intent Draft creation:
+
+A persisted Draft response should include enough information to identify, retrieve, edit, and understand the Draft state.
+
+Minimum Draft creation response attributes:
+
+| **Attribute** | **Requirement** | **Reason** |
+| --- | --- | --- |
+| `id` | Mandatory | Stable persisted Draft/Intent identity. |
+| `href` | Mandatory | Canonical resource URL. |
+| `name` | Mandatory | Human-readable Draft/Intent name. |
+| `submit` | Mandatory with value `false` where exposed | Confirms the Draft has not been requested for admission. |
+| `version` | Mandatory | Current persisted resource version/projection. |
+| `lifecycleStatus` | Mandatory with value `Draft` | Entity-assigned Draft state. |
+| `statusReason` | Mandatory | Human-readable reason for Draft state. |
+| `statusChangeDate` | Mandatory | Timestamp of Draft state assignment/update. |
+| `@type` | Mandatory | TMF polymorphic resource type. |
+| `@baseType` | Mandatory | TMF base type alignment. |
+
+Minimum Draft creation response payload:
+
+```json
+{
+  "id": "INT-HOSP-2026-001",
+  "href": "/intentManagement/v5/intent/INT-HOSP-2026-001",
+  "name": "Sydney Hospital Surgical Connection Intent",
+  "submit": false,
+  "version": "v1",
+  "lifecycleStatus": "Draft",
+  "statusReason": "Intent saved as draft and not submitted for admission.",
+  "statusChangeDate": "2026-04-18T12:00:00+10:00",
+  "@type": "Intent",
+  "@baseType": "Entity"
+}
+```
+
+Recommended Draft creation response payload with `humanExpression` when supplied:
+
+```json
+{
+  "id": "INT-HOSP-2026-001",
+  "href": "/intentManagement/v5/intent/INT-HOSP-2026-001",
+  "name": "Sydney Hospital Surgical Connection Intent",
+  "humanExpression": "I need a surgical connection in Sydney Hospital with latency less than or equal to 10 ms.",
+  "submit": false,
+  "version": "v1",
+  "lifecycleStatus": "Draft",
+  "statusReason": "Intent saved as draft and not submitted for admission.",
+  "statusChangeDate": "2026-04-18T12:00:00+10:00",
+  "@type": "Intent",
+  "@baseType": "Entity"
+}
+```
 
 ### 4.4 IntentSpecification resolution rule:
 
-`expression.iri` is **mandatory** in runtime create and update requests.
+`expression.iri` is mandatory for admission.
 
-`intentSpecification.id` is optional in the create request.
+`intentSpecification.id` is optional in the admission request.
 
 If `intentSpecification.id` is supplied:
 
@@ -120,13 +214,13 @@ If `intentSpecification.id` is omitted:
 - the intent management entity resolves the applicable active `IntentSpecification` using `expression.iri`
 - if exactly one active `IntentSpecification` matches, the request may be admitted
 - if zero active specifications match, the request must be rejected
-- if multiple active specifications match, the request must be **rejected** and the requester must supply `intentSpecification.id`
+- if multiple active specifications match, the request must be rejected and the requester must supply `intentSpecification.id`
 
 After successful admission, `intentSpecification.id` becomes mandatory on the persisted `Intent` representation because the intent management entity must record which active specification governed validation and admission.
 
-### 4.5 Persisted/admitted response profile:
+### 4.5 Persisted response profile after admission:
 
-A persisted/admitted `Intent` response must include:
+A persisted `Intent` response after admission is accepted must include:
 
 - `id`
 - `href`
@@ -143,134 +237,41 @@ A persisted/admitted `Intent` response must include:
 - `@type`
 - `@baseType`
 
-The persisted response may include strongly recommended or optional fields where supplied or derived, such as:
+The important distinction is:
 
-- `humanExpression`
-- `description`
-- `validFor`
-- `relatedParty`
-- `priority`
-- `isBundle`
-- `_links`
+> `intentSpecification.id` is optional in the admission request, but mandatory in the persisted response after admission is accepted.
 
-### 4.6 Lifecycle and version projection profile:
+### 4.6 Optional intent-management-entity governed enrichment fields:
 
-The top-level `Intent.lifecycleStatus` is the externally visible lifecycle projection for the runtime `Intent` resource.
-
-The persisted `version` is the projected runtime version shown to external consumers.
-
-Internal version history may be richer than the external projection. The intent management entity may retain version-level lifecycle state, standby versions, failed versions, rejected versions, and administrative archival state internally or expose them through a documented reporting or history mechanism.
-
-The profile avoids using ambiguous pointer names such as `effectiveVersion` or `currentVersion`. Where a pointer is needed to identify the version driving the external projection, use `activeVersion`.
-
-### 4.7 Recommended but not minimum mandatory fields:
+Optional enrichment fields are useful, but they are not part of the generic minimum mandatory profile.
 
 | **Field** | **Proposed classification** | **Reason** |
 | --- | --- | --- |
 | `humanExpression` | **Strongly recommended** | Improves human traceability, auditability, triage, and business-level interpretation. |
-| `intentSpecification.id` in create request | **Strongly recommended** | Removes ambiguity and speeds validation/interpretation where the requester knows the active specification. |
+| `intentSpecification.id` in admission request | **Strongly recommended** | Removes ambiguity and speeds validation/interpretation where the requester knows the active specification. |
 | `description` | Optional | Useful for extra human-readable context. |
-| `validFor.startDateTime` | Optional / intent-management-entity governed | Useful when the runtime intent should be valid from a specific time. |
-| `isBundle` | Optional / intent-management-entity governed | Useful where bundled intent behaviour is supported. |
-| `priority` | Optional / intent-management-entity governed | Useful where priority is handled as policy or operational guidance. |
-| `relatedParty` | Optional / intent-management-entity governed | Useful for requester, customer, or provider attribution. |
-| `_links` | Optional / intent-management-entity governed | Useful for discoverable operation affordances. |
+| `validFor.startDateTime` | Optional | Useful when the runtime intent should be valid from a specific time. |
+| `isBundle` | Optional | Useful where bundled intent behaviour is supported. |
+| `priority` | Optional | Useful where priority is handled as policy or operational guidance. |
+| `relatedParty` | Optional | Useful for requester, customer, or provider attribution. |
+| `_links` | Optional | Useful for discoverable operation affordances. |
+
+Optional enrichment fields may be required by a specific implementation, product, channel, policy, onboarding profile, or security posture.
+
+However, they are not part of the generic minimum mandatory profile defined by this proposal.
+
+### 4.7 Lifecycle ownership guardrail:
+
+External consumers must not supply `lifecycleStatus` in any external write request.
+`lifecycleStatus` is assigned, transitioned, and projected by the intent management entity.
 
 ## 5. Examples:
 
-The examples use a hospital surgical-connectivity scenario only to make the profile concrete. The minimal examples intentionally include only the fields needed to demonstrate the proposed create-request and persisted-response profiles, not complete API payloads. The fuller example then shows how strongly recommended and optional fields may be added for traceability, auditability, and richer implementation-specific governance.
+The examples use a hospital surgical-connectivity scenario only to make the profile concrete. Draft request/response payloads are shown in sections 4.3 and 4.3A. This section focuses on admission and the persisted response after admission.
 
-### 5.1 Minimal create request and admitted response:
+### 5.1 Minimal admission request:
 
-This example proves the minimum machine-readable create request. It omits `intentSpecification.id` to show that the intent management entity may resolve the active specification from `expression.iri`.
-
-```http
-POST /intentManagement/v5/intent
-Content-Type: application/json
-Accept: application/json
-```
-
-```json
-{
-  "name": "Sydney Hospital Surgical Connection Intent",
-  "expression": {
-    "@type": "JsonLdExpression",
-    "iri": "https://example.com/tio/hospital-surgical-slice/v1.0",
-    "expressionValue": {
-      "context": {
-        "targets": {
-          "maxLatencyMs": 10,
-          "minAvailabilityPercent": 99.99
-        },
-        "constraints": {
-          "location": {
-            "locationId": "AU-NSW-SYD-HOSP-001"
-          },
-          "serviceType": "surgical-connectivity",
-          "serviceClass": "critical-gold"
-        },
-        "preferences": {
-          "preferredAccessTechnology": "5G"
-        }
-      }
-    }
-  },
-  "@type": "Intent",
-  "@baseType": "Entity"
-}
-```
-
-The response persists generated identity, projected lifecycle state, projected version, status metadata, and the resolved active specification reference.
-
-```http
-HTTP/1.1 201 Created
-Location: /intentManagement/v5/intent/INT-HOSP-2026-001
-Content-Type: application/json
-ETag: "intent-INT-HOSP-2026-001-v1"
-```
-
-```json
-{
-  "id": "INT-HOSP-2026-001",
-  "href": "/intentManagement/v5/intent/INT-HOSP-2026-001",
-  "name": "Sydney Hospital Surgical Connection Intent",
-  "version": "v1",
-  "lifecycleStatus": "Acknowledged",
-  "statusReason": "Intent request accepted for validation and fulfilment.",
-  "statusChangeDate": "2026-04-18T12:00:00+10:00",
-  "intentSpecification": {
-    "id": "hospital-surgical-slice-spec-v1.20"
-  },
-  "expression": {
-    "@type": "JsonLdExpression",
-    "iri": "https://example.com/tio/hospital-surgical-slice/v1.0",
-    "expressionValue": {
-      "context": {
-        "targets": {
-          "maxLatencyMs": 10,
-          "minAvailabilityPercent": 99.99
-        },
-        "constraints": {
-          "location": {
-            "locationId": "AU-NSW-SYD-HOSP-001"
-          },
-          "serviceType": "surgical-connectivity",
-          "serviceClass": "critical-gold"
-        },
-        "preferences": {
-          "preferredAccessTechnology": "5G"
-        }
-      }
-    }
-  },
-  "@type": "Intent",
-  "@baseType": "Entity"
-}
-```
-
-### 5.2 Recommended create request with traceability fields:
-
-This example shows the preferred create request shape where the requester supplies both strongly recommended fields: `humanExpression` and `intentSpecification.id`.
+This example supplies `intentSpecification.id`, which is strongly recommended but not mandatory when `expression.iri` resolves unambiguously.
 
 ```json
 {
@@ -306,64 +307,35 @@ This example shows the preferred create request shape where the requester suppli
 }
 ```
 
-### 5.3 Fuller illustrative example with optional fields:
-
-This example shows how an implementation can add optional fields for richer traceability, requester attribution, validity timing, prioritisation, and operation affordances. These fields are useful, but they are not all part of the generic minimum mandatory create-request profile.
+### 5.2 Minimal persisted response after admission:
 
 ```json
 {
   "id": "INT-HOSP-2026-001",
   "href": "/intentManagement/v5/intent/INT-HOSP-2026-001",
   "name": "Sydney Hospital Surgical Connection Intent",
-  "description": "Request for a surgical connection in Sydney Hospital.",
-  "humanExpression": "I need a surgical connection in Sydney Hospital with latency less than or equal to 10 ms and availability at least 99.99%.",
   "version": "v1",
   "lifecycleStatus": "Acknowledged",
-  "statusReason": "Intent request accepted for validation and fulfilment.",
-  "statusChangeDate": "2026-04-18T12:00:00+10:00",
+  "statusReason": "Intent accepted for admission processing.",
+  "statusChangeDate": "2026-04-18T12:10:00+10:00",
   "intentSpecification": {
-    "id": "hospital-surgical-slice-spec-v1.20",
-    "href": "/intentManagement/v5/intentSpecification/hospital-surgical-slice-spec-v1.20"
+    "id": "hospital-surgical-slice-spec-v1.20"
   },
-  "isBundle": false,
-  "priority": "critical",
-  "relatedParty": [
-    {
-      "@type": "RelatedPartyRefOrPartyRoleRef",
-      "role": "requester",
-      "partyOrPartyRole": {
-        "@type": "PartyRoleRef",
-        "id": "hospital-ops",
-        "name": "Hospital Operations",
-        "@referredType": "Customer"
-      }
-    }
-  ],
   "expression": {
     "@type": "JsonLdExpression",
-    "@baseType": "Expression",
     "iri": "https://example.com/tio/hospital-surgical-slice/v1.0",
     "expressionValue": {
       "context": {
         "targets": {
           "maxLatencyMs": 10,
-          "minAvailabilityPercent": 99.99,
-          "maxJitterMs": 2,
-          "maxPacketLossPercent": 0.01
+          "minAvailabilityPercent": 99.99
         },
         "constraints": {
           "location": {
-            "locationId": "AU-NSW-SYD-HOSP-001",
-            "locationType": "hospital",
-            "geographicScope": "campus"
+            "locationId": "AU-NSW-SYD-HOSP-001"
           },
           "serviceType": "surgical-connectivity",
-          "serviceClass": "critical-gold",
-          "priority": "critical",
-          "redundancyRequired": true,
-          "timeWindow": {
-            "startDateTime": "2026-04-18T12:00:00+10:00"
-          }
+          "serviceClass": "critical-gold"
         },
         "preferences": {
           "preferredAccessTechnology": "5G"
@@ -371,20 +343,8 @@ This example shows how an implementation can add optional fields for richer trac
       }
     }
   },
-  "validFor": {
-    "startDateTime": "2026-04-18T12:00:00+10:00"
-  },
   "@type": "Intent",
-  "@baseType": "Entity",
-  "_links": {
-    "self": {
-      "href": "/intentManagement/v5/intent/INT-HOSP-2026-001"
-    },
-    "partialUpdate": {
-      "href": "/intentManagement/v5/intent/INT-HOSP-2026-001",
-      "method": "PATCH"
-    }
-  }
+  "@baseType": "Entity"
 }
 ```
 
@@ -394,13 +354,11 @@ This example shows how an implementation can add optional fields for richer trac
 
 If accepted, this proposal gives the intent management entity:
 
-- deterministic runtime admission inputs
+- a stable minimum profile for runtime Intent admission
+- a small Draft add-on for pre-admission authoring
 - support for both explicit and IRI-based specification resolution
 - stronger traceability after admission
-- clearer distinction between machine-authoritative fields and human-readable helper fields
-- lifecycle projection consistency
-- improved audit and operational triage
-- cleaner separation between minimum mandatory fields and optional enrichment
+- clearer separation between minimum mandatory fields and optional enrichment
 
 ### 6.2 Trade-offs:
 
@@ -409,13 +367,13 @@ If accepted, this proposal also means:
 - requesters can submit a minimal machine-readable intent without `humanExpression` or `intentSpecification.id`
 - the intent management entity must handle unambiguous resolution by `expression.iri`
 - persisted responses must include resolved specification identity after admission
-- operators get better traceability when requesters provide strongly recommended fields, but cannot rely on those fields always being present in the create request
+- operators get better traceability when requesters provide strongly recommended fields, but cannot rely on those fields always being present in the admission request
 
-These trade-offs are acceptable because create requests should remain interoperable while persisted/admitted resources must be deterministic and traceable.
+These trade-offs are acceptable because admission requests should remain interoperable while persisted resources must be deterministic and traceable.
 
 ## 7. Alternatives considered:
 
-### 7.1 Make `intentSpecification.id` mandatory in every create request:
+### 7.1 Make `intentSpecification.id` mandatory in every admission request:
 
 This was rejected.
 
@@ -427,7 +385,7 @@ This was rejected.
 
 `humanExpression` is valuable for traceability and human interpretation, but it is not machine-authoritative. Making it mandatory would make the API harder to use without improving machine validation.
 
-### 7.3 Allow create request without `expression.iri`:
+### 7.3 Allow admission request without `expression.iri`:
 
 This was rejected.
 
@@ -437,13 +395,16 @@ This was rejected.
 
 This proposal recommends adopting a runtime `Intent` mandatory profile baseline.
 
-If accepted, the intent management entity will document and enforce a lifecycle-aware runtime `Intent` profile:
+If accepted, the intent management entity will document and enforce:
 
-- create requests require `name`, `expression`, `expression.@type`, `expression.iri`, `expression.expressionValue`, `@type`, and `@baseType`
-- create requests strongly recommend `humanExpression` and `intentSpecification.id`
-- persisted/admitted responses require generated identity, lifecycle projection metadata, resolved `intentSpecification.id`, expression fields, `@type`, and `@baseType`
-- `intentSpecification.id` is optional in the create request but mandatory in the persisted/admitted response after resolution
-- `expression.iri` is mandatory and is the default runtime validation discriminator where `intentSpecification.id` is omitted
+- runtime Intent admission requires `name`, `expression`, `expression.@type`, `expression.iri`, `expression.expressionValue`, `@type`, and `@baseType`
+- persisted Intent response after admission requires identity, lifecycle projection, resolved `intentSpecification.id`, expression, `@type`, and `@baseType`
+- Draft creation requires only `name`, `submit: false`, `@type`, and `@baseType`
+- Draft creation response requires identity, Draft lifecycle projection, `submit: false`, `@type`, and `@baseType`
+- `humanExpression` and `intentSpecification.id` are strongly recommended for admission, but not generically mandatory
+- `intentSpecification.id` is optional in the admission request but mandatory in the persisted response after admission is accepted
+- optional enrichment fields remain separate from the generic minimum mandatory profile
+- `lifecycleStatus` must not be supplied in any external write request
 
 ## 9. References:
 
@@ -461,8 +422,8 @@ If accepted, the intent management entity will document and enforce a lifecycle-
 After this proposal is reviewed and baselined, update the affected architecture and specification artifacts surgically:
 
 - document the runtime `Intent` mandatory profile
-- clarify create request minimum mandatory fields
+- clarify admission request minimum mandatory fields
 - clarify strongly recommended `humanExpression` and `intentSpecification.id`
-- clarify persisted/admitted response mandatory fields
+- clarify persisted response mandatory fields
 - clarify `intentSpecification.id` resolution and persistence behaviour
 - keep runtime version/lifecycle profile wording aligned with the existing `activeVersion` baseline

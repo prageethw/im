@@ -11,79 +11,108 @@ rectangle "TMF921 Intent\nbase resource model" as TMF #EEF2FF
 
 rectangle "Intent management entity\nmandatory profile\n\nTMF-aligned, not TMF-minimal" as PROFILE #E8F5E9
 
-TMF --> PROFILE : intent management entity conformance\ndefines minimum runtime Intent profile
+TMF --> PROFILE : intent management entity conformance\ndefines runtime Intent profile
 
-rectangle "Minimal create request" as CREATE #FFF8E1 {
-  rectangle "Mandatory machine-readable fields\n\n- name\n- expression\n- expression.@type\n- expression.iri\n- expression.expressionValue\n- @type\n- @baseType" as CREATE_MIN
+rectangle "External write contract" as WRITE #FFF3E0 {
+  rectangle "External consumers may supply\n\n- consumer-owned Intent content\n- submit request-control field\n\nExternal consumers must NOT supply\nlifecycleStatus in create, PUT, PATCH,\nor any other external write request body." as WRITE_CONTRACT
 
-  rectangle "Strongly recommended\nfor traceability and speed\n\n- humanExpression\n- intentSpecification.id" as CREATE_RECOMMENDED
-
-  rectangle "Optional / governed enrichment\n\n- description\n- validFor\n- relatedParty\n- priority\n- externalId" as CREATE_OPTIONAL
+  rectangle "submit semantics\n\n- omitted on initial create = submit=true\n- submit=false = save / keep Draft\n- submit=true = request admission\n- omitted on existing Draft = remain Draft" as SUBMIT
 }
 
-rectangle "IntentSpecification resolution" as RESOLUTION #FFE0B2 {
+rectangle "Draft authoring state" as DRAFT #FFF8E1 {
+  rectangle "Minimal Draft create\n\n- name\n- submit = false\n- @type\n- @baseType\n\nStrongly recommended:\n- humanExpression" as DRAFT_CREATE
+
+  rectangle "Draft editability\n\nAll attributes accepted by the\nPUT / PATCH request contract\nare mutable while Draft.\n\nid is immutable.\nlifecycleStatus is not writable." as DRAFT_EDIT
+
+  rectangle "Draft is not runtime-active\n\n- not admitted\n- not optimised\n- not assured\n- not sent to change execution\n- does not drive activeVersion" as DRAFT_NON_RUNTIME
+}
+
+rectangle "Admission gate" as GATE #FFE0B2 {
+  rectangle "Admission requires\n\n- name\n- expression\n- expression.@type\n- expression.iri\n- expression.expressionValue\n- @type\n- @baseType\n\nStrongly recommended:\n- humanExpression\n- intentSpecification.id" as ADMISSION_PROFILE
+
+  rectangle "If admission is accepted\n\nIntent management entity assigns:\n- lifecycleStatus = Acknowledged\n- statusReason\n- statusChangeDate\n- version\n\nExternal consumer does not assign lifecycle." as ASSIGN_STATUS
+}
+
+note top of GATE
+Terminology:
+submit=true is the consumer action.
+admission is IC MS processing.
+Acknowledged is the first lifecycle state
+when admission is accepted.
+
+There is no Submitted lifecycle state.
+end note
+
+rectangle "IntentSpecification resolution" as RESOLUTION #E3F2FD {
   rectangle "If intentSpecification.id supplied\n\n- authoritative\n- must reference ACTIVE spec\n- must align with expression.iri" as SPEC_ID_SUPPLIED
 
   rectangle "If intentSpecification.id omitted\n\nResolve ACTIVE IntentSpecification\nusing expression.iri" as SPEC_ID_OMITTED
 
-  rectangle "Reject request if\n\n- zero ACTIVE matches\n- multiple ACTIVE matches\n- supplied id conflicts with iri" as REJECT
+  rectangle "Reject if\n\n- zero ACTIVE matches\n- multiple ACTIVE matches\n- supplied id conflicts with iri" as REJECT_RESOLUTION
 }
 
-rectangle "Persisted / admitted Intent" as PERSISTED #E0F2F1 {
-  rectangle "Mandatory persisted response fields\n\n- id\n- href\n- name\n- version\n- lifecycleStatus\n- statusReason\n- statusChangeDate\n- intentSpecification.id\n- expression\n- expression.@type\n- expression.iri\n- expression.expressionValue\n- @type\n- @baseType" as PERSISTED_MIN
+rectangle "Persisted Intent" as PERSISTED #E0F2F1 {
+  rectangle "Mandatory persisted response\n\n- id\n- href\n- name\n- version\n- lifecycleStatus\n- statusReason\n- statusChangeDate\n- intentSpecification.id\n- expression\n- expression.@type\n- expression.iri\n- expression.expressionValue\n- @type\n- @baseType" as PERSISTED_MIN
 
-  rectangle "Resolved specification is recorded\n\nintentSpecification.id becomes\nmandatory after admission" as SPEC_RECORDED
+  rectangle "lifecycleStatus is read-only\nfor external consumers\n\nIt is assigned, transitioned,\nand projected by the\nintent management entity." as LIFECYCLE_READONLY
 }
 
-rectangle "Lifecycle and version projection" as LIFECYCLE #E3F2FD {
-  rectangle "Top-level lifecycleStatus\n= external lifecycle projection" as STATUS
-  rectangle "version\n= projected runtime version" as VERSION
-  rectangle "activeVersion\n= version driving projection\nwhere a pointer is exposed" as ACTIVE_VERSION
+rectangle "Non-Draft version change" as CHANGE #F3E5F5 {
+  rectangle "Once Intent leaves Draft\n\ngeneral PUT / PATCH attribute\nupdate on that version is not allowed.\n\nMaterial changes require:\ncreate new Draft version -> edit -> submit=true" as MATERIAL_CHANGE
+
+  rectangle "activeVersion\n\nDraft versions do not drive activeVersion.\n\nactiveVersion points to the version\ndriving the external lifecycle projection." as ACTIVE_VERSION
 }
 
-rectangle "Fuller implementation profile" as FULLER #F3E5F5 {
-  rectangle "Useful enrichments\n\n- humanExpression\n- intentSpecification.href\n- description\n- validFor\n- relatedParty\n- priority\n- isBundle\n- _links" as FULLER_FIELDS
-}
+PROFILE --> WRITE : defines external write behaviour
+WRITE --> DRAFT : submit=false
+WRITE --> GATE : submit=true or omitted on initial create
+DRAFT --> DRAFT_EDIT : PUT / PATCH while Draft
+DRAFT --> GATE : later submit=true
+GATE --> RESOLUTION : resolve governing specification
+RESOLUTION --> PERSISTED : exactly one valid ACTIVE contract
+RESOLUTION -[#red,dashed]-> WRITE : reject resolution or admission failure
+PERSISTED --> CHANGE : after leaving Draft
+CHANGE --> DRAFT : material change requires\nnew Draft version
 
-PROFILE --> CREATE : submit runtime Intent
-CREATE --> RESOLUTION : resolve governing specification
-RESOLUTION --> PERSISTED : admission succeeds
-RESOLUTION -[#red,dashed]-> CREATE : reject if resolution fails
-PERSISTED --> LIFECYCLE : project state and version
-PROFILE --> FULLER : may add richer\nimplementation fields
+note right of WRITE_CONTRACT
+The key rule is broad:
+lifecycleStatus must not appear
+in any external write request body.
 
-note right of CREATE_RECOMMENDED
-humanExpression is not machine-authoritative,
-but improves human interpretation,
-audit, and triage.
-
-intentSpecification.id is not mandatory,
-but improves deterministic validation
-and traceability.
+This covers create, PUT, PATCH,
+and any other write operation.
 end note
 
-note right of RESOLUTION
-expression.iri is mandatory.
+note right of SUBMIT
+submit is an approved extension
+request-control field.
 
-It is the default runtime
-semantic / expression discriminator
-when intentSpecification.id is omitted.
+It is not a lifecycle field.
+end note
+
+note bottom of DRAFT_EDIT
+Draft is editable, but only through
+the accepted request contract.
+
+Response/projection fields are not
+client-supplied writable fields.
 end note
 
 note bottom of PERSISTED
-Create request may omit
-intentSpecification.id.
+intentSpecification.id may be omitted
+by the submit request when expression.iri
+resolves unambiguously.
 
-Persisted/admitted response must
-record the resolved specification id.
+After admission, the persisted Intent
+records the resolved specification id.
 end note
 
-note bottom of LIFECYCLE
-Avoid ambiguous pointer names such as
-effectiveVersion or currentVersion.
+note bottom of ACTIVE_VERSION
+Avoid ambiguous pointer names:
+- effectiveVersion
+- currentVersion
 
-Use activeVersion where a runtime
-version pointer is exposed.
+Use activeVersion.
 end note
 
 @enduml
