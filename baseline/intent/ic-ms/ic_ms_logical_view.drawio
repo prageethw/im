@@ -1,19 +1,19 @@
 <mxfile host="65bd71144e">
     <diagram name="IC MS - Logical View" id="ic-ms-logical-view">
-        <mxGraphModel dx="615" dy="633" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1654" pageHeight="1169" math="0" shadow="0">
+        <mxGraphModel dx="665" dy="639" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1654" pageHeight="1169" math="0" shadow="0" adaptiveColors="none">
             <root>
                 <mxCell id="0"/>
                 <mxCell id="1" parent="0"/>
-                <mxCell id="zone_external" value="External Zone" style="swimlane;startSize=30;fillColor=#dae8fc;strokeColor=default;fontStyle=1;fontSize=13;horizontal=1;container=0;" parent="1" vertex="1">
+                <mxCell id="zone_external" value="External Zone" style="swimlane;startSize=30;fillColor=#dae8fc;strokeColor=default;fontStyle=1;fontSize=13;horizontal=1;container=0;rounded=0;" parent="1" vertex="1">
                     <mxGeometry x="40" y="40" width="340" height="280" as="geometry"/>
                 </mxCell>
-                <mxCell id="zone_gateway" value="Gateway" style="swimlane;startSize=30;fillColor=#dae8fc;strokeColor=default;fontStyle=1;fontSize=13;horizontal=1;container=0;" parent="1" vertex="1">
+                <mxCell id="zone_gateway" value="Gateway" style="swimlane;startSize=30;fillColor=#dae8fc;strokeColor=default;fontStyle=1;fontSize=13;horizontal=1;container=0;rounded=0;" parent="1" vertex="1">
                     <mxGeometry x="440" y="40" width="220" height="280" as="geometry"/>
                 </mxCell>
-                <mxCell id="zone_icms" value="IC MS — Runtime API &amp; Projection Boundary" style="swimlane;startSize=30;fillColor=#d5e8d4;strokeColor=default;fontStyle=1;fontSize=13;horizontal=1;container=0;" parent="1" vertex="1">
+                <mxCell id="zone_icms" value="IC MS — Runtime API &amp; Projection Boundary" style="swimlane;startSize=30;fillColor=#d5e8d4;strokeColor=default;fontStyle=1;fontSize=13;horizontal=1;container=0;rounded=0;" parent="1" vertex="1">
                     <mxGeometry x="720" y="40" width="440" height="560" as="geometry"/>
                 </mxCell>
-                <mxCell id="zone_idms" value="Upstream Dependency" style="swimlane;startSize=30;fillColor=#d5e8d4;strokeColor=default;fontStyle=1;fontSize=13;horizontal=1;container=0;" parent="1" vertex="1">
+                <mxCell id="zone_idms" value="Upstream Dependency" style="swimlane;startSize=30;fillColor=#d5e8d4;strokeColor=default;fontStyle=1;fontSize=13;horizontal=1;container=0;rounded=0;" parent="1" vertex="1">
                     <mxGeometry x="1328" y="40" width="260" height="180" as="geometry"/>
                 </mxCell>
                 <mxCell id="0MlcjW0cjBZ2ITzH3IxV-1" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;fillColor=#d5e8d4;strokeColor=default;exitX=0.25;exitY=0;exitDx=0;exitDy=0;entryX=1;entryY=0.75;entryDx=0;entryDy=0;" parent="1" source="kafka" target="icms_core" edge="1">
@@ -27,18 +27,18 @@
                         </Array>
                     </mxGeometry>
                 </mxCell>
-                <mxCell id="2" value="consume&lt;div&gt;&lt;span style=&quot;color: rgb(0, 0, 0); font-size: 10px; font-style: italic; text-align: left;&quot;&gt;IntentRejectedEvent&amp;nbsp;&lt;br&gt;&lt;span style=&quot;color: rgb(0, 0, 0);&quot;&gt;IntentAssuranceEvent&lt;/span&gt;&lt;/span&gt;&lt;/div&gt;" style="edgeLabel;html=1;align=center;verticalAlign=middle;resizable=0;points=[];" vertex="1" connectable="0" parent="0MlcjW0cjBZ2ITzH3IxV-1">
+                <mxCell id="2" value="consume&lt;div&gt;&lt;span style=&quot;color: rgb(0, 0, 0); font-size: 10px; font-style: italic; text-align: left;&quot;&gt;IntentRejectedEvent&amp;nbsp;&lt;br&gt;&lt;span style=&quot;color: rgb(0, 0, 0);&quot;&gt;IntentAssuranceEvent&lt;/span&gt;&lt;/span&gt;&lt;/div&gt;" style="edgeLabel;html=1;align=center;verticalAlign=middle;resizable=0;points=[];rounded=0;" parent="0MlcjW0cjBZ2ITzH3IxV-1" vertex="1" connectable="0">
                     <mxGeometry x="0.4455" y="-1" relative="1" as="geometry">
                         <mxPoint x="52" y="-24" as="offset"/>
                     </mxGeometry>
                 </mxCell>
-                <mxCell id="zone_internal" value="Internal Fulfilment Pipeline (not owned by IC MS)" style="swimlane;startSize=30;fillColor=#d5e8d4;strokeColor=default;fontStyle=1;fontSize=13;horizontal=1;container=0;" parent="1" vertex="1">
+                <mxCell id="zone_internal" value="Internal Fulfilment Pipeline (not owned by IC MS)" style="swimlane;startSize=30;fillColor=#d5e8d4;strokeColor=default;fontStyle=1;fontSize=13;horizontal=1;container=0;rounded=0;" parent="1" vertex="1">
                     <mxGeometry x="1230" y="270" width="360" height="330" as="geometry"/>
                 </mxCell>
                 <mxCell id="e1" style="edgeStyle=orthogonalEdgeStyle;rounded=0;" parent="1" source="ext_consumer" target="gateway" edge="1">
                     <mxGeometry relative="1" as="geometry"/>
                 </mxCell>
-                <mxCell id="e1_lbl" value="REST over NGW" style="edgeLabel;fontSize=10;fontStyle=2;container=0;" parent="e1" connectable="0" vertex="1">
+                <mxCell id="e1_lbl" value="REST over NGW" style="edgeLabel;fontSize=10;fontStyle=2;container=0;rounded=0;" parent="e1" connectable="0" vertex="1">
                     <mxGeometry relative="0.5" as="geometry">
                         <mxPoint x="-37" y="-13" as="offset"/>
                     </mxGeometry>
@@ -46,7 +46,7 @@
                 <mxCell id="e2" style="edgeStyle=orthogonalEdgeStyle;rounded=0;" parent="1" source="gateway" target="icms_core" edge="1">
                     <mxGeometry relative="1" as="geometry"/>
                 </mxCell>
-                <mxCell id="e2_lbl" value="mTLS; forwards trusted system context&#xa;(no end-user context downstream)" style="edgeLabel;fontSize=10;fontStyle=2;container=0;" parent="e2" connectable="0" vertex="1">
+                <mxCell id="e2_lbl" value="mTLS; forwards trusted system context&#xa;(no end-user context downstream)" style="edgeLabel;fontSize=10;fontStyle=2;container=0;rounded=0;" parent="e2" connectable="0" vertex="1">
                     <mxGeometry relative="0.5" as="geometry">
                         <mxPoint x="-79" y="43" as="offset"/>
                     </mxGeometry>
@@ -54,7 +54,7 @@
                 <mxCell id="e3" style="edgeStyle=orthogonalEdgeStyle;rounded=0;dashed=1;fillColor=#d5e8d4;strokeColor=default;" parent="1" source="icms_core" target="idms" edge="1">
                     <mxGeometry relative="1" as="geometry"/>
                 </mxCell>
-                <mxCell id="e3_lbl" value="GET active IntentSpecification&#xa;(syntactic validation)" style="edgeLabel;fontSize=10;fontStyle=2;container=0;" parent="e3" connectable="0" vertex="1">
+                <mxCell id="e3_lbl" value="GET active IntentSpecification&#xa;(syntactic validation)" style="edgeLabel;fontSize=10;fontStyle=2;container=0;rounded=0;" parent="e3" connectable="0" vertex="1">
                     <mxGeometry relative="0.5" as="geometry">
                         <mxPoint x="-58" y="-42" as="offset"/>
                     </mxGeometry>
@@ -62,7 +62,7 @@
                 <mxCell id="e4" style="edgeStyle=orthogonalEdgeStyle;rounded=0;fillColor=#d5e8d4;strokeColor=default;" parent="1" source="icms_core" target="intent_store" edge="1">
                     <mxGeometry relative="1" as="geometry"/>
                 </mxCell>
-                <mxCell id="e4_lbl" value="persist / update&#xa;Intent / IntentReport projection" style="edgeLabel;fontSize=10;fontStyle=2;container=0;" parent="e4" connectable="0" vertex="1">
+                <mxCell id="e4_lbl" value="persist / update&#xa;Intent / IntentReport projection" style="edgeLabel;fontSize=10;fontStyle=2;container=0;rounded=0;" parent="e4" connectable="0" vertex="1">
                     <mxGeometry relative="0.5" as="geometry">
                         <mxPoint x="-83" y="-34" as="offset"/>
                     </mxGeometry>
@@ -70,7 +70,7 @@
                 <mxCell id="e5" style="edgeStyle=orthogonalEdgeStyle;rounded=0;fillColor=#d5e8d4;strokeColor=default;" parent="1" source="icms_core" target="int_outbox" edge="1">
                     <mxGeometry relative="1" as="geometry"/>
                 </mxCell>
-                <mxCell id="e5_lbl" value="write internal platform event&#xa;(same DB tx)" style="edgeLabel;fontSize=10;fontStyle=2;container=0;" parent="e5" connectable="0" vertex="1">
+                <mxCell id="e5_lbl" value="write internal platform event&#xa;(same DB tx)" style="edgeLabel;fontSize=10;fontStyle=2;container=0;rounded=0;" parent="e5" connectable="0" vertex="1">
                     <mxGeometry relative="0.5" as="geometry">
                         <mxPoint x="20" y="-34" as="offset"/>
                     </mxGeometry>
@@ -78,7 +78,7 @@
                 <mxCell id="e6" style="edgeStyle=orthogonalEdgeStyle;rounded=0;fillColor=#d5e8d4;strokeColor=default;" parent="1" source="int_outbox" target="kafka" edge="1">
                     <mxGeometry relative="1" as="geometry"/>
                 </mxCell>
-                <mxCell id="e6_lbl" value="relay internal Kafka event" style="edgeLabel;fontSize=10;fontStyle=2;container=0;" parent="e6" connectable="0" vertex="1">
+                <mxCell id="e6_lbl" value="relay internal Kafka event" style="edgeLabel;fontSize=10;fontStyle=2;container=0;rounded=0;" parent="e6" connectable="0" vertex="1">
                     <mxGeometry relative="0.5" as="geometry">
                         <mxPoint x="-30" y="-8" as="offset"/>
                     </mxGeometry>
@@ -86,7 +86,7 @@
                 <mxCell id="e7" style="edgeStyle=orthogonalEdgeStyle;rounded=0;fillColor=#d5e8d4;strokeColor=default;" parent="1" source="kafka" target="iims" edge="1">
                     <mxGeometry relative="1" as="geometry"/>
                 </mxCell>
-                <mxCell id="e7_lbl" value="consumes&#xa;IntentValidatedEvent" style="edgeLabel;fontSize=10;fontStyle=2;container=0;" parent="e7" connectable="0" vertex="1">
+                <mxCell id="e7_lbl" value="consumes&#xa;IntentValidatedEvent" style="edgeLabel;fontSize=10;fontStyle=2;container=0;rounded=0;" parent="e7" connectable="0" vertex="1">
                     <mxGeometry relative="0.5" as="geometry">
                         <mxPoint x="-150" y="-6" as="offset"/>
                     </mxGeometry>
@@ -100,7 +100,7 @@
                         </Array>
                     </mxGeometry>
                 </mxCell>
-                <mxCell id="e8_lbl" value="IntentRejectedEvent " style="edgeLabel;fontSize=10;fontStyle=2;container=0;" parent="e8" connectable="0" vertex="1">
+                <mxCell id="e8_lbl" value="IntentRejectedEvent " style="edgeLabel;fontSize=10;fontStyle=2;container=0;rounded=0;" parent="e8" connectable="0" vertex="1">
                     <mxGeometry relative="0.5" as="geometry">
                         <mxPoint x="-96" y="-29" as="offset"/>
                     </mxGeometry>
@@ -113,7 +113,7 @@
                         </Array>
                     </mxGeometry>
                 </mxCell>
-                <mxCell id="e9_lbl" value="IntentAssuranceEvent" style="edgeLabel;fontSize=10;fontStyle=2;container=0;" parent="e9" connectable="0" vertex="1">
+                <mxCell id="e9_lbl" value="IntentAssuranceEvent" style="edgeLabel;fontSize=10;fontStyle=2;container=0;rounded=0;" parent="e9" connectable="0" vertex="1">
                     <mxGeometry relative="0.5" as="geometry">
                         <mxPoint x="-58" y="-10" as="offset"/>
                     </mxGeometry>
@@ -126,7 +126,7 @@
                         </Array>
                     </mxGeometry>
                 </mxCell>
-                <mxCell id="e11_lbl" value="write TMF-aligned webhook event row&#xa;(same DB tx)" style="edgeLabel;fontSize=10;fontStyle=2;container=0;" parent="e11" connectable="0" vertex="1">
+                <mxCell id="e11_lbl" value="write TMF-aligned webhook event row&#xa;(same DB tx)" style="edgeLabel;fontSize=10;fontStyle=2;container=0;rounded=0;" parent="e11" connectable="0" vertex="1">
                     <mxGeometry relative="0.5" as="geometry">
                         <mxPoint x="-116" y="32" as="offset"/>
                     </mxGeometry>
@@ -139,7 +139,7 @@
                         </Array>
                     </mxGeometry>
                 </mxCell>
-                <mxCell id="e12_lbl" value="HTTPS POST to subscriber-owned callbackUrl&#xa;(TMF-aligned event payload; no external Kafka)" style="edgeLabel;fontSize=10;fontStyle=2;container=0;" parent="e12" connectable="0" vertex="1">
+                <mxCell id="e12_lbl" value="HTTPS POST to subscriber-owned callbackUrl&#xa;(TMF-aligned event payload; no external Kafka)" style="edgeLabel;fontSize=10;fontStyle=2;container=0;rounded=0;" parent="e12" connectable="0" vertex="1">
                     <mxGeometry relative="0.5" as="geometry"/>
                 </mxCell>
                 <mxCell id="e13" style="edgeStyle=orthogonalEdgeStyle;rounded=0;dashed=1;fillColor=#d5e8d4;strokeColor=default;" parent="1" source="icms_core" target="sub_registry" edge="1">
@@ -150,51 +150,51 @@
                         </Array>
                     </mxGeometry>
                 </mxCell>
-                <mxCell id="e13_lbl" value="store / lookup&#xa;callback subscriptions" style="edgeLabel;fontSize=10;fontStyle=2;container=0;" parent="e13" connectable="0" vertex="1">
+                <mxCell id="e13_lbl" value="store / lookup&#xa;callback subscriptions" style="edgeLabel;fontSize=10;fontStyle=2;container=0;rounded=0;" parent="e13" connectable="0" vertex="1">
                     <mxGeometry relative="0.5" as="geometry">
                         <mxPoint x="67" y="35" as="offset"/>
                     </mxGeometry>
                 </mxCell>
-                <mxCell id="legend" value="&lt;b&gt;Legend&lt;/b&gt;&#xa;─── Synchronous / data flow&#xa;- - - Dependency / lookup&#xa;─── Kafka event (internal platform only)&#xa;─── HTTP POST webhook callback (external)" style="text;html=1;strokeColor=default;fillColor=#f5f5f5;align=left;verticalAlign=top;spacingLeft=8;fontSize=11;fontColor=#333333;container=0;" parent="1" vertex="1">
+                <mxCell id="legend" value="&lt;b&gt;Legend&lt;/b&gt;&#xa;─── Synchronous / data flow&#xa;- - - Dependency / lookup&#xa;─── Kafka event (internal platform only)&#xa;─── HTTP POST webhook callback (external)" style="text;html=1;strokeColor=default;fillColor=#f5f5f5;align=left;verticalAlign=top;spacingLeft=8;fontSize=11;fontColor=#333333;container=0;rounded=0;" parent="1" vertex="1">
                     <mxGeometry x="840" y="650" width="320" height="100" as="geometry"/>
                 </mxCell>
-                <mxCell id="not_owned_note" value="IC MS does NOT own:&#xa;• Semantic interpretation&#xa;• Optimisation / change&#xa;• Callback ingestion&#xa;• Runtime assurance truth&#xa;• Internal fulfilment state machine" style="text;html=1;strokeColor=default;fillColor=#f8cecc;align=left;verticalAlign=top;spacingLeft=8;fontSize=11;container=0;" parent="1" vertex="1">
+                <mxCell id="not_owned_note" value="IC MS does NOT own:&#xa;• Semantic interpretation&#xa;• Optimisation / change&#xa;• Callback ingestion&#xa;• Runtime assurance truth&#xa;• Internal fulfilment state machine" style="text;html=1;strokeColor=default;fillColor=#f8cecc;align=left;verticalAlign=top;spacingLeft=8;fontSize=11;container=0;rounded=0;" parent="1" vertex="1">
                     <mxGeometry x="840" y="760" width="280" height="110" as="geometry"/>
                 </mxCell>
-                <mxCell id="ext_consumer" value="External Consumer / OEX" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=default;fontStyle=1;fontSize=12;container=0;" parent="1" vertex="1">
+                <mxCell id="ext_consumer" value="External Consumer / OEX" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=default;fontStyle=1;fontSize=12;container=0;" parent="1" vertex="1">
                     <mxGeometry x="110" y="100" width="200" height="50" as="geometry"/>
                 </mxCell>
-                <mxCell id="ext_subscriber" value="External Subscriber Listener&#xa;(subscriber-owned callback URL)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=default;fontStyle=1;fontSize=12;container=0;" parent="1" vertex="1">
+                <mxCell id="ext_subscriber" value="External Subscriber Listener&#xa;(subscriber-owned callback URL)" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=default;fontStyle=1;fontSize=12;container=0;" parent="1" vertex="1">
                     <mxGeometry x="110" y="220" width="200" height="50" as="geometry"/>
                 </mxCell>
-                <mxCell id="gateway" value="NGW" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=default;fontStyle=1;fontSize=12;container=0;" parent="1" vertex="1">
+                <mxCell id="gateway" value="NGW" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=default;fontStyle=1;fontSize=12;container=0;" parent="1" vertex="1">
                     <mxGeometry x="470" y="150" width="160" height="50" as="geometry"/>
                 </mxCell>
-                <mxCell id="icms_core" value="Intent Controller MS (IC MS)&lt;br&gt;&lt;br&gt;Owns:&lt;br&gt;• TMF-compliant /intentManagement/v5/intent&lt;br&gt;• TMF-compliant /intentManagement/v5/intent/{id}&lt;br&gt;• IntentReport read APIs&lt;br&gt;• Hub APIs:&amp;nbsp; /intent/hub" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=default;fontStyle=1;fontSize=12;align=left;spacingLeft=10;container=0;" parent="1" vertex="1">
+                <mxCell id="icms_core" value="Intent Controller MS (IC MS)&lt;br&gt;&lt;br&gt;Owns:&lt;br&gt;• TMF-compliant /intentManagement/v5/intent&lt;br&gt;• TMF-compliant /intentManagement/v5/intent/{id}&lt;br&gt;• IntentReport read APIs&lt;br&gt;• Hub APIs:&amp;nbsp; /intent/hub" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=default;fontStyle=1;fontSize=12;align=left;spacingLeft=10;container=0;" parent="1" vertex="1">
                     <mxGeometry x="750" y="90" width="380" height="110" as="geometry"/>
                 </mxCell>
-                <mxCell id="intent_store" value="Intent Projection Store&#xa;(Intent + IntentReport)" style="shape=cylinder3;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=default;fontStyle=1;fontSize=12;container=0;" parent="1" vertex="1">
+                <mxCell id="intent_store" value="Intent Projection Store&#xa;(Intent + IntentReport)" style="shape=cylinder3;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=default;fontStyle=1;fontSize=12;container=0;rounded=0;" parent="1" vertex="1">
                     <mxGeometry x="732" y="264" width="180" height="90" as="geometry"/>
                 </mxCell>
-                <mxCell id="int_outbox" value="internal_event_outbox&#xa;(Kafka relay)" style="shape=cylinder3;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=default;fontStyle=1;fontSize=12;container=0;" parent="1" vertex="1">
+                <mxCell id="int_outbox" value="internal_event_outbox&#xa;(Kafka relay)" style="shape=cylinder3;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=default;fontStyle=1;fontSize=12;container=0;rounded=0;" parent="1" vertex="1">
                     <mxGeometry x="975" y="264" width="170" height="90" as="geometry"/>
                 </mxCell>
-                <mxCell id="webhook_outbox" value="webhook_delivery_outbox&#xa;(HTTP POST relay; no Kafka)" style="shape=cylinder3;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=default;fontStyle=1;fontSize=12;container=0;" parent="1" vertex="1">
+                <mxCell id="webhook_outbox" value="webhook_delivery_outbox&#xa;(HTTP POST relay; no Kafka)" style="shape=cylinder3;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=default;fontStyle=1;fontSize=12;container=0;rounded=0;" parent="1" vertex="1">
                     <mxGeometry x="750" y="460" width="180" height="100" as="geometry"/>
                 </mxCell>
-                <mxCell id="sub_registry" value="Subscription Registry&#xa;(Hub webhook subscriptions)" style="shape=cylinder3;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=default;fontStyle=1;fontSize=12;container=0;" parent="1" vertex="1">
+                <mxCell id="sub_registry" value="Subscription Registry&#xa;(Hub webhook subscriptions)" style="shape=cylinder3;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=default;fontStyle=1;fontSize=12;container=0;rounded=0;" parent="1" vertex="1">
                     <mxGeometry x="960" y="460" width="170" height="100" as="geometry"/>
                 </mxCell>
-                <mxCell id="idms" value="Intent Definition MS&#xa;(ID MS)&#xa;&#xa;IntentSpecification catalogue&#xa;(Active spec validation)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=default;fontStyle=1;fontSize=12;align=left;spacingLeft=10;container=0;" parent="1" vertex="1">
+                <mxCell id="idms" value="Intent Definition MS&#xa;(ID MS)&#xa;&#xa;IntentSpecification catalogue&#xa;(Active spec validation)" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=default;fontStyle=1;fontSize=12;align=left;spacingLeft=10;container=0;" parent="1" vertex="1">
                     <mxGeometry x="1348" y="95" width="220" height="90" as="geometry"/>
                 </mxCell>
-                <mxCell id="kafka" value="Kafka&#xa;(internal platform event bus)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=default;fontStyle=1;fontSize=12;container=0;" parent="1" vertex="1">
+                <mxCell id="kafka" value="Kafka&#xa;(internal platform event bus)" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=default;fontStyle=1;fontSize=12;container=0;" parent="1" vertex="1">
                     <mxGeometry x="1340" y="320" width="170" height="50" as="geometry"/>
                 </mxCell>
-                <mxCell id="iims" value="Intent Intelligence MS&lt;br&gt;(II MS)&lt;br&gt;&lt;br&gt;• Semantic interpretation&lt;br&gt;• Optimisation&lt;br&gt;• Change handoff&lt;br&gt;• Emits rejection / network-ready outcomes" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffcccc;strokeColor=default;fontStyle=1;fontSize=12;align=left;spacingLeft=10;container=0;" parent="1" vertex="1">
+                <mxCell id="iims" value="Intent Intelligence MS&lt;br&gt;(II MS)&lt;br&gt;&lt;br&gt;• Semantic interpretation&lt;br&gt;• Optimisation&lt;br&gt;• Change handoff&lt;br&gt;• Emits rejection / network-ready outcomes" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#ffcccc;strokeColor=default;fontStyle=1;fontSize=12;align=left;spacingLeft=10;container=0;" parent="1" vertex="1">
                     <mxGeometry x="1250" y="445" width="150" height="145" as="geometry"/>
                 </mxCell>
-                <mxCell id="iams" value="Intent Assurance MS&#xa;(IA MS)&#xa;&#xa;• Runtime assurance truth&#xa;• Emits IntentAssuranceEvent outcomes" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffcccc;strokeColor=default;fontStyle=1;fontSize=12;align=left;spacingLeft=10;container=0;" parent="1" vertex="1">
+                <mxCell id="iams" value="Intent Assurance MS&#xa;(IA MS)&#xa;&#xa;• Runtime assurance truth&#xa;• Emits IntentAssuranceEvent outcomes" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#ffcccc;strokeColor=default;fontStyle=1;fontSize=12;align=left;spacingLeft=10;container=0;" parent="1" vertex="1">
                     <mxGeometry x="1430" y="446" width="140" height="144" as="geometry"/>
                 </mxCell>
             </root>
