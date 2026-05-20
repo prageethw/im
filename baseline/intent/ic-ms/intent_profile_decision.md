@@ -1,42 +1,5 @@
 # Intent mandatory profile proposal
 
-| **Document status** | **Value** |
-| --- | --- |
-| Status | Proposed decision paper |
-| Scope | Runtime Intent minimum data requirements |
-| Primary focus | Admission request profile, persisted response profile, Draft request/response minimums, optional enrichment separation |
-| Out of scope | Full lifecycle design, full version-history design, Draft lineage design, implementation routing details |
-| Source of truth after commit | GitHub `baseline/intent/ic-ms/intent_profile_decision.md` |
-
-## Table of contents:
-
-- [1. Decision summary](#1-decision-summary)
-- [2. Proposal flow diagram](#2-proposal-flow-diagram)
-- [3. Context](#3-context)
-- [4. Decision drivers](#4-decision-drivers)
-- [5. Proposal](#5-proposal)
-  - [5.1 TMF-aligned, not TMF-minimal](#51-tmf-aligned-not-tmf-minimal)
-  - [5.2 Runtime Intent admission profile](#52-runtime-intent-admission-profile)
-  - [5.3 Minimum attributes for Intent Draft creation](#53-minimum-attributes-for-intent-draft-creation)
-  - [5.4 Minimum response attributes for Intent Draft creation](#54-minimum-response-attributes-for-intent-draft-creation)
-  - [5.5 IntentSpecification resolution rule](#55-intentspecification-resolution-rule)
-  - [5.6 Persisted response profile after admission](#56-persisted-response-profile-after-admission)
-  - [5.7 Optional intent-management-entity governed enrichment fields](#57-optional-intent-management-entity-governed-enrichment-fields)
-  - [5.8 Lifecycle ownership guardrail](#58-lifecycle-ownership-guardrail)
-- [6. Examples](#6-examples)
-  - [6.1 Minimal admission request](#61-minimal-admission-request)
-  - [6.2 Minimal persisted response after admission](#62-minimal-persisted-response-after-admission)
-- [7. Consequences](#7-consequences)
-  - [7.1 Positive consequences](#71-positive-consequences)
-  - [7.2 Trade-offs](#72-trade-offs)
-- [8. Alternatives considered](#8-alternatives-considered)
-  - [8.1 Make intentSpecification.id mandatory in every admission request](#81-make-intentspecificationid-mandatory-in-every-admission-request)
-  - [8.2 Make humanExpression mandatory](#82-make-humanexpression-mandatory)
-  - [8.3 Allow admission request without expression.iri](#83-allow-admission-request-without-expressioniri)
-- [9. Proposal outcome](#9-proposal-outcome)
-- [10. References](#10-references)
-- [11. Follow-up work](#11-follow-up-work)
-
 ## 1. Decision summary:
 
 This proposal defines the minimum mandatory attribute profile for runtime `Intent` admission, layered on top of TMF921.
@@ -134,7 +97,7 @@ Draft is a pre-admission authoring convenience.
 
 A draft can be created just by setting `submit: false`.
 
-Draft is not the primary runtime profile. Draft is only a design time authoring profile used before admission.
+Draft is not the primary runtime profile. Draft is only a design-time authoring profile used before admission.
 
 Minimum Draft creation request attributes:
 
@@ -181,7 +144,7 @@ Recommended Draft creation request payload with `humanExpression`:
 }
 ```
 
-When a Draft is later moved into admission using `submit: true`, it must satisfy the normal runtime Intent admission profile defined in this paper.
+When a Draft is later moved into admission using `submit: true`, it must satisfy the normal runtime Intent admission profile defined in section 5.2.
 
 ### 5.4 Minimum response attributes for Intent Draft creation:
 
@@ -308,7 +271,7 @@ External consumers must not supply `lifecycleStatus` in any external write reque
 
 ## 6. Examples:
 
-The examples use a hospital surgical-connectivity scenario only to make the profile concrete. Draft request/response payloads are shown in the Draft sections above. This section focuses on admission and the persisted response after admission.
+The examples use a hospital surgical-connectivity scenario only to make the profile concrete. Draft request/response payloads are shown in sections 5.3 and 5.4. This section focuses on admission and the persisted response after admission.
 
 ### 6.1 Minimal admission request:
 
@@ -441,7 +404,7 @@ If accepted, the intent management entity will document and enforce:
 - runtime Intent admission requires `name`, `expression`, `expression.@type`, `expression.iri`, `expression.expressionValue`, `@type`, and `@baseType`
 - persisted Intent response after admission requires identity, lifecycle projection, resolved `intentSpecification.id`, expression, `@type`, and `@baseType`
 - Draft creation requires only `name`, `submit: false`, `@type`, and `@baseType`
-- Draft creation response requires identity, Draft lifecycle projection, `submit: false`, `@type`, and `@baseType`; it does not require a permanent runtime `version`; it does not require a permanent runtime `version`
+- Draft creation response requires identity, Draft lifecycle projection, `submit: false`, `@type`, and `@baseType`; it does not require a permanent runtime `version`
 - `humanExpression` and `intentSpecification.id` are strongly recommended for admission, but not generically mandatory
 - `intentSpecification.id` is optional in the admission request but mandatory in the persisted response after admission is accepted
 - optional enrichment fields remain separate from the generic minimum mandatory profile
