@@ -27,14 +27,16 @@ rectangle "Persisted Intent response\nafter admission is accepted" as ADMISSION_
   rectangle "Key distinction\n\nintentSpecification.id is optional\nin the admission request,\nbut mandatory in the persisted\nresponse after admission." as RESPONSE_DISTINCTION
 }
 
-rectangle " Draft \npre-admission authoring context" as DRAFT #FFF8E1 {
+rectangle "Small Draft add-on:\npre-admission authoring context" as DRAFT #FFF8E1 {
   rectangle "Minimum Draft creation request\n\n- name\n- submit = false\n- @type\n- @baseType" as DRAFT_MIN
 
   rectangle "Strongly recommended\nfor Draft\n\n- humanExpression" as DRAFT_RECOMMENDED
 
   rectangle "Draft does not require\n\n- expression\n- expression.iri\n- expression.expressionValue\n- intentSpecification.id" as DRAFT_NOT_REQUIRED
 
-  rectangle "Minimum Draft response\n\n- id\n- href\n- name\n- submit = false\n- version\n- lifecycleStatus = Draft\n- statusReason\n- statusChangeDate\n- @type\n- @baseType" as DRAFT_RESPONSE
+  rectangle "Minimum Draft response\n\n- id\n- href\n- name\n- submit = false\n- lifecycleStatus = Draft\n- statusReason\n- statusChangeDate\n- @type\n- @baseType" as DRAFT_RESPONSE
+
+  rectangle "Draft version rule\n\nDraft Intents are not assigned\na permanent runtime version.\n\nPermanent runtime version is\nassigned only after admission\nis accepted." as DRAFT_VERSION_RULE
 }
 
 rectangle "Optional intent-management-entity\ngoverned enrichment fields" as ENRICHMENT #F3E5F5 {
@@ -48,7 +50,7 @@ rectangle "Optional intent-management-entity\ngoverned enrichment fields" as ENR
 rectangle "Lifecycle ownership guardrail" as GUARDRAIL #E3F2FD {
   rectangle "External consumers must not supply\nlifecycleStatus in any external\nwrite request.\n\ncreate / PUT / PATCH / other writes" as NO_LIFECYCLE
 
-  rectangle "External consumers use submit,\nnot lifecycleStatus, to request\nDraft save or admission.\n\nlifecycleStatus is assigned,\ntransitioned, and projected by\nthe intent management entity." as SUBMIT_RULE
+  rectangle "lifecycleStatus is assigned,\ntransitioned, and projected by\nthe intent management entity." as LIFECYCLE_RULE
 }
 
 PROFILE --> ADMISSION : main baseline
@@ -69,6 +71,13 @@ Draft does not replace the
 runtime admission profile.
 It is only a lighter
 pre-admission authoring context.
+end note
+
+note bottom of DRAFT_VERSION_RULE
+No draft lineage or special ID
+design is part of this paper.
+This paper defines minimum
+data requirements only.
 end note
 
 note bottom of ENRICHMENT

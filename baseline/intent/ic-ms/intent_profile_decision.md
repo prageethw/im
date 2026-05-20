@@ -20,6 +20,10 @@ The key proposals are:
 
 This proposal defines a candidate intent management entity profile rule. It does not claim that TMF921 universally mandates the same fields for every implementation.
 
+## 2. Proposal flow diagram:
+
+![IntentSpecification mandatory profile proposal](intent_profile_decision.svg)
+
 ## 2. Context:
 
 An `IntentSpecification` defines the reusable contract. A runtime `Intent` is a concrete request made against that contract, either by explicit reference to an `IntentSpecification` or by an expression IRI that can be resolved to one active specification.
