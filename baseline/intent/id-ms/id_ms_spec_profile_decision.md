@@ -138,13 +138,13 @@ Some fields are valuable and may be mandatory in a specific implementation, but 
 
 | **Field** | **Proposed classification** | **Reason** |
 | --- | --- | --- |
-| `familyId` | Optional / intent-management-entity governed | Useful for version-family governance, but not required as a generic minimum mandatory field. |
+| `familyId` | Optional  | Useful for version-family governance, but not required as a generic minimum mandatory field. |
 | `description` | Optional | Useful for catalogue readability and governance context. |
-| `relatedParty` | Optional / intent-management-entity governed | Useful for ownership and provider attribution. |
-| `@schemaLocation` | Optional / intent-management-entity governed | Useful when an intent management entity publishes a concrete schema for the resource representation. |
+| `relatedParty` | Optional  | Useful for ownership and provider attribution. |
+| `@schemaLocation` | Optional  | Useful when an intent management entity publishes a concrete schema for the resource representation. |
 | `validFor.endDateTime` | Optional | Useful when a specification has a planned expiry. |
-| `schemaVersion` / `schemaHash` inside `targetEntitySchema` | Optional / intent-management-entity governed | Useful for stronger schema governance and integrity verification. |
-| `_links` | Optional / intent-management-entity governed | Useful for discoverable operation affordances. |
+| `schemaVersion` / `schemaHash` inside `targetEntitySchema` | Optional  | Useful for stronger schema governance and integrity verification. |
+| `_links` | Optional  | Useful for discoverable operation affordances. |
 
 An intent management entity may make any of these fields mandatory in a concrete implementation profile, but that is a stronger implementation-specific rule rather than the generic minimum mandatory profile proposed here.
 
