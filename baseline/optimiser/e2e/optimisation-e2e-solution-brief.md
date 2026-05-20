@@ -59,6 +59,8 @@ External/backend API design is TMF ontology-aligned where useful, with controlle
 
 ### Logical view
 
+![alt text](optimisation-logical-view.svg)
+
 The logical integration model is:
 
 ```text
