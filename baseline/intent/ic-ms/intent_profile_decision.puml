@@ -11,108 +11,70 @@ rectangle "TMF921 Intent\nbase resource model" as TMF #EEF2FF
 
 rectangle "Intent management entity\nmandatory profile\n\nTMF-aligned, not TMF-minimal" as PROFILE #E8F5E9
 
-TMF --> PROFILE : intent management entity conformance\ndefines runtime Intent profile
+TMF --> PROFILE : implementation profile\nfor runtime Intent handling
 
-rectangle "External write contract" as WRITE #FFF3E0 {
-  rectangle "External consumers may supply\n\n- consumer-owned Intent content\n- submit request-control field\n\nExternal consumers must NOT supply\nlifecycleStatus in create, PUT, PATCH,\nor any other external write request body." as WRITE_CONTRACT
+rectangle "Primary profile:\nruntime Intent admission" as ADMISSION #FFE0B2 {
+  rectangle "Minimum admission request\n\n- name\n- expression\n- expression.@type\n- expression.iri\n- expression.expressionValue\n- @type\n- @baseType" as ADMISSION_MIN
 
-  rectangle "submit semantics\n\n- omitted on initial create = submit=true\n- submit=false = save / keep Draft\n- submit=true = request admission\n- omitted on existing Draft = remain Draft" as SUBMIT
+  rectangle "Strongly encouraged\n\n- humanExpression\n- intentSpecification.id" as ADMISSION_RECOMMENDED
+
+  rectangle "IntentSpecification resolution\n\nintentSpecification.id supplied:\n- authoritative\n- must reference ACTIVE spec\n- must align with expression.iri\n\nintentSpecification.id omitted:\n- resolve ACTIVE spec by expression.iri\n- reject zero or multiple matches" as RESOLUTION
 }
 
-rectangle "Draft authoring state" as DRAFT #FFF8E1 {
-  rectangle "Minimal Draft create\n\n- name\n- submit = false\n- @type\n- @baseType\n\nStrongly recommended:\n- humanExpression" as DRAFT_CREATE
+rectangle "Persisted Intent response\nafter admission is accepted" as ADMISSION_RESPONSE #E0F2F1 {
+  rectangle "Minimum response attributes\n\n- id\n- href\n- name\n- version\n- lifecycleStatus\n- statusReason\n- statusChangeDate\n- intentSpecification.id\n- expression\n- expression.@type\n- expression.iri\n- expression.expressionValue\n- @type\n- @baseType" as RESPONSE_MIN
 
-  rectangle "Draft editability\n\nAll attributes accepted by the\nPUT / PATCH request contract\nare mutable while Draft.\n\nid is immutable.\nlifecycleStatus is not writable." as DRAFT_EDIT
-
-  rectangle "Draft is not runtime-active\n\n- not admitted\n- not optimised\n- not assured\n- not sent to change execution\n- does not drive activeVersion" as DRAFT_NON_RUNTIME
+  rectangle "Key distinction\n\nintentSpecification.id is optional\nin the admission request,\nbut mandatory in the persisted\nresponse after admission." as RESPONSE_DISTINCTION
 }
 
-rectangle "Admission gate" as GATE #FFE0B2 {
-  rectangle "Admission requires\n\n- name\n- expression\n- expression.@type\n- expression.iri\n- expression.expressionValue\n- @type\n- @baseType\n\nStrongly recommended:\n- humanExpression\n- intentSpecification.id" as ADMISSION_PROFILE
+rectangle "Small Draft add-on:\npre-admission authoring context" as DRAFT #FFF8E1 {
+  rectangle "Minimum Draft creation request\n\n- name\n- submit = false\n- @type\n- @baseType" as DRAFT_MIN
 
-  rectangle "If admission is accepted\n\nIntent management entity assigns:\n- lifecycleStatus = Acknowledged\n- statusReason\n- statusChangeDate\n- version\n\nExternal consumer does not assign lifecycle." as ASSIGN_STATUS
+  rectangle "Strongly recommended\nfor Draft\n\n- humanExpression" as DRAFT_RECOMMENDED
+
+  rectangle "Draft does not require\n\n- expression\n- expression.iri\n- expression.expressionValue\n- intentSpecification.id" as DRAFT_NOT_REQUIRED
+
+  rectangle "Minimum Draft response\n\n- id\n- href\n- name\n- submit = false\n- version\n- lifecycleStatus = Draft\n- statusReason\n- statusChangeDate\n- @type\n- @baseType" as DRAFT_RESPONSE
 }
 
-note top of GATE
-Terminology:
-submit=true is the consumer action.
-admission is IC MS processing.
-Acknowledged is the first lifecycle state
-when admission is accepted.
+rectangle "Optional intent-management-entity\ngoverned enrichment fields" as ENRICHMENT #F3E5F5 {
+  rectangle "Strongly recommended\nbut not generically mandatory\n\n- humanExpression\n- intentSpecification.id\n  in admission request" as ENRICHMENT_RECOMMENDED
 
-There is no Submitted lifecycle state.
+  rectangle "Optional / governed\n\n- description\n- validFor.startDateTime\n- isBundle\n- priority\n- relatedParty\n- _links" as ENRICHMENT_OPTIONAL
+
+  rectangle "Rule\n\nMay be required by a specific\nimplementation, product, channel,\npolicy, onboarding profile,\nor security posture.\n\nNot part of the generic\nminimum mandatory profile." as ENRICHMENT_RULE
+}
+
+rectangle "Lifecycle ownership guardrail" as GUARDRAIL #E3F2FD {
+  rectangle "External consumers must not supply\nlifecycleStatus in any external\nwrite request.\n\ncreate / PUT / PATCH / other writes" as NO_LIFECYCLE
+
+  rectangle "External consumers use submit,\nnot lifecycleStatus, to request\nDraft save or admission.\n\nlifecycleStatus is assigned,\ntransitioned, and projected by\nthe intent management entity." as SUBMIT_RULE
+}
+
+PROFILE --> ADMISSION : main baseline
+ADMISSION --> RESOLUTION : validate / resolve contract
+RESOLUTION --> ADMISSION_RESPONSE : admission accepted
+PROFILE --> DRAFT : small pre-admission add-on
+DRAFT --> ADMISSION : submit=true requires\nnormal admission profile
+PROFILE --> ENRICHMENT : separate optional enrichment
+PROFILE --> GUARDRAIL : common write rule
+
+note bottom of ADMISSION
+Primary paper focus:
+runtime Intent admission profile.
 end note
 
-rectangle "IntentSpecification resolution" as RESOLUTION #E3F2FD {
-  rectangle "If intentSpecification.id supplied\n\n- authoritative\n- must reference ACTIVE spec\n- must align with expression.iri" as SPEC_ID_SUPPLIED
-
-  rectangle "If intentSpecification.id omitted\n\nResolve ACTIVE IntentSpecification\nusing expression.iri" as SPEC_ID_OMITTED
-
-  rectangle "Reject if\n\n- zero ACTIVE matches\n- multiple ACTIVE matches\n- supplied id conflicts with iri" as REJECT_RESOLUTION
-}
-
-rectangle "Persisted Intent" as PERSISTED #E0F2F1 {
-  rectangle "Mandatory persisted response\n\n- id\n- href\n- name\n- version\n- lifecycleStatus\n- statusReason\n- statusChangeDate\n- intentSpecification.id\n- expression\n- expression.@type\n- expression.iri\n- expression.expressionValue\n- @type\n- @baseType" as PERSISTED_MIN
-
-  rectangle "lifecycleStatus is read-only\nfor external consumers\n\nIt is assigned, transitioned,\nand projected by the\nintent management entity." as LIFECYCLE_READONLY
-}
-
-rectangle "Non-Draft version change" as CHANGE #F3E5F5 {
-  rectangle "Once Intent leaves Draft\n\ngeneral PUT / PATCH attribute\nupdate on that version is not allowed.\n\nMaterial changes require:\ncreate new Draft version -> edit -> submit=true" as MATERIAL_CHANGE
-
-  rectangle "activeVersion\n\nDraft versions do not drive activeVersion.\n\nactiveVersion points to the version\ndriving the external lifecycle projection." as ACTIVE_VERSION
-}
-
-PROFILE --> WRITE : defines external write behaviour
-WRITE --> DRAFT : submit=false
-WRITE --> GATE : submit=true or omitted on initial create
-DRAFT --> DRAFT_EDIT : PUT / PATCH while Draft
-DRAFT --> GATE : later submit=true
-GATE --> RESOLUTION : resolve governing specification
-RESOLUTION --> PERSISTED : exactly one valid ACTIVE contract
-RESOLUTION -[#red,dashed]-> WRITE : reject resolution or admission failure
-PERSISTED --> CHANGE : after leaving Draft
-CHANGE --> DRAFT : material change requires\nnew Draft version
-
-note right of WRITE_CONTRACT
-The key rule is broad:
-lifecycleStatus must not appear
-in any external write request body.
-
-This covers create, PUT, PATCH,
-and any other write operation.
+note bottom of DRAFT
+Draft does not replace the
+runtime admission profile.
+It is only a lighter
+pre-admission authoring context.
 end note
 
-note right of SUBMIT
-submit is an approved extension
-request-control field.
-
-It is not a lifecycle field.
-end note
-
-note bottom of DRAFT_EDIT
-Draft is editable, but only through
-the accepted request contract.
-
-Response/projection fields are not
-client-supplied writable fields.
-end note
-
-note bottom of PERSISTED
-intentSpecification.id may be omitted
-by the submit request when expression.iri
-resolves unambiguously.
-
-After admission, the persisted Intent
-records the resolved specification id.
-end note
-
-note bottom of ACTIVE_VERSION
-Avoid ambiguous pointer names:
-- effectiveVersion
-- currentVersion
-
-Use activeVersion.
+note bottom of ENRICHMENT
+Keep optional enrichment separate
+from the generic minimum
+mandatory profile.
 end note
 
 @enduml
