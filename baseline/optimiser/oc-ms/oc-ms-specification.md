@@ -1,4 +1,4 @@
-# Optimisation-Controller-MS / OC MS Specification
+# OC MS Specification
 
 ## 1. OC MS summary:
 

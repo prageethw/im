@@ -1,4 +1,4 @@
-# OD MS / Optimisation Definition MS Specification
+# Optimisation Definition MS Specification
 
 ## 1. Service purpose:
 

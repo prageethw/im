@@ -1,4 +1,4 @@
-# OSB MS / Optimisation Screen Builder MS Specification
+# Optimisation Screen Builder MS Specification
 
 ## 1. Service purpose:
 
