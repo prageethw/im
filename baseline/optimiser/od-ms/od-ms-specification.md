@@ -180,7 +180,11 @@ Canonical runtime shape:
     "iri": "https://example.com/ontology/optimisation/v1",
     "expressionValue": {
       "@context": {
-        "opt": "https://example.com/ontology/optimisation#"
+        "opt": "https://example.com/ontology/optimisation#",
+        "context": "opt:context",
+        "targets": "opt:targets",
+        "constraints": "opt:constraints",
+        "preferences": "opt:preferences"
       },
       "@type": "opt:OptimisationProblem",
       "context": {
@@ -235,9 +239,32 @@ context.preferences[] contains soft ranking or selection preferences.
   "required": ["@context", "@type", "context"],
   "properties": {
     "@context": {
-      "description": "JSON-LD context for optimisation vocabulary prefixes.",
+      "description": "JSON-LD context for optimisation vocabulary prefixes and canonical optimisation problem container terms.",
       "type": "object",
-      "additionalProperties": true
+      "additionalProperties": true,
+      "required": ["opt", "context", "targets", "constraints", "preferences"],
+      "properties": {
+        "opt": {
+          "type": "string",
+          "const": "https://example.com/ontology/optimisation#"
+        },
+        "context": {
+          "type": "string",
+          "const": "opt:context"
+        },
+        "targets": {
+          "type": "string",
+          "const": "opt:targets"
+        },
+        "constraints": {
+          "type": "string",
+          "const": "opt:constraints"
+        },
+        "preferences": {
+          "type": "string",
+          "const": "opt:preferences"
+        }
+      }
     },
     "@type": {
       "description": "JSON-LD type for the optimisation expression value.",
@@ -308,7 +335,7 @@ The embedded `optimisation-expression-value.schema.json` validates the runtime `
 
 | Schema element | Baseline rule |
 |---|---|
-| `expressionValue.@context` | Required JSON-LD context for optimiser ontology prefixes. |
+| `expressionValue.@context` | Required JSON-LD context for optimiser ontology prefixes and canonical container terms: `context`, `targets`, `constraints`, and `preferences`. |
 | `expressionValue.@type` | Required JSON-LD type. Baseline value is `opt:OptimisationProblem`. |
 | `expressionValue.context` | Required object and canonical optimisation problem container. |
 | `context.targets[]` | Required array containing optimisation goals. It should normally contain at least one target. |
