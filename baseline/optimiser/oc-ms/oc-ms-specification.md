@@ -88,6 +88,8 @@ Field notes:
 | **Field** | **Rule** |
 |---|---|
 | `id` / `href` | Server-assigned runtime resource identity. |
+| `priority` | Optional caller-supplied priority rank represented as a string. Baseline allowed values are `"1"` = highest, `"2"` = normal, and `"3"` = low. If omitted, OC MS applies the default priority policy. |
+| `sourceContext` | Optional provenance context identifying the upstream domain and source resource that requested or caused the optimisation. It may be used for audit, traceability, and list filtering. |
 | `optimisationSpecification` | Immutable reference to the `OptimisationSpecification.id` and `href` used as the contract pointer at creation time. |
 | `expression` | Accepted runtime expression submitted by the caller and validated against the referenced ACTIVE specification. |
 | `result` | Terminal result projection only. Presence depends on lifecycle state. |
@@ -144,7 +146,11 @@ INFEASIBLE -> terminal by default
 CANCELLED -> terminal
 ```
 
+`ACKNOWLEDGED -> QUEUED` is driven by OC MS after the OC MS Outbox Relay successfully publishes the `OptimisationRequestedEvent` to the Kafka topic. If publication is delayed, the resource may remain `ACKNOWLEDGED` while the outbox retry policy continues.
+
 Retrial does not move the failed Optimisation back to `PROCESSING`. It creates a new linked Optimisation with `retrialOf`.
+
+Retrial is available only from `FAILED` in the baseline. Retrial is not available from `INFEASIBLE` by default because `INFEASIBLE` is a valid optimisation/model outcome, not a technical execution failure. If a consumer wants another attempt after `INFEASIBLE`, it must submit a new `Optimisation` request with changed inputs.
 
 ## 7. Result presence rules:
 
@@ -462,6 +468,8 @@ x-platform-extension: true
 x-tmf-native: false
 ```
 
+`X-Total-Count` reflects the total number of resources matching the applied filters before paging and sparse field projection. `X-Result-Count` reflects the number of resources returned in the current response page.
+
 ## 15. GET /optimisation/{id}:
 
 ```http
@@ -606,6 +614,14 @@ x-platform-extension: true
 x-tmf-native: false
 ```
 
+Cancellation request body:
+
+```text
+No request body is required.
+If a request body is supplied, it may contain optional reason/comment metadata only.
+A supplied cancellation body does not change cancellation semantics, worker instruction meaning, or lifecycle eligibility.
+```
+
 Cancellation semantics:
 
 ```text
@@ -613,6 +629,15 @@ Cancellation is best-effort.
 OC MS accepts cancellation only for eligible non-terminal lifecycle states.
 CANCELLED is set only after worker confirmation through OptimisationCompletedEvent or an equivalent terminal confirmation path.
 If cancellation is requested when lifecycleStatus is terminal (COMPLETED, FAILED, INFEASIBLE, or CANCELLED), OC MS returns 409 Conflict.
+```
+
+Retrial request body:
+
+```text
+No request body is required.
+Baseline retrial does not allow request overrides.
+Retrial resubmits the original accepted expression and referenced OptimisationSpecification.id unchanged.
+To change targets, constraints, preferences, source context, priority, or the referenced OptimisationSpecification, the caller must create a new Optimisation request rather than using retrial.
 ```
 
 Retrial response creates a new Optimisation and links it to the failed optimisation:
@@ -657,8 +682,8 @@ Strict content type rules:
 
 ```text
 POST /optimisation requires Content-Type: application/json.
-POST /optimisation/{id}/cancellation requires Content-Type: application/json when a request body is sent.
-POST /optimisation/{id}/retrial requires Content-Type: application/json when a request body is sent.
+POST /optimisation/{id}/cancellation has no required body; if a body is sent it requires Content-Type: application/json.
+POST /optimisation/{id}/retrial has no required body; if a body is sent it requires Content-Type: application/json.
 Unsupported request content type returns 415 Unsupported Media Type.
 ```
 
