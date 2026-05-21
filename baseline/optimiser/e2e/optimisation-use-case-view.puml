@@ -1,7 +1,8 @@
 @startuml
-title Optimisation Platform — Simplified Use Case View
+title Optimisation Platform — Main Use Cases
 
 left to right direction
+
 skinparam packageStyle rectangle
 skinparam actorStyle awesome
 skinparam usecaseBorderColor #4F46E5
@@ -11,38 +12,38 @@ skinparam actorBackgroundColor #EEF2FF
 skinparam rectangleBorderColor #4F46E5
 skinparam rectangleBackgroundColor #F8FAFC
 
-actor "User & OEX " as UserOEX
-actor "Platform Consumer" as Consumer
+actor "User & OEX" as UserOEX
+actor "Authorised Platform Service" as PlatformService
+actor "Optimisation Domain Engineer" as DomainEngineer
 actor "Python/Gurobi Worker" as Worker
 
 rectangle "Optimisation Platform" {
-  usecase "1. Discover optimisation\ncapabilities" as UC1
-  usecase "2. Create optimisation\nspecification" as UC2
-  usecase "3. Activate optimisation\nspecification" as UC3
-  usecase "4. Submit runtime\noptimisation request" as UC4
-  usecase "5. Execute optimisation" as UC5
-  usecase "6. Monitor optimisation\nstatus" as UC6
-  usecase "7. Retrieve optimisation\noutcome" as UC7
-  usecase "8. Cancel optimisation" as UC8
-  usecase "9. Retry failed\noptimisation" as UC9
+  usecase "Discover optimisation\ncapabilities" as UC_Discover
+  usecase "Manage optimisation\nspecifications" as UC_ManageSpecs
+  usecase "Submit runtime\noptimisation" as UC_Submit
+  usecase "Monitor optimisation\nstatus and outcome" as UC_Monitor
+  usecase "Cancel active\noptimisation" as UC_Cancel
+  usecase "Retry failed\noptimisation" as UC_Retry
+  usecase "Execute optimisation\nwork" as UC_Execute
 }
 
-UserOEX --> UC1
-UserOEX --> UC2
-UserOEX --> UC3
-UserOEX --> UC4
-UserOEX --> UC6
-UserOEX --> UC7
-UserOEX --> UC8
-UserOEX --> UC9
+UserOEX --> UC_Discover
+UserOEX --> UC_Submit
+UserOEX --> UC_Monitor
+UserOEX --> UC_Cancel
+UserOEX --> UC_Retry
 
-Consumer --> UC1
-Consumer --> UC4
-Consumer --> UC6
-Consumer --> UC7
-Consumer --> UC8
-Consumer --> UC9
+PlatformService --> UC_Discover
+PlatformService --> UC_Submit
+PlatformService --> UC_Monitor
+PlatformService --> UC_Cancel
+PlatformService --> UC_Retry
 
-Worker --> UC5
+DomainEngineer --> UC_ManageSpecs
+
+Worker --> UC_Execute
+
+UC_Submit ..> UC_Execute : async execution
+UC_Monitor ..> UC_Execute : reads projected outcome
 
 @enduml
