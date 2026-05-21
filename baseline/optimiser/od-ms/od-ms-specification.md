@@ -443,6 +443,8 @@ ACTIVE: official version is assigned at activation and is immutable.
 RETIRED: retains the assigned official version and is immutable.
 ```
 
+Multiple DRAFT OptimisationSpecification resources may exist in the same familyId at the same time. Official version uniqueness applies only to ACTIVE and RETIRED specifications because DRAFT specifications do not expose an official public version. OD MS enforces only one ACTIVE OptimisationSpecification per familyId.
+
 Version format baseline:
 
 ```text
@@ -504,6 +506,14 @@ Physical `DELETE` is not used for `ACTIVE` or `RETIRED` specifications.
 | `fields` | Optional sparse fieldset projection. |
 
 Unsupported or malformed query parameters return `400 Bad Request`.
+
+Sparse field projection rule:
+
+```text
+If a requested field is valid but not present for the resource's current lifecycle state, OD MS omits that field silently rather than returning an error.
+For example, fields=id,version on a DRAFT resource returns id and omits version because DRAFT specifications do not expose an official public version.
+Unsupported field names still return 400 Bad Request.
+```
 
 ## 15. External response header governance:
 
@@ -1105,6 +1115,23 @@ Content-Type: application/json
   "reason": "Concurrent activation conflict",
   "message": "Another OptimisationSpecification activation is already in progress or has just completed for the same familyId. Refresh the family state and retry if still required.",
   "status": 409,
+  "@type": "Error"
+}
+```
+
+Unsupported media type response:
+
+```http
+HTTP/1.1 415 Unsupported Media Type
+Content-Type: application/json
+```
+
+```json
+{
+  "code": "UNSUPPORTED_MEDIA_TYPE",
+  "reason": "Unsupported media type",
+  "message": "PATCH /optimisationSpecification/{id} requires Content-Type: application/merge-patch+json. PUT /optimisationSpecification/{id} requires Content-Type: application/json.",
+  "status": 415,
   "@type": "Error"
 }
 ```
