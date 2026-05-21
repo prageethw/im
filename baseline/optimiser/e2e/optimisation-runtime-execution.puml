@@ -1,5 +1,5 @@
 @startuml
-title Optimisation Runtime Execution (Request to Result)
+title Optimisation Runtime Execution — Request to Result
 
 skinparam sequenceArrowThickness 2
 skinparam roundcorner 10
@@ -10,7 +10,7 @@ skinparam sequenceActorBorderColor #4F46E5
 skinparam noteBorderColor #A5B4FC
 skinparam noteBackgroundColor #EEF2FF
 
-actor "User & OEX " as Caller
+actor "User & OEX" as Caller
 participant "OGW" as OGW
 participant "OSB MS" as OSB
 participant "NGW" as NGW
@@ -18,85 +18,84 @@ participant "OC MS" as OCMS
 participant "OD MS" as ODMS
 database "OC MS DB" as OCDB
 queue "OC MS Outbox" as Outbox
-queue "Kafka" as Kafka
+queue "Kafka\nt7.optimisation.events" as Kafka
 participant "Python/Gurobi\nWorker" as Worker
 queue "OC MS Inbox" as Inbox
 
-== Optimisation Request ==
+== Submit Runtime Optimisation ==
 
-Caller -> OGW : 1. Initiate optimisation journey via UI
-OGW -> OGW : 2. Authenticate caller/token/session\nand derive user context
-note right of OGW
-User context may include tenant, claims,
-roles/scopes, and entitlements.
-end note
+Caller -> OGW : 1. Start optimisation journey
+OGW -> OGW : 2. Authenticate/session check\nand derive user context
+OGW -> OSB : 3. Invoke OSB MS\nmTLS + User Context JWT\ncorrelationId / traceId
 
-OGW -> OSB : 3. Invoke OSB MS\nwith user context\nmTLS, correlation id, trace context
-OSB -> OSB : 4. Validate user context\nshape request/action model\nand perform user-context authorisation
-note right of OSB
-User-context-related authorisation is performed
-at OSB / OCB-level before the request crosses NGW.
-end note
+OSB -> OSB : 4. Apply user-context filtering\nand shape runtime request
 
-OSB -> NGW : 5. Forward optimisation request\nwith system caller identity\nmTLS, correlation id, trace context\n(no user context downstream)
+OSB -> NGW : 5. Submit optimisation request\nmTLS + OAuth2 system identity\n(no user context downstream)
+
 note right of NGW
-User context terminates at NGW.
-NGW-to-downstream calls carry only
-system/service caller identity plus technical metadata.
+User context stops before/at NGW.
+Downstream OD/OC calls use system/service identity only.
 end note
 
-NGW -> OCMS : 6. Route request to OC MS\nusing mTLS and service/system auth context only
-note right of OCMS
-OC MS authorises the calling service/system.
-OC MS does not receive or depend on
-end-user identity/claims/roles/scopes.
-end note
+NGW -> OCMS : 6. POST /optimisation\nmTLS + service/system auth
 
-== Validation ==
+== Validate Contract ==
 
-OCMS -> ODMS : 7. Validate referenced ACTIVE OptimisationSpecification\nand request contract\nusing mTLS and service/system auth context only
+OCMS -> ODMS : 7. Direct service-to-service mTLS\nvalidate referenced ACTIVE\nOptimisationSpecification.id
 note right of ODMS
-OD MS authorises the calling service/system.
-OD MS does not receive or depend on
-end-user identity/claims/roles/scopes.
+OC MS -> OD MS is a direct internal service path.
+It does not route through NGW.
 end note
 
-ODMS --> OCMS : Specification confirmed
+ODMS --> OCMS : ACTIVE specification + targetEntitySchema
 
-OCMS -> OCMS : 8. Validate expression.expressionValue.context.targets[],\nconstraints[], preferences[]\nagainst targetEntitySchema
+OCMS -> OCMS : 8. Validate expression.expressionValue\nagainst targetEntitySchema\ncontext.targets[] / constraints[] / preferences[]
 
-== Persistence & Event Publishing ==
+== Persist Runtime Resource ==
 
-OCMS -> OCDB : 9. Persist runtime Optimisation\n(lifecycleStatus = ACKNOWLEDGED)
-OCDB --> OCMS : Confirmed
-OCMS -> Outbox : 10. Write OptimisationRequestedEvent\n(instruction = EXECUTE) -- same transaction
-Outbox -> Kafka : 11. Relay publishes event to Kafka\nwith correlation id and trace context
+OCMS -> OCDB : 9. Persist runtime Optimisation\nlifecycleStatus = ACKNOWLEDGED\nstore immutable OptimisationSpecification.id/href
+OCDB --> OCMS : Persisted
 
-== Worker Execution ==
+OCMS -> Outbox : 10. Write OptimisationRequestedEvent\ninstruction = EXECUTE\nsame transaction
+Outbox --> OCMS : Outbox record stored
 
-Kafka -> Worker : 12. Consume OptimisationRequestedEvent
-Worker -> Worker : 13. Resolve internal deterministic\nmodel binding
-Worker -> Worker : 14. Invoke Gurobi Optimiser
-Worker -> Kafka : 15. Publish OptimisationCompletedEvent\nwith success or failure outcome
+OCMS --> NGW : 11. 201 Created\nLocation + ETag + ACKNOWLEDGED resource
+NGW --> OSB : 201 Created
+OSB --> OGW : CreationResultView\nexecution remains asynchronous
+OGW --> Caller : Optimisation created\nnot completed yet
 
-== Result Ingestion ==
+== Publish Worker Instruction ==
 
-Kafka -> Inbox : 16. OC MS Inbox consumes worker outcome event
-Inbox -> OCDB : 17. Update OC MS DB with\nlifecycle and result projection
-OCDB --> Inbox : Confirmed
+Outbox -> Kafka : 12. Publish OptimisationRequestedEvent\neventId + optimisationId\ncorrelationId + traceId
+OCMS -> OCDB : 13. Advance ACKNOWLEDGED -> QUEUED\nafter successful Kafka publish
 
-== User Polling ==
+== Execute Optimisation Work ==
 
-Caller -> OGW : 18. Poll GET /optimisation/{id}
-OGW -> OSB : 19. Invoke OSB MS\nwith user context\nmTLS, correlation id, trace context
-OSB -> OSB : 20. Authorise status/result visibility\nusing user context
-OSB -> NGW : 21. Forward poll request\nwith system caller identity\nmTLS, correlation id, trace context\n(no user context downstream)
-NGW -> OCMS : 22. Route poll request\nusing mTLS and service/system auth context only
-OCMS -> OCDB : 23. Read current status / result
-OCDB --> OCMS : Return status / result
-OCMS --> NGW : Return response
+Kafka -> Worker : 14. Consume OptimisationRequestedEvent\ninstruction = EXECUTE
+Worker -> Worker : 15. Resolve internal deterministic\nmodel binding
+Worker -> Worker : 16. Invoke Gurobi Optimiser
+
+Worker -> Kafka : 17. Publish OptimisationCompletedEvent\nstatus = COMPLETED / INFEASIBLE / FAILED
+
+== Project Outcome ==
+
+Kafka -> Inbox : 18. Consume OptimisationCompletedEvent
+Inbox -> Inbox : 19. Apply idempotency\nand stale/late event checks
+Inbox -> OCDB : 20. Update lifecycle/result projection\nCOMPLETED / INFEASIBLE / FAILED
+OCDB --> Inbox : Projection stored
+
+== Poll Runtime Status ==
+
+Caller -> OGW : 21. Poll optimisation status/result
+OGW -> OSB : 22. Invoke OSB MS\nmTLS + User Context JWT
+OSB -> OSB : 23. Authorise visibility\nusing user context
+OSB -> NGW : 24. GET /optimisation/{id}\nmTLS + OAuth2 system identity\n(no user context downstream)
+NGW -> OCMS : 25. Route GET /optimisation/{id}
+OCMS -> OCDB : 26. Read lifecycle/result
+OCDB --> OCMS : Current status/result
+OCMS --> NGW : Return runtime Optimisation
 NGW --> OSB : Return response
-OSB --> OGW : Shape response for OEX experience
-OGW --> Caller : Current optimisation status / result
+OSB --> OGW : Shape OptimisationDetailView
+OGW --> Caller : Current optimisation status/result
 
 @enduml
