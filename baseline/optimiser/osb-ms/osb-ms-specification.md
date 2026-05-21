@@ -14,29 +14,25 @@ OSB MS is not the source of truth for `OptimisationSpecification` or runtime `Op
 
 OSB MS owns:
 
-```text
-OEX-friendly optimisation experience APIs
-context-aware view shaping
-capability cards and landing-page models
-request-form models derived from OD MS specifications
-runtime optimisation list/detail view models
-context-aware action exposure such as cancellation and retrial
-user-context-based filtering of visible capabilities and records
-catalogue-management screen support for approved optimisation domain engineers when enabled
-```
+- OEX-friendly optimisation experience APIs.
+- Context-aware view shaping.
+- Capability cards and landing-page models.
+- Request-form models derived from OD MS specifications.
+- Runtime optimisation list/detail view models.
+- Context-aware action exposure such as cancellation and retrial.
+- User-context-based filtering of visible capabilities and records.
+- Catalogue-management screen support for approved optimisation domain engineers when enabled.
 
 OSB MS does not own:
 
-```text
-OptimisationSpecification source of truth
-runtime Optimisation lifecycle source of truth
-Kafka outbox/inbox processing
-solver execution
-Gurobi model binding
-optimisation result projection
-OD MS catalogue governance
-OC MS runtime lifecycle governance
-```
+- `OptimisationSpecification` source of truth.
+- Runtime `Optimisation` lifecycle source of truth.
+- Kafka outbox/inbox processing.
+- Solver execution.
+- Gurobi model binding.
+- Optimisation result projection.
+- OD MS catalogue governance.
+- OC MS runtime lifecycle governance.
 
 Source-of-truth ownership:
 
@@ -48,7 +44,7 @@ OSB MS: owns OEX experience/context-aware facade behaviour only.
 
 ## 3. API compliance:
 
-OSB APIs are private/OEX experience APIs and do not need to be TMF-compliant.
+OSB APIs are private OEX experience APIs and do not need to be TMF-compliant.
 
 NGW-exposed backend OD MS and OC MS APIs remain TMF-style optimiser-domain platform APIs. OSB MS must not expose backend OD/OC resource contracts directly unless the UI journey explicitly needs that shape.
 
@@ -105,7 +101,7 @@ OSB may rename, group, or format fields for OEX usability, but it must preserve 
 
 ## 7. Security and identity boundary:
 
-### 6.1. OGW -> OSB MS:
+### 7.1. OGW -> OSB MS:
 
 ```text
 mTLS
@@ -114,7 +110,7 @@ User Context JWT
 
 OGW is the user-context-aware gateway for OEX/experience APIs. OSB MS receives user context from OGW and uses it to shape views, filter visible actions, and determine whether the user can access a journey.
 
-### 6.2. OSB MS -> NGW:
+### 7.2. OSB MS -> NGW:
 
 ```text
 mTLS
@@ -252,7 +248,7 @@ OSB must not expose cancellation or retrial if the corresponding backend `_links
 
 ## 15. Cancellation and retrial behaviour:
 
-### 13.1. Cancellation:
+### 15.1. Cancellation:
 
 OSB MS exposes cancellation only when the user context and backend lifecycle state allow it.
 
@@ -268,7 +264,7 @@ Cancellation is best-effort. `CANCELLED` is set only after worker confirmation t
 
 If OC MS returns `409 Conflict` because the runtime optimisation is already terminal, OSB MS must show an appropriate lifecycle-conflict message instead of hiding it as a generic failure.
 
-### 13.2. Retrial:
+### 15.2. Retrial:
 
 Retrial is available only from `FAILED` in the baseline.
 
