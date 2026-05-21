@@ -114,6 +114,8 @@ OSB MS acts as the OEX backend-for-frontend. It shapes experience models such as
 
 ![Use case view](optimisation-use-case-view.svg)
 
+The diagram is intentionally simplified and shows the main optimisation platform use cases. The table below provides the more detailed use-case breakdown used by the process views and implementation alignment.
+
 | **No.** | **Use case** | **Actor** | **Summary** | **Outcome** |
 |---:|---|---|---|---|
 | **1** | Discover optimisation capability | User / OEX / authorised platform service | Retrieve visible ACTIVE `OptimisationSpecification` capabilities from OD MS through OSB/NGW or system API access. | Caller understands which optimisation capability and request contract to use. |
