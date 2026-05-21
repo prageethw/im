@@ -175,6 +175,7 @@ Canonical runtime shape:
       "@context": {
         "opt": "https://example.com/ontology/optimisation#"
       },
+      "@type": "opt:OptimisationProblem",
       "context": {
         "targets": [],
         "constraints": [],
