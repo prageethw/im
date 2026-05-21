@@ -75,7 +75,7 @@ lastUpdate
 sourceContext
 optimisationSpecification
 expression
-result
+result (terminal only)
 optimisationRelationship[]
 @type
 @baseType
@@ -95,7 +95,7 @@ Field notes:
 | `lifecycleStatus` / `statusChangeDate` | Runtime state and last lifecycle transition time. |
 | `_links` | Lifecycle-aware HATEOAS action links. |
 
-OC MS persists the referenced `OptimisationSpecification.id` and `href` as the immutable contract pointer for the life of the runtime `Optimisation`. If the specification is later `RETIRED`, the runtime `Optimisation` remains valid as an audit record; OC MS does not revalidate or rewrite the specification reference.
+OC MS persists the referenced `OptimisationSpecification.id` and `href` as the immutable contract pointer for the life of the runtime `Optimisation`. OC MS MUST treat `optimisationSpecification.id` as the immutable contract pointer and MUST NOT substitute another current `ACTIVE` specification, even if the same `familyId` later has a newer `ACTIVE` specification. If the referenced specification is later `RETIRED`, the runtime `Optimisation` remains valid as an audit record; OC MS does not revalidate or rewrite the specification reference.
 
 ## 5. Runtime lifecycle:
 
@@ -351,6 +351,7 @@ The referenced OptimisationSpecification must be ACTIVE at request-acceptance ti
 OC MS must not infer the current active contract by stale familyId lookup.
 OC MS does not use familyId or official specification version to choose a runtime contract.
 OC MS persists the referenced OptimisationSpecification.id and href as the immutable contract pointer for the life of the runtime Optimisation.
+OC MS MUST treat optimisationSpecification.id as the immutable contract pointer and MUST NOT substitute another current ACTIVE specification, even if the same familyId later has a newer ACTIVE specification.
 If the specification is later RETIRED, the runtime Optimisation remains valid as an audit record; OC MS does not revalidate or rewrite the specification reference.
 OC MS may cache immutable ACTIVE OptimisationSpecification contracts by id and ETag.
 A cached ACTIVE contract for a specific id is safe because OD MS makes ACTIVE specifications immutable.
