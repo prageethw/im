@@ -1,5 +1,5 @@
 @startuml
-title Optimisation Worker Execution & Result Projection
+title Optimisation Worker Execution and Result Projection
 
 skinparam sequenceArrowThickness 2
 skinparam roundcorner 10
@@ -10,70 +10,89 @@ skinparam sequenceActorBorderColor #4F46E5
 skinparam noteBorderColor #A5B4FC
 skinparam noteBackgroundColor #EEF2FF
 
-queue "Kafka" as Kafka
+queue "Kafka\nt7.optimisation.events" as Kafka
 participant "Python/Gurobi\nWorker" as Worker
 participant "Gurobi\nOptimiser" as Gurobi
 queue "OC MS Inbox" as Inbox
 participant "OC MS" as OCMS
 database "OC MS DB" as OCDB
-actor "User & OEX " as Caller
+actor "User & OEX" as Caller
 participant "OGW" as OGW
 participant "OSB MS" as OSB
 participant "NGW" as NGW
 
 == Worker Consumption ==
 
-Kafka -> Worker : 1. Consume OptimisationRequestedEvent\n(instruction = EXECUTE)
-Worker -> Worker : 2. Validate event idempotency\n& execution eligibility
+Kafka -> Worker : 1. Consume OptimisationRequestedEvent\ninstruction = EXECUTE\neventId + optimisationId\ncorrelationId + traceId
+Worker -> Worker : 2. Apply worker-side idempotency\nand execution eligibility checks
 
-== Model Resolution & Solving ==
+== Model Resolution and Solving ==
 
-Worker -> Worker : 3. Resolve runtime context\n& deterministic model binding
-Worker -> Gurobi : 4. Invoke Gurobi Optimiser
-Gurobi --> Worker : 5. Return solver output\nor failure information
+Worker -> Worker : 3. Resolve runtime context\nand internal deterministic model binding
+Worker -> Worker : 4. Protect internal details\nsolver configuration, objective internals,\ncandidate-resource rules
+Worker -> Gurobi : 5. Invoke Gurobi Optimiser
+Gurobi --> Worker : 6. Return solver output,\ninfeasibility information,\nor failure information
 
-== Outcome Mapping & Publishing ==
+== Outcome Mapping and Publishing ==
 
-Worker -> Worker : 6. Map outcome to\nSUCCESS, INFEASIBLE, or FAILURE
-Worker -> Kafka : 7. Publish OptimisationCompletedEvent\nwith success, infeasible, or failure outcome
+Worker -> Worker : 7. Map worker result to\nCOMPLETED / INFEASIBLE / FAILED
+
+note right of Worker
+Worker emits OptimisationCompletedEvent.status as:
+COMPLETED, INFEASIBLE, or FAILED.
+
+INFEASIBLE is a valid optimisation/model outcome.
+It is not a contract validation error.
+end note
+
+Worker -> Kafka : 8. Publish OptimisationCompletedEvent\nstatus = COMPLETED / INFEASIBLE / FAILED\neventId + optimisationId\ncorrelationId + traceId
 
 == Result Ingestion ==
 
-Kafka -> Inbox : 8. OC MS Inbox consumes worker outcome event
-Inbox -> Inbox : 9. Apply idempotency &\nstale/late-event checks
-Inbox -> OCDB : 10. Update OC MS DB with\nlifecycle & result projection
-OCDB --> Inbox : Confirmed
+Kafka -> Inbox : 9. Consume OptimisationCompletedEvent
+Inbox -> Inbox : 10. Apply idempotency\nand stale/late-event checks
+Inbox -> OCDB : 11. Project lifecycle/result\nCOMPLETED / INFEASIBLE / FAILED
+OCDB --> Inbox : Projection stored
+
+note right of OCDB
+Runtime result is terminal-only.
+
+result is absent while lifecycleStatus is
+ACKNOWLEDGED, QUEUED, PROCESSING, or CANCELLING.
+
+result may be present when lifecycleStatus is
+COMPLETED, INFEASIBLE, FAILED, or CANCELLED.
+end note
 
 == User Observation ==
 
-Caller -> OGW : 11. GET /optimisation/{id}
-OGW -> OGW : 12. Authenticate caller/token/session\nand derive user context
-OGW -> OSB : 13. Invoke OSB MS\nwith user context\nmTLS, correlation id, trace context
-OSB -> OSB : 14. Authorise result visibility\nusing user context
+Caller -> OGW : 12. Poll optimisation status/result
+OGW -> OGW : 13. Authenticate caller/session\nand derive user context
+OGW -> OSB : 14. Invoke OSB MS\nmTLS + User Context JWT\ncorrelationId / traceId
+
+OSB -> OSB : 15. Authorise result visibility\nusing user context
+
 note right of OSB
-User-context-related authorisation is performed
-at OSB / OCB-level before the request crosses NGW.
+User-context-related filtering and
+experience-layer authorisation are performed
+by OSB MS before the request crosses NGW.
+
+Backend OC MS decision still wins.
 end note
 
-OSB -> NGW : 15. Forward read request\nwith system caller identity\nmTLS, correlation id, trace context\n(no user context downstream)
+OSB -> NGW : 16. Forward read request\nmTLS + OAuth2 system identity\ncorrelationId / traceId\n(no user context downstream)
+
 note right of NGW
-User context terminates at NGW.
-NGW-to-downstream calls carry only
-system/service caller identity plus technical metadata.
+User context stops before/at NGW.
+Downstream OC MS calls use system/service identity only.
 end note
 
-NGW -> OCMS : 16. Route read request\nusing mTLS and service/system auth context only
-note right of OCMS
-OC MS authorises the calling service/system.
-OC MS does not receive or depend on
-end-user identity/claims/roles/scopes.
-end note
-
-OCMS -> OCDB : 17. Read lifecycle & result
-OCDB --> OCMS : Return record
-OCMS --> NGW : Return response
+NGW -> OCMS : 17. Route GET /optimisation/{id}\nmTLS + service/system auth
+OCMS -> OCDB : 18. Read lifecycle/result
+OCDB --> OCMS : Runtime Optimisation
+OCMS --> NGW : Runtime Optimisation\nlifecycleStatus + result if terminal\nETag + _links
 NGW --> OSB : Return response
-OSB --> OGW : Shape response
-OGW --> Caller : Optimisation outcome\n(SUCCESS / INFEASIBLE / FAILURE)
+OSB --> OGW : Shape OptimisationDetailView
+OGW --> Caller : Current optimisation status/result
 
 @enduml
