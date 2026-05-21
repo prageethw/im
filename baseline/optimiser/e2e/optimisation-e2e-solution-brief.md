@@ -44,7 +44,7 @@ The Python/Gurobi Worker is responsible for executing the internal deterministic
 External NGW API design is TMF ontology-aligned where useful, with controlled platform extensions clearly identified. OD MS owns the design-time optimisation contract. OC MS owns runtime optimisation resources. Internal APIs and Kafka events are intentionally not TMF REST resources. Appendix sections in this brief define the canonical runtime expression shape and lifecycle baseline used across the optimiser architecture.
 
 ### Use case view
-
+![alt text](optimisation-use-case-view.svg)
 | No. | Use case | Actor | Summary | Outcome |
 |---:|---|---|---|---|
 | 1 | Discover optimisation capability | User / experience layer / platform service | Retrieve available `OptimisationSpecification` records from OD MS and understand the required runtime expression contract. | Caller knows which optimisation capability to use and the required request contract. |
@@ -103,6 +103,8 @@ Each use case has a matching process flow. The process flows are intentionally m
 
 #### Discover optimisation capability
 
+![alt text](optimisation-capability-discovery.svg)
+
 ```text
 1. User, experience layer, or another authorised platform service requests available optimisation capabilities.
 2. Request reaches OGW.
@@ -118,6 +120,8 @@ Each use case has a matching process flow. The process flows are intentionally m
 ```
 
 #### Create optimisation specification
+
+![alt text](optimisation-specification-creation.svg)
 
 ```text
 1. Approved optimisation domain engineer starts a catalogue/specification creation journey after agreement with broader E2E teams.
@@ -137,6 +141,8 @@ Each use case has a matching process flow. The process flows are intentionally m
 ```
 
 #### Create and execute optimisation
+
+![alt text](optimisation-runtime-execution.svg)
 
 ```text
 1. User initiates the optimisation journey via UI or another authorised consumer submits a runtime request.
@@ -161,6 +167,8 @@ Each use case has a matching process flow. The process flows are intentionally m
 
 #### Monitor optimisation
 
+![alt text](optimisation-status-retrieval.svg)
+
 ```text
 1. User, experience layer, or another authorised platform service requests current optimisation status or result.
 2. Request reaches OGW where user context is applicable.
@@ -177,6 +185,8 @@ Each use case has a matching process flow. The process flows are intentionally m
 ```
 
 #### Cancel optimisation
+
+![alt text](optimisation-cancellation.svg)
 
 ```text
 1. Consumer calls POST /optimisation/{id}/cancellation with If-Match.
@@ -197,6 +207,8 @@ Each use case has a matching process flow. The process flows are intentionally m
 
 #### Retry failed optimisation
 
+![alt text](optimisation-retrial.svg)
+
 ```text
 1. Consumer calls POST /optimisation/{id}/retrial with If-Match.
 2. Request reaches OGW where user context is applicable.
@@ -215,6 +227,8 @@ Each use case has a matching process flow. The process flows are intentionally m
 ```
 
 #### Gurobi execute optimisation
+
+![alt text](optimisation-worker-execution.svg)
 
 ```text
 1. Python/Gurobi Worker consumes OptimisationRequestedEvent with instruction = EXECUTE from Kafka.
