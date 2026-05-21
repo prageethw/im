@@ -8,6 +8,8 @@ OC MS accepts runtime optimisation requests, validates the generic wrapper and t
 
 OC MS validates runtime requests only against the currently referenced `ACTIVE` `OptimisationSpecification`. OD MS guarantees that `ACTIVE` and `RETIRED` specifications are immutable, so OC MS can treat the referenced `ACTIVE` specification contract as stable for the lifetime of the accepted runtime `Optimisation`.
 
+OC MS does not use `familyId` or official specification `version` to select a runtime contract. Runtime validation is performed against the referenced `OptimisationSpecification.id`.
+
 ## 2. Ownership:
 
 OC MS owns:
@@ -48,6 +50,7 @@ Not supported:
 
 ```http
 PUT /optimisation/{id}
+PATCH /optimisation/{id}
 DELETE /optimisation/{id}
 ```
 
@@ -284,7 +287,23 @@ x-tmf-native: false
 
 `202 Accepted` means OC MS accepted the request for asynchronous execution. It does not mean the optimisation is feasible, started, solvable, or guaranteed to produce a valid result.
 
-## 9. OC MS validation boundary:
+## 9. OD specification lookup and cache posture:
+
+On `POST /optimisation`, OC MS validates the runtime request against the referenced `OptimisationSpecification.id`.
+
+Rules:
+
+```text
+The referenced OptimisationSpecification must exist.
+The referenced OptimisationSpecification must be ACTIVE at request-acceptance time.
+OC MS must not infer the current active contract by stale familyId lookup.
+OC MS does not use familyId or official specification version to choose a runtime contract.
+OC MS may cache immutable ACTIVE OptimisationSpecification contracts by id and ETag.
+A cached ACTIVE contract for a specific id is safe because OD MS makes ACTIVE specifications immutable.
+If the referenced specification is missing, not ACTIVE, cache-missing, or cache-stale beyond the local policy, OC MS refreshes from OD MS.
+```
+
+## 10. OC MS validation boundary:
 
 OC MS validates:
 
@@ -322,7 +341,7 @@ After acceptance, OC MS persists the runtime resource and writes `OptimisationRe
 
 Cancellation uses the same event type with `instruction = CANCEL`. Worker terminal outcomes are returned through `OptimisationCompletedEvent` with `status = COMPLETED`, `FAILED`, or `INFEASIBLE`.
 
-## 10. Internal event baseline:
+## 11. Internal event baseline:
 
 OC MS uses exactly two internal Kafka event types with the Python/Gurobi worker in the current baseline. These are platform-internal events, not TMF external notification events.
 
@@ -333,7 +352,50 @@ OC MS uses exactly two internal Kafka event types with the Python/Gurobi worker 
 
 `OptimisationFailedEvent` is not used in the current baseline. Failed and infeasible outcomes are carried by `OptimisationCompletedEvent.status`.
 
-## 11. GET /optimisation/{id}:
+## 12. GET /optimisation list:
+
+Request:
+
+```http
+GET /optimisation?lifecycleStatus=PROCESSING&fields=id,href,lifecycleStatus,statusChangeDate
+```
+
+Supported first-level filters:
+
+| Query parameter | Meaning |
+|---|---|
+| `id` | Exact match on runtime Optimisation id. |
+| `lifecycleStatus` | Exact match on runtime lifecycle state. |
+| `sourceContext.domain` | Exact match on source context domain where present. |
+| `sourceContext.resource.id` | Exact match on source resource id where present. |
+| `optimisationSpecification.id` | Exact match on referenced OptimisationSpecification id. |
+| `creationDate.gt` / `creationDate.lt` | Optional creation timestamp range filters. |
+| `lastUpdate.gt` / `lastUpdate.lt` | Optional last-update timestamp range filters. |
+| `statusChangeDate.gt` / `statusChangeDate.lt` | Optional lifecycle-state-change timestamp range filters. |
+| `fields` | Optional sparse fieldset projection. |
+
+Unsupported or malformed query parameters return `400 Bad Request`.
+
+Sparse field projection rule:
+
+```text
+If a requested field is valid but not present for the resource's current lifecycle state, OC MS omits that field silently rather than returning an error.
+For example, fields=id,result on a PROCESSING resource returns id and omits result because result is not present before terminal outcome projection.
+Unsupported field names still return 400 Bad Request.
+```
+
+Response headers:
+
+```http
+HTTP/1.1 200 OK
+X-Total-Count: 1
+X-Result-Count: 1
+Content-Type: application/json
+x-platform-extension: true
+x-tmf-native: false
+```
+
+## 13. GET /optimisation/{id}:
 
 ```http
 GET /optimisation/opt-12345
@@ -454,7 +516,7 @@ Completed-state example:
 }
 ```
 
-## 12. Cancellation and retrial:
+## 14. Cancellation and retrial:
 
 Cancellation:
 
@@ -498,7 +560,7 @@ Retrial response creates a new Optimisation and links it to the failed optimisat
 }
 ```
 
-## 13. Header/concurrency rules:
+## 15. Header/concurrency rules:
 
 ```text
 POST /optimisation: returns Location and ETag
@@ -517,7 +579,91 @@ x-platform-extension: true
 x-tmf-native: false
 ```
 
-## 14. Outcome mapping:
+Strict content type rules:
+
+```text
+POST /optimisation requires Content-Type: application/json.
+POST /optimisation/{id}/cancellation requires Content-Type: application/json when a request body is sent.
+POST /optimisation/{id}/retrial requires Content-Type: application/json when a request body is sent.
+Unsupported request content type returns 415 Unsupported Media Type.
+```
+
+## 16. Error handling boundary:
+
+| **Condition** | **Response** |
+|---|---|
+| Runtime expression or referenced `targetEntitySchema` contract failure | `422 Unprocessable Entity` |
+| Referenced `OptimisationSpecification` is missing or not visible | `404 Not Found` |
+| Referenced `OptimisationSpecification` is not `ACTIVE` | `422 Unprocessable Entity` |
+| Cancellation/retrial requested in an invalid lifecycle state | `409 Conflict` |
+| Missing `If-Match` on cancellation/retrial | `428 Precondition Required` |
+| Stale or wrong `If-Match` on cancellation/retrial | `412 Precondition Failed` |
+| Unsupported `Content-Type` | `415 Unsupported Media Type` |
+| Malformed JSON, malformed query parameter, or unsupported query parameter | `400 Bad Request` |
+
+Boundary rules:
+
+```text
+422 = request/expression/OD targetEntitySchema contract violation.
+409 = runtime lifecycle/action conflict.
+428 = required If-Match missing.
+412 = supplied If-Match does not match current ETag.
+415 = unsupported request media type.
+400 = malformed request or unsupported query/filter parameter.
+```
+
+Contract violation example:
+
+```http
+HTTP/1.1 422 Unprocessable Entity
+Content-Type: application/json
+```
+
+```json
+{
+  "code": "OPTIMISATION_CONTRACT_VIOLATION",
+  "reason": "Optimisation contract violation",
+  "message": "The submitted expression.expressionValue does not satisfy the referenced ACTIVE OptimisationSpecification targetEntitySchema.",
+  "status": 422,
+  "@type": "Error"
+}
+```
+
+Lifecycle conflict example:
+
+```http
+HTTP/1.1 409 Conflict
+Content-Type: application/json
+```
+
+```json
+{
+  "code": "OPTIMISATION_LIFECYCLE_CONFLICT",
+  "reason": "Optimisation lifecycle conflict",
+  "message": "Cancellation is not allowed when lifecycleStatus is COMPLETED.",
+  "status": 409,
+  "@type": "Error"
+}
+```
+
+Unsupported media type example:
+
+```http
+HTTP/1.1 415 Unsupported Media Type
+Content-Type: application/json
+```
+
+```json
+{
+  "code": "UNSUPPORTED_MEDIA_TYPE",
+  "reason": "Unsupported media type",
+  "message": "POST /optimisation requires Content-Type: application/json.",
+  "status": 415,
+  "@type": "Error"
+}
+```
+
+## 17. Outcome mapping:
 
 ```text
 SUCCESS -> COMPLETED
