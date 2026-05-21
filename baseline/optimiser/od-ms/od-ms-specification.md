@@ -1,4 +1,4 @@
-# Optimisation Definition MS Specification
+# OD MS / Optimisation Definition MS Specification
 
 ## 1. Service purpose:
 
@@ -21,9 +21,10 @@ Approved platform extensions:
 
 | Extension | Purpose | Guardrail |
 |---|---|---|
-| `PUT /optimisationSpecification/{id}` | Full replacement(finalisation) of mutable `DRAFT` specifications. | Requires `If-Match`; not allowed for `ACTIVE` or `RETIRED`. |
+| `PUT /optimisationSpecification/{id}` | Full replacement/finalisation of mutable `DRAFT` specifications. | Requires `If-Match`; not allowed for `ACTIVE` or `RETIRED`. |
 | `_links` | HATEOAS controls. | Does not replace `href`; lifecycle-aware and authorisation-aware. |
 | `ETag` / `If-Match` governance | Optimistic concurrency for unsafe existing-resource operations. | Required for `PUT`, `PATCH`, and `DELETE`. |
+| `x-platform-extension` / `x-tmf-native` response headers | Governance/documentation headers for NGW-facing optimiser-domain resources. | Used only on external NGW-facing OD/OC APIs; clients must not use these headers as business-logic switches. |
 
 ## 3. Ownership:
 
@@ -88,8 +89,10 @@ id
 href
 name
 description
+familyId
 version
 lifecycleStatus
+statusChangeDate
 creationDate
 lastUpdate
 validFor
@@ -119,8 +122,10 @@ The external `OptimisationSpecification` resource must use only the TMF-aligned 
 | `href` | Hyperlink reference to the specification resource. |
 | `name` | Human-readable specification name. |
 | `description` | Description of the optimisation capability and contract. |
-| `version` | Specification version. |
+| `familyId` | Stable specification-family identifier shared by all versions of the same `OptimisationSpecification`. OD MS uses it to enforce at most one `ACTIVE` version per family. |
+| `version` | Specification version within the specification family. |
 | `lifecycleStatus` | Specification lifecycle value: `DRAFT`, `ACTIVE`, or `RETIRED`. |
+| `statusChangeDate` | Date/time the `lifecycleStatus` last changed. |
 | `creationDate` | Date/time the specification resource was created. |
 | `lastUpdate` | Date/time the specification resource was last updated. |
 | `validFor` | Optional validity window for the specification. |
@@ -175,7 +180,6 @@ Canonical runtime shape:
       "@context": {
         "opt": "https://example.com/ontology/optimisation#"
       },
-      "@type": "opt:OptimisationProblem",
       "context": {
         "targets": [],
         "constraints": [],
@@ -225,12 +229,17 @@ context.preferences[] contains soft ranking or selection preferences.
   "description": "Schema for Optimisation.expression.expressionValue. The context object is the canonical container for the runtime optimisation problem definition.",
   "type": "object",
   "additionalProperties": true,
-  "required": ["@context", "context"],
+  "required": ["@context", "@type", "context"],
   "properties": {
     "@context": {
       "description": "JSON-LD context for optimisation vocabulary prefixes.",
       "type": "object",
       "additionalProperties": true
+    },
+    "@type": {
+      "description": "JSON-LD type for the optimisation expression value.",
+      "type": "string",
+      "const": "opt:OptimisationProblem"
     },
     "context": {
       "description": "The full optimisation scenario / big picture. Contains optimisation goals, hard requirements, and soft preferences.",
@@ -296,6 +305,8 @@ The embedded `optimisation-expression-value.schema.json` validates the runtime `
 
 | Schema element | Baseline rule |
 |---|---|
+| `expressionValue.@context` | Required JSON-LD context for optimiser ontology prefixes. |
+| `expressionValue.@type` | Required JSON-LD type. Baseline value is `opt:OptimisationProblem`. |
 | `expressionValue.context` | Required object and canonical optimisation problem container. |
 | `context.targets[]` | Required array containing optimisation goals. It should normally contain at least one target. |
 | `context.constraints[]` | Required array containing hard mandatory requirements. Whether it may be empty is capability-specific and governed by the concrete active `OptimisationSpecification.targetEntitySchema`. |
@@ -341,8 +352,8 @@ There is no `DEPRECATED` state in the optimiser baseline.
 Activation rules:
 
 ```text
-Only one ACTIVE OptimisationSpecification is allowed per specificationKey.
-When a DRAFT specification is promoted to ACTIVE, OD MS must transactionally retire the previous ACTIVE specification with the same specificationKey.
+Only one ACTIVE OptimisationSpecification is allowed per familyId.
+When a DRAFT specification is promoted to ACTIVE, OD MS must transactionally retire the previous ACTIVE specification with the same familyId.
 Activation validates the full OptimisationSpecification before committing the lifecycle transition.
 ```
 
@@ -363,7 +374,18 @@ Physical `DELETE` is not used for `ACTIVE` or `RETIRED` specifications.
 | `PATCH /optimisationSpecification/{id}` | TMF-compatible partial update. Requires `If-Match`. Discouraged for material runtime-contract replacement. |
 | `DELETE /optimisationSpecification/{id}` | Physical delete only for mutable `DRAFT`. Requires `If-Match`. |
 
-## 14. Concurrency and cache governance:
+## 14. External response header governance:
+
+OD MS external NGW-facing API responses include the following governance/documentation headers because `OptimisationSpecification` is an optimiser-domain platform resource that follows TMF-style conventions but is not a native TMF Open API resource:
+
+```http
+x-platform-extension: true
+x-tmf-native: false
+```
+
+These headers apply to OD MS external API responses only. They are not used on internal Kafka events, database records, or private worker contracts. Clients must not use these headers as runtime business-logic switches.
+
+## 15. Concurrency and cache governance:
 
 Unsafe existing-resource operations require optimistic concurrency:
 
@@ -401,7 +423,7 @@ The only explicit client cache override documented by OD MS is:
 Cache-Control: no-cache
 ```
 
-## 15. HATEOAS baseline:
+## 16. HATEOAS baseline:
 
 `_links` is an approved HATEOAS platform extension. It is lifecycle-aware and authorisation-aware. OD MS must expose only the links that are valid for the current caller and current lifecycle state.
 
@@ -431,11 +453,11 @@ Link relation meaning:
 
 The `activate` and `retire` link relations point to `PATCH` on the `OptimisationSpecification` resource itself. OD MS does not expose separate `/activate` or `/retire` action endpoints.
 
-## 16. Operation examples:
+## 17. Operation examples:
 
 The examples below are internally consistent and should be used as the OD MS reference pattern.
 
-### 16.1. POST /optimisationSpecification creates DRAFT:
+### 17.1. POST /optimisationSpecification creates DRAFT:
 
 Request:
 
@@ -448,6 +470,7 @@ Content-Type: application/json
 {
   "name": "Surgical Routing Optimisation Specification",
   "description": "Defines the allowed optimisation request contract for surgical routing optimisation.",
+  "familyId": "optimisation-spec-surgical-routing",
   "version": "1.0.0",
   "validFor": {
     "startDateTime": "2026-05-09T00:00:00Z"
@@ -497,6 +520,8 @@ Response:
 HTTP/1.1 201 Created
 Location: /optimisationManagement/v1/optimisationSpecification/optimisation-spec-surgical-routing-v1
 ETag: "od-spec-surgical-routing-v1-r1"
+x-platform-extension: true
+x-tmf-native: false
 Content-Type: application/json
 ```
 
@@ -506,6 +531,7 @@ Content-Type: application/json
   "href": "/optimisationManagement/v1/optimisationSpecification/optimisation-spec-surgical-routing-v1",
   "name": "Surgical Routing Optimisation Specification",
   "description": "Defines the allowed optimisation request contract for surgical routing optimisation.",
+  "familyId": "optimisation-spec-surgical-routing",
   "version": "1.0.0",
   "lifecycleStatus": "DRAFT",
   "creationDate": "2026-05-09T04:10:00Z",
@@ -578,7 +604,7 @@ Content-Type: application/json
 }
 ```
 
-### 16.2. GET /optimisationSpecification list:
+### 17.2. GET /optimisationSpecification list:
 
 Request:
 
@@ -593,6 +619,8 @@ Response:
 HTTP/1.1 200 OK
 Cache-Control: private, max-age=300
 ETag: "od-spec-list-r42"
+x-platform-extension: true
+x-tmf-native: false
 Content-Type: application/json
 ```
 
@@ -602,8 +630,10 @@ Content-Type: application/json
     "id": "optimisation-spec-surgical-routing-v1",
     "href": "/optimisationManagement/v1/optimisationSpecification/optimisation-spec-surgical-routing-v1",
     "name": "Surgical Routing Optimisation Specification",
+    "familyId": "optimisation-spec-surgical-routing",
     "version": "1.0.0",
     "lifecycleStatus": "ACTIVE",
+    "statusChangeDate": "2026-05-09T05:00:00Z",
     "@type": "OptimisationSpecification",
     "_links": {
       "self": {
@@ -627,7 +657,7 @@ Content-Type: application/json
 ]
 ```
 
-### 16.3. GET /optimisationSpecification/{id} retrieve ACTIVE:
+### 17.3. GET /optimisationSpecification/{id} retrieve ACTIVE:
 
 Request:
 
@@ -642,6 +672,8 @@ Response:
 HTTP/1.1 200 OK
 Cache-Control: private, max-age=300
 ETag: "od-spec-surgical-routing-v1-r4"
+x-platform-extension: true
+x-tmf-native: false
 Content-Type: application/json
 ```
 
@@ -651,6 +683,7 @@ Content-Type: application/json
   "href": "/optimisationManagement/v1/optimisationSpecification/optimisation-spec-surgical-routing-v1",
   "name": "Surgical Routing Optimisation Specification",
   "description": "Defines the allowed optimisation request contract for surgical routing optimisation.",
+  "familyId": "optimisation-spec-surgical-routing",
   "version": "1.0.0",
   "lifecycleStatus": "ACTIVE",
   "creationDate": "2026-05-09T04:10:00Z",
@@ -715,7 +748,7 @@ Content-Type: application/json
 }
 ```
 
-### 16.4. PATCH activation of finalised DRAFT:
+### 17.4. PATCH activation of finalised DRAFT:
 
 Request:
 
@@ -736,12 +769,14 @@ Response:
 ```http
 HTTP/1.1 200 OK
 ETag: "od-spec-surgical-routing-v1-r4"
+x-platform-extension: true
+x-tmf-native: false
 Content-Type: application/json
 ```
 
-Response body returns the full activated resource. OD MS transactionally retires the previous `ACTIVE` version in the same `specificationKey` family.
+Response body returns the full activated resource. OD MS transactionally retires the previous `ACTIVE` version in the same `familyId` family.
 
-### 16.5. PUT finalise and activate mutable DRAFT:
+### 17.5. PUT finalise and activate mutable DRAFT:
 
 Request:
 
@@ -764,12 +799,14 @@ Response:
 ```http
 HTTP/1.1 200 OK
 ETag: "od-spec-surgical-routing-v1-r4"
+x-platform-extension: true
+x-tmf-native: false
 Content-Type: application/json
 ```
 
 Response body returns the full activated resource. `PUT` is an approved platform extension and is allowed only for mutable `DRAFT` specifications.
 
-### 16.6. PATCH retirement of ACTIVE:
+### 17.6. PATCH retirement of ACTIVE:
 
 Request:
 
@@ -790,12 +827,14 @@ Response:
 ```http
 HTTP/1.1 200 OK
 ETag: "od-spec-surgical-routing-v1-r5"
+x-platform-extension: true
+x-tmf-native: false
 Content-Type: application/json
 ```
 
 Response body returns the full retired `OptimisationSpecification`. Retired specifications expose only lifecycle-authorised read/new-version links such as `self`, `collection`, and `createNewVersion`.
 
-### 16.7. DELETE mutable DRAFT:
+### 17.7. DELETE mutable DRAFT:
 
 Request:
 
@@ -812,7 +851,7 @@ HTTP/1.1 204 No Content
 
 Physical delete is allowed only for mutable `DRAFT` specifications. `ACTIVE` and `RETIRED` specifications are retained.
 
-## 17. Error handling baseline:
+## 18. Error handling baseline:
 
 OD MS uses TMF-style error responses with platform-specific error codes.
 
@@ -849,7 +888,7 @@ Standard error body:
 }
 ```
 
-## 18. Contract violation response:
+## 19. Contract violation response:
 
 Use `422 Unprocessable Entity` when the JSON is structurally valid but violates the `ACTIVE` `OptimisationSpecification` request contract.
 
@@ -868,7 +907,7 @@ Content-Type: application/json
 }
 ```
 
-## 19. Relationship to OC MS:
+## 20. Relationship to OC MS:
 
 ```text
 OD MS: defines what is allowed.
@@ -905,7 +944,7 @@ OD MS does not persist runtime `Optimisation` resources, does not write OC MS ou
 
 ---
 
-## 20. Event and subscription posture:
+## 21. Event and subscription posture:
 
 OD MS is baselined as a synchronous REST API only for the initial optimiser architecture. TMF-style hub/listener subscription support is not included in the initial OD MS baseline. OD MS does not expose `/hub` endpoints and does not publish external `OptimisationSpecification` events by default. This is a deliberate scope decision.
 
