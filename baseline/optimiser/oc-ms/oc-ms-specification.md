@@ -2,7 +2,11 @@
 
 ## 1. OC MS summary:
 
-Optimisation-Controller-MS (OC MS) owns the runtime `Optimisation` resource. It is a generic optimisation controller, not an intent-only controller. OC MS accepts runtime optimisation requests, validates only the wrapper and OD MS request contract, persists the request, emits `OptimisationRequestedEvent`, then later projects `OptimisationCompletedEvent` outcomes back into the runtime resource.
+Optimisation-Controller-MS (OC MS) owns the runtime `Optimisation` resource. It is a generic optimisation controller, not an intent-only controller.
+
+OC MS accepts runtime optimisation requests, validates the generic wrapper and the referenced OD MS request contract, persists the request, emits `OptimisationRequestedEvent`, and later projects `OptimisationCompletedEvent` outcomes back into the runtime resource.
+
+OC MS validates runtime requests only against the currently referenced `ACTIVE` `OptimisationSpecification`. OD MS guarantees that `ACTIVE` and `RETIRED` specifications are immutable, so OC MS can treat the referenced `ACTIVE` specification contract as stable for the lifetime of the accepted runtime `Optimisation`.
 
 ## 2. Ownership:
 
@@ -14,7 +18,7 @@ Runtime lifecycle
 Syntactic and OD-MS-contract validation
 OC MS outbox write
 Publishing worker instruction events to t7.optimisation.events
-Inbox consumption of `OptimisationCompletedEvent` worker outcomes
+Inbox consumption of OptimisationCompletedEvent worker outcomes
 Runtime result projection
 Cancellation and retrial controls
 ```
@@ -23,6 +27,7 @@ OC MS does not own:
 
 ```text
 OptimisationSpecification definitions
+OptimisationSpecification lifecycle/version governance
 Gurobi model formulation
 Python/Gurobi solver execution
 Analytics platform datasets
@@ -76,6 +81,8 @@ CANCELLED: Optimisation is confirmed cancelled.
 
 Runtime `Optimisation` does not expose a `version` field. ETag is used in HTTP headers for unsafe concurrency.
 
+`statusChangeDate` records when `lifecycleStatus` last changed. It is distinct from `creationDate` and `lastUpdate`.
+
 ## 5. Lifecycle transitions:
 
 ```text
@@ -104,7 +111,20 @@ FAILED: self retrial
 COMPLETED / INFEASIBLE / CANCELLED: self
 ```
 
-## 7. POST /optimisation:
+## 7. External response header governance:
+
+OC MS exposes optimiser-domain platform resources using TMF-style resource conventions. `Optimisation` is not a native TMF Open API resource.
+
+All NGW-facing OC MS resource responses include:
+
+```http
+x-platform-extension: true
+x-tmf-native: false
+```
+
+These headers are governance/documentation indicators only. Clients must not use them as runtime business-logic switches.
+
+## 8. POST /optimisation:
 
 ```http
 POST /optimisation
@@ -137,8 +157,13 @@ Content-Type: application/json
     "iri": "https://example.com/ontology/optimisation/v1",
     "expressionValue": {
       "@context": {
-        "opt": "https://example.com/ontology/optimisation#"
+        "opt": "https://example.com/ontology/optimisation#",
+        "context": "opt:context",
+        "targets": "opt:targets",
+        "constraints": "opt:constraints",
+        "preferences": "opt:preferences"
       },
+      "@type": "opt:OptimisationProblem",
       "context": {
         "targets": [
           {
@@ -175,6 +200,8 @@ HTTP/1.1 202 Accepted
 Location: /optimisation/opt-12345
 ETag: "opt-12345-rev1"
 Content-Type: application/json
+x-platform-extension: true
+x-tmf-native: false
 ```
 
 ```json
@@ -212,8 +239,13 @@ Content-Type: application/json
     "iri": "https://example.com/ontology/optimisation/v1",
     "expressionValue": {
       "@context": {
-        "opt": "https://example.com/ontology/optimisation#"
+        "opt": "https://example.com/ontology/optimisation#",
+        "context": "opt:context",
+        "targets": "opt:targets",
+        "constraints": "opt:constraints",
+        "preferences": "opt:preferences"
       },
+      "@type": "opt:OptimisationProblem",
       "context": {
         "targets": [
           {
@@ -252,7 +284,7 @@ Content-Type: application/json
 
 `202 Accepted` means OC MS accepted the request for asynchronous execution. It does not mean the optimisation is feasible, started, solvable, or guaranteed to produce a valid result.
 
-## 8. OC MS validation boundary:
+## 9. OC MS validation boundary:
 
 OC MS validates:
 
@@ -260,7 +292,14 @@ OC MS validates:
 generic REST wrapper using its static API/OpenAPI contract
 referenced OptimisationSpecification exists in OD MS
 referenced OptimisationSpecification lifecycleStatus is ACTIVE
+referenced ACTIVE OptimisationSpecification contract is immutable by OD MS lifecycle governance
+expression wrapper shape:
+  expression.@type = JsonLdExpression
+  expression.@baseType = Expression
+  expression.iri matches the specification ontology/model IRI where required
 expression.expressionValue against the referenced ACTIVE OptimisationSpecification.targetEntitySchema
+expression.expressionValue.@context contains the required optimiser ontology mappings
+expression.expressionValue.@type = opt:OptimisationProblem
 expression.expressionValue.context shape
 expression.expressionValue.context.targets[] entries
 expression.expressionValue.context.constraints[] entries
@@ -279,20 +318,22 @@ Gurobi model validity
 resource-selection correctness
 ```
 
-After acceptance, OC MS persists the runtime resource and writes `OptimisationRequestedEvent` with `instruction = EXECUTE` to its outbox in the same transaction. Cancellation uses the same event type with `instruction = CANCEL`. Worker terminal outcomes are returned through `OptimisationCompletedEvent` with `status = COMPLETED`, `FAILED`, or `INFEASIBLE`.
+After acceptance, OC MS persists the runtime resource and writes `OptimisationRequestedEvent` with `instruction = EXECUTE` to its outbox in the same transaction.
 
-## 9. Internal event baseline:
+Cancellation uses the same event type with `instruction = CANCEL`. Worker terminal outcomes are returned through `OptimisationCompletedEvent` with `status = COMPLETED`, `FAILED`, or `INFEASIBLE`.
+
+## 10. Internal event baseline:
 
 OC MS uses exactly two internal Kafka event types with the Python/Gurobi worker in the current baseline. These are platform-internal events, not TMF external notification events.
 
-| Event | Emitter | Consumer | Purpose | Key values |
+| **Event** | **Emitter** | **Consumer** | **Purpose** | **Key values** |
 |---|---|---|---|---|
 | `OptimisationRequestedEvent` | OC MS / OC MS Outbox Relay | Python/Gurobi Worker | Worker instruction event for execution or cancellation. | `instruction = EXECUTE` or `instruction = CANCEL` |
 | `OptimisationCompletedEvent` | Python/Gurobi Worker | OC MS / OC MS Inbox Consumer | Terminal worker outcome event for lifecycle/result projection. | `status = COMPLETED`, `FAILED`, or `INFEASIBLE` |
 
 `OptimisationFailedEvent` is not used in the current baseline. Failed and infeasible outcomes are carried by `OptimisationCompletedEvent.status`.
 
-## 10. GET /optimisation/{id}:
+## 11. GET /optimisation/{id}:
 
 ```http
 GET /optimisation/opt-12345
@@ -302,6 +343,8 @@ GET /optimisation/opt-12345
 HTTP/1.1 200 OK
 Content-Type: application/json
 ETag: "opt-12345-rev2"
+x-platform-extension: true
+x-tmf-native: false
 ```
 
 Active-state example:
@@ -330,8 +373,13 @@ Active-state example:
     "iri": "https://example.com/ontology/optimisation/v1",
     "expressionValue": {
       "@context": {
-        "opt": "https://example.com/ontology/optimisation#"
+        "opt": "https://example.com/ontology/optimisation#",
+        "context": "opt:context",
+        "targets": "opt:targets",
+        "constraints": "opt:constraints",
+        "preferences": "opt:preferences"
       },
+      "@type": "opt:OptimisationProblem",
       "context": {
         "targets": [
           {
@@ -406,7 +454,7 @@ Completed-state example:
 }
 ```
 
-## 11. Cancellation and retrial:
+## 12. Cancellation and retrial:
 
 Cancellation:
 
@@ -424,6 +472,13 @@ If-Match: "opt-12345-rev3"
 Content-Type: application/json
 ```
 
+Cancellation and retrial responses include the OC external response governance headers:
+
+```http
+x-platform-extension: true
+x-tmf-native: false
+```
+
 Retrial response creates a new Optimisation and links it to the failed optimisation:
 
 ```json
@@ -431,6 +486,7 @@ Retrial response creates a new Optimisation and links it to the failed optimisat
   "id": "opt-67890",
   "href": "/optimisation/opt-67890",
   "lifecycleStatus": "ACKNOWLEDGED",
+  "statusChangeDate": "2026-05-02T04:00:00Z",
   "optimisationRelationship": [
     {
       "@type": "EntityRelationship",
@@ -442,7 +498,7 @@ Retrial response creates a new Optimisation and links it to the failed optimisat
 }
 ```
 
-## 12. Header/concurrency rules:
+## 13. Header/concurrency rules:
 
 ```text
 POST /optimisation: returns Location and ETag
@@ -454,7 +510,14 @@ missing If-Match -> 428
 stale/wrong If-Match -> 412
 ```
 
-## 13. Outcome mapping:
+NGW-facing OC MS resource responses include:
+
+```http
+x-platform-extension: true
+x-tmf-native: false
+```
+
+## 14. Outcome mapping:
 
 ```text
 SUCCESS -> COMPLETED
