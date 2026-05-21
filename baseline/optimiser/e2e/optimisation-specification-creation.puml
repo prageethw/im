@@ -1,5 +1,5 @@
 @startuml
-title Optimisation Specification Creation (Catalogue Management)
+title Optimisation Specification Creation — Catalogue Management
 
 skinparam sequenceArrowThickness 2
 skinparam roundcorner 10
@@ -10,7 +10,7 @@ skinparam sequenceActorBorderColor #4F46E5
 skinparam noteBorderColor #A5B4FC
 skinparam noteBackgroundColor #EEF2FF
 
-actor "User & OEX " as Caller
+actor "User & OEX" as Caller
 participant "OGW" as OGW
 participant "OSB MS" as OSB
 participant "NGW" as NGW
@@ -19,53 +19,71 @@ database "OD MS DB" as ODDB
 
 == Catalogue Create Request ==
 
-Caller -> OGW : 1. Initiate OptimisationSpecification creation\n(post E2E team agreement)
-OGW -> OGW : 2. Authenticate caller/token/session\nand derive user context
+Caller -> OGW : 1. Initiate OptimisationSpecification\ncreation journey
+OGW -> OGW : 2. Authenticate caller/session\nand derive user context
+
 note right of OGW
 User context may include tenant, claims,
 roles/scopes, and entitlements.
 end note
 
-OGW -> OSB : 3. Invoke OSB MS\nwith user context\nmTLS, correlation id, trace context
-OSB -> OSB : 4. Validate user context\nand confirm catalogue-management access
+OGW -> OSB : 3. Invoke OSB MS\nmTLS + User Context JWT\ncorrelationId / traceId
+
+OSB -> OSB : 4. Validate user context\nand catalogue-management access
+
 note right of OSB
-User-context-related authorisation is performed
-at OSB / OCB-level before the request crosses NGW.
+Catalogue-management journeys are feature-gated.
+When disabled, OSB must not expose OD MS write,
+activation, or retirement journeys.
+
+User-context-related filtering and authorisation
+are performed by OSB MS before the request crosses NGW.
 end note
 
-OSB -> NGW : 5. Forward create request\nwith system caller identity\nmTLS, correlation id, trace context\n(no user context downstream)
+OSB -> NGW : 5. Forward create request\nmTLS + OAuth2 system identity\ncorrelationId / traceId\n(no user context downstream)
+
 note right of NGW
-User context terminates at NGW.
-NGW-to-downstream calls carry only
-system/service caller identity plus technical metadata.
+User context stops before/at NGW.
+Downstream OD MS calls use system/service identity only.
 end note
 
-NGW -> ODMS : 6. Route create request\nusing mTLS and service/system auth context only
+NGW -> ODMS : 6. POST /optimisationSpecification\nmTLS + service/system auth
+
 note right of ODMS
 OD MS authorises the calling service/system.
-OD MS does not receive or depend on
-end-user identity/claims/roles/scopes.
+OD MS does not receive or depend on end-user
+identity, claims, roles, or scopes.
 end note
 
-== Validation & Persistence ==
+== Validation and Persistence ==
 
-ODMS -> ODMS : 7. Authorise catalogue operation\nfor calling service/system
-ODMS -> ODMS : 8. Validate OptimisationSpecification shape\n(TMF-style fields, specCharacteristic[],\nexpressionSpecification, targetEntitySchema)
-ODMS -> ODDB : 9. Persist new OptimisationSpecification\n(lifecycleStatus = DRAFT)
-ODDB --> ODMS : Confirm persisted
+ODMS -> ODMS : 7. Validate create request\nname + familyId\nexpressionSpecification\ntargetEntitySchema\n@type
+ODMS -> ODMS : 8. Reject server-controlled fields\nid / href / creationDate / lastUpdate\nstatusChangeDate / version / _links
+ODMS -> ODMS : 9. Validate TMF-style specification shape\nspecCharacteristic[]\nexpressionSpecification\ntargetEntitySchema
+
+ODMS -> ODDB : 10. Persist new OptimisationSpecification\nlifecycleStatus = DRAFT\nno official public version\nETag represents draft revision
+ODDB --> ODMS : DRAFT persisted
 
 == Create Response ==
 
-ODMS --> NGW : 10. Return DRAFT OptimisationSpecification\n(+ Location & ETag where applicable)
-NGW --> OSB : 11. Return response to OSB MS
-OSB --> OGW : 12. Shape catalogue-management response\nfor OEX experience
-OGW --> Caller : 13. DRAFT OptimisationSpecification result
+ODMS --> NGW : 11. 201 Created\nLocation + ETag\nDRAFT OptimisationSpecification
+NGW --> OSB : 12. Return response to OSB MS
+
+OSB -> OSB : 13. Shape catalogue-management\nexperience response
+OSB --> OGW : 14. Catalogue create result\nwith backend correlation/trace details
+OGW --> Caller : 15. DRAFT OptimisationSpecification created
 
 == Governance Note ==
 
 note over Caller, ODDB
-14. DRAFT specification is NOT usable for runtime optimisation
-until reviewed and activated under OD MS governance.
+DRAFT specifications are mutable but not usable
+for runtime optimisation.
+
+DRAFT has no official public version.
+Official version is assigned by OD MS only during activation.
+
+Multiple DRAFT specifications may exist in the same familyId.
+Only one ACTIVE specification is enforced per familyId.
 end note
 
 @enduml
