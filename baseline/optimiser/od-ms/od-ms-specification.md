@@ -131,7 +131,7 @@ The external `OptimisationSpecification` resource must use only the TMF-aligned 
 | `validFor` | Optional validity window for the specification. |
 | `isBundle` | TMF-style bundle indicator. Default should be `false` unless explicitly modelling a bundle. |
 | `specCharacteristic[]` | Discovery/catalogue metadata for supported optimisation fields and OEX/UI guidance. |
-| `expressionSpecification` | Defines the expression language and ontology IRI for runtime optimisation expressions. |
+| `expressionSpecification` | Defines the expression specification metadata for runtime optimisation expressions, including `@type`, `expressionType`, `expressionLanguage`, and ontology `iri`. |
 | `targetEntitySchema` | Authoritative schema contract for runtime `Optimisation.expression.expressionValue`. |
 | `relatedParty[]` | Parties or roles associated with the specification. |
 | `attachment[]` | Optional attachments relevant to the specification. |
@@ -149,16 +149,18 @@ OD MS must keep the three TMF-aligned specification structures separate. They ar
 | Structure | Responsibility | Must not be used for |
 |---|---|---|
 | `specCharacteristic[]` | Catalogue/discovery metadata for OEX/UI and API consumers. It advertises supported optimisation capability characteristics, examples, defaults, and display guidance. | It must not be treated as the authoritative validation schema. |
-| `expressionSpecification` | Expression-language and ontology binding. It defines that runtime optimisation expressions use `JsonLdExpression` and the optimisation ontology IRI. | It must not contain runtime request values or detailed JSON validation rules. |
+| `expressionSpecification` | Expression-language and ontology binding. It declares `@type = ExpressionSpecification`, `expressionType = JsonLdExpression`, `expressionLanguage = JSON-LD`, and the optimisation ontology `iri`. | It must not contain runtime request values or detailed JSON validation rules. |
 | `targetEntitySchema` | Authoritative validation contract for `Optimisation.expression.expressionValue`, including `context.targets[]`, `context.constraints[]`, and `context.preferences[]`. | It must not be replaced by catalogue characteristics or prose-only rules. |
 
 Baseline rule:
 
 ```text
 specCharacteristic[] = catalogue / discovery / UI guidance
-expressionSpecification = expression language + ontology IRI
+expressionSpecification = expression type + expression language + ontology IRI
 targetEntitySchema = authoritative runtime expressionValue validation schema
 ```
+
+The design-time `expressionSpecification` must not be confused with the runtime `expression` instance. `expressionSpecification` declares the expected expression type/language/ontology for runtime requests. The runtime `Optimisation.expression` carries the actual `JsonLdExpression`, and `Optimisation.expression.expressionValue` carries the actual JSON-LD optimisation problem payload.
 
 ## 8. Runtime optimisation context contract:
 
@@ -180,6 +182,7 @@ Canonical runtime shape:
       "@context": {
         "opt": "https://example.com/ontology/optimisation#"
       },
+      "@type": "opt:OptimisationProblem",
       "context": {
         "targets": [],
         "constraints": [],
@@ -501,6 +504,7 @@ Content-Type: application/json
   ],
   "expressionSpecification": {
     "@type": "ExpressionSpecification",
+    "expressionType": "JsonLdExpression",
     "expressionLanguage": "JSON-LD",
     "iri": "https://example.com/ontology/optimisation/v1"
   },
@@ -565,6 +569,7 @@ Content-Type: application/json
   ],
   "expressionSpecification": {
     "@type": "ExpressionSpecification",
+    "expressionType": "JsonLdExpression",
     "expressionLanguage": "JSON-LD",
     "iri": "https://example.com/ontology/optimisation/v1"
   },
@@ -717,6 +722,7 @@ Content-Type: application/json
   ],
   "expressionSpecification": {
     "@type": "ExpressionSpecification",
+    "expressionType": "JsonLdExpression",
     "expressionLanguage": "JSON-LD",
     "iri": "https://example.com/ontology/optimisation/v1"
   },
