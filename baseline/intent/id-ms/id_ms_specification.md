@@ -1871,13 +1871,25 @@ It is shown here as implementation guidance only. It is not embedded inside `Int
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://mycsp.com.au/schemas/intentManagement/v5/intentExpression/hospital-surgical-slice-spec-v1.19.expression.schema.json",
-  "title": "Hospital Surgical Slice Intent Expression Value Context Wrapper",
+  "title": "Hospital Surgical Slice Intent Expression Value",
+  "description": "Schema for Intent.expression.expressionValue. The context object contains the intent targets, constraints, and preferences for the hospital surgical slice intent.",
   "type": "object",
   "additionalProperties": false,
   "required": [
+    "@context",
     "context"
   ],
   "properties": {
+    "@context": {
+      "description": "JSON-LD context for intent and domain vocabulary prefixes.",
+      "type": "object",
+      "additionalProperties": true
+    },
+    "@type": {
+      "description": "JSON-LD type for the expression value.",
+      "type": "string",
+      "const": "IntentExpressionValue"
+    },
     "context": {
       "type": "object",
       "additionalProperties": false,
