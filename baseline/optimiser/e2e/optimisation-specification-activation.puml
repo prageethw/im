@@ -1,5 +1,5 @@
 @startuml
-title Optimisation Specification Activation (Lifecycle Governance)
+title Optimisation Specification Activation — Lifecycle Governance
 
 skinparam sequenceArrowThickness 2
 skinparam roundcorner 10
@@ -10,7 +10,7 @@ skinparam sequenceActorBorderColor #4F46E5
 skinparam noteBorderColor #A5B4FC
 skinparam noteBackgroundColor #EEF2FF
 
-actor "User & OEX " as Caller
+actor "User & OEX" as Caller
 participant "OGW" as OGW
 participant "OSB MS" as OSB
 participant "NGW" as NGW
@@ -20,56 +20,74 @@ database "OD MS DB" as ODDB
 == Activation Request ==
 
 Caller -> OGW : 1. Request activation of DRAFT\nOptimisationSpecification
-OGW -> OGW : 2. Authenticate caller/token/session\nand derive user context
+OGW -> OGW : 2. Authenticate caller/session\nand derive user context
+
 note right of OGW
 User context may include tenant, claims,
 roles/scopes, and entitlements.
 end note
 
-OGW -> OSB : 3. Invoke OSB MS\nwith user context\nmTLS, correlation id, trace context
-OSB -> OSB : 4. Authorise activation action\nusing user context\nand shape governed request
+OGW -> OSB : 3. Invoke OSB MS\nmTLS + User Context JWT\ncorrelationId / traceId
+
+OSB -> OSB : 4. Validate user context\nand catalogue-management access
+
 note right of OSB
+Catalogue-management journeys are feature-gated.
+Activation is exposed only to authorised
+optimisation domain engineers.
+
 User-context-related authorisation is performed
-at OSB / OCB-level before the request crosses NGW.
+by OSB MS before the request crosses NGW.
 end note
 
-OSB -> NGW : 5. Forward activation request\nwith system caller identity\nmTLS, correlation id, trace context, If-Match\n(no user context downstream)
+OSB -> NGW : 5. Forward activation request\nIf-Match = OD MS ETag\nmTLS + OAuth2 system identity\ncorrelationId / traceId\n(no user context downstream)
+
 note right of NGW
-User context terminates at NGW.
-NGW-to-downstream calls carry only
-system/service caller identity plus technical metadata.
+User context stops before/at NGW.
+Downstream OD MS calls use system/service identity only.
 end note
 
-NGW -> ODMS : 6. Route governed activation request\nusing mTLS and service/system auth context only
+NGW -> ODMS : 6. PATCH or PUT /optimisationSpecification/{id}\nactivation request\nmTLS + service/system auth
+
 note right of ODMS
 OD MS authorises the calling service/system.
-OD MS does not receive or depend on
-end-user identity/claims/roles/scopes.
+OD MS does not receive or depend on end-user
+identity, claims, roles, or scopes.
 end note
 
 == Validation ==
 
-ODMS -> ODDB : 7. Validate If-Match for DRAFT specification
+ODMS -> ODDB : 7. Validate If-Match\nfor selected DRAFT specification
 ODDB --> ODMS : If-Match confirmed
-ODMS -> ODMS : 8. Validate full OptimisationSpecification\n(specCharacteristic[], expressionSpecification,\ntargetEntitySchema)
+
+ODMS -> ODMS : 8. Validate lifecycleStatus = DRAFT
+ODMS -> ODMS : 9. Validate full OptimisationSpecification\nspecCharacteristic[]\nexpressionSpecification\ntargetEntitySchema
+ODMS -> ODMS : 10. Validate activation governance\nfamilyId present\none ACTIVE per familyId
 
 == Lifecycle Transition ==
 
-ODMS -> ODDB : 9. Change selected version\nDRAFT -> ACTIVE
-ODDB --> ODMS : Version activated
-ODMS -> ODDB : 10. Atomically move previously ACTIVE version\nin same specification family -> RETIRED
-ODDB --> ODMS : Previous version retired
+ODMS -> ODDB : 11. Assign official version\nand move selected DRAFT -> ACTIVE
+ODDB --> ODMS : DRAFT activated
+
+ODMS -> ODDB : 12. Transactionally move previous ACTIVE\nin same familyId -> RETIRED
+ODDB --> ODMS : Previous ACTIVE retired
 
 note right of ODMS
-At most one ACTIVE version
-per specification family is enforced.
+Official version is assigned by OD MS
+during activation.
+
+ACTIVE and RETIRED specifications are immutable.
+Only one ACTIVE OptimisationSpecification
+is enforced per familyId.
 end note
 
 == Activation Response ==
 
-ODMS --> NGW : 11. Return activated OptimisationSpecification\n(updated ETag + lifecycle-aware _links)
-NGW --> OSB : Return response to OSB MS
-OSB --> OGW : Shape response for OEX experience
-OGW --> Caller : Activated OptimisationSpecification result
+ODMS --> NGW : 13. 200 OK\nactivated OptimisationSpecification\nupdated ETag + lifecycle-aware _links
+NGW --> OSB : 14. Return response to OSB MS
+
+OSB -> OSB : 15. Shape catalogue-management\nexperience response
+OSB --> OGW : 16. Activation result\nwith backend correlation/trace details
+OGW --> Caller : 17. Activated OptimisationSpecification result
 
 @enduml
