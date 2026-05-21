@@ -154,12 +154,6 @@ Key logical relationships are:
 10. OC MS <- Kafka: Consumes worker outcomes and projects lifecycle/result.
 ```
 
-Logical diagram artifact:
-
-```text
-optimisation-logical-view.drawio
-```
-
 ### 3.3. Process view:
 
 Each use case has a matching process flow. The process flows are intentionally more detailed than the logical view so that ownership, validation, persistence, eventing, and asynchronous execution responsibilities are clear.
