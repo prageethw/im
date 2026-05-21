@@ -1,6 +1,6 @@
 <mxfile host="65bd71144e">
     <diagram id="optimisation-logical-view" name="Optimisation Logical View">
-        <mxGraphModel dx="2436" dy="2180" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1500" pageHeight="900" math="0" shadow="0" adaptiveColors="none">
+        <mxGraphModel dx="871" dy="1540" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1500" pageHeight="900" math="0" shadow="0" adaptiveColors="none">
             <root>
                 <mxCell id="0"/>
                 <mxCell id="1" parent="0"/>
@@ -68,14 +68,14 @@
                 </mxCell>
                 <mxCell id="e10" value="Emit events&lt;br/&gt;EXECUTE / CANCEL" style="endArrow=block;html=1;rounded=0;strokeWidth=2;exitX=0.566;exitY=1;exitDx=0;exitDy=0;exitPerimeter=0;strokeColor=default;" parent="1g_pKyIUPg_Uf4EWA1Bv-1" edge="1">
                     <mxGeometry relative="1" as="geometry">
-                        <mxPoint x="1001.474685314685" y="378.8095238095239" as="sourcePoint"/>
-                        <mxPoint x="1001.9580419580418" y="541.5952380952383" as="targetPoint"/>
+                        <mxPoint x="1011.474685314685" y="378.8095238095239" as="sourcePoint"/>
+                        <mxPoint x="1011.9580419580418" y="541.5952380952383" as="targetPoint"/>
                     </mxGeometry>
                 </mxCell>
-                <mxCell id="e11" value="Consume outcomes&lt;br/&gt;SUCCESS / INFEASIBLE / FAILURE" style="endArrow=block;html=1;rounded=0;strokeWidth=2;exitX=0.417;exitY=0;exitDx=0;exitDy=0;exitPerimeter=0;strokeColor=default;" parent="1g_pKyIUPg_Uf4EWA1Bv-1" edge="1">
+                <mxCell id="e11" value="Consume outcomes&lt;br/&gt;COMPLETED / INFEASIBLE / FAILED" style="endArrow=block;html=1;rounded=0;strokeWidth=2;exitX=0.417;exitY=0;exitDx=0;exitDy=0;exitPerimeter=0;strokeColor=default;" parent="1g_pKyIUPg_Uf4EWA1Bv-1" edge="1">
                     <mxGeometry relative="1" as="geometry">
-                        <mxPoint x="856.0246153846153" y="542.6190476190478" as="sourcePoint"/>
-                        <mxPoint x="855.9601678321674" y="378.8095238095239" as="targetPoint"/>
+                        <mxPoint x="846.0246153846153" y="542.6190476190478" as="sourcePoint"/>
+                        <mxPoint x="845.9601678321674" y="378.8095238095239" as="targetPoint"/>
                     </mxGeometry>
                 </mxCell>
                 <mxCell id="e12" value="Consume worker instructions" style="endArrow=block;html=1;rounded=0;strokeWidth=2;strokeColor=default;" parent="1g_pKyIUPg_Uf4EWA1Bv-1" source="kafka" target="worker" edge="1">
