@@ -38,6 +38,8 @@ Long-running intent control-loop assurance
 
 ## 3. Endpoint set:
 
+Supported:
+
 ```http
 GET /optimisation
 POST /optimisation
@@ -54,9 +56,48 @@ PATCH /optimisation/{id}
 DELETE /optimisation/{id}
 ```
 
-Runtime `Optimisation` is an execution/audit record, not an editable draft definition.
+Runtime `Optimisation` is an execution/audit record, not an editable draft definition. Runtime changes occur only through internal event projection and explicit runtime commands such as cancellation and retrial. Clients must not use `PATCH` to edit runtime `Optimisation` resources.
 
-## 4. Runtime lifecycle:
+## 4. Runtime Optimisation canonical fields:
+
+Canonical runtime `Optimisation` fields:
+
+```text
+id
+href
+name
+description
+priority
+lifecycleStatus
+statusChangeDate
+creationDate
+lastUpdate
+sourceContext
+optimisationSpecification
+expression
+result
+optimisationRelationship[]
+@type
+@baseType
+@schemaLocation
+_links
+```
+
+Field notes:
+
+| **Field** | **Rule** |
+|---|---|
+| `id` / `href` | Server-assigned runtime resource identity. |
+| `optimisationSpecification` | Immutable reference to the `OptimisationSpecification.id` and `href` used as the contract pointer at creation time. |
+| `expression` | Accepted runtime expression submitted by the caller and validated against the referenced ACTIVE specification. |
+| `result` | Terminal result projection only. Presence depends on lifecycle state. |
+| `optimisationRelationship[]` | Used for relationships such as `retrialOf`. |
+| `lifecycleStatus` / `statusChangeDate` | Runtime state and last lifecycle transition time. |
+| `_links` | Lifecycle-aware HATEOAS action links. |
+
+OC MS persists the referenced `OptimisationSpecification.id` and `href` as the immutable contract pointer for the life of the runtime `Optimisation`. If the specification is later `RETIRED`, the runtime `Optimisation` remains valid as an audit record; OC MS does not revalidate or rewrite the specification reference.
+
+## 5. Runtime lifecycle:
 
 ```text
 ACKNOWLEDGED
@@ -86,7 +127,7 @@ Runtime `Optimisation` does not expose a `version` field. ETag is used in HTTP h
 
 `statusChangeDate` records when `lifecycleStatus` last changed. It is distinct from `creationDate` and `lastUpdate`.
 
-## 5. Lifecycle transitions:
+## 6. Lifecycle transitions:
 
 ```text
 ACKNOWLEDGED -> QUEUED
@@ -105,7 +146,18 @@ CANCELLED -> terminal
 
 Retrial does not move the failed Optimisation back to `PROCESSING`. It creates a new linked Optimisation with `retrialOf`.
 
-## 6. HATEOAS by lifecycle:
+## 7. Result presence rules:
+
+Normative result field rules:
+
+```text
+result MUST be absent while lifecycleStatus is ACKNOWLEDGED, QUEUED, PROCESSING, or CANCELLING.
+result MAY be present when lifecycleStatus is COMPLETED, INFEASIBLE, FAILED, or CANCELLED.
+FAILED result details may include safe error codes, safe messages, retry guidance, and diagnostic references.
+FAILED result details must not expose sensitive solver internals, Gurobi model formulation, credentials, infrastructure details, or raw stack traces.
+```
+
+## 8. HATEOAS by lifecycle:
 
 ```text
 ACKNOWLEDGED / QUEUED / PROCESSING: self cancellation
@@ -114,7 +166,7 @@ FAILED: self retrial
 COMPLETED / INFEASIBLE / CANCELLED: self
 ```
 
-## 7. External response header governance:
+## 9. External response header governance:
 
 OC MS exposes optimiser-domain platform resources using TMF-style resource conventions. `Optimisation` is not a native TMF Open API resource.
 
@@ -127,7 +179,7 @@ x-tmf-native: false
 
 These headers are governance/documentation indicators only. Clients must not use them as runtime business-logic switches.
 
-## 8. POST /optimisation:
+## 10. POST /optimisation:
 
 ```http
 POST /optimisation
@@ -199,7 +251,7 @@ Content-Type: application/json
 Successful response:
 
 ```http
-HTTP/1.1 202 Accepted
+HTTP/1.1 201 Created
 Location: /optimisation/opt-12345
 ETag: "opt-12345-rev1"
 Content-Type: application/json
@@ -285,9 +337,9 @@ x-tmf-native: false
 }
 ```
 
-`202 Accepted` means OC MS accepted the request for asynchronous execution. It does not mean the optimisation is feasible, started, solvable, or guaranteed to produce a valid result.
+`201 Created` means OC MS created and persisted the runtime `Optimisation` resource immediately. Execution is asynchronous; resource creation is immediate. `201 Created` does not mean the optimisation is feasible, started, solvable, or guaranteed to produce a valid result.
 
-## 9. OD specification lookup and cache posture:
+## 11. OD specification lookup and cache posture:
 
 On `POST /optimisation`, OC MS validates the runtime request against the referenced `OptimisationSpecification.id`.
 
@@ -298,12 +350,14 @@ The referenced OptimisationSpecification must exist.
 The referenced OptimisationSpecification must be ACTIVE at request-acceptance time.
 OC MS must not infer the current active contract by stale familyId lookup.
 OC MS does not use familyId or official specification version to choose a runtime contract.
+OC MS persists the referenced OptimisationSpecification.id and href as the immutable contract pointer for the life of the runtime Optimisation.
+If the specification is later RETIRED, the runtime Optimisation remains valid as an audit record; OC MS does not revalidate or rewrite the specification reference.
 OC MS may cache immutable ACTIVE OptimisationSpecification contracts by id and ETag.
 A cached ACTIVE contract for a specific id is safe because OD MS makes ACTIVE specifications immutable.
 If the referenced specification is missing, not ACTIVE, cache-missing, or cache-stale beyond the local policy, OC MS refreshes from OD MS.
 ```
 
-## 10. OC MS validation boundary:
+## 12. OC MS validation boundary:
 
 OC MS validates:
 
@@ -341,7 +395,7 @@ After acceptance, OC MS persists the runtime resource and writes `OptimisationRe
 
 Cancellation uses the same event type with `instruction = CANCEL`. Worker terminal outcomes are returned through `OptimisationCompletedEvent` with `status = COMPLETED`, `FAILED`, or `INFEASIBLE`.
 
-## 11. Internal event baseline:
+## 13. Internal event baseline:
 
 OC MS uses exactly two internal Kafka event types with the Python/Gurobi worker in the current baseline. These are platform-internal events, not TMF external notification events.
 
@@ -352,7 +406,18 @@ OC MS uses exactly two internal Kafka event types with the Python/Gurobi worker 
 
 `OptimisationFailedEvent` is not used in the current baseline. Failed and infeasible outcomes are carried by `OptimisationCompletedEvent.status`.
 
-## 12. GET /optimisation list:
+Event identity and idempotency requirements:
+
+```text
+OptimisationRequestedEvent and OptimisationCompletedEvent MUST include optimisationId.
+OptimisationRequestedEvent and OptimisationCompletedEvent MUST include correlationId and traceId.
+OptimisationRequestedEvent and OptimisationCompletedEvent MUST include a unique eventId or CloudEvents ce-id.
+OptimisationCompletedEvent processing MUST be idempotent.
+OC MS projection MUST safely handle duplicate OptimisationCompletedEvent messages.
+OC MS may use eventId/ce-id, inbox deduplication state, and monotonic lifecycle/statusChangeDate rules to suppress duplicate, stale, or late event projection.
+```
+
+## 14. GET /optimisation list:
 
 Request:
 
@@ -379,6 +444,7 @@ Unsupported or malformed query parameters return `400 Bad Request`.
 Sparse field projection rule:
 
 ```text
+fields supports top-level fields only in the baseline. Nested field selection is not supported.
 If a requested field is valid but not present for the resource's current lifecycle state, OC MS omits that field silently rather than returning an error.
 For example, fields=id,result on a PROCESSING resource returns id and omits result because result is not present before terminal outcome projection.
 Unsupported field names still return 400 Bad Request.
@@ -395,7 +461,7 @@ x-platform-extension: true
 x-tmf-native: false
 ```
 
-## 13. GET /optimisation/{id}:
+## 15. GET /optimisation/{id}:
 
 ```http
 GET /optimisation/opt-12345
@@ -478,8 +544,6 @@ Active-state example:
 }
 ```
 
-No `result` field is included while `lifecycleStatus` is `ACKNOWLEDGED`, `QUEUED`, `PROCESSING`, or `CANCELLING`.
-
 Completed-state example:
 
 ```json
@@ -516,7 +580,7 @@ Completed-state example:
 }
 ```
 
-## 14. Cancellation and retrial:
+## 16. Cancellation and retrial:
 
 Cancellation:
 
@@ -541,6 +605,15 @@ x-platform-extension: true
 x-tmf-native: false
 ```
 
+Cancellation semantics:
+
+```text
+Cancellation is best-effort.
+OC MS accepts cancellation only for eligible non-terminal lifecycle states.
+CANCELLED is set only after worker confirmation through OptimisationCompletedEvent or an equivalent terminal confirmation path.
+If cancellation is requested when lifecycleStatus is terminal (COMPLETED, FAILED, INFEASIBLE, or CANCELLED), OC MS returns 409 Conflict.
+```
+
 Retrial response creates a new Optimisation and links it to the failed optimisation:
 
 ```json
@@ -560,7 +633,7 @@ Retrial response creates a new Optimisation and links it to the failed optimisat
 }
 ```
 
-## 15. Header/concurrency rules:
+## 17. Header/concurrency rules:
 
 ```text
 POST /optimisation: returns Location and ETag
@@ -588,7 +661,7 @@ POST /optimisation/{id}/retrial requires Content-Type: application/json when a r
 Unsupported request content type returns 415 Unsupported Media Type.
 ```
 
-## 16. Error handling boundary:
+## 18. Error handling boundary:
 
 | **Condition** | **Response** |
 |---|---|
@@ -596,6 +669,7 @@ Unsupported request content type returns 415 Unsupported Media Type.
 | Referenced `OptimisationSpecification` is missing or not visible | `404 Not Found` |
 | Referenced `OptimisationSpecification` is not `ACTIVE` | `422 Unprocessable Entity` |
 | Cancellation/retrial requested in an invalid lifecycle state | `409 Conflict` |
+| Cancellation requested for a terminal lifecycle state | `409 Conflict` |
 | Missing `If-Match` on cancellation/retrial | `428 Precondition Required` |
 | Stale or wrong `If-Match` on cancellation/retrial | `412 Precondition Failed` |
 | Unsupported `Content-Type` | `415 Unsupported Media Type` |
@@ -663,7 +737,7 @@ Content-Type: application/json
 }
 ```
 
-## 17. Outcome mapping:
+## 19. Outcome mapping:
 
 ```text
 SUCCESS -> COMPLETED
