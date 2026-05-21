@@ -69,6 +69,8 @@ Avoid using backend resource namespaces directly from OSB:
 
 Those backend namespaces belong to OC MS and OD MS behind NGW.
 
+OSB uses pluralised experience endpoint names intentionally. Backend OC MS and OD MS resource endpoint names remain unchanged behind NGW.
+
 ## 5. Phase one endpoint set:
 
 ```http
@@ -82,7 +84,26 @@ POST /optimisationExperience/v1/optimisations/{id}/cancellation
 POST /optimisationExperience/v1/optimisations/{id}/retrial
 ```
 
-## 6. Security and identity boundary:
+
+## 6. OSB response model baseline:
+
+OSB response models are experience models, not source-of-truth domain resources. OD MS remains the source of truth for `OptimisationSpecification`, and OC MS remains the source of truth for runtime `Optimisation`.
+
+Minimal OSB view model types:
+
+| View model | Purpose |
+|---|---|
+| `CapabilityCard` | OEX-friendly summary of an available optimisation capability derived from OD MS. |
+| `RequestFormModel` | OEX-friendly form model generated from OD MS metadata and schema. |
+| `CreationResultView` | OEX-friendly runtime creation result derived from OC MS `201 Created`. |
+| `OptimisationSummaryView` | OEX-friendly list-row/summary representation of runtime optimisation state. |
+| `OptimisationDetailView` | OEX-friendly detail representation of runtime optimisation state and terminal result where present. |
+| `AvailableAction` | OEX action affordance derived from backend `_links` and further restricted by user context. |
+
+OSB may rename, group, or format fields for OEX usability, but it must preserve backend lifecycle semantics, action semantics, status codes, ETags, and diagnostic correlation identifiers.
+
+
+## 7. Security and identity boundary:
 
 ### 6.1. OGW -> OSB MS:
 
@@ -106,7 +127,9 @@ OSB MS is responsible for user-context-aware experience-layer authorisation befo
 
 OSB MS does not bypass NGW to call OD MS or OC MS directly unless explicitly approved by architecture/security governance.
 
-## 7. Runtime optimisation flow:
+OSB user-context filtering is not a security substitute for backend enforcement. If OSB shows an action but OD MS or OC MS rejects it, the backend decision wins. OSB must not assume visibility, freshness, or action eligibility from cached UI state alone.
+
+## 8. Runtime optimisation flow:
 
 ```text
 User -> OEX UI -> OGW -> OSB MS -> NGW -> OC MS
@@ -127,13 +150,28 @@ expression.expressionValue.context.preferences[]
 
 OSB MS may construct an OEX-friendly request form from OD MS metadata, but the submitted backend runtime request must still conform to the OC MS `POST /optimisation` contract and the referenced ACTIVE OD MS `targetEntitySchema`.
 
-## 8. Catalogue/specification flow:
+Request-form generation rules:
+
+```text
+Request forms may be generated from OD MS specCharacteristic[], expressionSpecification, and targetEntitySchema.
+specCharacteristic[] is UI guidance, discovery metadata, defaults, examples, and display guidance only.
+targetEntitySchema remains the authoritative validation contract.
+expressionSpecification provides expression type/language/ontology binding.
+OSB form validation is pre-validation only.
+OC MS remains the final runtime contract validator.
+```
+
+## 9. Catalogue/specification flow:
 
 ```text
 User -> OEX UI -> OGW -> OSB MS -> NGW -> OD MS
 ```
 
-Only approved optimisation domain engineers can access catalogue write, activation, and retirement journeys.
+Catalogue-management endpoints and view models are out of phase-one scope unless explicitly enabled.
+
+When catalogue-management is disabled, OSB MS must not expose OD MS write, activation, or retirement journeys.
+
+Only approved optimisation domain engineers can access catalogue write, activation, and retirement journeys when the feature is enabled.
 
 When catalogue-management journeys are enabled, OSB MS must preserve OD MS governance:
 
@@ -150,22 +188,24 @@ PUT requires application/json and is allowed only for mutable DRAFT replacement/
 
 OSB MS must not invent, override, or expose its own versioning semantics for `OptimisationSpecification`.
 
-## 9. Backend mapping:
+## 10. Backend mapping:
 
 | OSB endpoint | Backend mapping | OSB responsibility |
 |---|---|---|
 | `GET /optimisationExperience/v1/home` | OSB aggregates/context-shapes from NGW -> OD MS and NGW -> OC MS as required. | Build landing-page model, cards, and available actions. |
 | `GET /optimisationExperience/v1/capabilities` | NGW -> OD MS `GET /optimisationSpecification`. | Show visible optimisation capabilities. |
 | `GET /optimisationExperience/v1/capabilities/{capabilityId}/request-form` | NGW -> OD MS `GET /optimisationSpecification/{id}`. | Transform specification metadata/schema into a request form model. |
-| `POST /optimisationExperience/v1/optimisations` | NGW -> OC MS `POST /optimisation`. | Submit runtime request and return OEX-friendly creation result. Backend success maps to OC `201 Created`. |
+| `POST /optimisationExperience/v1/optimisations` | NGW -> OC MS `POST /optimisation`. | Submit runtime request and return OEX-friendly `CreationResultView`. Backend success maps to OC `201 Created`. |
 | `GET /optimisationExperience/v1/optimisations` | NGW -> OC MS `GET /optimisation`. | Return context-filtered list/detail summary. |
 | `GET /optimisationExperience/v1/optimisations/{id}` | NGW -> OC MS `GET /optimisation/{id}`. | Transform backend state/result into UI-friendly detail. |
 | `POST /optimisationExperience/v1/optimisations/{id}/cancellation` | NGW -> OC MS `POST /optimisation/{id}/cancellation`. | Expose cancellation only when user context and backend lifecycle/action model allow it. |
 | `POST /optimisationExperience/v1/optimisations/{id}/retrial` | NGW -> OC MS `POST /optimisation/{id}/retrial`. | Expose retrial only when user context and backend lifecycle/action model allow it. |
 
-## 10. Runtime creation behaviour:
+## 11. Runtime creation behaviour:
 
 When OSB MS calls OC MS through NGW to create a runtime optimisation, OC MS returns `201 Created` when the runtime `Optimisation` resource is created immediately.
+
+OSB MS should return `201 Created` to OEX when OC MS returns `201 Created`, because OSB is acting as the direct experience facade for runtime creation. OSB may return an OEX-friendly `CreationResultView`, but it must preserve the backend creation semantics, backend `Location`, backend resource identifier, and backend correlation/trace identifiers where available.
 
 OSB MS must preserve this semantic distinction:
 
@@ -175,9 +215,9 @@ Execution is asynchronous.
 201 Created from OC MS does not mean the optimisation is feasible, started, solvable, or guaranteed to produce a valid result.
 ```
 
-OSB MS may translate the response into an OEX-friendly message, but must not present creation as successful optimisation completion.
+OSB MS may translate the response into an OEX-friendly message, but must not present creation as successful optimisation completion. OSB MS MUST NOT translate OC MS `201 Created` into a message implying optimisation completion.
 
-## 11. Contract pointer and specification reference behaviour:
+## 12. Contract pointer and specification reference behaviour:
 
 OSB MS must preserve the caller-selected or system-selected `optimisationSpecification.id` when submitting the backend runtime request to OC MS.
 
@@ -185,7 +225,7 @@ OC MS persists the referenced `OptimisationSpecification.id` and `href` as the i
 
 If a specification is later `RETIRED`, existing runtime optimisation records remain valid audit records tied to the original `optimisationSpecification.id`.
 
-## 12. Result display behaviour:
+## 13. Result display behaviour:
 
 OSB MS must follow OC MS result presence rules:
 
@@ -198,7 +238,19 @@ OSB MS must not expose sensitive solver internals, Gurobi model formulation, cre
 
 OSB MS may present human-friendly labels, progress indicators, or guidance, but must not invent backend result values that are not present in the OC MS response.
 
-## 13. Cancellation and retrial behaviour:
+## 14. Runtime action exposure:
+
+OSB should use backend `_links` from OC MS as the authoritative runtime action affordance signal, then further restrict visible actions using the User Context JWT.
+
+Action visibility rule:
+
+```text
+actionVisible = backend_link_present AND user_context_allows
+```
+
+OSB must not expose cancellation or retrial if the corresponding backend `_links` action is not present in the OC MS response. OSB may hide an available backend action when user context does not allow it, but it must not invent backend actions locally.
+
+## 15. Cancellation and retrial behaviour:
 
 ### 13.1. Cancellation:
 
@@ -231,19 +283,54 @@ To change targets, constraints, preferences, source context, priority, or the re
 
 Retrial is not available from `INFEASIBLE` by default because `INFEASIBLE` is a valid optimisation/model outcome, not a technical execution failure.
 
-## 14. Concurrency handling:
+## 16. Concurrency handling:
 
 OSB MS must preserve backend ETag semantics for unsafe runtime operations.
 
 ```text
 OSB MS receives or stores the current ETag from OC MS responses.
 For cancellation and retrial, OSB MS forwards If-Match to OC MS through NGW.
+OSB must forward the OC MS ETag and must not generate its own ETag for backend unsafe operations.
+If OSB does not have a current ETag, it must refresh the runtime Optimisation before issuing cancellation/retrial, or return a refresh-required response to OEX.
 OC MS remains the runtime concurrency source of truth.
 ```
 
 Backend `412 Precondition Failed` and `428 Precondition Required` must not be hidden as generic failures.
 
-## 15. Filtering, fields, and count handling:
+## 17. Cache posture:
+
+OSB may cache read-only capability, form, and view data only where backend cache headers and lifecycle rules allow.
+
+OD MS capability/form data:
+
+```text
+ACTIVE OptimisationSpecification contracts are immutable.
+OSB may cache OD-derived capability/form data only in line with OD/NGW cache policy.
+OSB must not use cached OD data to bypass backend validation.
+```
+
+OC MS runtime data:
+
+```text
+Runtime Optimisation state changes over time.
+OSB should avoid long-lived caching for runtime status/detail views.
+OSB must not use cached runtime state alone to determine action eligibility.
+```
+
+## 18. Runtime status refresh:
+
+Phase-one OEX/OSB status refresh is REST polling against OC MS through NGW.
+
+Rules:
+
+```text
+OSB observes runtime progress through OC MS REST APIs.
+OSB must not infer terminal status locally.
+Terminal state must come from OC MS.
+Polling cadence is a UI/platform concern and is not owned by OD MS or OC MS.
+```
+
+## 19. Filtering, fields, and count handling:
 
 OSB MS may expose OEX-friendly filters, but backend runtime filtering is performed by OC MS and backend capability filtering is performed by OD MS.
 
@@ -265,7 +352,7 @@ X-Result-Count reflects resources returned in the current response page.
 
 OSB MS may transform these into UI pagination metadata but must preserve their meaning.
 
-## 16. Error handling:
+## 20. Error handling:
 
 OSB MS must preserve important backend error semantics:
 
@@ -280,7 +367,9 @@ OSB MS must preserve important backend error semantics:
 
 OSB MS may map backend error bodies to OEX-friendly messages, but it must preserve the backend status and correlation information for support and troubleshooting.
 
-## 17. Event posture:
+OSB must propagate or surface backend `correlationId` and `traceId` where available. OSB may add its own correlation identifier, but it must not discard backend diagnostic identifiers.
+
+## 21. Event posture:
 
 OSB MS does not publish or consume the optimiser Kafka worker events.
 
@@ -293,7 +382,21 @@ OptimisationCompletedEvent
 
 OSB MS observes runtime progress only through OC MS REST APIs exposed through NGW.
 
-## 18. Open design guardrails:
+## 22. OSB MS non-goals:
+
+OSB MS is not:
+
+```text
+source of truth for OptimisationSpecification
+source of truth for runtime Optimisation
+contract validator of record
+runtime lifecycle owner
+optimiser Kafka event publisher or consumer
+solver/orchestration engine
+replacement for OD MS or OC MS
+```
+
+## 23. Open design guardrails:
 
 OSB MS must not:
 
