@@ -1,6 +1,6 @@
-# Optimisation Definition MS Specification
+# OD MS / Optimisation Definition MS Specification
 
-## 1. Service purpose
+## 1. Service purpose:
 
 Optimisation Definition MS (OD MS) owns the governed catalogue of `OptimisationSpecification` resources. An `OptimisationSpecification` defines the allowed shape, semantics, lifecycle, and validation contract for runtime `Optimisation` requests.
 
@@ -8,7 +8,7 @@ It describes what a runtime optimisation request may contain, including the requ
 
 OD MS does **not** execute optimisation runs, evaluate solver feasibility, select candidates, invoke Gurobi, persist runtime `Optimisation` resources, or project runtime optimisation outcomes. Those runtime responsibilities belong to OSB MS, OC MS, workers, and the optimiser engine.
 
-## 2. TMF alignment and platform extensions
+## 2. TMF alignment and platform extensions:
 
 OD MS follows the TMF-style external resource model:
 
@@ -17,7 +17,7 @@ OD MS follows the TMF-style external resource model:
 - Standard external operations are `GET`, `POST`, `PATCH`, and `DELETE`.
 - `PATCH` uses JSON Merge Patch style partial update semantics.
 
-platform extensions:
+Approved platform extensions:
 
 | Extension | Purpose | Guardrail |
 |---|---|---|
@@ -25,7 +25,7 @@ platform extensions:
 | `_links` | HATEOAS controls. | Does not replace `href`; lifecycle-aware and authorisation-aware. |
 | `ETag` / `If-Match` governance | Optimistic concurrency for unsafe existing-resource operations. | Required for `PUT`, `PATCH`, and `DELETE`. |
 
-## 3. Ownership
+## 3. Ownership:
 
 OD MS owns:
 
@@ -57,7 +57,7 @@ Runtime optimisation outcome
 Runtime optimisation result projection
 ```
 
-## 4. Endpoint set
+## 4. Endpoint set:
 
 TMF-aligned operation set:
 
@@ -77,7 +77,7 @@ PUT /optimisationSpecification/{id}
 
 OD MS does not expose runtime optimisation operations. Runtime operations belong to OSB MS and OC MS.
 
-## 5. OptimisationSpecification resource shape
+## 5. OptimisationSpecification resource shape:
 
 `OptimisationSpecification` is a platform optimiser-domain resource modelled using the TMF921 `IntentSpecification` / `EntitySpecification` pattern. It is not a native TMF921 resource name.
 
@@ -111,7 +111,7 @@ _links
 
 The external `OptimisationSpecification` resource must use only the TMF-aligned specification structures shown in the canonical field list. Optimiser request-contract semantics are represented through `targetEntitySchema`, `expressionSpecification`, and `specCharacteristic[]`.
 
-## 6. Field semantics
+## 6. Field semantics:
 
 | Field | Meaning |
 |---|---|
@@ -137,7 +137,7 @@ The external `OptimisationSpecification` resource must use only the TMF-aligned 
 | `@schemaLocation` | Optional schema location for platform extension details. |
 | `_links` | Approved HATEOAS extension containing valid next actions for the current caller and lifecycle state. |
 
-## 7. TMF-aligned specification responsibility split
+## 7. TMF-aligned specification responsibility split:
 
 OD MS must keep the three TMF-aligned specification structures separate. They are related, but they do not mean the same thing.
 
@@ -155,7 +155,7 @@ expressionSpecification = expression language + ontology IRI
 targetEntitySchema = authoritative runtime expressionValue validation schema
 ```
 
-## 8. Runtime optimisation context contract
+## 8. Runtime optimisation context contract:
 
 The runtime optimisation problem is carried inside:
 
@@ -196,7 +196,7 @@ Meaning:
 
 OD MS defines this runtime contract using `targetEntitySchema`. `specCharacteristic[]` may describe these fields for discovery, governance, examples, defaults, and OEX/UI prefill guidance, but it must not replace the authoritative schema.
 
-## 9. Embedded schema artifact: optimisation-expression-value.schema.json
+## 9. Embedded schema artifact: optimisation-expression-value.schema.json:
 
 To avoid ambiguity, the `targetEntitySchema.@schemaLocation` reference used by `OptimisationSpecification` is backed by the governed schema content below. The schema is documented inside this OD MS specification baseline so readers do not have to locate a separate artifact to understand the contract.
 
@@ -289,7 +289,7 @@ context.preferences[] contains soft ranking or selection preferences.
 }
 ```
 
-## 10. Embedded schema governance baseline
+## 10. Embedded schema governance baseline:
 
 The embedded `optimisation-expression-value.schema.json` validates the runtime `Optimisation.expression.expressionValue` structure only. It does not perform solver feasibility checks, rank candidates, calculate objective trade-offs, select the best candidate, or decide runtime optimisation outcomes. Those responsibilities remain with OC MS, workers, and the optimiser engine.
 
@@ -314,7 +314,7 @@ The reusable JSON Schema definition names intentionally stay short:
 }
 ```
 
-## 11. Lifecycle model
+## 11. Lifecycle model:
 
 ```text
 DRAFT -> ACTIVE -> RETIRED
@@ -328,7 +328,7 @@ There is no `DEPRECATED` state in the optimiser baseline.
 | `ACTIVE` | Specification is approved for runtime use. | Used by OC MS to validate and create runtime `Optimisation` resources. Runtime contract is immutable. |
 | `RETIRED` | Specification is no longer available for new use. | Retained for audit/history and existing runtime references. Not usable for new runtime `Optimisation` creation. |
 
-## 12. Version activation and retirement governance
+## 12. Version activation and retirement governance:
 
 `POST /optimisationSpecification` always creates a `DRAFT` `OptimisationSpecification`.
 
@@ -351,7 +351,7 @@ Activation validates the full OptimisationSpecification before committing the li
 
 Physical `DELETE` is not used for `ACTIVE` or `RETIRED` specifications.
 
-## 13. Operation governance summary
+## 13. Operation governance summary:
 
 | Operation | Rule |
 |---|---|
@@ -362,7 +362,7 @@ Physical `DELETE` is not used for `ACTIVE` or `RETIRED` specifications.
 | `PATCH /optimisationSpecification/{id}` | TMF-compatible partial update. Requires `If-Match`. Discouraged for material runtime-contract replacement. |
 | `DELETE /optimisationSpecification/{id}` | Physical delete only for mutable `DRAFT`. Requires `If-Match`. |
 
-## 14. Concurrency and cache governance
+## 14. Concurrency and cache governance:
 
 Unsafe existing-resource operations require optimistic concurrency:
 
@@ -400,7 +400,7 @@ The only explicit client cache override documented by OD MS is:
 Cache-Control: no-cache
 ```
 
-## 15. HATEOAS baseline
+## 15. HATEOAS baseline:
 
 `_links` is an approved HATEOAS platform extension. It is lifecycle-aware and authorisation-aware. OD MS must expose only the links that are valid for the current caller and current lifecycle state.
 
@@ -430,11 +430,11 @@ Link relation meaning:
 
 The `activate` and `retire` link relations point to `PATCH` on the `OptimisationSpecification` resource itself. OD MS does not expose separate `/activate` or `/retire` action endpoints.
 
-## 16. Operation examples
+## 16. Operation examples:
 
 The examples below are internally consistent and should be used as the OD MS reference pattern.
 
-### 16.1 POST /optimisationSpecification creates DRAFT
+### 16.1. POST /optimisationSpecification creates DRAFT:
 
 Request:
 
@@ -577,7 +577,7 @@ Content-Type: application/json
 }
 ```
 
-### 16.2 GET /optimisationSpecification list
+### 16.2. GET /optimisationSpecification list:
 
 Request:
 
@@ -626,7 +626,7 @@ Content-Type: application/json
 ]
 ```
 
-### 16.3 GET /optimisationSpecification/{id} retrieve ACTIVE
+### 16.3. GET /optimisationSpecification/{id} retrieve ACTIVE:
 
 Request:
 
@@ -714,7 +714,7 @@ Content-Type: application/json
 }
 ```
 
-### 16.4 PATCH activation of finalised DRAFT
+### 16.4. PATCH activation of finalised DRAFT:
 
 Request:
 
@@ -740,7 +740,7 @@ Content-Type: application/json
 
 Response body returns the full activated resource. OD MS transactionally retires the previous `ACTIVE` version in the same `specificationKey` family.
 
-### 16.5 PUT finalise and activate mutable DRAFT
+### 16.5. PUT finalise and activate mutable DRAFT:
 
 Request:
 
@@ -768,7 +768,7 @@ Content-Type: application/json
 
 Response body returns the full activated resource. `PUT` is an approved platform extension and is allowed only for mutable `DRAFT` specifications.
 
-### 16.6 PATCH retirement of ACTIVE
+### 16.6. PATCH retirement of ACTIVE:
 
 Request:
 
@@ -794,7 +794,7 @@ Content-Type: application/json
 
 Response body returns the full retired `OptimisationSpecification`. Retired specifications expose only lifecycle-authorised read/new-version links such as `self`, `collection`, and `createNewVersion`.
 
-### 16.7 DELETE mutable DRAFT
+### 16.7. DELETE mutable DRAFT:
 
 Request:
 
@@ -811,7 +811,7 @@ HTTP/1.1 204 No Content
 
 Physical delete is allowed only for mutable `DRAFT` specifications. `ACTIVE` and `RETIRED` specifications are retained.
 
-## 17. Error handling baseline
+## 17. Error handling baseline:
 
 OD MS uses TMF-style error responses with platform-specific error codes.
 
@@ -848,7 +848,7 @@ Standard error body:
 }
 ```
 
-## 18. Contract violation response
+## 18. Contract violation response:
 
 Use `422 Unprocessable Entity` when the JSON is structurally valid but violates the `ACTIVE` `OptimisationSpecification` request contract.
 
@@ -867,7 +867,7 @@ Content-Type: application/json
 }
 ```
 
-## 19. Relationship to OC MS
+## 19. Relationship to OC MS:
 
 ```text
 OD MS: defines what is allowed.
@@ -904,7 +904,7 @@ OD MS does not persist runtime `Optimisation` resources, does not write OC MS ou
 
 ---
 
-## Event and subscription posture
+## 20. Event and subscription posture:
 
 OD MS is baselined as a synchronous REST API only for the initial optimiser architecture. TMF-style hub/listener subscription support is not included in the initial OD MS baseline. OD MS does not expose `/hub` endpoints and does not publish external `OptimisationSpecification` events by default. This is a deliberate scope decision.
 

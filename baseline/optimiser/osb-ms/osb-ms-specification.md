@@ -1,12 +1,12 @@
-# Optimisation Screen Builder MS Specification
+# OSB MS / Optimisation Screen Builder MS Specification
 
-## Service purpose
+## 1. Service purpose:
 
 OSB MS means Optimisation Screen Builder MS. OSB MS is the context-aware OEX facade / backend-for-frontend service for optimisation experiences. OSB MS sits behind OGW and receives user context from the User Context JWT passed by OGW. It shapes the OEX optimisation experience and calls backend optimisation domain APIs through NGW. OSB MS initially supports runtime optimisation journeys through OC MS.
 
 It later supports catalogue/specification journeys through OD MS.
 
-## Ownership boundary
+## 2. Ownership boundary:
 
 OSB MS owns:
 
@@ -42,11 +42,11 @@ OC MS: owns runtime Optimisation resources.
 OSB MS: owns OEX experience/context-aware facade behaviour.
 ```
 
-## API compliance
+## 3. API compliance:
 
 OSB APIs are private/OEX experience APIs and do not need to be TMF-compliant. NGW-exposed backend OD MS and OC MS APIs remain TMF/TIO-aligned while using Optimisation as the domain concept. OSB MS must not expose backend OD/OC resource contracts directly unless the UI journey explicitly needs that shape.
 
-## Recommended namespace
+## 4. Recommended namespace:
 
 ```http
 /optimisationExperience/v1
@@ -61,7 +61,7 @@ Avoid using backend resource namespaces directly from OSB:
 
 Those belong to OC MS and OD MS behind NGW.
 
-## Phase one endpoint set
+## 5. Phase one endpoint set:
 
 ```http
 GET /optimisationExperience/v1/home
@@ -74,7 +74,7 @@ POST /optimisationExperience/v1/optimisations/{id}/cancellation
 POST /optimisationExperience/v1/optimisations/{id}/retrial
 ```
 
-## Runtime optimisation flow
+## 6. Runtime optimisation flow:
 
 ```text
 User -> OEX UI -> OGW -> OSB MS -> NGW -> OC MS
@@ -88,7 +88,7 @@ expression.expressionValue.context.constraints[]
 expression.expressionValue.context.preferences[]
 ```
 
-## Catalogue/specification flow
+## 7. Catalogue/specification flow:
 
 ```text
 User -> OEX UI -> OGW -> OSB MS -> NGW -> OD MS
@@ -96,16 +96,16 @@ User -> OEX UI -> OGW -> OSB MS -> NGW -> OD MS
 
 Only approved optimisation domain engineers can access catalogue write, activation, and retirement journeys.
 
-## Security baseline
+## 8. Security baseline:
 
-### OGW -> OSB MS
+### 8.1. OGW -> OSB MS:
 
 ```text
 mTLS
 User Context JWT
 ```
 
-### OSB MS -> NGW
+### 8.2. OSB MS -> NGW:
 
 ```text
 mTLS
@@ -114,7 +114,7 @@ OAuth2 system-to-system
 
 OSB MS does not bypass NGW to call OD MS or OC MS directly unless explicitly approved by architecture/security governance.
 
-## Backend mapping
+## 9. Backend mapping:
 
 | OSB endpoint | Backend mapping |
 |---|---|
@@ -127,7 +127,7 @@ OSB MS does not bypass NGW to call OD MS or OC MS directly unless explicitly app
 | `POST /optimisationExperience/v1/optimisations/{id}/cancellation` | NGW -> OC MS `POST /optimisation/{id}/cancellation`. |
 | `POST /optimisationExperience/v1/optimisations/{id}/retrial` | NGW -> OC MS `POST /optimisation/{id}/retrial`. |
 
-## Concurrency handling
+## 10. Concurrency handling:
 
 OSB MS must preserve backend ETag semantics for unsafe runtime operations.
 

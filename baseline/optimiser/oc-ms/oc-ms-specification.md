@@ -1,10 +1,10 @@
-# OC MS Specification
+# Optimisation-Controller-MS / OC MS Specification
 
-## OC MS summary
+## 1. OC MS summary:
 
 Optimisation-Controller-MS (OC MS) owns the runtime `Optimisation` resource. It is a generic optimisation controller, not an intent-only controller. OC MS accepts runtime optimisation requests, validates only the wrapper and OD MS request contract, persists the request, emits `OptimisationRequestedEvent`, then later projects `OptimisationCompletedEvent` outcomes back into the runtime resource.
 
-## Ownership
+## 2. Ownership:
 
 OC MS owns:
 
@@ -29,7 +29,7 @@ Analytics platform datasets
 Long-running intent control-loop assurance
 ```
 
-## Endpoint set
+## 3. Endpoint set:
 
 ```http
 GET /optimisation
@@ -48,7 +48,7 @@ DELETE /optimisation/{id}
 
 Runtime `Optimisation` is an execution/audit record, not an editable draft definition.
 
-## Runtime lifecycle
+## 4. Runtime lifecycle:
 
 ```text
 ACKNOWLEDGED
@@ -76,7 +76,7 @@ CANCELLED: Optimisation is confirmed cancelled.
 
 Runtime `Optimisation` does not expose a `version` field. ETag is used in HTTP headers for unsafe concurrency.
 
-## Lifecycle transitions
+## 5. Lifecycle transitions:
 
 ```text
 ACKNOWLEDGED -> QUEUED
@@ -95,7 +95,7 @@ CANCELLED -> terminal
 
 Retrial does not move the failed Optimisation back to `PROCESSING`. It creates a new linked Optimisation with `retrialOf`.
 
-## HATEOAS by lifecycle
+## 6. HATEOAS by lifecycle:
 
 ```text
 ACKNOWLEDGED / QUEUED / PROCESSING: self cancellation
@@ -104,7 +104,7 @@ FAILED: self retrial
 COMPLETED / INFEASIBLE / CANCELLED: self
 ```
 
-## POST /optimisation
+## 7. POST /optimisation:
 
 ```http
 POST /optimisation
@@ -252,7 +252,7 @@ Content-Type: application/json
 
 `202 Accepted` means OC MS accepted the request for asynchronous execution. It does not mean the optimisation is feasible, started, solvable, or guaranteed to produce a valid result.
 
-## OC MS validation boundary
+## 8. OC MS validation boundary:
 
 OC MS validates:
 
@@ -281,7 +281,7 @@ resource-selection correctness
 
 After acceptance, OC MS persists the runtime resource and writes `OptimisationRequestedEvent` with `instruction = EXECUTE` to its outbox in the same transaction. Cancellation uses the same event type with `instruction = CANCEL`. Worker terminal outcomes are returned through `OptimisationCompletedEvent` with `status = COMPLETED`, `FAILED`, or `INFEASIBLE`.
 
-## Internal event baseline
+## 9. Internal event baseline:
 
 OC MS uses exactly two internal Kafka event types with the Python/Gurobi worker in the current baseline. These are platform-internal events, not TMF external notification events.
 
@@ -292,7 +292,7 @@ OC MS uses exactly two internal Kafka event types with the Python/Gurobi worker 
 
 `OptimisationFailedEvent` is not used in the current baseline. Failed and infeasible outcomes are carried by `OptimisationCompletedEvent.status`.
 
-## GET /optimisation/{id}
+## 10. GET /optimisation/{id}:
 
 ```http
 GET /optimisation/opt-12345
@@ -406,7 +406,7 @@ Completed-state example:
 }
 ```
 
-## Cancellation and retrial
+## 11. Cancellation and retrial:
 
 Cancellation:
 
@@ -442,7 +442,7 @@ Retrial response creates a new Optimisation and links it to the failed optimisat
 }
 ```
 
-## Header/concurrency rules
+## 12. Header/concurrency rules:
 
 ```text
 POST /optimisation: returns Location and ETag
@@ -454,7 +454,7 @@ missing If-Match -> 428
 stale/wrong If-Match -> 412
 ```
 
-## Outcome mapping
+## 13. Outcome mapping:
 
 ```text
 SUCCESS -> COMPLETED
