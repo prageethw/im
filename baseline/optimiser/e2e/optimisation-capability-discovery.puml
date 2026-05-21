@@ -1,5 +1,5 @@
 @startuml
-title Optimisation Capability Discovery
+title Optimisation Capability Discovery — ACTIVE Capabilities and Request Contract
 
 skinparam sequenceArrowThickness 2
 skinparam roundcorner 10
@@ -10,7 +10,7 @@ skinparam sequenceActorBorderColor #4F46E5
 skinparam noteBorderColor #A5B4FC
 skinparam noteBackgroundColor #EEF2FF
 
-actor "User & OEX " as Caller
+actor "User & OEX" as Caller
 participant "OGW" as OGW
 participant "OSB MS" as OSB
 participant "NGW" as NGW
@@ -19,46 +19,61 @@ database "OD MS DB" as ODDB
 
 == Discovery Request ==
 
-Caller -> OGW : 1. Request available optimisation capabilities
-OGW -> OGW : 2. Authenticate caller/token/session\nand derive user context
+Caller -> OGW : 1. Request available\noptimisation capabilities
+OGW -> OGW : 2. Authenticate caller/session\nand derive user context
+
 note right of OGW
 User context may include tenant, claims,
 roles/scopes, and entitlements.
 end note
 
-OGW -> OSB : 3. Invoke OSB MS\nwith user context\nmTLS, correlation id, trace context
+OGW -> OSB : 3. Invoke OSB MS\nmTLS + User Context JWT\ncorrelationId / traceId
+
+OSB -> OSB : 4. Apply user-context filtering\nand build capability query
+
 note right of OSB
-User-context-related authorisation and filtering
-is performed at OSB / OCB-level before NGW.
+Normal OEX capability browsing defaults to ACTIVE
+OptimisationSpecification resources only.
+
+capabilityId maps to OD MS OptimisationSpecification.id
+in phase one.
 end note
 
-OSB -> OSB : 4. Shape discovery request\nand apply user-context-aware filtering
-OSB -> NGW : 5. Call NGW\nwith system caller identity\nmTLS, correlation id, trace context\n(no user context downstream)
+OSB -> NGW : 5. Call NGW\nmTLS + OAuth2 system identity\ncorrelationId / traceId\n(no user context downstream)
+
 note right of NGW
-User context terminates at NGW.
-NGW-to-downstream calls carry only
-system/service caller identity plus technical metadata
-such as correlation id and trace context.
+User context stops before/at NGW.
+Downstream OD MS calls use system/service identity only.
 end note
 
-NGW -> ODMS : 6. Route discovery request\nusing mTLS and service/system auth context only
+NGW -> ODMS : 6. GET /optimisationSpecification\nlifecycleStatus = ACTIVE\noptional familyId/name/fields filters\nmTLS + service/system auth
+
 note right of ODMS
 OD MS authorises the calling service/system.
-OD MS does not receive or depend on
-end-user identity/claims/roles/scopes.
+OD MS does not receive or depend on end-user
+identity, claims, roles, or scopes.
 end note
 
 == Data Retrieval ==
 
-ODMS -> ODDB : 7. Read ACTIVE OptimisationSpecification records
-ODDB --> ODMS : Return active records
+ODMS -> ODDB : 7. Read visible ACTIVE\nOptimisationSpecification records
+ODDB --> ODMS : Specification records\nfamilyId + name + lifecycleStatus\nspecCharacteristic[]\nexpressionSpecification\ntargetEntitySchema metadata
 
 == Discovery Response ==
 
-ODMS --> NGW : 8. Return capability & request-contract metadata\n(specCharacteristic[], expressionSpecification,\ntargetEntitySchema)
+ODMS --> NGW : 8. Return capability and\nrequest-contract metadata
 NGW --> OSB : 9. Return response to OSB MS
-OSB --> OSB : 10. Shape response for OEX / API consumer
-OSB --> OGW : Shaped response
-OGW --> Caller : 11. Available optimisation capabilities\n& request contract details
+
+OSB -> OSB : 10. Shape CapabilityCard\nor RequestFormModel
+
+note right of OSB
+specCharacteristic[] is UI/discovery guidance.
+targetEntitySchema remains authoritative.
+OSB form validation is pre-validation only.
+OC MS remains final runtime contract validator.
+end note
+
+OSB --> OGW : 11. OEX-friendly capability view\nwith backend correlation/trace details
+OGW --> Caller : 12. Available optimisation capabilities\nand request-contract guidance
 
 @enduml
