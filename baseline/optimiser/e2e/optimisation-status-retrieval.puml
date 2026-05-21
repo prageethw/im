@@ -1,5 +1,5 @@
 @startuml
-title Optimisation Status & Result Retrieval (Read-Only Monitoring)
+title Optimisation Status and Result Retrieval — Read-Only Monitoring
 
 skinparam sequenceArrowThickness 2
 skinparam roundcorner 10
@@ -10,62 +10,76 @@ skinparam sequenceActorBorderColor #4F46E5
 skinparam noteBorderColor #A5B4FC
 skinparam noteBackgroundColor #EEF2FF
 
-actor "User & OEX " as Caller
+actor "User & OEX" as Caller
 participant "OGW" as OGW
 participant "OSB MS" as OSB
 participant "NGW" as NGW
 participant "OC MS" as OCMS
 database "OC MS DB" as OCDB
-queue "OC MS Outbox" as Outbox
-queue "Kafka" as Kafka
 
 == Status / Result Request ==
 
-Caller -> OGW : 1. Request optimisation status or result
-OGW -> OGW : 2. Authenticate caller/token/session\nand derive user context
+Caller -> OGW : 1. Request optimisation\nstatus or result
+OGW -> OGW : 2. Authenticate caller/session\nand derive user context
+
 note right of OGW
 User context may include tenant, claims,
 roles/scopes, and entitlements.
 end note
 
-OGW -> OSB : 3. Invoke OSB MS\nwith user context\nmTLS, correlation id, trace context
+OGW -> OSB : 3. Invoke OSB MS\nmTLS + User Context JWT\ncorrelationId / traceId
+
 OSB -> OSB : 4. Validate access to\nrequested optimisation view\nusing user context
+
 note right of OSB
-User-context-related authorisation is performed
-at OSB / OCB-level before the request crosses NGW.
+User-context-related filtering and
+experience-layer authorisation are performed
+by OSB MS before the request crosses NGW.
+
+Backend OC MS decision still wins.
 end note
 
-OSB -> NGW : 5. Forward status/result request\nwith system caller identity\nmTLS, correlation id, trace context\n(no user context downstream)
+OSB -> NGW : 5. Forward status/result request\nmTLS + OAuth2 system identity\ncorrelationId / traceId\n(no user context downstream)
+
 note right of NGW
-User context terminates at NGW.
-NGW-to-downstream calls carry only
-system/service caller identity plus technical metadata.
+User context stops before/at NGW.
+Downstream OC MS call uses system/service identity only.
 end note
 
-NGW -> OCMS : 6. Route GET /optimisation/{id}\nusing mTLS and service/system auth context only
+NGW -> OCMS : 6. Route GET /optimisation/{id}\nmTLS + service/system auth
+
 note right of OCMS
 OC MS authorises the calling service/system.
-OC MS does not receive or depend on
-end-user identity/claims/roles/scopes.
+OC MS does not receive or depend on end-user
+identity, claims, roles, or scopes.
 end note
 
 == Data Retrieval ==
 
-OCMS -> OCDB : 7. Read runtime Optimisation record
-OCDB --> OCMS : Return record
+OCMS -> OCDB : 7. Read runtime Optimisation\nby id
+OCDB --> OCMS : Runtime record\nlifecycleStatus + result if terminal\nETag + _links
 
 == Response ==
 
-OCMS --> NGW : 8. Return lifecycleStatus, status reason,\nresult projection, failure details,\nlinks/actions where applicable
+OCMS --> NGW : 8. Return runtime Optimisation\nlifecycleStatus\nstatusChangeDate\nresult if terminal\n_links/actions where applicable
 NGW --> OSB : 9. Return response to OSB MS
-OSB --> OGW : 10. Shape user-friendly\nstatus/result model
-OGW --> Caller : 11. Current lifecycle / result state
+
+OSB -> OSB : 10. Shape OptimisationDetailView\nor OptimisationSummaryView
+
+note right of OSB
+OSB may format labels and guidance for OEX,
+but it must not infer terminal status locally.
+Terminal state must come from OC MS.
+end note
+
+OSB --> OGW : 11. OEX-friendly status/result view\nwith backend correlation/trace details
+OGW --> Caller : 12. Current lifecycle/result state
 
 == Read-Only Boundary ==
 
-note over OCMS, Kafka
-12. No OC MS Outbox record written.
-No worker instruction emitted.
+note over OCMS
+No OC MS Outbox record is written.
+No worker instruction is emitted.
 This is a read-only monitoring operation.
 end note
 
