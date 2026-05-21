@@ -6,7 +6,6 @@
 |---|---|
 | **Status** | Baseline candidate |
 | **Scope** | Optimisation platform end-to-end architecture |
-| **Source path** | `baseline/optimiser/e2e/optimisation-e2e-solution-brief.md` |
 | **Source of truth** | GitHub `main` |
 | **Last enhanced** | 2026-05-21 |
 | **Enhancement** | Added numbered headings, table of contents, status section, and colon-ended headings. |
