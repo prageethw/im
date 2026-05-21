@@ -1,4 +1,4 @@
-# OC MS Specification
+# Optimisation Controller MS Specification
 
 ## 1. OC MS summary:
 
