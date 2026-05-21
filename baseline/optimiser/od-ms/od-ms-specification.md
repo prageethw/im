@@ -1,4 +1,4 @@
-Optimisation Definition MS Specification
+# Optimisation Definition MS Specification
 
 ## 1. Service purpose
 
@@ -17,7 +17,7 @@ OD MS follows the TMF-style external resource model:
 - Standard external operations are `GET`, `POST`, `PATCH`, and `DELETE`.
 - `PATCH` uses JSON Merge Patch style partial update semantics.
 
-Approved platform extensions:
+platform extensions:
 
 | Extension | Purpose | Guardrail |
 |---|---|---|
