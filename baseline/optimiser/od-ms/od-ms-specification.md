@@ -449,8 +449,8 @@ Version format baseline:
 Official version values use SemVer-compatible MAJOR.MINOR.PATCH format, for example 1.0.0.
 The official version is assigned by OD MS during activation.
 Client requests must not assign or change the official version.
-Within a familyId, an official version value must be unique across ACTIVE and RETIRED specifications.
-If activation would create a duplicate official version in the same familyId, OD MS returns 409 Conflict.
+Within a familyId, an official version value must be unique across ACTIVE and RETIRED specifications as a server-side data-integrity invariant.
+Because the official version is assigned by OD MS, clients cannot directly create a duplicate official version. If OD MS cannot safely assign a new official version because another activation is occurring for the same familyId, OD MS returns 409 Conflict for the concurrent activation conflict.
 ```
 
 `POST /optimisationSpecification` always creates a mutable `DRAFT` `OptimisationSpecification` without an official public `version`.
@@ -1054,7 +1054,7 @@ Core status codes:
 | `403 Forbidden` | Authenticated caller is not allowed. |
 | `404 Not Found` | Resource not found or not visible to caller. |
 | `405 Method Not Allowed` | HTTP method not supported for this resource. |
-| `409 Conflict` | Lifecycle/version conflict, including ACTIVE/RETIRED mutation attempts, duplicate official version during activation, or concurrent activation conflict. |
+| `409 Conflict` | Lifecycle/version conflict, including ACTIVE/RETIRED mutation attempts or concurrent activation conflict for the same familyId. |
 | `412 Precondition Failed` | `If-Match` is stale or mismatched. |
 | `415 Unsupported Media Type` | Unsupported request content type. |
 | `422 Unprocessable Entity` | Syntactically valid JSON violates OD MS `OptimisationSpecification` schema or targetEntitySchema contract rules. |
@@ -1069,8 +1069,8 @@ Boundary rules:
 ACTIVE/RETIRED contract or content mutation -> 409 Conflict
 DRAFT contract/content update that fails OptimisationSpecification schema validation -> 422 Unprocessable Entity
 targetEntitySchema / expressionSpecification contract-shape failure -> 422 Unprocessable Entity
-duplicate official version during activation within the same familyId -> 409 Conflict
 concurrent activation conflict for the same familyId -> 409 Conflict
+server-side official version uniqueness violation -> internal data-integrity failure; OD MS must roll back the activation transaction
 unsupported PATCH Content-Type -> 415 Unsupported Media Type
 unsupported query parameter -> 400 Bad Request
 ```
@@ -1092,7 +1092,7 @@ Content-Type: application/json
 }
 ```
 
-Duplicate official version response:
+Concurrent activation conflict response:
 
 ```http
 HTTP/1.1 409 Conflict
@@ -1101,9 +1101,9 @@ Content-Type: application/json
 
 ```json
 {
-  "code": "OPTIMISATION_SPECIFICATION_VERSION_CONFLICT",
-  "reason": "Duplicate official version",
-  "message": "The official version assigned during activation already exists for another ACTIVE or RETIRED OptimisationSpecification in the same familyId.",
+  "code": "OPTIMISATION_SPECIFICATION_ACTIVATION_CONFLICT",
+  "reason": "Concurrent activation conflict",
+  "message": "Another OptimisationSpecification activation is already in progress or has just completed for the same familyId. Refresh the family state and retry if still required.",
   "status": 409,
   "@type": "Error"
 }
