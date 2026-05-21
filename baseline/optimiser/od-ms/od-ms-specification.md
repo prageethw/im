@@ -367,8 +367,17 @@ There is no `DEPRECATED` state in the optimiser baseline.
 | Lifecycle state | Meaning | Edit/runtime rule |
 |---|---|---|
 | `DRAFT` | Specification is being prepared. | Editable. Not usable for new runtime `Optimisation` creation. |
-| `ACTIVE` | Specification is approved for runtime use. | Used by OC MS to validate and create runtime `Optimisation` resources. Runtime contract is immutable. |
-| `RETIRED` | Specification is no longer available for new use. | Retained for audit/history and existing runtime references. Not usable for new runtime `Optimisation` creation. |
+| `ACTIVE` | Specification is approved for runtime use. | Immutable for contract/content changes. Used by OC MS to validate and create runtime `Optimisation` resources. May be moved to `RETIRED` only by governed lifecycle transition, normally when another `DRAFT` in the same `familyId` is activated. |
+| `RETIRED` | Specification is no longer available for new use. | Immutable retained history/audit record. Not editable and not usable for new runtime `Optimisation` creation. Existing runtime references may continue to resolve it for audit/explainability. |
+
+Baseline immutability rule:
+
+```text
+Only DRAFT specifications are mutable.
+ACTIVE specifications are contract/content immutable.
+RETIRED specifications are fully immutable retained records.
+To change an ACTIVE specification contract, create a new DRAFT version in the same familyId and activate that version.
+```
 
 ## 12. Version activation and retirement governance:
 
@@ -383,13 +392,16 @@ Activation rules:
 
 ```text
 Only one ACTIVE OptimisationSpecification is allowed per familyId.
-When a DRAFT specification is promoted to ACTIVE, OD MS must transactionally retire the previous ACTIVE specification with the same familyId.
+Activation is allowed only from DRAFT.
 Activation validates the full OptimisationSpecification before committing the lifecycle transition.
+When a DRAFT specification is promoted to ACTIVE, OD MS must transactionally retire any previous ACTIVE specification with the same familyId.
+The newly ACTIVE specification becomes contract/content immutable immediately after activation.
+The previous ACTIVE specification becomes RETIRED and fully immutable as part of the same transaction.
 ```
 
-`ACTIVE -> RETIRED` is a governed lifecycle transition. It may be performed by `PATCH` when the only change is `lifecycleStatus: RETIRED`. This is an acceptable small controlled lifecycle update, even though `PATCH` remains discouraged for material runtime-contract replacement.
+`ACTIVE -> RETIRED` is a governed lifecycle transition, not a contract/content update. It is normally performed automatically when a replacement `DRAFT` in the same `familyId` is activated. If a deployment allows explicit retirement, it must be lifecycle-only, require `If-Match`, update `statusChangeDate`, and must not change any contract fields.
 
-`PUT` is not the normal mechanism for retiring an `ACTIVE` specification. `PUT` remains the approved platform extension for full replacement/finalisation of mutable `DRAFT` specifications.
+`PUT` is not the mechanism for retiring an `ACTIVE` specification. `PUT` remains the approved platform extension for full replacement/finalisation of mutable `DRAFT` specifications only.
 
 Physical `DELETE` is not used for `ACTIVE` or `RETIRED` specifications.
 
@@ -400,9 +412,9 @@ Physical `DELETE` is not used for `ACTIVE` or `RETIRED` specifications.
 | `GET /optimisationSpecification` | Lists visible specifications. Supports first-level filtering and `fields`. |
 | `GET /optimisationSpecification/{id}` | Retrieves one specification. Supports first-level `fields`. |
 | `POST /optimisationSpecification` | Creates a new `DRAFT` specification. |
-| `PUT /optimisationSpecification/{id}` | Approved platform extension. Full replacement/finalisation of mutable `DRAFT` only. Requires `If-Match`. |
-| `PATCH /optimisationSpecification/{id}` | TMF-compatible partial update. Requires `If-Match`. Discouraged for material runtime-contract replacement. |
-| `DELETE /optimisationSpecification/{id}` | Physical delete only for mutable `DRAFT`. Requires `If-Match`. |
+| `PUT /optimisationSpecification/{id}` | Approved platform extension. Full replacement/finalisation of mutable `DRAFT` only. Requires `If-Match`. Rejected for `ACTIVE` and `RETIRED`. |
+| `PATCH /optimisationSpecification/{id}` | TMF-compatible partial update. Requires `If-Match`. Contract/content updates are allowed only for `DRAFT`. Activation from `DRAFT` is allowed. Retirement of `ACTIVE` is lifecycle-only and does not permit contract/content changes. Rejected for `RETIRED`. |
+| `DELETE /optimisationSpecification/{id}` | Physical delete only for mutable `DRAFT`. Requires `If-Match`. Rejected for `ACTIVE` and `RETIRED`. |
 
 ## 14. External response header governance:
 
@@ -481,7 +493,7 @@ Link relation meaning:
 | `retire` | `PATCH` | Governed retirement of an `ACTIVE` specification. |
 | `createNewVersion` | `POST` | Create a new versioned `DRAFT` from an existing active/retired family. |
 
-The `activate` and `retire` link relations point to `PATCH` on the `OptimisationSpecification` resource itself. OD MS does not expose separate `/activate` or `/retire` action endpoints.
+The `activate` and `retire` link relations point to `PATCH` on the `OptimisationSpecification` resource itself. OD MS does not expose separate `/activate` or `/retire` action endpoints. The `retire` link is lifecycle-only and must not be used to modify an `ACTIVE` specification contract/content.
 
 ## 17. Operation examples:
 
@@ -565,6 +577,7 @@ Content-Type: application/json
   "familyId": "optimisation-spec-surgical-routing",
   "version": "1.0.0",
   "lifecycleStatus": "DRAFT",
+  "statusChangeDate": "2026-05-09T04:10:00Z",
   "creationDate": "2026-05-09T04:10:00Z",
   "lastUpdate": "2026-05-09T04:10:00Z",
   "validFor": {
@@ -718,6 +731,7 @@ Content-Type: application/json
   "familyId": "optimisation-spec-surgical-routing",
   "version": "1.0.0",
   "lifecycleStatus": "ACTIVE",
+  "statusChangeDate": "2026-05-09T05:00:00Z",
   "creationDate": "2026-05-09T04:10:00Z",
   "lastUpdate": "2026-05-09T05:00:00Z",
   "validFor": {
@@ -865,7 +879,7 @@ x-tmf-native: false
 Content-Type: application/json
 ```
 
-Response body returns the full retired `OptimisationSpecification`. Retired specifications expose only lifecycle-authorised read/new-version links such as `self`, `collection`, and `createNewVersion`.
+Response body returns the full retired `OptimisationSpecification`. This operation changes lifecycle metadata only; it must not alter any specification contract/content fields. Retired specifications expose only lifecycle-authorised read/new-version links such as `self`, `collection`, and `createNewVersion`.
 
 ### 17.7. DELETE mutable DRAFT:
 
@@ -908,6 +922,23 @@ Core status codes:
 | `500 Internal Server Error` | Unexpected OD MS failure. |
 | `501 Not Implemented` | Operation or approved platform extension is not implemented or not enabled in this deployment. |
 | `503 Service Unavailable` | OD MS temporarily unavailable. |
+
+Immutable specification response:
+
+```http
+HTTP/1.1 409 Conflict
+Content-Type: application/json
+```
+
+```json
+{
+  "code": "OPTIMISATION_SPECIFICATION_IMMUTABLE",
+  "reason": "OptimisationSpecification is immutable",
+  "message": "Only DRAFT OptimisationSpecification resources can be changed. ACTIVE specifications are contract/content immutable and RETIRED specifications are fully immutable retained records.",
+  "status": 409,
+  "@type": "Error"
+}
+```
 
 Standard error body:
 
