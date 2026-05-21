@@ -110,6 +110,8 @@ entitySpecRelationship[]
 _links
 ```
 
+`version` is included in the canonical field set because it is present on `ACTIVE` and `RETIRED` specifications. Mutable `DRAFT` specifications do not expose an official public `version`; draft revision is represented by `ETag` only.
+
 `_links` is an approved HATEOAS platform extension. It does not replace the standard `href` field.
 
 The external `OptimisationSpecification` resource must use only the TMF-aligned specification structures shown in the canonical field list. Optimiser request-contract semantics are represented through `targetEntitySchema`, `expressionSpecification`, and `specCharacteristic[]`.
@@ -123,7 +125,7 @@ The external `OptimisationSpecification` resource must use only the TMF-aligned 
 | `name` | Human-readable specification name. |
 | `description` | Description of the optimisation capability and contract. |
 | `familyId` | Stable specification-family identifier shared by all versions of the same `OptimisationSpecification`. OD MS uses it to enforce at most one `ACTIVE` version per family. |
-| `version` | Specification version within the specification family. |
+| `version` | Official specification version within the specification family. Omitted for mutable `DRAFT`; assigned by OD MS only when the draft is activated. Present and immutable for `ACTIVE` and `RETIRED` specifications. |
 | `lifecycleStatus` | Specification lifecycle value: `DRAFT`, `ACTIVE`, or `RETIRED`. |
 | `statusChangeDate` | Date/time the `lifecycleStatus` last changed. |
 | `creationDate` | Date/time the specification resource was created. |
@@ -366,7 +368,7 @@ There is no `DEPRECATED` state in the optimiser baseline.
 
 | Lifecycle state | Meaning | Edit/runtime rule |
 |---|---|---|
-| `DRAFT` | Specification is being prepared. | Editable. Not usable for new runtime `Optimisation` creation. |
+| `DRAFT` | Specification is being prepared. | Editable. Not usable for new runtime `Optimisation` creation. No official public `version`; draft revision is represented by `ETag` only. |
 | `ACTIVE` | Specification is approved for runtime use. | Immutable for contract/content changes. Used by OC MS to validate and create runtime `Optimisation` resources. May be moved to `RETIRED` only by governed lifecycle transition, normally when another `DRAFT` in the same `familyId` is activated. |
 | `RETIRED` | Specification is no longer available for new use. | Immutable retained history/audit record. Not editable and not usable for new runtime `Optimisation` creation. Existing runtime references may continue to resolve it for audit/explainability. |
 
@@ -376,12 +378,20 @@ Baseline immutability rule:
 Only DRAFT specifications are mutable.
 ACTIVE specifications are contract/content immutable.
 RETIRED specifications are fully immutable retained records.
-To change an ACTIVE specification contract, create a new DRAFT version in the same familyId and activate that version.
+To change an ACTIVE specification contract, create a new DRAFT in the same `familyId` and activate it. OD MS assigns the official `version` during activation, not while the resource is still `DRAFT`.
 ```
 
 ## 12. Version activation and retirement governance:
 
-`POST /optimisationSpecification` always creates a `DRAFT` `OptimisationSpecification`.
+Version governance baseline:
+
+```text
+DRAFT: no official public version; ETag represents draft revision/concurrency.
+ACTIVE: official version is assigned at activation and is immutable.
+RETIRED: retains the assigned official version and is immutable.
+```
+
+`POST /optimisationSpecification` always creates a mutable `DRAFT` `OptimisationSpecification` without an official public `version`.
 
 `DRAFT -> ACTIVE` is a governed activation transition on an existing `DRAFT` specification. Activation may be performed by:
 
@@ -394,7 +404,7 @@ Activation rules:
 Only one ACTIVE OptimisationSpecification is allowed per familyId.
 Activation is allowed only from DRAFT.
 Activation validates the full OptimisationSpecification before committing the lifecycle transition.
-When a DRAFT specification is promoted to ACTIVE, OD MS must transactionally retire any previous ACTIVE specification with the same familyId.
+When a DRAFT specification is promoted to ACTIVE, OD MS assigns the official `version` for that specification family and must transactionally retire any previous ACTIVE specification with the same `familyId`.
 The newly ACTIVE specification becomes contract/content immutable immediately after activation.
 The previous ACTIVE specification becomes RETIRED and fully immutable as part of the same transaction.
 ```
@@ -411,7 +421,7 @@ Physical `DELETE` is not used for `ACTIVE` or `RETIRED` specifications.
 |---|---|
 | `GET /optimisationSpecification` | Lists visible specifications. Supports first-level filtering and `fields`. |
 | `GET /optimisationSpecification/{id}` | Retrieves one specification. Supports first-level `fields`. |
-| `POST /optimisationSpecification` | Creates a new `DRAFT` specification. |
+| `POST /optimisationSpecification` | Creates a new mutable `DRAFT` specification without an official public `version`. Returns an `ETag` for draft revision/concurrency. |
 | `PUT /optimisationSpecification/{id}` | Approved platform extension. Full replacement/finalisation of mutable `DRAFT` only. Requires `If-Match`. Rejected for `ACTIVE` and `RETIRED`. |
 | `PATCH /optimisationSpecification/{id}` | TMF-compatible partial update. Requires `If-Match`. Contract/content updates are allowed only for `DRAFT`. Activation from `DRAFT` is allowed. Retirement of `ACTIVE` is lifecycle-only and does not permit contract/content changes. Rejected for `RETIRED`. |
 | `DELETE /optimisationSpecification/{id}` | Physical delete only for mutable `DRAFT`. Requires `If-Match`. Rejected for `ACTIVE` and `RETIRED`. |
@@ -491,7 +501,7 @@ Link relation meaning:
 | `delete` | `DELETE` | Delete mutable `DRAFT`. |
 | `activate` | `PATCH` | Governed activation of a finalised `DRAFT`. |
 | `retire` | `PATCH` | Governed retirement of an `ACTIVE` specification. |
-| `createNewVersion` | `POST` | Create a new versioned `DRAFT` from an existing active/retired family. |
+| `createNewVersion` | `POST` | Create a new mutable `DRAFT` in the same `familyId` from an existing active/retired family. The official `version` is assigned only when the draft is activated. |
 
 The `activate` and `retire` link relations point to `PATCH` on the `OptimisationSpecification` resource itself. OD MS does not expose separate `/activate` or `/retire` action endpoints. The `retire` link is lifecycle-only and must not be used to modify an `ACTIVE` specification contract/content.
 
@@ -513,7 +523,6 @@ Content-Type: application/json
   "name": "Surgical Routing Optimisation Specification",
   "description": "Defines the allowed optimisation request contract for surgical routing optimisation.",
   "familyId": "optimisation-spec-surgical-routing",
-  "version": "1.0.0",
   "validFor": {
     "startDateTime": "2026-05-09T00:00:00Z"
   },
@@ -575,7 +584,6 @@ Content-Type: application/json
   "name": "Surgical Routing Optimisation Specification",
   "description": "Defines the allowed optimisation request contract for surgical routing optimisation.",
   "familyId": "optimisation-spec-surgical-routing",
-  "version": "1.0.0",
   "lifecycleStatus": "DRAFT",
   "statusChangeDate": "2026-05-09T04:10:00Z",
   "creationDate": "2026-05-09T04:10:00Z",
@@ -811,6 +819,8 @@ Content-Type: application/merge-patch+json
 }
 ```
 
+OD MS assigns the official `version` as part of this activation transaction. Clients do not assign the official version while the specification is still `DRAFT`.
+
 Response:
 
 ```http
@@ -833,13 +843,15 @@ If-Match: "od-spec-surgical-routing-v1-r3"
 Content-Type: application/json
 ```
 
-The request body contains the full replacement `OptimisationSpecification`, including:
+The request body contains the full replacement mutable `DRAFT` `OptimisationSpecification` contract and requests activation, including:
 
 ```json
 {
   "lifecycleStatus": "ACTIVE"
 }
 ```
+
+OD MS assigns the official `version` as part of the activation transaction. Clients do not provide the official version while the specification is still `DRAFT`.
 
 Response:
 
