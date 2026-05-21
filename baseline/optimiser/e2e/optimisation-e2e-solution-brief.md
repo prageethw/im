@@ -1,4 +1,4 @@
-# End-to-End Solution Brief — Optimisation Platform:
+# End-to-End Solution Brief — Optimisation Platform
 
 ## Document status:
 
