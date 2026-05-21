@@ -2,9 +2,13 @@
 
 ## 1. Service purpose:
 
-OSB MS means Optimisation Screen Builder MS. OSB MS is the context-aware OEX facade(backend-for-frontend service) for optimisation experiences. OSB MS sits behind OGW and receives user context from the User Context JWT passed by OGW. It shapes the OEX optimisation experience and calls backend optimisation domain APIs through NGW. OSB MS initially supports runtime optimisation journeys through OC MS (trigger optimisation and access to optimisation catalogue).
+OSB MS means Optimisation Screen Builder MS.
 
-It later supports catalogue specification journeys through OD MS.
+OSB MS is the context-aware OEX facade / backend-for-frontend service for optimisation experiences. OSB MS sits behind OGW and receives user context from the User Context JWT passed by OGW. It shapes the OEX optimisation experience and calls backend optimisation domain APIs through NGW.
+
+OSB MS initially supports runtime optimisation journeys through OC MS, including capability discovery, request form construction, runtime optimisation creation, status/detail views, cancellation, and retrial. It may later support catalogue-management journeys through OD MS for approved optimisation domain engineers.
+
+OSB MS is not the source of truth for `OptimisationSpecification` or runtime `Optimisation` resources.
 
 ## 2. Ownership boundary:
 
@@ -17,7 +21,7 @@ capability cards and landing-page models
 request-form models derived from OD MS specifications
 runtime optimisation list/detail view models
 context-aware action exposure such as cancellation and retrial
-user-context based filtering of visible capabilities and records
+user-context-based filtering of visible capabilities and records
 catalogue-management screen support for approved optimisation domain engineers when enabled
 ```
 
@@ -37,14 +41,18 @@ OC MS runtime lifecycle governance
 Source-of-truth ownership:
 
 ```text
-OD MS: owns OptimisationSpecification definitions.
-OC MS: owns runtime Optimisation resources.
-OSB MS: owns OEX experience/context-aware facade behaviour.
+OD MS: owns OptimisationSpecification definitions and lifecycle/version governance.
+OC MS: owns runtime Optimisation resources, lifecycle, event projection, and result projection.
+OSB MS: owns OEX experience/context-aware facade behaviour only.
 ```
 
 ## 3. API compliance:
 
-OSB APIs are private/OEX experience APIs and do not need to be TMF-compliant. NGW-exposed backend OD MS and OC MS APIs remain TMF/TIO-aligned while using Optimisation as the domain concept. OSB MS must not expose backend OD/OC resource contracts directly unless the UI journey explicitly needs that shape.
+OSB APIs are private/OEX experience APIs and do not need to be TMF-compliant.
+
+NGW-exposed backend OD MS and OC MS APIs remain TMF-style optimiser-domain platform APIs. OSB MS must not expose backend OD/OC resource contracts directly unless the UI journey explicitly needs that shape.
+
+OSB MS may transform backend OD/OC responses into UI-friendly models, but it must not change backend lifecycle semantics, result semantics, ETag semantics, or contract-validation decisions.
 
 ## 4. Recommended namespace:
 
@@ -59,7 +67,7 @@ Avoid using backend resource namespaces directly from OSB:
 /optimisationSpecification
 ```
 
-Those belong to OC MS and OD MS behind NGW.
+Those backend namespaces belong to OC MS and OD MS behind NGW.
 
 ## 5. Phase one endpoint set:
 
@@ -74,7 +82,31 @@ POST /optimisationExperience/v1/optimisations/{id}/cancellation
 POST /optimisationExperience/v1/optimisations/{id}/retrial
 ```
 
-## 6. Runtime optimisation flow:
+## 6. Security and identity boundary:
+
+### 6.1. OGW -> OSB MS:
+
+```text
+mTLS
+User Context JWT
+```
+
+OGW is the user-context-aware gateway for OEX/experience APIs. OSB MS receives user context from OGW and uses it to shape views, filter visible actions, and determine whether the user can access a journey.
+
+### 6.2. OSB MS -> NGW:
+
+```text
+mTLS
+OAuth2 system-to-system
+```
+
+User context stops before/at NGW. Downstream OD MS and OC MS calls use system/service identity only. OSB MS must not forward end-user identity, roles, claims, or scopes to OD MS or OC MS as backend authorisation context.
+
+OSB MS is responsible for user-context-aware experience-layer authorisation before calling NGW. OD MS and OC MS authorise the calling system/service and enforce their own lifecycle, schema, ETag, and business rules.
+
+OSB MS does not bypass NGW to call OD MS or OC MS directly unless explicitly approved by architecture/security governance.
+
+## 7. Runtime optimisation flow:
 
 ```text
 User -> OEX UI -> OGW -> OSB MS -> NGW -> OC MS
@@ -83,12 +115,19 @@ User -> OEX UI -> OGW -> OSB MS -> NGW -> OC MS
 OSB MS must preserve the runtime expression shape expected by OC MS:
 
 ```text
+expression.@type = JsonLdExpression
+expression.@baseType = Expression
+expression.iri = optimisation ontology/model IRI
+expression.expressionValue.@context
+expression.expressionValue.@type = opt:OptimisationProblem
 expression.expressionValue.context.targets[]
 expression.expressionValue.context.constraints[]
 expression.expressionValue.context.preferences[]
 ```
 
-## 7. Catalogue/specification flow:
+OSB MS may construct an OEX-friendly request form from OD MS metadata, but the submitted backend runtime request must still conform to the OC MS `POST /optimisation` contract and the referenced ACTIVE OD MS `targetEntitySchema`.
+
+## 8. Catalogue/specification flow:
 
 ```text
 User -> OEX UI -> OGW -> OSB MS -> NGW -> OD MS
@@ -96,45 +135,175 @@ User -> OEX UI -> OGW -> OSB MS -> NGW -> OD MS
 
 Only approved optimisation domain engineers can access catalogue write, activation, and retirement journeys.
 
-## 8. Security baseline:
-
-### 8.1. OGW -> OSB MS:
+When catalogue-management journeys are enabled, OSB MS must preserve OD MS governance:
 
 ```text
-mTLS
-User Context JWT
+DRAFT specifications are mutable.
+DRAFT specifications have no official public version.
+Official version is assigned by OD MS during activation.
+ACTIVE and RETIRED specifications are immutable.
+Multiple DRAFT specifications may exist in the same familyId.
+Only one ACTIVE specification is enforced per familyId.
+PATCH requires application/merge-patch+json.
+PUT requires application/json and is allowed only for mutable DRAFT replacement/finalisation.
 ```
 
-### 8.2. OSB MS -> NGW:
-
-```text
-mTLS
-OAuth2 system-to-system
-```
-
-OSB MS does not bypass NGW to call OD MS or OC MS directly unless explicitly approved by architecture/security governance.
+OSB MS must not invent, override, or expose its own versioning semantics for `OptimisationSpecification`.
 
 ## 9. Backend mapping:
 
-| OSB endpoint | Backend mapping |
-|---|---|
-| `GET /optimisationExperience/v1/home` | OSB aggregates/context-shapes from NGW -> OD MS and NGW -> OC MS as required. |
-| `GET /optimisationExperience/v1/capabilities` | NGW -> OD MS `GET /optimisationSpecification`. |
-| `GET /optimisationExperience/v1/capabilities/{capabilityId}/request-form` | NGW -> OD MS `GET /optimisationSpecification/{id}`, transformed into UI form model. |
-| `POST /optimisationExperience/v1/optimisations` | NGW -> OC MS `POST /optimisation`. |
-| `GET /optimisationExperience/v1/optimisations` | NGW -> OC MS `GET /optimisation`, context-filtered. |
-| `GET /optimisationExperience/v1/optimisations/{id}` | NGW -> OC MS `GET /optimisation/{id}`, transformed into UI-friendly detail. |
-| `POST /optimisationExperience/v1/optimisations/{id}/cancellation` | NGW -> OC MS `POST /optimisation/{id}/cancellation`. |
-| `POST /optimisationExperience/v1/optimisations/{id}/retrial` | NGW -> OC MS `POST /optimisation/{id}/retrial`. |
+| OSB endpoint | Backend mapping | OSB responsibility |
+|---|---|---|
+| `GET /optimisationExperience/v1/home` | OSB aggregates/context-shapes from NGW -> OD MS and NGW -> OC MS as required. | Build landing-page model, cards, and available actions. |
+| `GET /optimisationExperience/v1/capabilities` | NGW -> OD MS `GET /optimisationSpecification`. | Show visible optimisation capabilities. |
+| `GET /optimisationExperience/v1/capabilities/{capabilityId}/request-form` | NGW -> OD MS `GET /optimisationSpecification/{id}`. | Transform specification metadata/schema into a request form model. |
+| `POST /optimisationExperience/v1/optimisations` | NGW -> OC MS `POST /optimisation`. | Submit runtime request and return OEX-friendly creation result. Backend success maps to OC `201 Created`. |
+| `GET /optimisationExperience/v1/optimisations` | NGW -> OC MS `GET /optimisation`. | Return context-filtered list/detail summary. |
+| `GET /optimisationExperience/v1/optimisations/{id}` | NGW -> OC MS `GET /optimisation/{id}`. | Transform backend state/result into UI-friendly detail. |
+| `POST /optimisationExperience/v1/optimisations/{id}/cancellation` | NGW -> OC MS `POST /optimisation/{id}/cancellation`. | Expose cancellation only when user context and backend lifecycle/action model allow it. |
+| `POST /optimisationExperience/v1/optimisations/{id}/retrial` | NGW -> OC MS `POST /optimisation/{id}/retrial`. | Expose retrial only when user context and backend lifecycle/action model allow it. |
 
-## 10. Concurrency handling:
+## 10. Runtime creation behaviour:
+
+When OSB MS calls OC MS through NGW to create a runtime optimisation, OC MS returns `201 Created` when the runtime `Optimisation` resource is created immediately.
+
+OSB MS must preserve this semantic distinction:
+
+```text
+Resource creation is immediate.
+Execution is asynchronous.
+201 Created from OC MS does not mean the optimisation is feasible, started, solvable, or guaranteed to produce a valid result.
+```
+
+OSB MS may translate the response into an OEX-friendly message, but must not present creation as successful optimisation completion.
+
+## 11. Contract pointer and specification reference behaviour:
+
+OSB MS must preserve the caller-selected or system-selected `optimisationSpecification.id` when submitting the backend runtime request to OC MS.
+
+OC MS persists the referenced `OptimisationSpecification.id` and `href` as the immutable contract pointer for the runtime `Optimisation`. OSB MS must not later substitute a different `OptimisationSpecification`, even a newer ACTIVE specification in the same family, for an already accepted runtime record.
+
+If a specification is later `RETIRED`, existing runtime optimisation records remain valid audit records tied to the original `optimisationSpecification.id`.
+
+## 12. Result display behaviour:
+
+OSB MS must follow OC MS result presence rules:
+
+```text
+result MUST be absent in ACKNOWLEDGED, QUEUED, PROCESSING, and CANCELLING.
+result MAY be present in COMPLETED, INFEASIBLE, FAILED, and CANCELLED.
+FAILED result details may contain safe error codes/messages only.
+OSB MS must not expose sensitive solver internals, Gurobi model formulation, credentials, infrastructure details, or raw stack traces.
+```
+
+OSB MS may present human-friendly labels, progress indicators, or guidance, but must not invent backend result values that are not present in the OC MS response.
+
+## 13. Cancellation and retrial behaviour:
+
+### 13.1. Cancellation:
+
+OSB MS exposes cancellation only when the user context and backend lifecycle state allow it.
+
+Cancellation request body baseline:
+
+```text
+No request body is required.
+If a body is supplied by OEX, it may contain optional reason/comment metadata only.
+A supplied cancellation body must not change backend cancellation semantics.
+```
+
+Cancellation is best-effort. `CANCELLED` is set only after worker confirmation through OC MS event projection or an equivalent terminal confirmation path.
+
+If OC MS returns `409 Conflict` because the runtime optimisation is already terminal, OSB MS must show an appropriate lifecycle-conflict message instead of hiding it as a generic failure.
+
+### 13.2. Retrial:
+
+Retrial is available only from `FAILED` in the baseline.
+
+Retrial request body baseline:
+
+```text
+No request body is required.
+Baseline retrial does not allow request overrides.
+Retrial resubmits the original accepted expression and referenced OptimisationSpecification.id unchanged.
+To change targets, constraints, preferences, source context, priority, or the referenced OptimisationSpecification, the caller must create a new Optimisation request rather than using retrial.
+```
+
+Retrial is not available from `INFEASIBLE` by default because `INFEASIBLE` is a valid optimisation/model outcome, not a technical execution failure.
+
+## 14. Concurrency handling:
 
 OSB MS must preserve backend ETag semantics for unsafe runtime operations.
 
 ```text
-OSB MS receives or stores the current ETag from OC MS response.
+OSB MS receives or stores the current ETag from OC MS responses.
 For cancellation and retrial, OSB MS forwards If-Match to OC MS through NGW.
-OC MS remains the concurrency source of truth.
+OC MS remains the runtime concurrency source of truth.
 ```
 
-Backend `412` and `428` must not be hidden as generic failures.
+Backend `412 Precondition Failed` and `428 Precondition Required` must not be hidden as generic failures.
+
+## 15. Filtering, fields, and count handling:
+
+OSB MS may expose OEX-friendly filters, but backend runtime filtering is performed by OC MS and backend capability filtering is performed by OD MS.
+
+When proxying or translating `fields`:
+
+```text
+OD MS and OC MS baseline fields projection supports top-level fields only.
+Nested field selection is not supported in the baseline.
+Valid-but-absent lifecycle fields are omitted silently by OD MS/OC MS.
+Unsupported field names return 400 from backend services.
+```
+
+When displaying backend list counts:
+
+```text
+X-Total-Count reflects total resources matching backend filters before paging and sparse projection.
+X-Result-Count reflects resources returned in the current response page.
+```
+
+OSB MS may transform these into UI pagination metadata but must preserve their meaning.
+
+## 16. Error handling:
+
+OSB MS must preserve important backend error semantics:
+
+| Backend condition | Backend status | OSB behaviour |
+|---|---:|---|
+| OD/OC contract validation failure | `422` | Show validation/contract error, not generic failure. |
+| Lifecycle/action conflict | `409` | Show lifecycle/action conflict. |
+| Missing `If-Match` | `428` | Refresh/retry guidance; do not hide as generic failure. |
+| Stale/wrong `If-Match` | `412` | Show stale state and ask user to refresh. |
+| Unsupported media type | `415` | Treat as OSB/client integration defect. |
+| Backend resource not found or not visible | `404` | Show not found / no longer visible. |
+
+OSB MS may map backend error bodies to OEX-friendly messages, but it must preserve the backend status and correlation information for support and troubleshooting.
+
+## 17. Event posture:
+
+OSB MS does not publish or consume the optimiser Kafka worker events.
+
+Internal optimiser eventing remains owned by OC MS and the Python/Gurobi Worker:
+
+```text
+OptimisationRequestedEvent
+OptimisationCompletedEvent
+```
+
+OSB MS observes runtime progress only through OC MS REST APIs exposed through NGW.
+
+## 18. Open design guardrails:
+
+OSB MS must not:
+
+```text
+perform solver feasibility checks
+evaluate optimisation candidate quality
+modify runtime result projection
+rewrite OptimisationSpecification references on existing runtime records
+bypass NGW for OD/OC calls without explicit approval
+forward end-user context to OD MS or OC MS
+invent lifecycle transitions not present in OC MS
+invent specification version semantics not present in OD MS
+```
