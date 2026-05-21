@@ -70,7 +70,7 @@ PROCESSING: Python/Gurobi worker has started processing.
 COMPLETED: Worker completed successfully and produced a usable result.
 INFEASIBLE: Worker completed correctly, but no valid solution exists.
 FAILED: Technical/runtime failure occurred.
-CANCELLING: Cancellation command has been accepted and worker should stop/ignore where safely possible.
+CANCELLING: Cancellation command has been accepted and worker should stop or ignore where safely possible.
 CANCELLED: Optimisation is confirmed cancelled.
 ```
 

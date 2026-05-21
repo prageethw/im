@@ -2,9 +2,9 @@
 
 ## 1. Service purpose:
 
-OSB MS means Optimisation Screen Builder MS. OSB MS is the context-aware OEX facade / backend-for-frontend service for optimisation experiences. OSB MS sits behind OGW and receives user context from the User Context JWT passed by OGW. It shapes the OEX optimisation experience and calls backend optimisation domain APIs through NGW. OSB MS initially supports runtime optimisation journeys through OC MS.
+OSB MS means Optimisation Screen Builder MS. OSB MS is the context-aware OEX facade(backend-for-frontend service) for optimisation experiences. OSB MS sits behind OGW and receives user context from the User Context JWT passed by OGW. It shapes the OEX optimisation experience and calls backend optimisation domain APIs through NGW. OSB MS initially supports runtime optimisation journeys through OC MS (trigger optimisation and access to optimisation catalogue).
 
-It later supports catalogue/specification journeys through OD MS.
+It later supports catalogue specification journeys through OD MS.
 
 ## 2. Ownership boundary:
 

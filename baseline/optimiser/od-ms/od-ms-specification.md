@@ -21,7 +21,7 @@ Approved platform extensions:
 
 | Extension | Purpose | Guardrail |
 |---|---|---|
-| `PUT /optimisationSpecification/{id}` | Full replacement/finalisation of mutable `DRAFT` specifications. | Requires `If-Match`; not allowed for `ACTIVE` or `RETIRED`. |
+| `PUT /optimisationSpecification/{id}` | Full replacement(finalisation) of mutable `DRAFT` specifications. | Requires `If-Match`; not allowed for `ACTIVE` or `RETIRED`. |
 | `_links` | HATEOAS controls. | Does not replace `href`; lifecycle-aware and authorisation-aware. |
 | `ETag` / `If-Match` governance | Optimistic concurrency for unsafe existing-resource operations. | Required for `PUT`, `PATCH`, and `DELETE`. |
 
