@@ -1,5 +1,5 @@
 @startuml
-title Optimisation Retrial Flow
+title Optimisation Retrial — Failed Runtime Optimisation
 
 skinparam sequenceArrowThickness 2
 skinparam roundcorner 10
@@ -10,77 +10,87 @@ skinparam sequenceActorBorderColor #4F46E5
 skinparam noteBorderColor #A5B4FC
 skinparam noteBackgroundColor #EEF2FF
 
-actor "User & OEX " as Caller
+actor "User & OEX" as Caller
 participant "OGW" as OGW
 participant "OSB MS" as OSB
 participant "NGW" as NGW
 participant "OC MS" as OCMS
 database "OC MS DB" as OCDB
 queue "OC MS Outbox" as Outbox
-queue "Kafka" as Kafka
+queue "Kafka\nt7.optimisation.events" as Kafka
 participant "Python/Gurobi\nWorker" as Worker
 
-== Retrial Request ==
+== Request Retrial ==
 
-Caller -> OGW : 1. POST /optimisation/{id}/retrial\n(If-Match header)
-OGW -> OGW : 2. Authenticate caller/token/session\nand derive user context
-note right of OGW
-User context may include tenant, claims,
-roles/scopes, and entitlements.
-end note
+Caller -> OGW : 1. Request retrial\nfor failed runtime Optimisation
+OGW -> OSB : 2. Invoke OSB MS\nmTLS + User Context JWT\ncorrelationId / traceId
 
-OGW -> OSB : 3. Invoke OSB MS\nwith user context\nmTLS, correlation id, trace context
-OSB -> OSB : 4. Validate user context and runtime state\nExpose retrial action only if allowed
+OSB -> OSB : 3. Check user context\nand current ETag availability
+
 note right of OSB
-User-context-related authorisation is performed
-at OSB / OCB-level before the request crosses NGW.
+OSB uses backend _links as the authoritative
+runtime action affordance signal, then further
+restricts with user context.
+
+actionVisible = backend_link_present AND user_context_allows
 end note
 
-OSB -> NGW : 5. Forward retrial request\nwith system caller identity\nmTLS, correlation id, trace context, If-Match\n(no user context downstream)
+alt No current OC MS ETag
+  OSB -> NGW : 3a. Refresh runtime Optimisation\nmTLS + OAuth2 system identity
+  NGW -> OCMS : GET /optimisation/{id}
+  OCMS -> OCDB : Read current runtime state + ETag + _links
+  OCDB --> OCMS : Current resource
+  OCMS --> NGW : 200 OK + ETag + _links
+  NGW --> OSB : Current state/action model
+end
+
+OSB -> NGW : 4. POST /optimisation/{id}/retrial\nIf-Match = OC MS ETag\nmTLS + OAuth2 system identity\n(no user context downstream)
+
 note right of NGW
-User context terminates at NGW.
-NGW-to-downstream calls carry only
-system/service caller identity plus technical metadata.
+User context stops before/at NGW.
+Downstream OC MS calls use system/service identity only.
 end note
 
-NGW -> OCMS : 6. Route retrial request\nusing mTLS and service/system auth context only
-note right of OCMS
-OC MS authorises the calling service/system.
-OC MS does not receive or depend on
-end-user identity/claims/roles/scopes.
-end note
+NGW -> OCMS : 5. Route retrial request
 
-== Validation ==
+== Validate Original Runtime Record ==
 
-OCMS -> OCDB : 7. Validate original Optimisation\nlifecycleStatus = FAILED
-OCDB --> OCMS : FAILED status confirmed
+OCMS -> OCDB : 6. Validate If-Match\nand original lifecycle state
+OCDB --> OCMS : Current original Optimisation
 
-== New Optimisation Creation ==
+alt Original lifecycleStatus is not FAILED
+  OCMS --> NGW : 409 Conflict\nRetrial allowed only from FAILED
+  NGW --> OSB : 409 Conflict
+  OSB --> OGW : Lifecycle conflict view
+  OGW --> Caller : Retrial not allowed
+else Original lifecycleStatus = FAILED
+  OCMS -> OCDB : 7. Create new Optimisation\nlifecycleStatus = ACKNOWLEDGED\noptimisationRelationship = retrialOf\nreuse accepted expression\nreuse OptimisationSpecification.id/href
+  OCDB --> OCMS : New Optimisation persisted
 
-OCMS -> OCDB : 8. Create new Optimisation resource
-note right of OCDB
-9. New Optimisation links to original
-via retrialOf reference.
+  note right of OCDB
+  Original FAILED Optimisation remains FAILED.
+  Retrial does not move the original record back to PROCESSING.
+  New runtime Optimisation progresses independently.
+  end note
 
-10. lifecycleStatus = ACKNOWLEDGED
-end note
-OCDB --> OCMS : New Optimisation persisted
+  OCMS -> Outbox : 8. Write OptimisationRequestedEvent\ninstruction = EXECUTE\nfor new Optimisation\neventId + optimisationId\ncorrelationId + traceId
+  Outbox --> OCMS : Outbox record stored
 
-== Event Publishing ==
+  OCMS --> NGW : 201 Created\nnew ACKNOWLEDGED Optimisation\nLocation + ETag
+  NGW --> OSB : 201 Created
+  OSB --> OGW : CreationResultView\nexecution remains asynchronous
+  OGW --> Caller : Retrial created\nnot completed yet
+end
 
-OCMS -> Outbox : 11. Write OptimisationRequestedEvent\n(instruction = EXECUTE) for new Optimisation\n-- same transaction
-Outbox -> Kafka : 12. Relay publishes event to Kafka\nwith correlation id and trace context
+== Publish New Worker Instruction ==
 
-== Worker Execution ==
+Outbox -> Kafka : 9. Publish OptimisationRequestedEvent\ninstruction = EXECUTE
+OCMS -> OCDB : 10. Advance new Optimisation\nACKNOWLEDGED -> QUEUED\nafter successful Kafka publish
 
-Kafka -> Worker : 13. Python/Gurobi Worker consumes\nand processes new request
+== Execute Retried Optimisation ==
 
-== Retrial Boundary ==
-
-note over OCMS, OCDB
-14. Original FAILED Optimisation remains FAILED.
-Retrial does NOT move it back to PROCESSING.
-Only the new Optimisation progresses through the lifecycle.
-end note
+Kafka -> Worker : 11. Consume OptimisationRequestedEvent\nfor new Optimisation
+Worker -> Worker : 12. Execute deterministic\noptimisation work
+Worker -> Kafka : 13. Publish OptimisationCompletedEvent\nstatus = COMPLETED / INFEASIBLE / FAILED
 
 @enduml
