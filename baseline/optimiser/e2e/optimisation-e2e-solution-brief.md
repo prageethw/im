@@ -123,9 +123,9 @@ The diagram is intentionally simplified and shows the main optimisation platform
 | **3** | Activate optimisation specification | Optimisation domain engineer | Promote a reviewed DRAFT to ACTIVE. | OD MS assigns official version and retires previous ACTIVE in the same `familyId`. |
 | **4** | Create runtime optimisation | User / OEX / authorised platform service | Submit a runtime `Optimisation` request to OC MS using a referenced ACTIVE specification and valid expression value. | OC MS returns `201 Created` and creates an `ACKNOWLEDGED` optimisation. Execution proceeds asynchronously. |
 | **5** | Monitor optimisation | User / OEX / authorised platform service | Read current lifecycle state and result when available. | Caller sees acknowledged, queued, processing, completed, infeasible, failed, cancelling, or cancelled state. |
-| **6** | Cancel optimisation | User / OEX / authorised platform service | Request cancellation for eligible non-terminal optimisation using `If-Match`. | OC MS moves to `CANCELLING` and sends a best-effort cancel instruction. |
-| **7** | Retry failed optimisation | User / OEX / authorised platform service | Retry a `FAILED` optimisation. | New `ACKNOWLEDGED` optimisation is created with `retrialOf`; original failed record stays failed. |
-| **8** | Execute optimisation | Python/Gurobi Worker | Consume worker instruction and execute deterministic optimisation model. | Worker emits `OptimisationCompletedEvent` with `COMPLETED`, `INFEASIBLE`, or `FAILED`. |
+| **6** | Cancel optimisation | User / OEX / authorised platform service | Request cancellation for eligible non-terminal(yet to be executed) optimisation using `If-Match`. | OC MS moves to `CANCELLING` and sends a best-effort(no guranteed cancellation) cancel instruction. |
+| **7** | Retry failed optimisation | User / OEX / authorised platform service | Retry a `FAILED` optimisation. | New `ACKNOWLEDGED` optimisation is created with `retrialOf` attribute; original failed record stays failed. |
+| **8** | Execute optimisation | Python Gurobi Worker | Consume worker instruction and execute deterministic optimisation model. | Worker emits `OptimisationCompletedEvent` with `COMPLETED`, `INFEASIBLE`, or `FAILED`. |
 | **9** | Retrieve optimisation outcome | User / OEX / authorised platform service | Retrieve completed result, infeasible explanation, failure details, or cancellation state. | Caller receives final projected runtime state/result from OC MS. |
 
 ### 3.2. Logical view:
