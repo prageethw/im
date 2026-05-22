@@ -91,6 +91,6 @@ OCMS -> OCDB : 10. Advance new Optimisation\nACKNOWLEDGED -> QUEUED\nafter succe
 
 Kafka -> Worker : 11. Consume OptimisationRequestedEvent\nfor new Optimisation
 Worker -> Worker : 12. Execute deterministic\noptimisation work
-Worker -> Kafka : 13. Publish OptimisationCompletedEvent\nstatus = COMPLETED / INFEASIBLE / FAILED
+Worker -> Kafka : 13. Publish OptimisationCompletedEvent\nstatus = COMPLETED / INFEASIBLE / FAILED / CANCELLED
 
 @enduml
