@@ -150,7 +150,7 @@ Key logical relationships:
 7. OC MS -> OD MS: direct internal service-to-service mTLS call for specification validation; this path does not route through NGW.
 8. OC MS -> Kafka: emits OptimisationRequestedEvent with EXECUTE or CANCEL.
 9. Python/Gurobi Worker -> Kafka: consumes requested events and emits OptimisationCompletedEvent.
-10. OC MS <- Kafka: consumes worker outcomes and projects lifecycle/result.
+10. OC MS <- Kafka: consumes worker outcomes and projects result.
 ```
 
 User context terminates before NGW. Downstream OD MS and OC MS calls do not carry or expose end-user identity, claims, roles, or scopes. OSB performs user-context filtering and view/action shaping, while OD MS and OC MS enforce backend service, lifecycle, schema, ETag, and business rules.
@@ -336,7 +336,7 @@ Retrial is available only from `FAILED` in the baseline. Retrial is not availabl
 | **Kafka DLQ** | Holds events that cannot be safely processed after retry handling. |
 | **Python/Gurobi Worker** | Consumes requested events, executes/cancels work, and emits completed events. |
 | **Internal deterministic optimisation models** | Own solver-specific objective formulation, constraints, candidate-resource rules, model binding, and solver configuration. |
-| **Gurobi Optimiser** | Executes mathematical optimisation prepared by worker/model layer. |
+| **Gurobi Optimiser** | Executes mathematical optimisation prepared by worker model layer. |
 | **Analytics platform/data sources** | Provides authorised datasets required by the worker/model layer. |
 | **OC MS Inbox Consumer** | Consumes worker outcomes, applies idempotency/stale/late checks, and projects lifecycle/result. |
 | **Operational support/monitoring** | Monitors service health, Kafka lag, outbox/inbox processing, worker failures, solver failures, DLQ, and lifecycle/result trends. |
