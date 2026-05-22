@@ -125,7 +125,7 @@ The diagram is intentionally simplified and shows the main optimisation platform
 | **5** | Monitor optimisation | User / OEX / authorised platform service | Read current lifecycle state and result when available. | Caller sees acknowledged, queued, processing, completed, infeasible, failed, cancelling, or cancelled state. |
 | **6** | Cancel optimisation | User / OEX / authorised platform service | Request cancellation for eligible non-terminal(yet to be executed) optimisation using `If-Match`. | OC MS moves to `CANCELLING` and sends a best-effort(no guranteed cancellation) cancel instruction. |
 | **7** | Retry failed optimisation | User / OEX / authorised platform service | Retry a `FAILED` optimisation. | New `ACKNOWLEDGED` optimisation is created with `retrialOf` attribute; original failed record stays failed. |
-| **8** | Execute optimisation | Python Gurobi Worker | Consume worker instruction and execute deterministic optimisation model. | Worker emits `OptimisationCompletedEvent` with `COMPLETED`, `INFEASIBLE`, or `FAILED`. |
+| **8** | Execute optimisation | Python Gurobi Worker | Consume worker instruction and execute deterministic optimisation model. | Worker emits `OptimisationCompletedEvent` with `COMPLETED`, `INFEASIBLE`, `FAILED`, or `CANCELLED`. |
 | **9** | Retrieve optimisation outcome | User / OEX / authorised platform service | Retrieve completed result, infeasible explanation, failure details, or cancellation state. | Caller receives final projected runtime state/result from OC MS. |
 
 ### 3.2. Logical view:
@@ -235,7 +235,7 @@ Catalogue-management journeys are feature-gated and out of phase-one scope unles
 14. OC MS advances ACKNOWLEDGED -> QUEUED after successful Kafka publish.
 15. Python/Gurobi Worker consumes OptimisationRequestedEvent.
 16. Worker resolves deterministic model binding and invokes Gurobi Optimiser.
-17. Worker publishes OptimisationCompletedEvent with COMPLETED, INFEASIBLE, or FAILED.
+17. Worker publishes OptimisationCompletedEvent with COMPLETED, INFEASIBLE, FAILED, or CANCELLED.
 18. OC MS Inbox Consumer applies idempotency and stale/late event checks.
 19. OC MS updates lifecycle/result projection.
 20. Caller polls through User -> OEX -> OGW -> OSB MS -> NGW -> OC MS to retrieve status/result.
@@ -274,7 +274,7 @@ Phase-one OEX/OSB status refresh is REST polling against OC MS through NGW. OSB 
 8. OC MS writes OptimisationRequestedEvent with instruction = CANCEL to outbox.
 9. OC MS Outbox Relay publishes event to Kafka.
 10. Worker stops, cancels, or ignores work where safely possible.
-11. OC MS projects CANCELLED only after worker confirmation or equivalent terminal confirmation.
+11. OC MS projects CANCELLED only after worker confirmation or equivalent terminal confirmation that cancellation was honoured(safely).
 ```
 
 Cancellation is best-effort. Cancellation has no required request body; optional reason/comment metadata does not change cancellation semantics. Cancellation requested for terminal `COMPLETED`, `FAILED`, `INFEASIBLE`, or `CANCELLED` state returns `409 Conflict`.
@@ -309,8 +309,8 @@ Retrial is available only from `FAILED` in the baseline. Retrial is not availabl
 2. Worker validates event idempotency and execution eligibility.
 3. Worker resolves runtime context and internal deterministic model binding.
 4. Worker invokes Gurobi Optimiser.
-5. Gurobi Optimiser returns solver output, infeasibility information, or failure information.
-6. Worker maps outcome to COMPLETED, INFEASIBLE, or FAILED.
+5. Gurobi Optimiser returns solver output, infeasibility information, failure information, or cancellation confirmation.
+6. Worker maps outcome to COMPLETED, INFEASIBLE, FAILED, or CANCELLED.
 7. Worker publishes OptimisationCompletedEvent.
 8. OC MS Inbox Consumer applies idempotency and stale/late event checks.
 9. OC MS updates runtime lifecycle/result projection.
@@ -615,7 +615,7 @@ CANCELLED
 | `INFEASIBLE` | Worker/model determined no feasible solution exists. Not retriable by default. |
 | `FAILED` | Technical/runtime failure occurred. Retriable by creating a new linked Optimisation. |
 | `CANCELLING` | Cancellation was requested and is being handled. |
-| `CANCELLED` | Optimisation was cancelled or safely resolved as cancelled. |
+| `CANCELLED` | Optimisation was cancelled after worker confirmation, or equivalent terminal confirmation, that cancellation was honoured(safely). |
 
 Lifecycle transition baseline:
 
@@ -643,7 +643,7 @@ OptimisationRequestedEvent
 OptimisationCompletedEvent
 ```
 
-A separate `OptimisationFailedEvent` is not used by default. Failed and infeasible outcomes are represented inside `OptimisationCompletedEvent.status`.
+A separate `OptimisationFailedEvent` is not used by default. Failed, infeasible, and cancelled outcomes are represented inside `OptimisationCompletedEvent.status`.
 
 ### 10.7. Worker instructions:
 
@@ -658,6 +658,7 @@ CANCEL
 COMPLETED
 INFEASIBLE
 FAILED
+CANCELLED
 ```
 
 ### 10.9. Outcome mapping:
@@ -668,6 +669,7 @@ Worker emits `OptimisationCompletedEvent.status` using one of:
 COMPLETED
 INFEASIBLE
 FAILED
+CANCELLED
 ```
 
 OC MS maps worker status to runtime lifecycle status as follows:
@@ -676,6 +678,7 @@ OC MS maps worker status to runtime lifecycle status as follows:
 COMPLETED -> lifecycleStatus COMPLETED
 INFEASIBLE -> lifecycleStatus INFEASIBLE
 FAILED -> lifecycleStatus FAILED
+CANCELLED -> lifecycleStatus CANCELLED
 ```
 
 Do not introduce an alternate success status unless the worker contract is explicitly changed to emit one.
@@ -738,6 +741,7 @@ Python/Gurobi Worker returns terminal status:
 COMPLETED
 INFEASIBLE
 FAILED
+CANCELLED
 ```
 
 Use `422 OPTIMISATION_CONTRACT_VIOLATION` for contract/cardinality failures. Use `INFEASIBLE` only when the request is valid and the worker/model determines no feasible solution exists.
