@@ -15,7 +15,7 @@ skinparam rectangleBackgroundColor #F8FAFC
 actor "User & OEX" as UserOEX
 actor "Authorised Platform Service" as PlatformService
 actor "Optimisation Domain Engineer" as DomainEngineer
-actor "Python/Gurobi Worker" as Worker
+actor "Python Gurobi Worker" as Worker
 
 rectangle "Optimisation Platform" {
   usecase "Discover optimisation\ncapabilities" as UC_Discover
