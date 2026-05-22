@@ -57,11 +57,11 @@ Core services:
 | **OSB MS(Optimisation Screen Builder MS)** | Provides the OEX backend-for-frontend experience, shapes views/actions using user context, and calls backend optimisation APIs through NGW. |
 | **Python Gurobi Worker** | Executes or cancels internal deterministic optimisation work based on Kafka worker instructions. |
 
-Operator access to the experience layer is governed by the ACG approval process and Microsoft Entra ID SSO. OGW invokes OSB MS using mTLS and User Context JWT. OSB MS invokes NGW using mTLS and OAuth2 system-to-system. User context stops before/at NGW; downstream OD MS and OC MS calls use system/service identity only.
+Operator access to the experience layer is governed by the ACG approval process and Microsoft Entra ID SSO. OGW invokes OSB MS using mTLS and User Context JWT. OSB MS invokes NGW using mTLS and OAuth2 system-to-system. User context stops before NGW; downstream OD MS and OC MS calls use system service identity only.
 
 OC MS validates the request structure and referenced ACTIVE OD MS request contract, persists the runtime `Optimisation` resource, returns `201 Created`, writes `OptimisationRequestedEvent` to its outbox, and drives execution asynchronously through Kafka.
 
-Kafka carries worker instructions and outcomes, with a dedicated DLQ for unprocessable events. The Python/Gurobi Worker consumes `EXECUTE` or `CANCEL` instructions and returns terminal outcomes through `OptimisationCompletedEvent`.
+Kafka carries worker instructions and outcomes, with a dedicated DLQ for unprocessable events. The Python & Gurobi Worker consumes `EXECUTE` or `CANCEL` instructions and returns terminal outcomes through `OptimisationCompletedEvent`.
 
 NGW-exposed backend APIs use TMF-style API conventions where appropriate. `OptimisationSpecification` and `Optimisation` are optimiser-domain platform resources, not native TMF Open API resources. OGW-exposed experience APIs, private MS-to-MS APIs, and internal Kafka events do not need to be TMF-compliant.
 
@@ -101,14 +101,14 @@ OC MS runtime baseline:
 
 ```text
 Runtime Optimisation has no business version.
-POST /optimisation returns 201 Created because the resource is created immediately.
+POST optimisation returns 201 Created because the resource is created immediately.
 Execution is asynchronous.
-Result is terminal-only.
+Result is terminal-only(not re-occuring).
 optimisationSpecification.id is the immutable contract pointer for the runtime record.
 OC MS must not substitute a newer ACTIVE specification from the same familyId.
 ```
 
-OSB MS acts as the OEX backend-for-frontend. It shapes experience models such as `HomeView`, `CapabilityCard`, `RequestFormModel`, `CreationResultView`, `OptimisationSummaryView`, and `OptimisationDetailView`. OSB response models are experience models, not source-of-truth domain resources.
+OSB MS acts as the OEX backend-for-frontend. It shapes experience models such as `HomeView`, `CapabilityCard`, `RequestFormModel`, `CreationResultView`, `OptimisationSummaryView`, and `OptimisationDetailView`. OSB response models are experience models, not source-of-truth domain resources, OSB can be own by experience team to simplyfy their UI flows using common agregator to create payloads for UI components.
 
 ### 3.1. Use case view:
 
