@@ -90,14 +90,14 @@ Field notes:
 | `id` / `href` | Server-assigned runtime resource identity. |
 | `priority` | Optional caller-supplied priority rank represented as a string. Baseline allowed values are `"1"` = highest, `"2"` = normal, and `"3"` = low. If omitted, OC MS applies the default priority policy. |
 | `sourceContext` | Optional provenance context identifying the upstream domain and source resource that requested or caused the optimisation. It may be used for audit, traceability, and list filtering. |
-| `optimisationSpecification` | Immutable reference to the `OptimisationSpecification.id` and `href` used as the contract pointer at creation time. |
-| `expression` | Accepted runtime expression submitted by the caller and validated against the referenced ACTIVE specification. |
+| `optimisationSpecification` | Mandatory immutable reference to the `OptimisationSpecification.id` and `href` used as the exact contract pointer at creation time. |
+| `expression` | Accepted runtime expression submitted by the caller. `expression.iri` is mandatory and must match the referenced ACTIVE specification's `expressionSpecification.iri`. |
 | `result` | Terminal result projection only. Presence depends on lifecycle state. |
 | `optimisationRelationship[]` | Used for relationships such as `retrialOf`. |
 | `lifecycleStatus` / `statusChangeDate` | Runtime state and last lifecycle transition time. |
 | `_links` | Lifecycle-aware HATEOAS action links. |
 
-OC MS persists the referenced `OptimisationSpecification.id` and `href` as the immutable contract pointer for the life of the runtime `Optimisation`. OC MS MUST treat `optimisationSpecification.id` as the immutable contract pointer and MUST NOT substitute another current `ACTIVE` specification, even if the same `familyId` later has a newer `ACTIVE` specification. If the referenced specification is later `RETIRED`, the runtime `Optimisation` remains valid as an audit record; OC MS does not revalidate or rewrite the specification reference.
+OC MS persists the referenced `OptimisationSpecification.id` and `href` as the immutable contract pointer for the life of the runtime `Optimisation`. Runtime creation requires both `optimisationSpecification.id` and `expression.iri`. OC MS MUST treat `optimisationSpecification.id` as the exact contract pointer and MUST verify that `expression.iri` matches the referenced ACTIVE specification's `expressionSpecification.iri`. OC MS MUST NOT substitute another current `ACTIVE` specification, even if the same `familyId` or `expressionSpecification.iri` later has another `ACTIVE` specification. If the referenced specification is later `RETIRED`, the runtime `Optimisation` remains valid as an audit record; OC MS does not revalidate or rewrite the specification reference.
 
 ## 5. Runtime lifecycle:
 
@@ -347,17 +347,21 @@ x-tmf-native: false
 
 ## 11. OD specification lookup and cache posture:
 
-On `POST /optimisation`, OC MS validates the runtime request against the referenced `OptimisationSpecification.id`.
+On `POST /optimisation`, OC MS validates the runtime request against the referenced `OptimisationSpecification.id` and the runtime `expression.iri`. Both are mandatory for runtime creation.
 
 Rules:
 
 ```text
+The runtime request must provide optimisationSpecification.id.
+The runtime request must provide expression.iri.
 The referenced OptimisationSpecification must exist.
 The referenced OptimisationSpecification must be ACTIVE at request-acceptance time.
+The runtime expression.iri must match the referenced OptimisationSpecification.expressionSpecification.iri.
 OC MS must not infer the current active contract by stale familyId lookup.
-OC MS does not use familyId or official specification version to choose a runtime contract.
+OC MS must not resolve the runtime contract by expression.iri alone.
+OC MS does not use familyId, official specification version, or expression.iri to choose a runtime contract.
 OC MS persists the referenced OptimisationSpecification.id and href as the immutable contract pointer for the life of the runtime Optimisation.
-OC MS MUST treat optimisationSpecification.id as the immutable contract pointer and MUST NOT substitute another current ACTIVE specification, even if the same familyId later has a newer ACTIVE specification.
+OC MS MUST treat optimisationSpecification.id as the exact contract pointer and MUST NOT substitute another current ACTIVE specification, even if the same familyId or expressionSpecification.iri later has another ACTIVE specification.
 If the specification is later RETIRED, the runtime Optimisation remains valid as an audit record; OC MS does not revalidate or rewrite the specification reference.
 OC MS may cache immutable ACTIVE OptimisationSpecification contracts by id and ETag.
 A cached ACTIVE contract for a specific id is safe because OD MS makes ACTIVE specifications immutable.
@@ -370,13 +374,15 @@ OC MS validates:
 
 ```text
 generic REST wrapper using its static API/OpenAPI contract
+optimisationSpecification.id is present
+expression.iri is present
 referenced OptimisationSpecification exists in OD MS
 referenced OptimisationSpecification lifecycleStatus is ACTIVE
 referenced ACTIVE OptimisationSpecification contract is immutable by OD MS lifecycle governance
 expression wrapper shape:
   expression.@type = JsonLdExpression
   expression.@baseType = Expression
-  expression.iri matches the specification ontology/model IRI where required
+  expression.iri matches the referenced OptimisationSpecification.expressionSpecification.iri
 expression.expressionValue against the referenced ACTIVE OptimisationSpecification.targetEntitySchema
 expression.expressionValue.@context contains the required optimiser ontology mappings
 expression.expressionValue.@type = opt:OptimisationProblem
@@ -627,7 +633,7 @@ Cancellation semantics:
 ```text
 Cancellation is best-effort.
 OC MS accepts cancellation only for eligible non-terminal lifecycle states.
-CANCELLED is set only after worker confirmation through OptimisationCompletedEvent or an equivalent terminal confirmation path that confirms cancellation was honoured(safely).
+CANCELLED is set only after worker confirmation through OptimisationCompletedEvent or an equivalent terminal confirmation path.
 If cancellation is requested when lifecycleStatus is terminal (COMPLETED, FAILED, INFEASIBLE, or CANCELLED), OC MS returns 409 Conflict.
 ```
 
@@ -691,7 +697,7 @@ Unsupported request content type returns 415 Unsupported Media Type.
 
 | **Condition** | **Response** |
 |---|---|
-| Runtime expression or referenced `targetEntitySchema` contract failure | `422 Unprocessable Entity` |
+| Missing or mismatched `optimisationSpecification.id`, `expression.iri`, or referenced `targetEntitySchema` contract failure | `422 Unprocessable Entity` |
 | Referenced `OptimisationSpecification` is missing or not visible | `404 Not Found` |
 | Referenced `OptimisationSpecification` is not `ACTIVE` | `422 Unprocessable Entity` |
 | Cancellation/retrial requested in an invalid lifecycle state | `409 Conflict` |
@@ -704,7 +710,7 @@ Unsupported request content type returns 415 Unsupported Media Type.
 Boundary rules:
 
 ```text
-422 = request/expression/OD targetEntitySchema contract violation.
+422 = request/expression/OD targetEntitySchema contract violation, including missing `optimisationSpecification.id`, missing `expression.iri`, or mismatch between `expression.iri` and the referenced specification's `expressionSpecification.iri`.
 409 = runtime lifecycle/action conflict.
 428 = required If-Match missing.
 412 = supplied If-Match does not match current ETag.
@@ -723,7 +729,7 @@ Content-Type: application/json
 {
   "code": "OPTIMISATION_CONTRACT_VIOLATION",
   "reason": "Optimisation contract violation",
-  "message": "The submitted expression.expressionValue does not satisfy the referenced ACTIVE OptimisationSpecification targetEntitySchema.",
+  "message": "The submitted Optimisation request does not satisfy the referenced ACTIVE OptimisationSpecification contract, including required optimisationSpecification.id, expression.iri, expressionSpecification.iri matching, and targetEntitySchema validation.",
   "status": 422,
   "@type": "Error"
 }
@@ -773,5 +779,3 @@ CANCELLED -> CANCELLED
 ```
 
 `INFEASIBLE` is an optimisation outcome produced by the worker/model. It is not a request contract validation error.
-
-`CANCELLED` is a terminal worker outcome confirming that a cancellation request was honoured(safely). It is not the same as accepting the cancellation request, which is represented by `lifecycleStatus = CANCELLING`.
