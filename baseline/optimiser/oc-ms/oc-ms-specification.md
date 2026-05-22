@@ -627,7 +627,7 @@ Cancellation semantics:
 ```text
 Cancellation is best-effort.
 OC MS accepts cancellation only for eligible non-terminal lifecycle states.
-CANCELLED is set only after worker confirmation through OptimisationCompletedEvent or an equivalent terminal confirmation path.
+CANCELLED is set only after worker confirmation through OptimisationCompletedEvent or an equivalent terminal confirmation path that confirms cancellation was honoured(safely).
 If cancellation is requested when lifecycleStatus is terminal (COMPLETED, FAILED, INFEASIBLE, or CANCELLED), OC MS returns 409 Conflict.
 ```
 
