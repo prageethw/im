@@ -93,13 +93,13 @@ end note
 
 Worker -> Worker : 12. Stop, cancel, or ignore safely\naccording to worker capability
 
-Worker -> Kafka : 13. Publish OptimisationCompletedEvent\nstatus = CANCELLED\nwhen cancellation is honoured(safely)
+Worker -> Kafka : 13. Publish OptimisationCompletedEvent\nstatus = CANCELLED or terminal outcome\nwhere supported by worker contract
 
 == Project Terminal State ==
 
 Kafka -> Inbox : 14. Consume worker terminal confirmation
 Inbox -> Inbox : 15. Apply idempotency\nand stale/late event checks
-Inbox -> OCDB : 16. Project final lifecycle/result\nCANCELLED
+Inbox -> OCDB : 16. Project final lifecycle/result\nCANCELLED or accepted terminal outcome
 OCDB --> Inbox : Projection stored
 
 == Poll Updated Status ==

@@ -400,7 +400,7 @@ resource-selection correctness
 
 After acceptance, OC MS persists the runtime resource and writes `OptimisationRequestedEvent` with `instruction = EXECUTE` to its outbox in the same transaction.
 
-Cancellation uses the same event type with `instruction = CANCEL`. Worker terminal outcomes are returned through `OptimisationCompletedEvent` with `status = COMPLETED`, `INFEASIBLE`, `FAILED`, or `CANCELLED`. `CANCELLED` is emitted only as terminal confirmation after a cancellation instruction is honoured(safely). The cancellation request itself is represented by `OptimisationRequestedEvent` with `instruction = CANCEL` and OC MS lifecycleStatus `CANCELLING`.
+Cancellation uses the same event type with `instruction = CANCEL`. Worker terminal outcomes are returned through `OptimisationCompletedEvent` with `status = COMPLETED`, `FAILED`, or `INFEASIBLE`.
 
 ## 13. Internal event baseline:
 
@@ -627,7 +627,7 @@ Cancellation semantics:
 ```text
 Cancellation is best-effort.
 OC MS accepts cancellation only for eligible non-terminal lifecycle states.
-CANCELLED is set only after worker confirmation through `OptimisationCompletedEvent.status = CANCELLED` or an equivalent terminal confirmation path.
+CANCELLED is set only after worker confirmation through OptimisationCompletedEvent or an equivalent terminal confirmation path.
 If cancellation is requested when lifecycleStatus is terminal (COMPLETED, FAILED, INFEASIBLE, or CANCELLED), OC MS returns 409 Conflict.
 ```
 

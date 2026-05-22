@@ -235,7 +235,7 @@ Catalogue-management journeys are feature-gated and out of phase-one scope unles
 14. OC MS advances ACKNOWLEDGED -> QUEUED after successful Kafka publish.
 15. Python/Gurobi Worker consumes OptimisationRequestedEvent.
 16. Worker resolves deterministic model binding and invokes Gurobi Optimiser.
-17. Worker publishes OptimisationCompletedEvent with COMPLETED, INFEASIBLE, FAILED, or CANCELLED.
+17. Worker publishes OptimisationCompletedEvent with COMPLETED, INFEASIBLE, or FAILED.
 18. OC MS Inbox Consumer applies idempotency and stale/late event checks.
 19. OC MS updates lifecycle/result projection.
 20. Caller polls through User -> OEX -> OGW -> OSB MS -> NGW -> OC MS to retrieve status/result.
@@ -274,7 +274,7 @@ Phase-one OEX/OSB status refresh is REST polling against OC MS through NGW. OSB 
 8. OC MS writes OptimisationRequestedEvent with instruction = CANCEL to outbox.
 9. OC MS Outbox Relay publishes event to Kafka.
 10. Worker stops, cancels, or ignores work where safely possible.
-11. OC MS projects CANCELLED only after worker confirmation through `OptimisationCompletedEvent.status = CANCELLED` or equivalent terminal confirmation.
+11. OC MS projects CANCELLED only after worker confirmation or equivalent terminal confirmation.
 ```
 
 Cancellation is best-effort. Cancellation has no required request body; optional reason/comment metadata does not change cancellation semantics. Cancellation requested for terminal `COMPLETED`, `FAILED`, `INFEASIBLE`, or `CANCELLED` state returns `409 Conflict`.
@@ -310,7 +310,7 @@ Retrial is available only from `FAILED` in the baseline. Retrial is not availabl
 3. Worker resolves runtime context and internal deterministic model binding.
 4. Worker invokes Gurobi Optimiser.
 5. Gurobi Optimiser returns solver output, infeasibility information, or failure information.
-6. Worker maps outcome to COMPLETED, INFEASIBLE, FAILED, or CANCELLED.
+6. Worker maps outcome to COMPLETED, INFEASIBLE, or FAILED.
 7. Worker publishes OptimisationCompletedEvent.
 8. OC MS Inbox Consumer applies idempotency and stale/late event checks.
 9. OC MS updates runtime lifecycle/result projection.
@@ -643,7 +643,7 @@ OptimisationRequestedEvent
 OptimisationCompletedEvent
 ```
 
-A separate `OptimisationFailedEvent` is not used by default. Failed, infeasible, and cancelled outcomes are represented inside `OptimisationCompletedEvent.status`. `CANCELLED` is terminal confirmation after cancellation is honoured(safely); the cancellation request itself remains `OptimisationRequestedEvent` with `instruction = CANCEL` and OC MS lifecycleStatus `CANCELLING`.
+A separate `OptimisationFailedEvent` is not used by default. Failed and infeasible outcomes are represented inside `OptimisationCompletedEvent.status`.
 
 ### 10.7. Worker instructions:
 
