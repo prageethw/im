@@ -400,7 +400,7 @@ resource-selection correctness
 
 After acceptance, OC MS persists the runtime resource and writes `OptimisationRequestedEvent` with `instruction = EXECUTE` to its outbox in the same transaction.
 
-Cancellation uses the same event type with `instruction = CANCEL`. Worker terminal outcomes are returned through `OptimisationCompletedEvent` with `status = COMPLETED`, `FAILED`, or `INFEASIBLE`.
+Cancellation uses the same event type with `instruction = CANCEL`. Worker terminal outcomes are returned through `OptimisationCompletedEvent` with `status = COMPLETED`, `FAILED`, `INFEASIBLE`, or `CANCELLED`.
 
 ## 13. Internal event baseline:
 
@@ -409,9 +409,9 @@ OC MS uses exactly two internal Kafka event types with the Python/Gurobi worker 
 | **Event** | **Emitter** | **Consumer** | **Purpose** | **Key values** |
 |---|---|---|---|---|
 | `OptimisationRequestedEvent` | OC MS / OC MS Outbox Relay | Python/Gurobi Worker | Worker instruction event for execution or cancellation. | `instruction = EXECUTE` or `instruction = CANCEL` |
-| `OptimisationCompletedEvent` | Python/Gurobi Worker | OC MS / OC MS Inbox Consumer | Terminal worker outcome event for lifecycle/result projection. | `status = COMPLETED`, `FAILED`, or `INFEASIBLE` |
+| `OptimisationCompletedEvent` | Python/Gurobi Worker | OC MS / OC MS Inbox Consumer | Terminal worker outcome event for lifecycle/result projection. | `status = COMPLETED`, `FAILED`, `INFEASIBLE`, or `CANCELLED` |
 
-`OptimisationFailedEvent` is not used in the current baseline. Failed and infeasible outcomes are carried by `OptimisationCompletedEvent.status`.
+`OptimisationFailedEvent` is not used in the current baseline. Failed, infeasible, and cancelled outcomes are carried by `OptimisationCompletedEvent.status`.
 
 Event identity and idempotency requirements:
 
@@ -769,6 +769,7 @@ Content-Type: application/json
 SUCCESS -> COMPLETED
 INFEASIBLE -> INFEASIBLE
 FAILURE -> FAILED
+CANCELLED -> CANCELLED
 ```
 
 `INFEASIBLE` is an optimisation outcome produced by the worker/model. It is not a request contract validation error.
