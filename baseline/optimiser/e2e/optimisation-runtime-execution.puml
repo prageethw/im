@@ -75,13 +75,13 @@ Kafka -> Worker : 14. Consume OptimisationRequestedEvent\ninstruction = EXECUTE
 Worker -> Worker : 15. Resolve internal deterministic\nmodel binding
 Worker -> Worker : 16. Invoke Gurobi Optimiser
 
-Worker -> Kafka : 17. Publish OptimisationCompletedEvent\nstatus = COMPLETED / INFEASIBLE / FAILED
+Worker -> Kafka : 17. Publish OptimisationCompletedEvent\nstatus = COMPLETED / INFEASIBLE / FAILED / CANCELLED
 
 == Project Outcome ==
 
 Kafka -> Inbox : 18. Consume OptimisationCompletedEvent
 Inbox -> Inbox : 19. Apply idempotency\nand stale/late event checks
-Inbox -> OCDB : 20. Update lifecycle/result projection\nCOMPLETED / INFEASIBLE / FAILED
+Inbox -> OCDB : 20. Update lifecycle/result projection\nCOMPLETED / INFEASIBLE / FAILED / CANCELLED
 OCDB --> Inbox : Projection stored
 
 == Poll Runtime Status ==
