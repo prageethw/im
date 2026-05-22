@@ -773,3 +773,5 @@ CANCELLED -> CANCELLED
 ```
 
 `INFEASIBLE` is an optimisation outcome produced by the worker/model. It is not a request contract validation error.
+
+`CANCELLED` is a terminal worker outcome confirming that a cancellation request was honoured(safely). It is not the same as accepting the cancellation request, which is represented by `lifecycleStatus = CANCELLING`.
