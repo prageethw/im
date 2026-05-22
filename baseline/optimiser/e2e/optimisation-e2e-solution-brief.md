@@ -153,7 +153,7 @@ Key logical relationships:
 10. OC MS <- Kafka: consumes worker outcomes and projects lifecycle/result.
 ```
 
-User context terminates before/at NGW. Downstream OD MS and OC MS calls do not carry or expose end-user identity, claims, roles, or scopes. OSB performs user-context filtering and view/action shaping, while OD MS and OC MS enforce backend service, lifecycle, schema, ETag, and business rules.
+User context terminates before NGW. Downstream OD MS and OC MS calls do not carry or expose end-user identity, claims, roles, or scopes. OSB performs user-context filtering and view/action shaping, while OD MS and OC MS enforce backend service, lifecycle, schema, ETag, and business rules.
 
 ### 3.3. Process view:
 
