@@ -301,7 +301,7 @@ If a body is supplied by OEX, it may contain optional reason/comment metadata on
 A supplied cancellation body must not change backend cancellation semantics.
 ```
 
-Cancellation is best-effort. `CANCELLED` is set only after worker confirmation through OC MS event projection or an equivalent terminal confirmation path.
+Cancellation is best-effort. `CANCELLED` is set only after worker confirmation through OC MS event projection or an equivalent terminal confirmation path that confirms cancellation was honoured(safely).
 
 If OC MS returns `409 Conflict` because the runtime optimisation is already terminal, OSB MS must show an appropriate lifecycle-conflict message instead of hiding it as a generic failure.
 
