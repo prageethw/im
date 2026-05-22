@@ -196,6 +196,17 @@ expressionSpecification = expression type + expression language + ontology IRI
 targetEntitySchema = authoritative runtime expressionValue validation schema
 ```
 
+Runtime contract-selection rule:
+
+```text
+Runtime Optimisation creation requires both optimisationSpecification.id and expression.iri.
+optimisationSpecification.id selects the exact governed OptimisationSpecification contract.
+expression.iri identifies the submitted runtime expression semantics.
+OC MS must verify that runtime expression.iri matches the referenced OptimisationSpecification.expressionSpecification.iri.
+OC MS must validate expression.expressionValue against the referenced OptimisationSpecification.targetEntitySchema.
+OC MS must not resolve or substitute the runtime contract by expression.iri alone.
+```
+
 The design-time `expressionSpecification` must not be confused with the runtime `expression` instance. `expressionSpecification` declares the expected expression type/language/ontology for runtime requests. The runtime `Optimisation.expression` carries the actual `JsonLdExpression`, and `Optimisation.expression.expressionValue` carries the actual JSON-LD optimisation problem payload.
 
 ## 8. Runtime optimisation context contract:
@@ -1172,10 +1183,10 @@ Content-Type: application/json
 ```text
 OD MS: defines what is allowed.
 OC MS: stores what was accepted at runtime.
-Worker model: decides feasibility cancellation outcome and returns COMPLETED, INFEASIBLE, FAILED, or CANCELLED.
+Worker/model: decides feasibility/cancellation outcome and returns COMPLETED, INFEASIBLE, FAILED, or CANCELLED.
 ```
 
-OC MS validates runtime `Optimisation` requests against the `targetEntitySchema` of the referenced `ACTIVE` `OptimisationSpecification`.
+OC MS validates runtime `Optimisation` requests against the `targetEntitySchema` of the referenced `ACTIVE` `OptimisationSpecification`. Runtime creation requires both `optimisationSpecification.id` and `expression.iri`; OC MS uses the id as the exact contract pointer and verifies the runtime IRI against `OptimisationSpecification.expressionSpecification.iri`.
 
 OC MS validates:
 
