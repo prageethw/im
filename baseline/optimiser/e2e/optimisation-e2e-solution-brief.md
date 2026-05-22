@@ -478,16 +478,21 @@ Every service-to-infrastructure integration must explicitly capture authenticati
 ## 6. Important quality attributes:
 
 ### 6.1. Availability:
-
+SLA of avalabilty yet to be determined.
 OD MS and OC MS should be deployed as independently scalable and highly available services. Kafka availability is critical for asynchronous worker instruction/outcome exchange. Outbox/inbox patterns reduce data-loss risk during transient service or Kafka failures.
+DB and kafka cluster will have enough redundency have high availablity requirements, and k8s will provide high availabilty by having multiple pods and having capabilty to orchestrate pods to meet defined avaialbilty.
 
 ### 6.2. Scalability:
+Production enviorement expected to be able to dynamicaly scale based on demand.
+OD MS scales primarily for capability discovery and specification retrieval. OC MS scales for runtime API traffic, outbox relay throughput, and inbox outcome processing. Python/Gurobi workers scale horizontally based on queue depth and solver runtime characteristics. OSB scales for OEX-API view traffic and can cache read-only OD-derived capability/form data only where backend cache headers allow.
 
-OD MS scales primarily for capability discovery and specification retrieval. OC MS scales for runtime API traffic, outbox relay throughput, and inbox outcome processing. Python/Gurobi workers scale horizontally based on queue depth and solver runtime characteristics. OSB scales for OEX/API view traffic and can cache read-only OD-derived capability/form data only where backend cache headers allow.
+K8s will provide ability scale based on demand.
 
 ### 6.3. Performance:
 
-`POST /optimisation` returns `201 Created` after syntactic and OD-MS-contract validation, runtime resource persistence, and outbox write. Solver execution remains asynchronous and decoupled from REST request latency.
+All sync api calls supposed to be provide below 30ms response time.
+
+`POST /optimisation` returns `201 Created` after syntactic and OD-MS-contract validation, runtime resource persistence, and outbox write. Solver execution remains asynchronous and decoupled from REST request latency. 
 
 `GET /optimisation/{id}` provides polling of lifecycle and result state. Runtime `result` is absent until terminal state. OSB/OEX status refresh is REST polling against OC MS through NGW in phase one. Polling cadence is owned by OSB MS in coordination with OEX UI/platform UX.
 
@@ -517,7 +522,7 @@ OD MS scales primarily for capability discovery and specification retrieval. OC 
 - NGW exposes OD MS and OC MS APIs to authorised backend consumers.
 - OC MS calls OD MS using mTLS for specification validation.
 - Kafka is available as the event backbone.
-- Python/Gurobi Worker has authorised access to required analytics/data sources.
+- Python Gurobi Worker has authorised access to required analytics data sources.
 - Runtime `Optimisation` is asynchronous by design.
 - `sourceContext` is optional and may be omitted for generic optimisation requests.
 - Runtime `Optimisation` does not expose a business `version` field.
@@ -529,7 +534,7 @@ OD MS scales primarily for capability discovery and specification retrieval. OC 
 - NGW-exposed backend APIs use TMF-style API conventions where appropriate.
 - `OptimisationSpecification` and `Optimisation` are optimiser-domain platform resources, not native TMF Open API resources.
 - OGW-exposed experience APIs, private MS-to-MS APIs, private MS-to-MS events, and internal Kafka events do not need to be TMF REST compliant.
-- `x-platform-extension: true` and `x-tmf-native: false` are governance/documentation response headers on external NGW-facing optimiser resources.
+- `x-platform-extension: true` and `x-tmf-native: false` are governance documentation response headers on external NGW-facing optimiser resources.
 - Do not expose Gurobi model formulation, solver configuration, objective internals, candidate-resource rules, or model binding through public APIs or OSB views.
 - OD MS exposes only the caller-facing `OptimisationSpecification` request contract.
 - OC MS performs syntactic and OD-MS-contract validation only.
@@ -586,7 +591,7 @@ POST /optimisationExperience/v1/optimisations/{id}/cancellation
 POST /optimisationExperience/v1/optimisations/{id}/retrial
 ```
 
-OSB uses pluralised experience endpoint names intentionally; backend OD/OC resource endpoint names remain unchanged behind NGW.
+OSB uses pluralised experience endpoint names intentionally; backend OD and OC resource endpoint names remain unchanged behind NGW.
 
 ### 10.4. Runtime lifecycle states:
 
