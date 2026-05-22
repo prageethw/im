@@ -35,23 +35,23 @@ Gurobi --> Worker : 6. Return solver output,\ninfeasibility information,\nor fai
 
 == Outcome Mapping and Publishing ==
 
-Worker -> Worker : 7. Map worker result to\nCOMPLETED / INFEASIBLE / FAILED
+Worker -> Worker : 7. Map worker result to\nCOMPLETED / INFEASIBLE / FAILED / CANCELLED
 
 note right of Worker
 Worker emits OptimisationCompletedEvent.status as:
-COMPLETED, INFEASIBLE, or FAILED.
+COMPLETED, INFEASIBLE, FAILED, or CANCELLED.
 
 INFEASIBLE is a valid optimisation/model outcome.
 It is not a contract validation error.
 end note
 
-Worker -> Kafka : 8. Publish OptimisationCompletedEvent\nstatus = COMPLETED / INFEASIBLE / FAILED\neventId + optimisationId\ncorrelationId + traceId
+Worker -> Kafka : 8. Publish OptimisationCompletedEvent\nstatus = COMPLETED / INFEASIBLE / FAILED / CANCELLED\neventId + optimisationId\ncorrelationId + traceId
 
 == Result Ingestion ==
 
 Kafka -> Inbox : 9. Consume OptimisationCompletedEvent
 Inbox -> Inbox : 10. Apply idempotency\nand stale/late-event checks
-Inbox -> OCDB : 11. Project lifecycle/result\nCOMPLETED / INFEASIBLE / FAILED
+Inbox -> OCDB : 11. Project lifecycle/result\nCOMPLETED / INFEASIBLE / FAILED / CANCELLED
 OCDB --> Inbox : Projection stored
 
 note right of OCDB
