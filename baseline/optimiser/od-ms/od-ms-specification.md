@@ -1172,7 +1172,7 @@ Content-Type: application/json
 ```text
 OD MS: defines what is allowed.
 OC MS: stores what was accepted at runtime.
-Worker/model: decides feasibility/cancellation outcome and returns COMPLETED, INFEASIBLE, FAILED, or CANCELLED.
+Worker model: decides feasibility cancellation outcome and returns COMPLETED, INFEASIBLE, FAILED, or CANCELLED.
 ```
 
 OC MS validates runtime `Optimisation` requests against the `targetEntitySchema` of the referenced `ACTIVE` `OptimisationSpecification`.
