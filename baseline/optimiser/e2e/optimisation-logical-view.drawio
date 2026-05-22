@@ -1,6 +1,6 @@
 <mxfile host="65bd71144e">
     <diagram id="optimisation-logical-view" name="Optimisation Logical View">
-        <mxGraphModel dx="871" dy="1540" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1500" pageHeight="900" math="0" shadow="0" adaptiveColors="none">
+        <mxGraphModel dx="874" dy="1539" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1500" pageHeight="900" math="0" shadow="0" adaptiveColors="none">
             <root>
                 <mxCell id="0"/>
                 <mxCell id="1" parent="0"/>
@@ -28,7 +28,7 @@
                 <mxCell id="oddb" value="OD MS DB&lt;br/&gt;&lt;span style=&#39;font-size:11px&#39;&gt;OptimisationSpecification&lt;/span&gt;" style="shape=cylinder3d;whiteSpace=wrap;html=1;boundedLbl=1;backgroundOutline=1;size=15;fillColor=#d5e8d4;strokeColor=default;container=0;" parent="1g_pKyIUPg_Uf4EWA1Bv-1" vertex="1">
                     <mxGeometry x="1178.181818181818" y="92.14285714285717" width="211.4685314685314" height="81.90476190476193" as="geometry"/>
                 </mxCell>
-                <mxCell id="ocdb" value="OC MS DB&lt;br/&gt;&lt;span style=&#39;font-size:11px&#39;&gt;Optimisation&lt;br/&gt;Outbox / Inbox&lt;/span&gt;" style="shape=cylinder3d;whiteSpace=wrap;html=1;boundedLbl=1;backgroundOutline=1;size=15;fillColor=#d5e8d4;strokeColor=default;container=0;" parent="1g_pKyIUPg_Uf4EWA1Bv-1" vertex="1">
+                <mxCell id="ocdb" value="OC MS DB&lt;br/&gt;&lt;span style=&#39;font-size:11px&#39;&gt;Optimisation&lt;br/&gt;Outbox and Inbox&lt;/span&gt;" style="shape=cylinder3d;whiteSpace=wrap;html=1;boundedLbl=1;backgroundOutline=1;size=15;fillColor=#d5e8d4;strokeColor=default;container=0;" parent="1g_pKyIUPg_Uf4EWA1Bv-1" vertex="1">
                     <mxGeometry x="1180.1958041958042" y="296.90476190476204" width="211.4685314685314" height="92.14285714285717" as="geometry"/>
                 </mxCell>
                 <mxCell id="kafka" value="Kafka Topic&lt;br/&gt;&lt;b&gt;t7.optimisation.events&lt;/b&gt;" style="shape=hexagon;perimeter=hexagonPerimeter2;whiteSpace=wrap;html=1;fixedSize=1;fillColor=#d5e8d4;strokeColor=default;fontStyle=1;container=0;" parent="1g_pKyIUPg_Uf4EWA1Bv-1" vertex="1">
@@ -37,20 +37,20 @@
                 <mxCell id="dlq" value="Kafka DLQ&lt;br/&gt;&lt;b&gt;t7.optimisation.events.dlq&lt;/b&gt;" style="shape=hexagon;perimeter=hexagonPerimeter2;whiteSpace=wrap;html=1;fixedSize=1;fillColor=#d5e8d4;strokeColor=default;fontStyle=1;container=0;" parent="1g_pKyIUPg_Uf4EWA1Bv-1" vertex="1">
                     <mxGeometry x="1097.6223776223774" y="542.6190476190478" width="241.67832167832168" height="81.90476190476193" as="geometry"/>
                 </mxCell>
-                <mxCell id="worker" value="Gurobi Modeler&lt;br/&gt;/ Python Worker" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=default;fontStyle=1;container=0;" parent="1g_pKyIUPg_Uf4EWA1Bv-1" vertex="1">
+                <mxCell id="worker" value="Gurobi Modeler&lt;br/&gt;Python Worker" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=default;fontStyle=1;container=0;" parent="1g_pKyIUPg_Uf4EWA1Bv-1" vertex="1">
                     <mxGeometry x="332.3076923076923" y="542.6190476190478" width="231.6083916083916" height="81.90476190476193" as="geometry"/>
                 </mxCell>
                 <mxCell id="gurobi" value="Gurobi Optimizer" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=default;fontStyle=1;container=0;" parent="1g_pKyIUPg_Uf4EWA1Bv-1" vertex="1">
                     <mxGeometry x="50.349650349650354" y="542.6190476190478" width="191.32867132867133" height="81.90476190476193" as="geometry"/>
                 </mxCell>
-                <mxCell id="e5" value="mTLS + service/system identity only&lt;br/&gt;/optimisationSpecification" style="endArrow=block;html=1;rounded=0;strokeWidth=2;strokeColor=default;" parent="1g_pKyIUPg_Uf4EWA1Bv-1" source="gw" target="od" edge="1">
+                <mxCell id="e5" value="mTLS + service identity only&lt;br/&gt;/optimisationSpecification" style="endArrow=block;html=1;rounded=0;strokeWidth=2;strokeColor=default;" parent="1g_pKyIUPg_Uf4EWA1Bv-1" source="gw" target="od" edge="1">
                     <mxGeometry relative="1" as="geometry">
                         <Array as="points">
                             <mxPoint x="680" y="133"/>
                         </Array>
                     </mxGeometry>
                 </mxCell>
-                <mxCell id="e6" value="mTLS + service/system identity only&lt;br/&gt;/optimisation" style="endArrow=block;html=1;rounded=0;strokeWidth=2;strokeColor=default;exitX=0.5;exitY=1;exitDx=0;exitDy=0;" parent="1g_pKyIUPg_Uf4EWA1Bv-1" source="gw" target="oc" edge="1">
+                <mxCell id="e6" value="mTLS + service identity only&lt;br/&gt;/optimisation" style="endArrow=block;html=1;rounded=0;strokeWidth=2;strokeColor=default;exitX=0.5;exitY=1;exitDx=0;exitDy=0;" parent="1g_pKyIUPg_Uf4EWA1Bv-1" source="gw" target="oc" edge="1">
                     <mxGeometry relative="1" as="geometry">
                         <Array as="points">
                             <mxPoint x="680" y="338"/>
@@ -60,22 +60,22 @@
                 <mxCell id="e7" value="mTLS&lt;br/&gt;validate ACTIVE spec" style="endArrow=block;html=1;rounded=0;strokeWidth=3;dashed=1;strokeColor=default;" parent="1g_pKyIUPg_Uf4EWA1Bv-1" source="oc" target="od" edge="1">
                     <mxGeometry relative="1" as="geometry"/>
                 </mxCell>
-                <mxCell id="e8" value="Read / write specs" style="endArrow=block;html=1;rounded=0;strokeWidth=2;strokeColor=default;" parent="1g_pKyIUPg_Uf4EWA1Bv-1" source="od" target="oddb" edge="1">
+                <mxCell id="e8" value="Read and write specs" style="endArrow=block;html=1;rounded=0;strokeWidth=2;strokeColor=default;" parent="1g_pKyIUPg_Uf4EWA1Bv-1" source="od" target="oddb" edge="1">
                     <mxGeometry relative="1" as="geometry"/>
                 </mxCell>
-                <mxCell id="e9" value="Persist Optimisation&lt;br/&gt;Outbox / Inbox" style="endArrow=block;html=1;rounded=0;strokeWidth=2;strokeColor=default;" parent="1g_pKyIUPg_Uf4EWA1Bv-1" source="oc" target="ocdb" edge="1">
+                <mxCell id="e9" value="Persist Optimisation&lt;br/&gt;Outbox and Inbox" style="endArrow=block;html=1;rounded=0;strokeWidth=2;strokeColor=default;" parent="1g_pKyIUPg_Uf4EWA1Bv-1" source="oc" target="ocdb" edge="1">
                     <mxGeometry relative="1" as="geometry"/>
                 </mxCell>
-                <mxCell id="e10" value="Emit events&lt;br/&gt;EXECUTE / CANCEL" style="endArrow=block;html=1;rounded=0;strokeWidth=2;exitX=0.566;exitY=1;exitDx=0;exitDy=0;exitPerimeter=0;strokeColor=default;" parent="1g_pKyIUPg_Uf4EWA1Bv-1" edge="1">
+                <mxCell id="e10" value="Emit events&lt;br/&gt;EXECUTE and CANCEL" style="endArrow=block;html=1;rounded=0;strokeWidth=2;exitX=0.566;exitY=1;exitDx=0;exitDy=0;exitPerimeter=0;strokeColor=default;" parent="1g_pKyIUPg_Uf4EWA1Bv-1" edge="1">
                     <mxGeometry relative="1" as="geometry">
-                        <mxPoint x="1011.474685314685" y="378.8095238095239" as="sourcePoint"/>
-                        <mxPoint x="1011.9580419580418" y="541.5952380952383" as="targetPoint"/>
+                        <mxPoint x="1000.4746853146848" y="378.8095238095239" as="sourcePoint"/>
+                        <mxPoint x="1000.9580419580418" y="541.5952380952383" as="targetPoint"/>
                     </mxGeometry>
                 </mxCell>
-                <mxCell id="e11" value="Consume outcomes&lt;br/&gt;COMPLETED / INFEASIBLE / FAILED" style="endArrow=block;html=1;rounded=0;strokeWidth=2;exitX=0.417;exitY=0;exitDx=0;exitDy=0;exitPerimeter=0;strokeColor=default;" parent="1g_pKyIUPg_Uf4EWA1Bv-1" edge="1">
+                <mxCell id="e11" value="Consume outcomes&lt;br&gt;COMPLETED, INFEASIBLE, FAILED&lt;div&gt;&amp;nbsp;CANCELLED&lt;/div&gt;" style="endArrow=block;html=1;rounded=0;strokeWidth=2;exitX=0.417;exitY=0;exitDx=0;exitDy=0;exitPerimeter=0;strokeColor=default;" parent="1g_pKyIUPg_Uf4EWA1Bv-1" edge="1">
                     <mxGeometry relative="1" as="geometry">
-                        <mxPoint x="846.0246153846153" y="542.6190476190478" as="sourcePoint"/>
-                        <mxPoint x="845.9601678321674" y="378.8095238095239" as="targetPoint"/>
+                        <mxPoint x="844.0246153846153" y="542.6190476190478" as="sourcePoint"/>
+                        <mxPoint x="843.9601678321674" y="378.8095238095239" as="targetPoint"/>
                     </mxGeometry>
                 </mxCell>
                 <mxCell id="e12" value="Consume worker instructions" style="endArrow=block;html=1;rounded=0;strokeWidth=2;strokeColor=default;" parent="1g_pKyIUPg_Uf4EWA1Bv-1" source="kafka" target="worker" edge="1">
@@ -128,7 +128,7 @@
                 <mxCell id="1g_pKyIUPg_Uf4EWA1Bv-3" value="Identity Provider" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f5f5f5;strokeColor=default;dashed=1;fontStyle=1;verticalAlign=top;spacingTop=8;container=0;" parent="1" vertex="1">
                     <mxGeometry x="371.3986013986014" y="-605" width="221.53846153846152" height="122.85714285714288" as="geometry"/>
                 </mxCell>
-                <mxCell id="1g_pKyIUPg_Uf4EWA1Bv-4" value="Access / Experience Layer" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f5f5f5;strokeColor=default;dashed=1;fontStyle=1;verticalAlign=top;spacingTop=8;container=0;" parent="1" vertex="1">
+                <mxCell id="1g_pKyIUPg_Uf4EWA1Bv-4" value="Access and Experience Layer" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f5f5f5;strokeColor=default;dashed=1;fontStyle=1;verticalAlign=top;spacingTop=8;container=0;" parent="1" vertex="1">
                     <mxGeometry x="361.33" y="-426.19" width="258.67" height="316.19" as="geometry"/>
                 </mxCell>
                 <mxCell id="1g_pKyIUPg_Uf4EWA1Bv-5" value="User" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=default;fontStyle=1;container=0;" parent="1" vertex="1">
@@ -137,7 +137,7 @@
                 <mxCell id="1g_pKyIUPg_Uf4EWA1Bv-6" value="Microsoft Entra ID" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f8cecc;strokeColor=default;fontStyle=1;container=0;" parent="1" vertex="1">
                     <mxGeometry x="391.53846153846155" y="-574.2857142857142" width="181.25874125874125" height="71.66666666666669" as="geometry"/>
                 </mxCell>
-                <mxCell id="1g_pKyIUPg_Uf4EWA1Bv-7" value="OEX Layer&lt;br&gt;&lt;span style=&quot;font-size:11px&quot;&gt;Experience / UI / API façade&lt;br&gt;&lt;/span&gt;" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=default;fontStyle=1;container=0;" parent="1" vertex="1">
+                <mxCell id="1g_pKyIUPg_Uf4EWA1Bv-7" value="OEX Layer&lt;br&gt;&lt;span style=&quot;font-size:11px&quot;&gt;Experience, UI, API façade&lt;br&gt;&lt;/span&gt;" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=default;fontStyle=1;container=0;" parent="1" vertex="1">
                     <mxGeometry x="391.54" y="-377" width="211.47" height="50" as="geometry"/>
                 </mxCell>
                 <mxCell id="1g_pKyIUPg_Uf4EWA1Bv-8" value="Authenticate" style="endArrow=block;html=1;rounded=0;strokeWidth=2;strokeColor=default;" parent="1" source="1g_pKyIUPg_Uf4EWA1Bv-5" target="1g_pKyIUPg_Uf4EWA1Bv-6" edge="1">
@@ -177,7 +177,7 @@
                         <mxPoint as="offset"/>
                     </mxGeometry>
                 </mxCell>
-                <mxCell id="e4" value="mTLS + system/service identity only&lt;br&gt;no user context downstream" style="endArrow=block;html=1;rounded=0;strokeWidth=2;strokeColor=default;exitX=0.5;exitY=1;exitDx=0;exitDy=0;" parent="1" source="1g_pKyIUPg_Uf4EWA1Bv-12" target="gw" edge="1">
+                <mxCell id="e4" value="mTLS + service identity only&lt;br&gt;no user context downstream" style="endArrow=block;html=1;rounded=0;strokeWidth=2;strokeColor=default;exitX=0.5;exitY=1;exitDx=0;exitDy=0;" parent="1" source="1g_pKyIUPg_Uf4EWA1Bv-12" target="gw" edge="1">
                     <mxGeometry relative="1" as="geometry">
                         <Array as="points">
                             <mxPoint x="490" y="-60"/>
@@ -185,7 +185,7 @@
                         <mxPoint x="473.01" y="-63.27515692615066" as="sourcePoint"/>
                     </mxGeometry>
                 </mxCell>
-                <mxCell id="ngw_boundary_note" value="NGW boundary&lt;br/&gt;User context stops before/at NGW.&lt;br/&gt;Downstream OD/OC receive service/system identity only." style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=default;fontStyle=0;container=0;" parent="1" vertex="1">
+                <mxCell id="ngw_boundary_note" value="NGW boundary&lt;br/&gt;User context stops before or at NGW.&lt;br/&gt;Downstream OD and OC receive service identity only." style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=default;fontStyle=0;container=0;" parent="1" vertex="1">
                     <mxGeometry x="660" y="-388" width="260" height="128" as="geometry"/>
                 </mxCell>
             </root>
