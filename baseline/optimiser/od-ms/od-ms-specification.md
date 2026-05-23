@@ -85,7 +85,7 @@ Endpoint responsibility:
 |---|---|---|
 | `GET /optimisationSpecification` | Collection | List visible DRAFT, ACTIVE, and RETIRED records according to filters and caller authorisation. |
 | `POST /optimisationSpecification` | Collection | Create a mutable DRAFT candidate only. `specKey` is required; OD MS resolves `id` from `specKey` and assigns `draftId`. |
-| `GET /optimisationSpecification/{id}` | Lineage/current official version | Retrieve the current ACTIVE version by default, or an ACTIVE/RETIRED official version with `version`. |
+| `GET /optimisationSpecification/{id}` | Lineage/current official version | Retrieve the current ACTIVE version by default, or an ACTIVE/RETIRED official version with `version`. Read-only provenance lookup may use `draftId`, but DRAFT candidate mutation and retrieval use `/optimisationSpecification/draft/{draftId}`. |
 | `DELETE /optimisationSpecification/{id}` | Current ACTIVE official version | Retire the current ACTIVE version for the supplied `id`. This is a lifecycle retirement operation, not physical deletion. |
 | `GET /optimisationSpecification/draft/{draftId}` | DRAFT candidate | Retrieve one mutable DRAFT candidate. |
 | `PATCH /optimisationSpecification/draft/{draftId}` | DRAFT candidate | Partially update a mutable DRAFT candidate, or activate the selected DRAFT candidate. |
@@ -126,6 +126,8 @@ entitySpecRelationship[]
 @schemaLocation
 _links
 ```
+
+`familyId` is not a canonical `OptimisationSpecification` field in this baseline. The previous loose grouping role is replaced by `specKey`, which is the mandatory stable logical specification key used by OD MS to resolve the server-assigned `id` when a DRAFT candidate is created.
 
 Required create fields for `POST /optimisationSpecification`:
 
@@ -571,7 +573,7 @@ Other DRAFT candidates for the same `OptimisationSpecification.id` remain DRAFT 
 | `PUT /optimisationSpecification/draft/{draftId}` | Approved platform extension. Full replacement and finalisation of a mutable DRAFT candidate only. Requires `If-Match` and `Content-Type: application/json`. The body must not change `id`, `draftId`, `version`, or `specKey`. Rejected for ACTIVE and RETIRED official versions. |
 | `PATCH /optimisationSpecification/draft/{draftId}` | TMF-compatible partial update using JSON Merge Patch. Requires `If-Match` and `Content-Type: application/merge-patch+json`. Contract and content updates are allowed only for the selected DRAFT candidate. The patch must not change `id`, `draftId`, `version`, or `specKey`. Activation from DRAFT is allowed by setting `lifecycleStatus` to `ACTIVE`. |
 | `DELETE /optimisationSpecification/draft/{draftId}` | Physical delete only for an unused mutable DRAFT candidate. Requires `If-Match`. Rejected if the draft is already activated or otherwise no longer mutable. |
-| `DELETE /optimisationSpecification/{id}` | Lifecycle retirement of the current ACTIVE version for the supplied `id`. Requires `If-Match` for the current ACTIVE version. Returns `204 No Content` on success. It does not delete the lineage, retained RETIRED versions, or DRAFT candidates. Rejected when no current ACTIVE version exists or governance blocks retirement. |
+| `DELETE /optimisationSpecification/{id}` | Lifecycle retirement of the current ACTIVE version for the supplied `id`. Requires `If-Match` for the current ACTIVE version. Returns `204 No Content` on success. It does not delete the lineage, retained RETIRED versions, or DRAFT candidates. Returns `404 Not Found` when no current ACTIVE version exists. Returns `409 Conflict` only when a current ACTIVE version exists but retirement is blocked by governance. |
 
 ## 14. Supported list filters:
 
@@ -713,7 +715,9 @@ Link relation meaning:
 | `delete` | `DELETE` | Delete mutable `DRAFT`. |
 | `activate` | `PATCH` | Governed activation of a finalised `DRAFT`. |
 | `retire` | `DELETE` | Governed retirement of the current `ACTIVE` version for an `id`. |
-| `createNewVersion` | `POST` | Create a new mutable `DRAFT` candidate by submitting the same `specKey` as the current ACTIVE specification. OD MS resolves the existing `id` from `specKey`; the official `version` is assigned only when the draft candidate is activated. |
+| `createNewVersion` | `POST` | Item-level affordance to create a replacement `DRAFT` candidate by submitting the same `specKey` as the current ACTIVE specification. OD MS resolves the existing `id` from `specKey`; the official `version` is assigned only when the draft candidate is activated. |
+
+The `create` and `createNewVersion` link relations are intentionally different. `create` is a collection-level affordance for creating a new DRAFT candidate. `createNewVersion` is an item-level affordance shown on ACTIVE or RETIRED records to guide callers toward creating a replacement DRAFT candidate using the same `specKey`. Both use `POST /optimisationSpecification`; the submitted `specKey` determines whether OD MS resolves the new DRAFT to an existing active lineage or creates a new lineage.
 
 The `activate` link relation points to `PATCH /optimisationSpecification/draft/{draftId}`. DRAFT action links use the DRAFT candidate endpoint and include `draftId` in the path. The `retire` link relation points to `DELETE /optimisationSpecification/{id}` and targets the current ACTIVE version for that `id`. `draftId` may be returned on ACTIVE and RETIRED records for provenance, but ACTIVE and RETIRED action links must not use `draftId` for mutation.
 
@@ -962,6 +966,42 @@ Content-Type: application/json
 
 Response body returns the full activated resource, including the carried-forward `draftId` and the newly assigned official `version`.
 
+```json
+{
+  "id": "optimisation-spec-surgical-routing",
+  "href": "/optimisationManagement/v1/optimisationSpecification/optimisation-spec-surgical-routing",
+  "specKey": "surgical-routing-optimisation",
+  "draftId": "od-draft-surgical-routing-a",
+  "version": "1.0.0",
+  "name": "Surgical Routing Optimisation Specification",
+  "description": "Defines the allowed optimisation request contract for surgical routing optimisation.",
+  "lifecycleStatus": "ACTIVE",
+  "statusChangeDate": "2026-05-09T05:00:00Z",
+  "creationDate": "2026-05-09T04:10:00Z",
+  "lastUpdate": "2026-05-09T05:00:00Z",
+  "@type": "OptimisationSpecification",
+  "@baseType": "EntitySpecification",
+  "_links": {
+    "self": {
+      "href": "/optimisationManagement/v1/optimisationSpecification/optimisation-spec-surgical-routing",
+      "method": "GET"
+    },
+    "collection": {
+      "href": "/optimisationManagement/v1/optimisationSpecification",
+      "method": "GET"
+    },
+    "retire": {
+      "href": "/optimisationManagement/v1/optimisationSpecification/optimisation-spec-surgical-routing",
+      "method": "DELETE"
+    },
+    "createNewVersion": {
+      "href": "/optimisationManagement/v1/optimisationSpecification",
+      "method": "POST"
+    }
+  }
+}
+```
+
 ### 18.6. PUT finalise and activate mutable DRAFT:
 
 Request:
@@ -1001,7 +1041,7 @@ Response:
 HTTP/1.1 204 No Content
 ```
 
-This operation retires the current ACTIVE version for the supplied `id`. It does not delete the lineage, retained RETIRED versions, or DRAFT candidates. If no current ACTIVE version exists for the supplied `id`, OD MS returns `404 Not Found` or `409 Conflict` according to the deployment's governance policy.
+This operation retires the current ACTIVE version for the supplied `id`. It does not delete the lineage, retained RETIRED versions, or DRAFT candidates. If no current ACTIVE version exists for the supplied `id`, OD MS returns `404 Not Found`. If a current ACTIVE version exists but retirement is blocked by governance, OD MS returns `409 Conflict`.
 
 ### 18.8. DELETE mutable DRAFT by draftId:
 
@@ -1212,4 +1252,6 @@ Optimisation specifications support short-run optimisation models, and the initi
 
 A future TMF-style `/hub` subscription model may be introduced if concrete requirements emerge for external notification of specification creation, activation, retirement, or catalogue changes.
 
-Until then, event support is deferred and must not be assumed by clients.
+A future `createFrom` capability for governed lineage reuse across retired-only `specKey` records is deferred and must not be assumed by clients. The current baseline creates a new `id` when a DRAFT is created for a `specKey` that has no current ACTIVE lineage, even if RETIRED history exists for the same `specKey`.
+
+Until then, event support and future lineage-reuse capabilities are deferred and must not be assumed by clients.
