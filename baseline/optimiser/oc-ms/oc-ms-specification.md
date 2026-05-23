@@ -6,9 +6,9 @@ Optimisation-Controller-MS (OC MS) owns the runtime `Optimisation` resource. It 
 
 OC MS accepts runtime optimisation requests, validates the generic wrapper and the referenced OD MS request contract, persists the request, emits `OptimisationRequestedEvent`, and later projects `OptimisationCompletedEvent` outcomes back into the runtime resource.
 
-OC MS validates runtime requests only against the currently referenced `ACTIVE` `OptimisationSpecification`. OD MS guarantees that `ACTIVE` and `RETIRED` specifications are immutable, so OC MS can treat the referenced `ACTIVE` specification contract as stable for the lifetime of the accepted runtime `Optimisation`.
+OC MS validates runtime requests only against the current `ACTIVE` version of the referenced `OptimisationSpecification.id`. OD MS guarantees that `ACTIVE` and `RETIRED` specification versions are immutable, so OC MS can treat the resolved `ACTIVE` specification version as stable for the lifetime of the accepted runtime `Optimisation`.
 
-OC MS does not use `familyId` or official specification `version` to select a runtime contract. Runtime validation is performed against the referenced `OptimisationSpecification.id`.
+OC MS does not use `familyId` or `expression.iri` to choose a runtime contract. Runtime validation is anchored on the referenced `OptimisationSpecification.id`; OC MS resolves the current `ACTIVE` version from OD MS at request-acceptance time and persists the resolved `version`, `draftId`, `href`, and `ETag` as contract traceability metadata.
 
 ## 2. Ownership:
 
@@ -83,6 +83,26 @@ optimisationRelationship[]
 _links
 ```
 
+Client create requests must not provide server-controlled runtime fields:
+
+```text
+id
+href
+lifecycleStatus
+statusChangeDate
+creationDate
+lastUpdate
+result
+optimisationRelationship[]
+_links
+optimisationSpecification.version
+optimisationSpecification.draftId
+optimisationSpecification.href
+optimisationSpecification.etag
+```
+
+OC MS resolves and assigns those fields at creation time or during runtime projection. If a client supplies a forbidden server-controlled field, OC MS returns `400 Bad Request`.
+
 Field notes:
 
 | **Field** | **Rule** |
@@ -90,14 +110,26 @@ Field notes:
 | `id` / `href` | Server-assigned runtime resource identity. |
 | `priority` | Optional caller-supplied priority rank represented as a string. Baseline allowed values are `"1"` = highest, `"2"` = normal, and `"3"` = low. If omitted, OC MS applies the default priority policy. |
 | `sourceContext` | Optional provenance context identifying the upstream domain and source resource that requested or caused the optimisation. It may be used for audit, traceability, and list filtering. |
-| `optimisationSpecification` | Mandatory immutable reference to the `OptimisationSpecification.id` and `href` used as the exact contract pointer at creation time. |
+| `optimisationSpecification` | Mandatory immutable reference to the resolved `ACTIVE` `OptimisationSpecification` version used as the exact contract pointer at creation time. Includes `id`, `version`, `draftId`, `href`, and optionally `etag` for cache traceability. |
 | `expression` | Accepted runtime expression submitted by the caller. `expression.iri` is mandatory and must match the referenced ACTIVE specification's `expressionSpecification.iri`. |
 | `result` | Terminal result projection only. Presence depends on lifecycle state. |
 | `optimisationRelationship[]` | Used for relationships such as `retrialOf`. |
 | `lifecycleStatus` / `statusChangeDate` | Runtime state and last lifecycle transition time. |
 | `_links` | Lifecycle-aware HATEOAS action links. |
 
-OC MS persists the referenced `OptimisationSpecification.id` and `href` as the immutable contract pointer for the life of the runtime `Optimisation`. Runtime creation requires both `optimisationSpecification.id` and `expression.iri`. OC MS MUST treat `optimisationSpecification.id` as the exact contract pointer and MUST verify that `expression.iri` matches the referenced ACTIVE specification's `expressionSpecification.iri`. OC MS MUST NOT substitute another current `ACTIVE` specification, even if the same `familyId` or `expressionSpecification.iri` later has another `ACTIVE` specification. If the referenced specification is later `RETIRED`, the runtime `Optimisation` remains valid as an audit record; OC MS does not revalidate or rewrite the specification reference.
+OC MS persists the resolved `OptimisationSpecification.id`, `version`, `draftId`, `href`, and optionally `etag` as the immutable contract pointer for the life of the runtime `Optimisation`. Runtime creation requires both `optimisationSpecification.id` and `expression.iri`. OC MS MUST use `optimisationSpecification.id` to resolve the current `ACTIVE` specification version from OD MS at acceptance time and MUST verify that `expression.iri` matches that resolved version's `expressionSpecification.iri`. OC MS MUST NOT substitute a different specification because of `familyId` or `expressionSpecification.iri`. If the resolved specification version is later `RETIRED`, the runtime `Optimisation` remains valid as an audit record; OC MS does not revalidate or rewrite the persisted specification reference.
+
+Specification reference identity model:
+
+```text
+optimisationSpecification.id = stable OD MS specification lineage identity
+optimisationSpecification.version = official immutable version resolved at acceptance time
+optimisationSpecification.draftId = provenance identifier of the draft candidate that produced the resolved version
+optimisationSpecification.href = OD MS hyperlink for the resolved version
+optimisationSpecification.etag = optional OD MS ETag captured for cache and audit traceability
+```
+
+OC MS stores the resolved `version` even when the request supplies only `optimisationSpecification.id`. This preserves the exact contract used by the runtime `Optimisation` after OD MS later activates a newer version for the same `id`.
 
 ## 5. Runtime lifecycle:
 
@@ -204,8 +236,8 @@ Content-Type: application/json
     }
   },
   "optimisationSpecification": {
-    "id": "os-7f3a9c21",
-    "href": "/optimisationSpecification/os-7f3a9c21",
+    "id": "optimisation-spec-surgical-routing",
+    "href": "/optimisationManagement/v1/optimisationSpecification/optimisation-spec-surgical-routing",
     "@type": "OptimisationSpecificationRef",
     "@referredType": "OptimisationSpecification"
   },
@@ -289,8 +321,11 @@ x-tmf-native: false
   "lastUpdate": "2026-05-02T03:00:00Z",
   "statusChangeDate": "2026-05-02T03:00:00Z",
   "optimisationSpecification": {
-    "id": "os-7f3a9c21",
-    "href": "/optimisationSpecification/os-7f3a9c21",
+    "id": "optimisation-spec-surgical-routing",
+    "version": "1.1.0",
+    "draftId": "od-draft-surgical-routing-b",
+    "href": "/optimisationManagement/v1/optimisationSpecification/optimisation-spec-surgical-routing?version=1.1.0",
+    "etag": "od-spec-surgical-routing-v1-1-r4",
     "@type": "OptimisationSpecificationRef",
     "@referredType": "OptimisationSpecification"
   },
@@ -345,28 +380,33 @@ x-tmf-native: false
 
 `201 Created` means OC MS created and persisted the runtime `Optimisation` resource immediately. Execution is asynchronous; resource creation is immediate. `201 Created` does not mean the optimisation is feasible, started, solvable, or guaranteed to produce a valid result.
 
+The response `optimisationSpecification` reference shows the resolved ACTIVE contract version persisted by OC MS. The request may provide only `optimisationSpecification.id`; `version`, `draftId`, `href`, and `etag` in the response are resolved from OD MS at acceptance time.
+
 ## 11. OD specification lookup and cache posture:
 
-On `POST /optimisation`, OC MS validates the runtime request against the referenced `OptimisationSpecification.id` and the runtime `expression.iri`. Both are mandatory for runtime creation.
+On `POST /optimisation`, OC MS validates the runtime request against the current `ACTIVE` version of the referenced `OptimisationSpecification.id` and the runtime `expression.iri`. Both are mandatory for runtime creation.
 
 Rules:
 
 ```text
 The runtime request must provide optimisationSpecification.id.
 The runtime request must provide expression.iri.
-The referenced OptimisationSpecification must exist.
-The referenced OptimisationSpecification must be ACTIVE at request-acceptance time.
-The runtime expression.iri must match the referenced OptimisationSpecification.expressionSpecification.iri.
+The referenced OptimisationSpecification.id must exist in OD MS.
+OD MS must return a current ACTIVE version for the referenced OptimisationSpecification.id at request-acceptance time.
+The runtime expression.iri must match the resolved ACTIVE version's expressionSpecification.iri.
 OC MS must not infer the current active contract by stale familyId lookup.
 OC MS must not resolve the runtime contract by expression.iri alone.
-OC MS does not use familyId, official specification version, or expression.iri to choose a runtime contract.
-OC MS persists the referenced OptimisationSpecification.id and href as the immutable contract pointer for the life of the runtime Optimisation.
-OC MS MUST treat optimisationSpecification.id as the exact contract pointer and MUST NOT substitute another current ACTIVE specification, even if the same familyId or expressionSpecification.iri later has another ACTIVE specification.
-If the specification is later RETIRED, the runtime Optimisation remains valid as an audit record; OC MS does not revalidate or rewrite the specification reference.
-OC MS may cache immutable ACTIVE OptimisationSpecification contracts by id and ETag.
-A cached ACTIVE contract for a specific id is safe because OD MS makes ACTIVE specifications immutable.
-If the referenced specification is missing, not ACTIVE, cache-missing, or cache-stale beyond the local policy, OC MS refreshes from OD MS.
+OC MS does not use familyId, draftId, official specification version, or expression.iri to choose a runtime contract.
+OC MS resolves the current ACTIVE version by OptimisationSpecification.id at acceptance time.
+OC MS persists the resolved OptimisationSpecification.id, version, draftId, href, and optionally etag as the immutable contract pointer for the life of the runtime Optimisation.
+OC MS MUST NOT substitute a different specification because of familyId or expressionSpecification.iri.
+If the resolved specification version is later RETIRED, the runtime Optimisation remains valid as an audit record; OC MS does not revalidate or rewrite the specification reference.
+OC MS may cache immutable ACTIVE OptimisationSpecification contracts by id, version, and ETag.
+A cached ACTIVE contract for a specific id and version is safe because OD MS makes ACTIVE and RETIRED versions immutable.
+If the referenced specification is missing, no ACTIVE version exists, cache-missing, or cache-stale beyond the local policy, OC MS refreshes from OD MS.
 ```
+
+Runtime requests normally supply only `optimisationSpecification.id`. If a client supplies `optimisationSpecification.version` or `optimisationSpecification.draftId` on creation, OC MS treats those fields as client hints only and must verify them against the current ACTIVE version resolved from OD MS. A mismatch returns `422 Unprocessable Entity`; OC MS must not create a runtime `Optimisation` against a non-current, `DRAFT`, or `RETIRED` specification version.
 
 ## 12. OC MS validation boundary:
 
@@ -376,22 +416,19 @@ OC MS validates:
 generic REST wrapper using its static API/OpenAPI contract
 optimisationSpecification.id is present
 expression.iri is present
-referenced OptimisationSpecification exists in OD MS
-referenced OptimisationSpecification lifecycleStatus is ACTIVE
-referenced ACTIVE OptimisationSpecification contract is immutable by OD MS lifecycle governance
+referenced OptimisationSpecification.id exists in OD MS
+referenced OptimisationSpecification.id has a current ACTIVE version
+resolved ACTIVE OptimisationSpecification version is immutable by OD MS lifecycle governance
+resolved version, draftId, href, and optional etag are persisted as contract traceability metadata
 expression wrapper shape:
   expression.@type = JsonLdExpression
   expression.@baseType = Expression
-  expression.iri matches the referenced OptimisationSpecification.expressionSpecification.iri
-expression.expressionValue against the referenced ACTIVE OptimisationSpecification.targetEntitySchema
-expression.expressionValue.@context contains the required optimiser ontology mappings
-expression.expressionValue.@type = opt:OptimisationProblem
-expression.expressionValue.context shape
-expression.expressionValue.context.targets[] entries
-expression.expressionValue.context.constraints[] entries
-expression.expressionValue.context.preferences[] entries
-cardinality and allowed values defined by targetEntitySchema
+  expression.iri matches the resolved ACTIVE OptimisationSpecification version's expressionSpecification.iri
+expression.expressionValue against the resolved ACTIVE OptimisationSpecification version's targetEntitySchema
+expression.expressionValue JSON-LD context, type, container shape, target entries, constraint entries, preference entries, cardinality, and allowed values as defined by the resolved targetEntitySchema
 ```
+
+OC MS must not hardcode a universal `expressionValue.@context` alias set or `expressionValue.@type` value outside the resolved `targetEntitySchema`. Concrete `OptimisationSpecification` contracts may use different ontology IRIs or JSON-LD aliases when OD MS governs them through the target entity schema.
 
 OC MS does not validate:
 
@@ -435,7 +472,7 @@ OC MS may use eventId/ce-id, inbox deduplication state, and monotonic lifecycle/
 Request:
 
 ```http
-GET /optimisation?lifecycleStatus=PROCESSING&fields=id,href,lifecycleStatus,statusChangeDate
+GET /optimisation?lifecycleStatus=PROCESSING&offset=0&limit=50&fields=id,href,lifecycleStatus,statusChangeDate
 ```
 
 Supported first-level filters:
@@ -447,12 +484,25 @@ Supported first-level filters:
 | `sourceContext.domain` | Exact match on source context domain where present. |
 | `sourceContext.resource.id` | Exact match on source resource id where present. |
 | `optimisationSpecification.id` | Exact match on referenced OptimisationSpecification id. |
+| `optimisationSpecification.version` | Exact match on resolved official OptimisationSpecification version persisted at acceptance time. |
+| `optimisationSpecification.draftId` | Exact match on the draft candidate provenance identifier persisted from the resolved OptimisationSpecification version. |
 | `creationDate.gt` / `creationDate.lt` | Optional creation timestamp range filters. |
 | `lastUpdate.gt` / `lastUpdate.lt` | Optional last-update timestamp range filters. |
 | `statusChangeDate.gt` / `statusChangeDate.lt` | Optional lifecycle-state-change timestamp range filters. |
+| `offset` | Zero-based starting position for paging. Default is `0`. |
+| `limit` | Maximum number of resources returned in the current page. Default and maximum are deployment-governed. |
 | `fields` | Optional sparse fieldset projection. |
 
-Unsupported or malformed query parameters return `400 Bad Request`.
+Unsupported or malformed query parameters return `400 Bad Request`. Invalid `offset` or `limit` values also return `400 Bad Request`.
+
+Paging rule:
+
+```text
+offset is the zero-based starting position.
+limit is the maximum number of resources returned in the current page.
+X-Total-Count reflects the number of resources matching filters before paging.
+X-Result-Count reflects the number of resources returned in the current page after paging.
+```
 
 Sparse field projection rule:
 
@@ -505,8 +555,11 @@ Active-state example:
   "lastUpdate": "2026-05-02T03:01:00Z",
   "statusChangeDate": "2026-05-02T03:01:00Z",
   "optimisationSpecification": {
-    "id": "os-7f3a9c21",
-    "href": "/optimisationSpecification/os-7f3a9c21",
+    "id": "optimisation-spec-surgical-routing",
+    "version": "1.1.0",
+    "draftId": "od-draft-surgical-routing-b",
+    "href": "/optimisationManagement/v1/optimisationSpecification/optimisation-spec-surgical-routing?version=1.1.0",
+    "etag": "od-spec-surgical-routing-v1-1-r4",
     "@type": "OptimisationSpecificationRef",
     "@referredType": "OptimisationSpecification"
   },
@@ -572,6 +625,15 @@ Completed-state example:
   "creationDate": "2026-05-02T03:00:00Z",
   "lastUpdate": "2026-05-02T03:03:00Z",
   "statusChangeDate": "2026-05-02T03:03:00Z",
+  "optimisationSpecification": {
+    "id": "optimisation-spec-surgical-routing",
+    "version": "1.1.0",
+    "draftId": "od-draft-surgical-routing-b",
+    "href": "/optimisationManagement/v1/optimisationSpecification/optimisation-spec-surgical-routing?version=1.1.0",
+    "etag": "od-spec-surgical-routing-v1-1-r4",
+    "@type": "OptimisationSpecificationRef",
+    "@referredType": "OptimisationSpecification"
+  },
   "result": {
     "outcome": "SUCCESS",
     "summary": "Optimisation completed successfully.",
@@ -642,8 +704,8 @@ Retrial request body:
 ```text
 No request body is required.
 Baseline retrial does not allow request overrides.
-Retrial resubmits the original accepted expression and referenced OptimisationSpecification.id unchanged.
-To change targets, constraints, preferences, source context, priority, or the referenced OptimisationSpecification, the caller must create a new Optimisation request rather than using retrial.
+Retrial resubmits the original accepted expression and the persisted resolved OptimisationSpecification reference unchanged, including `id`, `version`, `draftId`, `href`, and optional `etag`.
+To change targets, constraints, preferences, source context, priority, or the referenced OptimisationSpecification contract, the caller must create a new Optimisation request rather than using retrial.
 ```
 
 Retrial response creates a new Optimisation and links it to the failed optimisation:
@@ -654,6 +716,15 @@ Retrial response creates a new Optimisation and links it to the failed optimisat
   "href": "/optimisation/opt-67890",
   "lifecycleStatus": "ACKNOWLEDGED",
   "statusChangeDate": "2026-05-02T04:00:00Z",
+  "optimisationSpecification": {
+    "id": "optimisation-spec-surgical-routing",
+    "version": "1.1.0",
+    "draftId": "od-draft-surgical-routing-b",
+    "href": "/optimisationManagement/v1/optimisationSpecification/optimisation-spec-surgical-routing?version=1.1.0",
+    "etag": "od-spec-surgical-routing-v1-1-r4",
+    "@type": "OptimisationSpecificationRef",
+    "@referredType": "OptimisationSpecification"
+  },
   "optimisationRelationship": [
     {
       "@type": "EntityRelationship",
@@ -697,25 +768,25 @@ Unsupported request content type returns 415 Unsupported Media Type.
 
 | **Condition** | **Response** |
 |---|---|
-| Missing or mismatched `optimisationSpecification.id`, `expression.iri`, or referenced `targetEntitySchema` contract failure | `422 Unprocessable Entity` |
-| Referenced `OptimisationSpecification` is missing or not visible | `404 Not Found` |
-| Referenced `OptimisationSpecification` is not `ACTIVE` | `422 Unprocessable Entity` |
+| Missing or mismatched `optimisationSpecification.id`, `expression.iri`, supplied specification `version` or `draftId` hint, or referenced `targetEntitySchema` contract failure | `422 Unprocessable Entity` |
+| Referenced `OptimisationSpecification.id` is missing or not visible | `404 Not Found` |
+| Referenced `OptimisationSpecification.id` has no current `ACTIVE` version | `422 Unprocessable Entity` |
 | Cancellation/retrial requested in an invalid lifecycle state | `409 Conflict` |
 | Cancellation requested for a terminal lifecycle state | `409 Conflict` |
 | Missing `If-Match` on cancellation/retrial | `428 Precondition Required` |
 | Stale or wrong `If-Match` on cancellation/retrial | `412 Precondition Failed` |
 | Unsupported `Content-Type` | `415 Unsupported Media Type` |
-| Malformed JSON, malformed query parameter, or unsupported query parameter | `400 Bad Request` |
+| Malformed JSON, malformed query parameter, unsupported query parameter, invalid paging parameter, or client-supplied forbidden server-controlled field | `400 Bad Request` |
 
 Boundary rules:
 
 ```text
-422 = request/expression/OD targetEntitySchema contract violation, including missing `optimisationSpecification.id`, missing `expression.iri`, or mismatch between `expression.iri` and the referenced specification's `expressionSpecification.iri`.
+422 = request, expression, or OD targetEntitySchema contract violation, including missing `optimisationSpecification.id`, missing `expression.iri`, mismatch between `expression.iri` and the resolved specification version's `expressionSpecification.iri`, no current ACTIVE version for the referenced specification id, or mismatch between supplied specification `version` or `draftId` hints and the resolved current ACTIVE version.
 409 = runtime lifecycle/action conflict.
 428 = required If-Match missing.
 412 = supplied If-Match does not match current ETag.
 415 = unsupported request media type.
-400 = malformed request or unsupported query/filter parameter.
+400 = malformed request, unsupported query/filter parameter, invalid paging parameter, or client-supplied forbidden server-controlled runtime field.
 ```
 
 Contract violation example:
@@ -729,7 +800,7 @@ Content-Type: application/json
 {
   "code": "OPTIMISATION_CONTRACT_VIOLATION",
   "reason": "Optimisation contract violation",
-  "message": "The submitted Optimisation request does not satisfy the referenced ACTIVE OptimisationSpecification contract, including required optimisationSpecification.id, expression.iri, expressionSpecification.iri matching, and targetEntitySchema validation.",
+  "message": "The submitted Optimisation request does not satisfy the resolved ACTIVE OptimisationSpecification contract, including required optimisationSpecification.id, expression.iri, expressionSpecification.iri matching, optional version or draftId hint matching, and targetEntitySchema validation.",
   "status": 422,
   "@type": "Error"
 }
