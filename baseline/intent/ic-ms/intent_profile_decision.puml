@@ -14,17 +14,19 @@ rectangle "Intent management entity\nmandatory profile\n\nTMF-aligned, not TMF-m
 TMF --> PROFILE : implementation profile\nfor runtime Intent handling
 
 rectangle "Primary profile:\nruntime Intent admission" as ADMISSION #FFE0B2 {
-  rectangle "Minimum admission request\n\n- name\n- expression\n- expression.@type\n- expression.iri\n- expression.expressionValue\n- @type\n- @baseType" as ADMISSION_MIN
+  rectangle "Minimum admission request\n\n- name\n- intentSpecification.id\n- expression\n- expression.@type\n- expression.iri\n- expression.expressionValue\n- @type\n- @baseType" as ADMISSION_MIN
 
-  rectangle "Strongly encouraged\n\n- humanExpression\n- intentSpecification.id" as ADMISSION_RECOMMENDED
+  rectangle "Strongly encouraged\n\n- humanExpression" as ADMISSION_RECOMMENDED
 
-  rectangle "IntentSpecification resolution\n\nintentSpecification.id supplied:\n- authoritative\n- must reference ACTIVE spec\n- must align with expression.iri\n\nintentSpecification.id omitted:\n- resolve ACTIVE spec by expression.iri\n- reject zero or multiple matches" as RESOLUTION
+  rectangle "Both are mandatory\nfor admission\n\nintentSpecification.id selects\nthe platform-managed specification.\n\nexpression.iri identifies\nthe semantic/expression contract." as BOTH_REQUIRED
+
+  rectangle "Consistency validation\n\n1. Retrieve ACTIVE IntentSpecification\n   by intentSpecification.id\n2. Compare runtime expression.iri\n   with IntentSpecification.expressionSpecification.iri\n3. Reject if missing or mismatched" as CONSISTENCY
 }
 
 rectangle "Persisted Intent response\nafter admission is accepted" as ADMISSION_RESPONSE #E0F2F1 {
   rectangle "Minimum response attributes\n\n- id\n- href\n- name\n- version\n- lifecycleStatus\n- statusReason\n- statusChangeDate\n- intentSpecification.id\n- expression\n- expression.@type\n- expression.iri\n- expression.expressionValue\n- @type\n- @baseType" as RESPONSE_MIN
 
-  rectangle "Key distinction\n\nintentSpecification.id is optional\nin the admission request,\nbut mandatory in the persisted\nresponse after admission." as RESPONSE_DISTINCTION
+  rectangle "Key distinction\n\nintentSpecification.id is mandatory\nin the admission request and\nin the persisted response.\n\nexpression.iri is mandatory\nin the admission request and\npersisted expression." as RESPONSE_DISTINCTION
 }
 
 rectangle "Small Draft add-on:\npre-admission authoring context" as DRAFT #FFF8E1 {
@@ -32,7 +34,7 @@ rectangle "Small Draft add-on:\npre-admission authoring context" as DRAFT #FFF8E
 
   rectangle "Strongly recommended\nfor Draft\n\n- humanExpression" as DRAFT_RECOMMENDED
 
-  rectangle "Draft does not require\n\n- expression\n- expression.iri\n- expression.expressionValue\n- intentSpecification.id" as DRAFT_NOT_REQUIRED
+  rectangle "Draft does not require\n\n- intentSpecification.id\n- expression\n- expression.iri\n- expression.expressionValue" as DRAFT_NOT_REQUIRED
 
   rectangle "Minimum Draft response\n\n- id\n- href\n- name\n- submit = false\n- lifecycleStatus = Draft\n- statusReason\n- statusChangeDate\n- @type\n- @baseType" as DRAFT_RESPONSE
 
@@ -40,7 +42,7 @@ rectangle "Small Draft add-on:\npre-admission authoring context" as DRAFT #FFF8E
 }
 
 rectangle "Optional intent-management-entity\ngoverned enrichment fields" as ENRICHMENT #F3E5F5 {
-  rectangle "Strongly recommended\nbut not generically mandatory\n\n- humanExpression\n- intentSpecification.id\n  in admission request" as ENRICHMENT_RECOMMENDED
+  rectangle "Strongly recommended\nbut not generically mandatory\n\n- humanExpression" as ENRICHMENT_RECOMMENDED
 
   rectangle "Optional / governed\n\n- description\n- validFor.startDateTime\n- isBundle\n- priority\n- relatedParty\n- _links" as ENRICHMENT_OPTIONAL
 
@@ -54,8 +56,9 @@ rectangle "Lifecycle ownership guardrail" as GUARDRAIL #E3F2FD {
 }
 
 PROFILE --> ADMISSION : main baseline
-ADMISSION --> RESOLUTION : validate / resolve contract
-RESOLUTION --> ADMISSION_RESPONSE : admission accepted
+ADMISSION --> BOTH_REQUIRED : requires exact resource\nand semantic contract
+BOTH_REQUIRED --> CONSISTENCY : validate before admission
+CONSISTENCY --> ADMISSION_RESPONSE : admission accepted
 PROFILE --> DRAFT : small pre-admission add-on
 DRAFT --> ADMISSION : submit=true requires\nnormal admission profile
 PROFILE --> ENRICHMENT : separate optional enrichment
@@ -64,6 +67,8 @@ PROFILE --> GUARDRAIL : common write rule
 note bottom of ADMISSION
 Primary paper focus:
 runtime Intent admission profile.
+Admission requires both
+intentSpecification.id and expression.iri.
 end note
 
 note bottom of DRAFT
