@@ -378,6 +378,13 @@ _ANCHOR_LIST_ITEM_RE = re.compile(
 )
 _NEXT_HEADING_RE = re.compile(r"^\#{1,6}[ \t]+")
 
+# H1 headings to strip from the Markdown source. The Confluence page title
+# already serves as the document's top-level heading, so an in-body H1 is
+# redundant (and would appear as a duplicate H1 in the TOC macro).
+# Matches both ATX-style (`# Heading`) and Setext-style (`Heading\n=====`).
+_ATX_H1_RE = re.compile(r"^[ \t]*\#[ \t]+[^\n]*\n?", re.MULTILINE)
+_SETEXT_H1_RE = re.compile(r"^[^\n]+\n=+[ \t]*\n?", re.MULTILINE)
+
 # Raw `<ac:structured-macro ac:name="toc|status">...</ac:structured-macro>`
 # blocks that an author pasted into the Markdown source. The regex is
 # permissive about attribute order, whitespace, and multi-line content.
@@ -493,9 +500,41 @@ def strip_existing_status_and_toc(md_text: str) -> Tuple[str, int]:
     out, n = _strip_manual_toc_blocks(out)
     removed += n
 
+    # 4. H1 headings (ATX `# ...` and Setext `...\n===`). The page title
+    #    already serves this role.
+    out, n = _strip_h1_headings(out)
+    removed += n
+
     # Collapse blank-line runs created by deletions
     out = re.sub(r"\n{3,}", "\n\n", out)
     return out, removed
+
+
+def _strip_h1_headings(md_text: str) -> Tuple[str, int]:
+    """
+    Remove all top-level (H1) headings from the Markdown source.
+
+    Handles two cases:
+      * ATX style:    `# Heading`
+      * Setext style: `Heading\n=======`
+
+    Care is taken NOT to strip inside fenced code blocks — a line like
+    `# hello world` inside a ```python block is a comment, not a heading.
+    """
+    # Split on fenced code blocks so we only process Markdown prose regions.
+    # A simple state machine is more robust than a single regex here.
+    parts = re.split(r"(```[^\n]*\n.*?\n```)", md_text, flags=re.DOTALL)
+    removed = 0
+    for idx, part in enumerate(parts):
+        if part.startswith("```"):
+            continue  # leave fenced blocks untouched
+        # ATX `# Heading` — but not `##`, `###`, etc.
+        part_new, n1 = _ATX_H1_RE.subn("", part)
+        # Setext `Heading\n=====`
+        part_new, n2 = _SETEXT_H1_RE.subn("", part_new)
+        removed += n1 + n2
+        parts[idx] = part_new
+    return "".join(parts), removed
 
 
 def build_footer(source_path: Path, base_url: Optional[str] = None) -> str:
@@ -588,6 +627,9 @@ def export_offline(md_path: Path, output_dir: Path,
     output_dir.mkdir(parents=True, exist_ok=True)
     images_dir = output_dir / "images"
     images_dir.mkdir(exist_ok=True)
+    # Note: footer + comment header are intentionally omitted from offline
+    # exports — the output should be a clean Confluence page body, ready
+    # to paste with no manual cleanup.
 
     # Copy each discovered image into the bundle under its disambiguated name
     copied: List[Tuple[str, str]] = []
@@ -606,22 +648,11 @@ def export_offline(md_path: Path, output_dir: Path,
             LOG.error("Image not found: %s (referenced as %s)", m.abs_path, m.src)
         raise FileNotFoundError(f"{len(missing)} image(s) missing on disk")
 
-    footer = build_footer(md_path, base_url=None)
-    final_body = storage_body + footer
-
-    image_list = (
-        "\n".join(f"  - {fn}   (from {src})" for fn, src in copied) or "  (none)"
-    )
-    header = OFFLINE_INSTRUCTIONS.format(
-        generated_at=datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M UTC"),
-        source_path=md_path.resolve(),
-        image_count=len(copied),
-        image_list=image_list,
-    )
-
     out_file = output_dir / f"{md_path.stem}.confluence.xhtml"
-    out_file.write_text(header + final_body + OFFLINE_END_MARKER, encoding="utf-8")
+    out_file.write_text(storage_body, encoding="utf-8")
 
+    # The MANIFEST.txt remains as a sidecar so users know which images to
+    # drag-attach — it lives alongside the XHTML file, not inside it.
     manifest = output_dir / "MANIFEST.txt"
     manifest.write_text(
         "Confluence offline export\n"
@@ -629,7 +660,12 @@ def export_offline(md_path: Path, output_dir: Path,
         f"Source:    {md_path.resolve()}\n"
         f"Body file: {out_file.name}\n"
         f"Images:    {len(copied)} file(s) in images/\n\n"
-        + "\n".join(f"  {fn}" for fn, _ in copied)
+        "To publish:\n"
+        f"  1. Paste the contents of {out_file.name} into Confluence's\n"
+        "     source / storage-format editor.\n"
+        "  2. Drag-attach every file from images/ to the same page.\n\n"
+        "Images to attach:\n"
+        + ("\n".join(f"  {fn}" for fn, _ in copied) or "  (none)")
         + "\n",
         encoding="utf-8",
     )
@@ -1032,6 +1068,7 @@ def publish(cfg: PublishConfig) -> Dict[str, Any]:
         md_text, cfg.md_path.parent,
         status_text=cfg.status_text, status_colour=cfg.status_colour,
     )
+    # Footer intentionally omitted — keep the page clean.
     LOG.info("Discovered %d local image reference(s)", len(image_refs))
 
     # Validate every local image actually exists on disk before we touch the API
@@ -1041,8 +1078,7 @@ def publish(cfg: PublishConfig) -> Dict[str, Any]:
             LOG.error("Image not found: %s (referenced as %s)", m.abs_path, m.src)
         raise FileNotFoundError(f"{len(missing)} image(s) missing on disk")
 
-    footer = build_footer(cfg.md_path, cfg.base_url)
-    final_body = storage_body + footer
+    final_body = storage_body
 
     if cfg.dry_run:
         LOG.info("DRY RUN — emitting storage XHTML to stdout")

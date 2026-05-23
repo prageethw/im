@@ -1,4 +1,4 @@
-# Runtime Intent contract reference decision: IRI, IntentSpecification ID, or both?
+# Runtime Intent contract reference decision: IRI, IntentSpecification ID, or both:
 
 | **Document status** | **Value** |
 | --- | --- |
@@ -11,24 +11,25 @@
 ## Table of contents:
 
 - [1. Decision summary](#1-decision-summary)
-- [2. Context](#2-context)
-- [3. Decision drivers](#3-decision-drivers)
-- [4. Options considered](#4-options-considered)
-  - [4.1 Use expression.iri only](#41-use-expressioniri-only)
-  - [4.2 Use intentSpecification.id only](#42-use-intentspecificationid-only)
-  - [4.3 Require both intentSpecification.id and expression.iri](#43-require-both-intentspecificationid-and-expressioniri)
-- [5. Decision](#5-decision)
-- [6. Validation rule](#6-validation-rule)
-- [7. Examples](#7-examples)
-  - [7.1 Valid admission request](#71-valid-admission-request)
-  - [7.2 Rejected request when intentSpecification.id is missing](#72-rejected-request-when-intentspecificationid-is-missing)
-  - [7.3 Rejected request when IRI does not match the specification](#73-rejected-request-when-iri-does-not-match-the-specification)
-- [8. Consequences](#8-consequences)
-  - [8.1 Positive consequences](#81-positive-consequences)
-  - [8.2 Trade-offs](#82-trade-offs)
-- [9. Proposal outcome](#9-proposal-outcome)
-- [10. References](#10-references)
-- [11. Follow-up work](#11-follow-up-work)
+- [2. Proposal flow diagram](#2-proposal-flow-diagram)
+- [3. Context](#3-context)
+- [4. Decision drivers](#4-decision-drivers)
+- [5. Options considered](#5-options-considered)
+  - [5.1 Use expression.iri only](#51-use-expressioniri-only)
+  - [5.2 Use intentSpecification.id only](#52-use-intentspecificationid-only)
+  - [5.3 Require both intentSpecification.id and expression.iri](#53-require-both-intentspecificationid-and-expressioniri)
+- [6. Proposal](#6-proposal)
+- [7. Validation rule](#7-validation-rule)
+- [8. Examples](#8-examples)
+  - [8.1 Valid admission request](#81-valid-admission-request)
+  - [8.2 Rejected request when intentSpecification.id is missing](#82-rejected-request-when-intentspecificationid-is-missing)
+  - [8.3 Rejected request when IRI does not match the specification](#83-rejected-request-when-iri-does-not-match-the-specification)
+- [9. Consequences](#9-consequences)
+  - [9.1 Positive consequences](#91-positive-consequences)
+  - [9.2 Trade-offs](#92-trade-offs)
+- [10. Proposal outcome](#10-proposal-outcome)
+- [11. References](#11-references)
+- [12. Follow-up work](#12-follow-up-work)
 
 ## 1. Decision summary:
 
@@ -56,7 +57,7 @@ Draft creation remains lighter and does not require either field. This decision 
 ![Intent mandatory iri vs spec.id proposal](intent_iri_specification_id_decision.svg)
 
 
-## 2. Context:
+## 3. Context:
 
 A runtime `Intent` carries structured expression content in `expression.expressionValue`.
 
@@ -73,7 +74,7 @@ The same `expression.iri` can be used by multiple `IntentSpecification` resource
 
 Therefore, allowing runtime admission by IRI alone can be ambiguous.
 
-## 3. Decision drivers:
+## 4. Decision drivers:
 
 | **Driver** | **Need** |
 | --- | --- |
@@ -84,9 +85,9 @@ Therefore, allowing runtime admission by IRI alone can be ambiguous.
 | Operator clarity | Operators should not need to infer which specification was selected from IRI alone. |
 | TMF alignment | Remain aligned with TMF-style resource references while applying a stricter intent management entity profile. |
 
-## 4. Options considered:
+## 5. Options considered:
 
-### 4.1 Use expression.iri only:
+### 5.1 Use expression.iri only:
 
 This option makes `expression.iri` the only mandatory contract reference in runtime admission.
 
@@ -102,7 +103,7 @@ Problems:
 - audit trails become harder to explain
 - adding a second active specification with the same IRI can change runtime admission behaviour
 
-### 4.2 Use intentSpecification.id only:
+### 5.2 Use intentSpecification.id only:
 
 This option makes `intentSpecification.id` mandatory but does not require `expression.iri`.
 
@@ -117,7 +118,7 @@ Problems:
 - IC MS cannot check that the runtime expression IRI and selected specification IRI are consistent
 - the expression body becomes less portable and less self-describing
 
-### 4.3 Require both intentSpecification.id and expression.iri:
+### 5.3 Require both intentSpecification.id and expression.iri:
 
 This option makes both fields mandatory for runtime admission.
 
@@ -131,7 +132,7 @@ Benefits:
 - audit records contain both the platform governance reference and the semantic contract reference
 - no ambiguous active-specification resolution is needed during admission
 
-## 5. Proposal:
+## 6. Proposal:
 
 Runtime `Intent` admission requires:
 
@@ -152,7 +153,7 @@ The admission request is rejected if:
 
 Draft creation is not affected by this decision. Draft creation may omit both fields because Draft is not admitted into runtime processing.
 
-## 6. Validation rule:
+## 7. Validation rule:
 
 The validation rule is:
 
@@ -168,9 +169,9 @@ The validation rule is:
 
 This means the intent management entity does not infer the governing runtime contract from `expression.iri` alone.
 
-## 7. Examples:
+## 8. Examples:
 
-### 7.1 Valid admission request:
+### 8.1 Valid admission request:
 
 ```json
 {
@@ -211,7 +212,7 @@ This request is valid only if `hospital-surgical-slice-spec-v1.20` is active and
 https://example.com/tio/hospital-surgical-slice/v1.0
 ```
 
-### 7.2 Rejected request when intentSpecification.id is missing:
+### 8.2 Rejected request when intentSpecification.id is missing:
 
 ```json
 {
@@ -236,7 +237,7 @@ Suggested error reason:
 MISSING_INTENT_SPECIFICATION_ID
 ```
 
-### 7.3 Rejected request when IRI does not match the specification:
+### 8.3 Rejected request when IRI does not match the specification:
 
 ```json
 {
@@ -264,9 +265,9 @@ Suggested error reason:
 INTENT_EXPRESSION_IRI_MISMATCH
 ```
 
-## 8. Consequences:
+## 9. Consequences:
 
-### 8.1 Positive consequences:
+### 9.1 Positive consequences:
 
 - Admission is deterministic.
 - IC MS does not need ambiguous active-specification resolution by IRI alone.
@@ -275,7 +276,7 @@ INTENT_EXPRESSION_IRI_MISMATCH
 - Operators can see both the governing specification and semantic contract.
 - Future introduction of multiple active specifications with the same IRI does not change admission behaviour.
 
-### 8.2 Trade-offs:
+### 9.2 Trade-offs:
 
 - Requesters must know the active `IntentSpecification.id` before admission.
 - OEX or catalogue discovery becomes more important.
@@ -284,7 +285,7 @@ INTENT_EXPRESSION_IRI_MISMATCH
 
 These trade-offs are acceptable because they remove ambiguity from runtime admission and make audit/governance stronger.
 
-## 9. Proposal outcome:
+## 10. Proposal outcome:
 
 This proposal recommends the following baseline:
 
@@ -295,7 +296,7 @@ This proposal recommends the following baseline:
 - IC MS rejects admission if `expression.iri` does not match `IntentSpecification.expressionSpecification.iri`.
 - Persisted Intent responses after admission include both the selected `intentSpecification.id` and the runtime `expression.iri`.
 
-## 10. References:
+## 11. References:
 
 | **Reference** | **URL** | **Relevance to this proposal** |
 | --- | --- | --- |
@@ -304,7 +305,7 @@ This proposal recommends the following baseline:
 | TR299 Intent Specification | https://www.tmforum.org/resources/standard/tr299-intent-specification/ | Provides the intent specification concept used to define rules for well-formed intent and allowed intent content. |
 | Intent architecture baseline repository | https://github.com/prageethw/im/tree/main/baseline/intent | Holds the intent architecture baseline and project-specific profile artefacts. |
 
-## 11. Follow-up work:
+## 12. Follow-up work:
 
 After this proposal is reviewed and baselined, update affected architecture and specification artefacts surgically:
 
