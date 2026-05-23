@@ -131,7 +131,7 @@ Benefits:
 - audit records contain both the platform governance reference and the semantic contract reference
 - no ambiguous active-specification resolution is needed during admission
 
-## 5. Decision:
+## 5. Proposal:
 
 Runtime `Intent` admission requires:
 
