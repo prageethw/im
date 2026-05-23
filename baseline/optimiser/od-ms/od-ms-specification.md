@@ -136,7 +136,7 @@ targetEntitySchema
 @type
 ```
 
-Recommended create fields:
+Additional recommended create fields:
 
 ```text
 description
