@@ -1,4 +1,4 @@
-# Intent mandatory profile proposal
+# Intent mandatory profile proposal:
 
 | **Document status** | **Value** |
 | --- | --- |
@@ -30,7 +30,7 @@
   - [7.1 Positive consequences](#71-positive-consequences)
   - [7.2 Trade-offs](#72-trade-offs)
 - [8. Alternatives considered](#8-alternatives-considered)
-  - [8.1 Make intentSpecification.id mandatory in every admission request](#81-make-intentspecificationid-mandatory-in-every-admission-request)
+  - [8.1 Allow admission by expression.iri alone](#81-allow-admission-by-expressioniri-alone)
   - [8.2 Make humanExpression mandatory](#82-make-humanexpression-mandatory)
   - [8.3 Allow admission request without expression.iri](#83-allow-admission-request-without-expressioniri)
 - [9. Proposal outcome](#9-proposal-outcome)
@@ -49,7 +49,7 @@ Draft is treated only as a small pre-admission authoring context. Draft does not
 
 The key proposals are:
 
-- define the minimum mandatory attributes for runtime `Intent` admission
+- define the minimum mandatory attributes for runtime `Intent` admission, including both `intentSpecification.id` and `expression.iri`
 - define the minimum mandatory attributes for a persisted Intent response after admission is accepted
 - define the minimum attributes for `Intent` Draft creation
 - define the minimum response attributes for `Intent` Draft creation
@@ -65,7 +65,7 @@ This proposal defines a candidate intent management entity profile rule. It does
 
 An `IntentSpecification` defines the reusable contract. A runtime `Intent` is a concrete request made against that contract, either by explicit reference to an `IntentSpecification` or by an expression IRI that can be resolved to one active specification.
 
-The admission request must contain enough machine-readable information to resolve and validate the runtime request. The persisted Intent must contain enough information to trace the request, audit the decision, project lifecycle state, and support later version or update handling.
+The admission request must contain enough machine-readable information to identify the governing `IntentSpecification`, confirm the semantic expression contract, and validate the runtime request. The persisted Intent must contain enough information to trace the request, audit the decision, project lifecycle state, and support later version or update handling.
 
 Draft is a pre-admission authoring convenience. A Draft Intent may be incomplete because it is not admitted, not validated for runtime processing, and not sent downstream.
 
@@ -84,7 +84,7 @@ The intent management entity must be able to answer questions such as:
 | **Driver** | **Need** |
 | --- | --- |
 | Runtime admission safety | Ensure admission requests contain enough machine-readable content to validate the runtime intent. |
-| Specification resolution | Support explicit `intentSpecification.id` where supplied, or unambiguous resolution by `expression.iri` where omitted. |
+| Specification resolution | Require explicit `intentSpecification.id` for admission and require `expression.iri` to confirm the semantic/expression contract. |
 | Traceability | Persist the resolved `intentSpecification.id` and lifecycle metadata after admission. |
 | Human readability | Strongly encourage `humanExpression` so operators and auditors can quickly understand the business request. |
 | Lifecycle projection | Ensure persisted intents expose lifecycle state, status reason, and status change time. |
@@ -112,6 +112,7 @@ Admission is the point where the intent management entity accepts the Intent int
 The minimum admission request must include:
 
 - `name`
+- `intentSpecification.id`
 - `expression`
 - `expression.@type`
 - `expression.iri`
@@ -122,11 +123,10 @@ The minimum admission request must include:
 The admission request is **strongly** encouraged to include:
 
 - `humanExpression`
-- `intentSpecification.id`
 
 `humanExpression` is strongly recommended because it improves human traceability, auditability, triage, and business-level interpretation. It is not mandatory because the authoritative validation input is the structured expression.
 
-`intentSpecification.id` is strongly recommended because it removes resolution ambiguity, improves traceability, and allows faster interpretation by operators and downstream systems. It is not mandatory because the intent management entity can resolve the applicable active `IntentSpecification` using `expression.iri` when there is exactly one active match.
+`intentSpecification.id` is mandatory for admission because it selects the exact platform-managed `IntentSpecification` resource used for validation, governance, and audit. `expression.iri` is also mandatory because it identifies the semantic/expression contract the runtime expression claims to follow. Both fields are required because they serve different purposes.
 
 ### 5.3 Minimum attributes for Intent Draft creation:
 
@@ -240,23 +240,17 @@ Recommended Draft creation response payload with `humanExpression` when supplied
 
 `expression.iri` is mandatory for admission.
 
-`intentSpecification.id` is optional in the admission request.
+`intentSpecification.id` is mandatory in the admission request.
 
-If `intentSpecification.id` is supplied:
+For admission:
 
-- it is authoritative
 - the referenced `IntentSpecification` must exist
 - the referenced `IntentSpecification` must be active
 - the runtime `expression.iri` must be consistent with the specification's `expressionSpecification.iri`
 
-If `intentSpecification.id` is omitted:
+If `intentSpecification.id` is omitted, the admission request must be rejected. The intent management entity does not infer the governing runtime contract from `expression.iri` alone.
 
-- the intent management entity resolves the applicable active `IntentSpecification` using `expression.iri`
-- if exactly one active `IntentSpecification` matches, the request may be admitted
-- if zero active specifications match, the request must be rejected
-- if multiple active specifications match, the request must be rejected and the requester must supply `intentSpecification.id`
-
-After successful admission, `intentSpecification.id` becomes mandatory on the persisted `Intent` representation because the intent management entity must record which active specification governed validation and admission.
+After successful admission, `intentSpecification.id` remains mandatory on the persisted `Intent` representation because the intent management entity must record which active specification governed validation and admission.
 
 ### 5.6 Persisted response profile after admission:
 
@@ -269,6 +263,7 @@ A persisted `Intent` response after admission is accepted must include:
 - `lifecycleStatus`
 - `statusReason`
 - `statusChangeDate`
+- `intentSpecification.id`
 - `intentSpecification.id`
 - `expression`
 - `expression.@type`
@@ -312,7 +307,7 @@ The examples use a hospital surgical-connectivity scenario only to make the prof
 
 ### 6.1 Minimal admission request:
 
-This example supplies `intentSpecification.id`, which is strongly recommended but not mandatory when `expression.iri` resolves unambiguously.
+This example supplies both `intentSpecification.id` and `expression.iri`, because both are mandatory for admission and serve different purposes.
 
 ```json
 {
@@ -405,8 +400,8 @@ If accepted, this proposal gives the intent management entity:
 
 If accepted, this proposal also means:
 
-- requesters can submit a minimal machine-readable intent without `humanExpression` or `intentSpecification.id`
-- the intent management entity must handle unambiguous resolution by `expression.iri`
+- requesters can submit a minimal machine-readable intent without `humanExpression`, but not without `intentSpecification.id`
+- the intent management entity avoids ambiguous runtime contract selection by requiring `intentSpecification.id`
 - persisted responses must include resolved specification identity after admission
 - operators get better traceability when requesters provide strongly recommended fields, but cannot rely on those fields always being present in the admission request
 
@@ -414,11 +409,11 @@ These trade-offs are acceptable because admission requests should remain interop
 
 ## 8. Alternatives considered:
 
-### 8.1 Make `intentSpecification.id` mandatory in every admission request:
+### 8.1 Allow admission by `expression.iri` alone:
 
 This was rejected.
 
-It would make validation deterministic, but it would remove the useful runtime pattern where a requester submits a valid expression identified by `expression.iri` and lets the intent management entity resolve the active specification when the match is unambiguous.
+Although `expression.iri` identifies the semantic/expression contract, the same IRI may be referenced by more than one active `IntentSpecification`. Admission by IRI alone can therefore be ambiguous. The safer rule is to require `intentSpecification.id` for admission and use `expression.iri` as the semantic contract consistency check.
 
 ### 8.2 Make `humanExpression` mandatory:
 
@@ -438,12 +433,12 @@ This proposal recommends adopting a runtime `Intent` mandatory profile baseline.
 
 If accepted, the intent management entity will document and enforce:
 
-- runtime Intent admission requires `name`, `expression`, `expression.@type`, `expression.iri`, `expression.expressionValue`, `@type`, and `@baseType`
+- runtime Intent admission requires `name`, `intentSpecification.id`, `expression`, `expression.@type`, `expression.iri`, `expression.expressionValue`, `@type`, and `@baseType`
 - persisted Intent response after admission requires identity, lifecycle projection, resolved `intentSpecification.id`, expression, `@type`, and `@baseType`
 - Draft creation requires only `name`, `submit: false`, `@type`, and `@baseType`
 - Draft creation response requires identity, Draft lifecycle projection, `submit: false`, `@type`, and `@baseType`; it does not require a permanent runtime `version`
-- `humanExpression` and `intentSpecification.id` are strongly recommended for admission, but not generically mandatory
-- `intentSpecification.id` is optional in the admission request but mandatory in the persisted response after admission is accepted
+- `humanExpression` is strongly recommended for admission, but not generically mandatory
+- `intentSpecification.id` is mandatory in both the admission request and the persisted response after admission is accepted
 - optional enrichment fields remain separate from the generic minimum mandatory profile
 - `lifecycleStatus` must not be supplied in any external write request
 
@@ -464,7 +459,7 @@ After this proposal is reviewed and baselined, update the affected architecture 
 
 - document the runtime `Intent` mandatory profile
 - clarify admission request minimum mandatory fields
-- clarify strongly recommended `humanExpression` and `intentSpecification.id`
+- clarify mandatory `intentSpecification.id` and strongly recommended `humanExpression`
 - clarify persisted response mandatory fields
-- clarify `intentSpecification.id` resolution and persistence behaviour
+- clarify `intentSpecification.id` and `expression.iri` consistency validation
 - keep runtime version/lifecycle profile wording aligned with the existing `activeVersion` baseline
