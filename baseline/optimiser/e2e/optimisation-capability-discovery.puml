@@ -37,6 +37,9 @@ OptimisationSpecification resources only.
 
 capabilityId maps to OD MS OptimisationSpecification.id
 in phase one.
+
+Request guidance exposes expressionSpecification.iri
+so runtime expression.iri can be preserved.
 end note
 
 OSB -> NGW : 5. Call NGW\nmTLS + OAuth2 system identity\ncorrelationId / traceId\n(no user context downstream)
@@ -57,7 +60,7 @@ end note
 == Data Retrieval ==
 
 ODMS -> ODDB : 7. Read visible ACTIVE\nOptimisationSpecification records
-ODDB --> ODMS : Specification records\nfamilyId + name + lifecycleStatus\nspecCharacteristic[]\nexpressionSpecification\ntargetEntitySchema metadata
+ODDB --> ODMS : Specification records\nfamilyId + name + lifecycleStatus\nspecCharacteristic[]\nexpressionSpecification.iri\ntargetEntitySchema metadata
 
 == Discovery Response ==
 

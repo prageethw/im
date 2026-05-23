@@ -64,7 +64,7 @@ alt Original lifecycleStatus is not FAILED
   OSB --> OGW : Lifecycle conflict view
   OGW --> Caller : Retrial not allowed
 else Original lifecycleStatus = FAILED
-  OCMS -> OCDB : 7. Create new Optimisation\nlifecycleStatus = ACKNOWLEDGED\noptimisationRelationship = retrialOf\nreuse accepted expression\nreuse OptimisationSpecification.id/href
+  OCMS -> OCDB : 7. Create new Optimisation\nlifecycleStatus = ACKNOWLEDGED\noptimisationRelationship = retrialOf\nreuse accepted expression and expression.iri\nreuse OptimisationSpecification.id/href
   OCDB --> OCMS : New Optimisation persisted
 
   note right of OCDB

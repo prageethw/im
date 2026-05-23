@@ -41,19 +41,19 @@ NGW -> OCMS : 6. POST /optimisation\nmTLS + service/system auth
 
 == Validate Contract ==
 
-OCMS -> ODMS : 7. Direct service-to-service mTLS\nvalidate referenced ACTIVE\nOptimisationSpecification.id
+OCMS -> ODMS : 7. Direct service-to-service mTLS\nvalidate referenced ACTIVE\nOptimisationSpecification.id\nand expression.iri match
 note right of ODMS
 OC MS -> OD MS is a direct internal service path.
 It does not route through NGW.
 end note
 
-ODMS --> OCMS : ACTIVE specification + targetEntitySchema
+ODMS --> OCMS : ACTIVE specification\nexpressionSpecification.iri + targetEntitySchema
 
-OCMS -> OCMS : 8. Validate expression.expressionValue\nagainst targetEntitySchema\ncontext.targets[] / constraints[] / preferences[]
+OCMS -> OCMS : 8. Validate expression.iri\nagainst expressionSpecification.iri\nand expression.expressionValue\nagainst targetEntitySchema\ncontext.targets[] / constraints[] / preferences[]
 
 == Persist Runtime Resource ==
 
-OCMS -> OCDB : 9. Persist runtime Optimisation\nlifecycleStatus = ACKNOWLEDGED\nstore immutable OptimisationSpecification.id/href
+OCMS -> OCDB : 9. Persist runtime Optimisation\nlifecycleStatus = ACKNOWLEDGED\nstore immutable OptimisationSpecification.id/href\nand accepted expression.iri
 OCDB --> OCMS : Persisted
 
 OCMS -> Outbox : 10. Write OptimisationRequestedEvent\ninstruction = EXECUTE\nsame transaction
