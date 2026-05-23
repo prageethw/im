@@ -494,6 +494,7 @@ DRAFT candidate selection uses id and draftId.
 ACTIVE and RETIRED official version selection uses id and version.
 Default runtime selection by id resolves to the current ACTIVE version.
 Read-only provenance lookup of ACTIVE and RETIRED records may use id and draftId.
+Within a given OptimisationSpecification.id, a draftId can produce at most one ACTIVE or RETIRED official version; therefore read-only provenance lookup by id and draftId is unambiguous.
 draftId must not be used for mutation, activation, deletion, or retirement of ACTIVE or RETIRED records.
 ```
 
@@ -568,6 +569,7 @@ When `id` is supplied without `version`, `lifecycleStatus`, or `draftId`, OD MS 
 To retrieve historical records, callers must explicitly filter by `version`, `lifecycleStatus`, `draftId`, or an allowed combination.
 To retrieve draft candidates, callers must explicitly filter by `lifecycleStatus=DRAFT`; to retrieve one draft candidate, callers must also provide `draftId`.
 To retrieve an ACTIVE or RETIRED record by provenance, callers may provide `id`, `draftId`, and optionally `lifecycleStatus=ACTIVE` or `lifecycleStatus=RETIRED`.
+Within a given `OptimisationSpecification.id`, a `draftId` can produce at most one `ACTIVE` or `RETIRED` official version, so read-only provenance lookup by `id` and `draftId` is unambiguous.
 If no ACTIVE version exists and no `version`, `lifecycleStatus`, or `draftId` filter is supplied, OD MS returns an empty list rather than silently returning DRAFT or RETIRED records.
 ```
 
