@@ -53,6 +53,47 @@ A strict TMF deployment may expose the same API through `/tmf-api/intentManageme
 
 ## 2. Common conventions
 
+
+### Response classification headers:
+
+ID MS returns response classification headers on external REST API responses so callers can distinguish strict TMF-native behaviour from documented platform-extension behaviour.
+
+These are response headers only. Clients do not send these headers in requests.
+
+| **Response header** | **Meaning** |
+|---|---|
+| `X-TMF-Native: true` | The response is for a TMF-native operation/behaviour. |
+| `X-TMF-Native: false` | The response is for an operation/behaviour that includes platform-specific semantics. |
+| `X-Platform-Extension: true` | The route, method, response, or behaviour includes a documented platform extension. |
+| `X-Platform-Extension: false` | No platform extension is used for the response. |
+
+Header classification guidance:
+
+| **ID MS response area** | **X-TMF-Native** | **X-Platform-Extension** | **Reason** |
+|---|---:|---:|---|
+| `POST /intentSpecification`, `GET /intentSpecification`, `GET /intentSpecification/{id}`, `PATCH /intentSpecification/{id}`, `DELETE /intentSpecification/{id}` using strict TMF-compatible behaviour | `true` | `false` | TMF-compatible IntentSpecification resource operations. |
+| `PUT /intentSpecification/{id}` | `false` | `true` | Deterministic full replacement is a platform extension. |
+| `PATCH /intentSpecification/{id}` used for tightly controlled activation | `true` | `false` | Uses TMF-compatible partial update on the resource. |
+| `PUT /intentSpecification/{id}` used for full-resource activation | `false` | `true` | Full-resource activation through PUT is a platform extension. |
+| Strict `/hub` create/delete responses | `true` | `false` | Strict TMF hub route family. |
+| Domain-scoped `/intentSpecification/hub` responses | `false` | `true` | Domain-owned hub route family is a platform extension. |
+| `GET /intentSpecification/hub/{id}` | `false` | `true` | Subscription retrieval is an operational convenience extension. |
+
+Example TMF-native response headers:
+
+```http
+X-TMF-Native: true
+X-Platform-Extension: false
+```
+
+Example platform-extension response headers:
+
+```http
+X-TMF-Native: false
+X-Platform-Extension: true
+```
+
+
 ### Lifecycle values
 
 ```text
@@ -134,6 +175,8 @@ The following query parameters are supported where applicable:
 ```http
 HTTP/1.1 428 Precondition Required
 Content-Type: application/json
+X-TMF-Native: true
+X-Platform-Extension: false
 ```
 
 ```json
@@ -152,6 +195,8 @@ Content-Type: application/json
 ```http
 HTTP/1.1 412 Precondition Failed
 Content-Type: application/json
+X-TMF-Native: true
+X-Platform-Extension: false
 ```
 
 ```json
@@ -270,6 +315,8 @@ HTTP/1.1 201 Created
 Location: /intentManagement/v5/intentSpecification/hospital-surgical-slice-spec-v1.19
 Content-Type: application/json
 Content-Language: en-AU
+X-TMF-Native: true
+X-Platform-Extension: false
 ETag: "intent-spec-hospital-surgical-slice-spec-v1.19-v1"
 Last-Modified: Sat, 18 Apr 2026 02:00:00 GMT
 ```
@@ -395,6 +442,8 @@ Accept: application/json
 HTTP/1.1 200 OK
 Content-Type: application/json
 Content-Language: en-AU
+X-TMF-Native: true
+X-Platform-Extension: false
 X-Total-Count: 1
 X-Result-Count: 1
 ETag: "intent-spec-list-active-v17"
@@ -469,6 +518,8 @@ Cache-Control: no-cache
 HTTP/1.1 200 OK
 Content-Type: application/json
 Content-Language: en-AU
+X-TMF-Native: true
+X-Platform-Extension: false
 Content-Location: /intentManagement/v5/intentSpecification/hospital-surgical-slice-spec-v1.19
 ETag: "intent-spec-hospital-surgical-slice-spec-v1.19-v1"
 Last-Modified: Sat, 18 Apr 2026 02:00:00 GMT
@@ -581,6 +632,8 @@ Cache-Control: private, max-age=300
 HTTP/1.1 404 Not Found
 Content-Type: application/json
 Content-Language: en-AU
+X-TMF-Native: true
+X-Platform-Extension: false
 ```
 
 ```json
@@ -668,6 +721,8 @@ If-Match: "intent-spec-hospital-surgical-slice-spec-v1.19-v1"
 HTTP/1.1 200 OK
 Content-Type: application/json
 Content-Language: en-AU
+X-TMF-Native: true
+X-Platform-Extension: false
 Content-Location: /intentManagement/v5/intentSpecification/hospital-surgical-slice-spec-v1.19
 ETag: "intent-spec-hospital-surgical-slice-spec-v1.19-v2"
 Last-Modified: Sat, 18 Apr 2026 03:00:00 GMT
@@ -783,6 +838,8 @@ Last-Modified: Sat, 18 Apr 2026 03:00:00 GMT
 HTTP/1.1 409 Conflict
 Content-Type: application/json
 Content-Language: en-AU
+X-TMF-Native: true
+X-Platform-Extension: false
 Cache-Control: no-store
 ```
 
@@ -803,6 +860,8 @@ Cache-Control: no-store
 HTTP/1.1 428 Precondition Required
 Content-Type: application/json
 Content-Language: en-AU
+X-TMF-Native: true
+X-Platform-Extension: false
 Cache-Control: no-store
 ```
 
@@ -823,6 +882,8 @@ Cache-Control: no-store
 HTTP/1.1 412 Precondition Failed
 Content-Type: application/json
 Content-Language: en-AU
+X-TMF-Native: true
+X-Platform-Extension: false
 Cache-Control: no-store
 ```
 
@@ -868,6 +929,8 @@ If-Match: "intent-spec-hospital-surgical-slice-spec-v1.19-v1"
 HTTP/1.1 200 OK
 Content-Type: application/json
 Content-Language: en-AU
+X-TMF-Native: true
+X-Platform-Extension: false
 Content-Location: /intentManagement/v5/intentSpecification/hospital-surgical-slice-spec-v1.19
 ETag: "intent-spec-hospital-surgical-slice-spec-v1.19-v2"
 Last-Modified: Sat, 18 Apr 2026 03:00:00 GMT
@@ -934,6 +997,8 @@ Accept: application/json
 ```http
 HTTP/1.1 204 No Content
 Content-Language: en-AU
+X-TMF-Native: true
+X-Platform-Extension: false
 ```
 
 No response body is returned.
@@ -959,6 +1024,8 @@ No response body is returned.
 HTTP/1.1 409 Conflict
 Content-Type: application/json
 Content-Language: en-AU
+X-TMF-Native: true
+X-Platform-Extension: false
 Cache-Control: no-store
 ```
 
@@ -979,6 +1046,8 @@ Cache-Control: no-store
 HTTP/1.1 428 Precondition Required
 Content-Type: application/json
 Content-Language: en-AU
+X-TMF-Native: true
+X-Platform-Extension: false
 Cache-Control: no-store
 ```
 
@@ -999,6 +1068,8 @@ Cache-Control: no-store
 HTTP/1.1 412 Precondition Failed
 Content-Type: application/json
 Content-Language: en-AU
+X-TMF-Native: true
+X-Platform-Extension: false
 Cache-Control: no-store
 ```
 
@@ -1064,6 +1135,8 @@ If-Match: "intent-spec-hospital-surgical-slice-spec-v1.20-v1"
 HTTP/1.1 200 OK
 Content-Type: application/json
 Content-Language: en-AU
+X-TMF-Native: true
+X-Platform-Extension: false
 Content-Location: /intentManagement/v5/intentSpecification/hospital-surgical-slice-spec-v1.20
 ETag: "intent-spec-hospital-surgical-slice-spec-v1.20-v2"
 Last-Modified: Sat, 18 Apr 2026 03:30:00 GMT
@@ -1130,6 +1203,8 @@ The status-change event type identifies that the lifecycle status changed. The e
 HTTP/1.1 409 Conflict
 Content-Type: application/json
 Content-Language: en-AU
+X-TMF-Native: true
+X-Platform-Extension: false
 Cache-Control: no-store
 ```
 
@@ -1150,6 +1225,8 @@ Cache-Control: no-store
 HTTP/1.1 428 Precondition Required
 Content-Type: application/json
 Content-Language: en-AU
+X-TMF-Native: true
+X-Platform-Extension: false
 Cache-Control: no-store
 ```
 
@@ -1170,6 +1247,8 @@ Cache-Control: no-store
 HTTP/1.1 412 Precondition Failed
 Content-Type: application/json
 Content-Language: en-AU
+X-TMF-Native: true
+X-Platform-Extension: false
 Cache-Control: no-store
 ```
 
@@ -1227,6 +1306,8 @@ HTTP/1.1 201 Created
 Location: /intentManagement/v5/intentSpecification/hub/sub-001
 Content-Type: application/json
 Content-Language: en-AU
+X-TMF-Native: true
+X-Platform-Extension: false
 ETag: "subscription-sub-001-v1"
 ```
 
@@ -1279,6 +1360,8 @@ Accept: application/json
 HTTP/1.1 200 OK
 Content-Type: application/json
 Content-Language: en-AU
+X-TMF-Native: true
+X-Platform-Extension: false
 ETag: "subscription-sub-001-v1"
 Cache-Control: private, max-age=300
 ```
@@ -1319,6 +1402,8 @@ Accept: application/json
 ```http
 HTTP/1.1 204 No Content
 Content-Language: en-AU
+X-TMF-Native: true
+X-Platform-Extension: false
 ```
 
 No response body is returned.
@@ -1329,6 +1414,8 @@ No response body is returned.
 HTTP/1.1 428 Precondition Required
 Content-Type: application/json
 Content-Language: en-AU
+X-TMF-Native: true
+X-Platform-Extension: false
 Cache-Control: no-store
 ```
 
@@ -1349,6 +1436,8 @@ Cache-Control: no-store
 HTTP/1.1 412 Precondition Failed
 Content-Type: application/json
 Content-Language: en-AU
+X-TMF-Native: true
+X-Platform-Extension: false
 Cache-Control: no-store
 ```
 
@@ -1390,6 +1479,8 @@ Cache-Control: no-store
 ```http
 HTTP/1.1 503 Service Unavailable
 Content-Type: application/json
+X-TMF-Native: true
+X-Platform-Extension: false
 Retry-After: 30
 ```
 
