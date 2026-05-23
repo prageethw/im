@@ -972,7 +972,7 @@ If-Match: "od-draft-surgical-routing-a-r3"
 Content-Type: application/json
 ```
 
-The request body contains the full replacement mutable `DRAFT` `OptimisationSpecification` contract and may request activation by setting `lifecycleStatus` to `ACTIVE`. It must include all required client-controlled fields for the final contract. It must not include server-controlled fields such as `href`, `draftId`, `creationDate`, `lastUpdate`, `statusChangeDate`, `_links`, or official `version`.
+The request body contains the full replacement mutable `DRAFT` `OptimisationSpecification` contract and may request activation by setting `lifecycleStatus` to `ACTIVE`. It must include all required client-controlled fields for the final contract. It must not include server-controlled fields or immutable identity fields such as `href`, `id`, `draftId`, `creationDate`, `lastUpdate`, `statusChangeDate`, `_links`, `specKey` changes, or official `version`.
 
 Response:
 
