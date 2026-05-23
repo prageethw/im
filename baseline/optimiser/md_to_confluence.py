@@ -357,6 +357,27 @@ _MD_TOC_MARKERS = (
     re.compile(r"^[ \t]*<!--\s*toc\s*-->[ \t]*$", re.IGNORECASE | re.MULTILINE),
 )
 
+# Manually-authored TOC blocks: a heading whose text looks like "Table of
+# Contents" / "Contents" / "Index", followed by a bullet list of in-page
+# anchor links. We match the heading line, then consume every following line
+# that is part of the bullet list (blank lines inside the list are allowed),
+# stopping at the next heading or the first non-list / non-blank line.
+#
+# The list-detection part uses a fairly conservative definition of "bullet
+# list item": leading whitespace, then `-`, `*`, `+`, or `N.`, then content
+# that includes at least one in-page link `](#...)`. This avoids accidentally
+# eating prose lists that happen to follow a Contents heading.
+_MANUAL_TOC_HEADING_RE = re.compile(
+    r"^(?P<hashes>\#{1,6})[ \t]+"
+    r"(?:table\s+of\s+contents|contents|index|toc)"
+    r"[ \t:.]*$",
+    re.IGNORECASE | re.MULTILINE,
+)
+_ANCHOR_LIST_ITEM_RE = re.compile(
+    r"^[ \t]*(?:[-*+]|\d+\.)[ \t]+.*\]\(#[^)]+\)",
+)
+_NEXT_HEADING_RE = re.compile(r"^\#{1,6}[ \t]+")
+
 # Raw `<ac:structured-macro ac:name="toc|status">...</ac:structured-macro>`
 # blocks that an author pasted into the Markdown source. The regex is
 # permissive about attribute order, whitespace, and multi-line content.
@@ -372,10 +393,86 @@ _MD_MACRO_RE = re.compile(
 _EMPTY_P_RE = re.compile(r"<p\b[^>]*>\s*</p>", re.IGNORECASE)
 
 
+def _strip_manual_toc_blocks(md_text: str) -> Tuple[str, int]:
+    """
+    Remove hand-written "## Table of contents" sections followed by a bullet
+    list of in-page anchor links. Returns (cleaned, count_removed_blocks).
+
+    Algorithm:
+      1. Find each heading line that looks like a Contents heading.
+      2. Walk forward line-by-line. A line is part of the TOC block if it's
+         blank, indented continuation, or a bullet/numbered item that links
+         to an in-page anchor (`](#...)`). Stop at the first line that is
+         neither of those and isn't blank — in particular, stop at the next
+         heading.
+      3. Delete the heading and all consumed lines.
+    """
+    lines = md_text.splitlines(keepends=True)
+    keep: List[str] = []
+    i = 0
+    removed_blocks = 0
+    n_lines = len(lines)
+
+    while i < n_lines:
+        line = lines[i]
+        if _MANUAL_TOC_HEADING_RE.match(line):
+            # Look ahead: do we have at least one anchor-list item before the
+            # next heading? If not, leave this heading alone (it might just
+            # be a section called "Contents" with prose underneath).
+            j = i + 1
+            saw_anchor_item = False
+            scan = j
+            while scan < n_lines:
+                s = lines[scan]
+                if _NEXT_HEADING_RE.match(s):
+                    break
+                if _ANCHOR_LIST_ITEM_RE.match(s):
+                    saw_anchor_item = True
+                    break
+                if s.strip() == "":
+                    scan += 1
+                    continue
+                # Some other content — not a TOC block
+                break
+
+            if not saw_anchor_item:
+                keep.append(line)
+                i += 1
+                continue
+
+            # Consume the heading + the whole TOC block. We accept blank
+            # lines and indented continuation lines as part of the list.
+            j = i + 1
+            while j < n_lines:
+                s = lines[j]
+                if _NEXT_HEADING_RE.match(s):
+                    break
+                if s.strip() == "":
+                    j += 1
+                    continue
+                if _ANCHOR_LIST_ITEM_RE.match(s):
+                    j += 1
+                    continue
+                # Indented continuation of a previous bullet (nested list)
+                if s.startswith(("  ", "\t")) and s.strip():
+                    j += 1
+                    continue
+                break
+            removed_blocks += 1
+            i = j
+            continue
+
+        keep.append(line)
+        i += 1
+
+    return "".join(keep), removed_blocks
+
+
 def strip_existing_status_and_toc(md_text: str) -> Tuple[str, int]:
     """
-    Remove `[TOC]`-style markers AND any raw status/toc storage macros
-    that appear in the Markdown source. Returns (cleaned_md, count_removed).
+    Remove `[TOC]`-style markers, raw status/toc storage macros, AND any
+    manually-authored "Table of contents" sections that appear in the
+    Markdown source. Returns (cleaned_md, count_removed).
     """
     removed = 0
 
@@ -384,12 +481,19 @@ def strip_existing_status_and_toc(md_text: str) -> Tuple[str, int]:
         removed += 1
         return ""
 
+    # 1. Raw storage macros (status / toc)
     out = _MD_MACRO_RE.sub(_drop, md_text)
+
+    # 2. Inline TOC markers ([TOC], [[_TOC_]], <!-- toc -->)
     for pat in _MD_TOC_MARKERS:
         out, n = pat.subn("", out)
         removed += n
 
-    # Collapse blank-line runs that pure-deletion may have created
+    # 3. Hand-written "## Table of contents" + bullet-anchor list blocks
+    out, n = _strip_manual_toc_blocks(out)
+    removed += n
+
+    # Collapse blank-line runs created by deletions
     out = re.sub(r"\n{3,}", "\n\n", out)
     return out, removed
 
