@@ -22,9 +22,9 @@ Approved platform extensions:
 
 | Extension | Purpose | Guardrail |
 |---|---|---|
-| `PUT /optimisationSpecification/{id}` | Full replacement/finalisation of mutable `DRAFT` specifications. | Requires `If-Match`; not allowed for `ACTIVE` or `RETIRED`. |
+| `PUT /optimisationSpecification/{id}` | Full replacement and finalisation of mutable `DRAFT` specifications. | Requires `If-Match`; not allowed for `ACTIVE` or `RETIRED`. |
 | `_links` | HATEOAS controls. | Does not replace `href`; lifecycle-aware and authorisation-aware. |
-| `ETag and If-Match governance | Optimistic concurrency for unsafe existing-resource operations. | Required for `PUT`, `PATCH`, and `DELETE`. |
+| `ETag` and `If-Match` governance | Optimistic concurrency for unsafe existing-resource operations. | Required for `PUT`, `PATCH`, and `DELETE`. |
 | `x-platform-extension` and `x-tmf-native` response headers | Governance/documentation headers for NGW-facing optimiser-domain resources. | Used only on external NGW-facing OD/OC APIs; clients must not use these headers as business-logic switches. |
 
 ## 3. Ownership:
@@ -432,7 +432,7 @@ There is no `DEPRECATED` state in the optimiser baseline.
 |---|---|---|
 | `DRAFT` | Specification is being prepared. | Editable. Not usable for new runtime `Optimisation` creation. No official public `version`; draft revision is represented by `ETag` only. |
 | `ACTIVE` | Specification is approved for runtime use. | Immutable for contract and content changes. Used by OC MS to validate and create runtime `Optimisation` resources. May be moved to `RETIRED` only by governed lifecycle transition, normally when a replacement `DRAFT` for the same `OptimisationSpecification.id` is activated. |
-| `RETIRED` | Specification is no longer available for new use. | Immutable retained history/audit record. Not editable and not usable for new runtime `Optimisation` creation. Existing runtime references may continue to resolve it for audit/explainability. |
+| `RETIRED` | Specification is no longer available for new use. | Immutable retained history and audit record. Not editable and not usable for new runtime `Optimisation` creation. Existing runtime references may continue to resolve it for audit and explainability. |
 
 Baseline immutability rule:
 
@@ -442,7 +442,7 @@ ACTIVE specifications are contract and content immutable.
 RETIRED specifications are fully immutable retained records.
 To change an ACTIVE specification contract, create a new DRAFT for the same `OptimisationSpecification.id` and activate it.
 OD MS assigns the official version during activation, not while the resource is still DRAFT.
-`familyId` remains logical grouping metadata and must not drive activation, retirement, or official-version uniqueness decisions.
+`familyId` remains logical grouping metadata and must not drive activation, retirement, or official version uniqueness decisions.
 ```
 
 ## 12. Version activation and retirement governance:
@@ -455,7 +455,20 @@ ACTIVE: official version is assigned at activation and is immutable.
 RETIRED: retains the assigned official version and is immutable.
 ```
 
-Multiple DRAFT OptimisationSpecification candidates may exist for the same `OptimisationSpecification.id` only when OD MS explicitly supports parallel draft candidates. Otherwise, OD MS may restrict each `OptimisationSpecification.id` to one mutable DRAFT at a time. Official version uniqueness applies only to ACTIVE and RETIRED specifications because DRAFT specifications do not expose an official public version. OD MS enforces only one ACTIVE version per `OptimisationSpecification.id`.
+Version cardinality baseline for a given `OptimisationSpecification.id`:
+
+```text
+Zero or one ACTIVE version may exist.
+Zero or many RETIRED versions may exist.
+Zero or one mutable DRAFT candidate may exist in the baseline.
+Official version values must be unique across ACTIVE and RETIRED versions.
+```
+
+Multiple RETIRED versions are allowed and expected because existing runtime `Optimisation` records may reference older specification versions for audit, replay, explainability, and historical validation.
+
+The baseline allows only one mutable DRAFT candidate per `OptimisationSpecification.id` because `GET`, `PUT`, `PATCH`, and `DELETE` operations are keyed by `{id}`. Parallel draft candidates would require an additional draft-candidate identifier or a separate draft workspace model, which is outside the current OD MS baseline.
+
+DRAFT specifications do not expose an official public `version`; draft revision and concurrency are represented by `ETag` only. OD MS enforces only one ACTIVE version per `OptimisationSpecification.id`.
 
 Version format baseline:
 
@@ -496,7 +509,7 @@ Physical `DELETE` is not used for `ACTIVE` or `RETIRED` specifications.
 | Operation | Rule |
 |---|---|
 | `GET /optimisationSpecification` | Lists visible specifications. Supports enumerated first-level filtering and `fields`. |
-| `GET /optimisationSpecification/{id}` | Retrieves one specification. Supports first-level `fields`. |
+| `GET /optimisationSpecification/{id}` | Retrieves the current ACTIVE version by default. Historical versions require an explicit `version` query parameter. Supports first-level `fields`. |
 | `POST /optimisationSpecification` | Creates a new mutable `DRAFT` specification without an official public `version`. `familyId` is required as logical grouping metadata. Returns an `ETag` for draft revision and concurrency. |
 | `PUT /optimisationSpecification/{id}` | Approved platform extension. Full replacement/finalisation of mutable `DRAFT` only. Requires `If-Match` and `Content-Type: application/json`. Rejected for `ACTIVE` and `RETIRED`. |
 | `PATCH /optimisationSpecification/{id}` | TMF-compatible partial update using JSON Merge Patch. Requires `If-Match` and `Content-Type: application/merge-patch+json`. Contract and content updates are allowed only for `DRAFT`. Activation from `DRAFT` is allowed. Retirement of `ACTIVE` is lifecycle-only and does not permit contract and content changes. Rejected for `RETIRED`. |
@@ -518,6 +531,23 @@ Physical `DELETE` is not used for `ACTIVE` or `RETIRED` specifications.
 | `fields` | Optional sparse fieldset projection. |
 
 Unsupported or malformed query parameters return `400 Bad Request`.
+
+Default list resolution rule:
+
+```text
+When `id` is supplied without `version` or `lifecycleStatus`, OD MS returns the current ACTIVE version for that `OptimisationSpecification.id` if one exists.
+To retrieve historical or draft records, callers must explicitly filter by `version`, `lifecycleStatus`, or both.
+If no ACTIVE version exists and no `version` or `lifecycleStatus` filter is supplied, OD MS returns an empty list rather than silently returning DRAFT or RETIRED records.
+```
+
+Version and lifecycle filter examples:
+
+```http
+GET /optimisationSpecification?id=optimisation-spec-surgical-routing
+GET /optimisationSpecification?id=optimisation-spec-surgical-routing&lifecycleStatus=RETIRED
+GET /optimisationSpecification?id=optimisation-spec-surgical-routing&version=1.0.0
+GET /optimisationSpecification?id=optimisation-spec-surgical-routing&lifecycleStatus=DRAFT
+```
 
 Sparse field projection rule:
 
@@ -675,8 +705,8 @@ Response:
 
 ```http
 HTTP/1.1 201 Created
-Location: /optimisationManagement/v1/optimisationSpecification/optimisation-spec-surgical-routing-v1
-ETag: "od-spec-surgical-routing-v1-r1"
+Location: /optimisationManagement/v1/optimisationSpecification/optimisation-spec-surgical-routing
+ETag: "od-spec-surgical-routing-r1"
 x-platform-extension: true
 x-tmf-native: false
 Content-Type: application/json
@@ -684,8 +714,8 @@ Content-Type: application/json
 
 ```json
 {
-  "id": "optimisation-spec-surgical-routing-v1",
-  "href": "/optimisationManagement/v1/optimisationSpecification/optimisation-spec-surgical-routing-v1",
+  "id": "optimisation-spec-surgical-routing",
+  "href": "/optimisationManagement/v1/optimisationSpecification/optimisation-spec-surgical-routing",
   "name": "Surgical Routing Optimisation Specification",
   "description": "Defines the allowed optimisation request contract for surgical routing optimisation.",
   "familyId": "optimisation-spec-surgical-routing",
@@ -735,7 +765,7 @@ Content-Type: application/json
   "@schemaLocation": "https://example.com/schema/optimisation/v1/OptimisationSpecification.schema.json",
   "_links": {
     "self": {
-      "href": "/optimisationManagement/v1/optimisationSpecification/optimisation-spec-surgical-routing-v1",
+      "href": "/optimisationManagement/v1/optimisationSpecification/optimisation-spec-surgical-routing",
       "method": "GET"
     },
     "collection": {
@@ -743,19 +773,19 @@ Content-Type: application/json
       "method": "GET"
     },
     "patch": {
-      "href": "/optimisationManagement/v1/optimisationSpecification/optimisation-spec-surgical-routing-v1",
+      "href": "/optimisationManagement/v1/optimisationSpecification/optimisation-spec-surgical-routing",
       "method": "PATCH"
     },
     "replace": {
-      "href": "/optimisationManagement/v1/optimisationSpecification/optimisation-spec-surgical-routing-v1",
+      "href": "/optimisationManagement/v1/optimisationSpecification/optimisation-spec-surgical-routing",
       "method": "PUT"
     },
     "delete": {
-      "href": "/optimisationManagement/v1/optimisationSpecification/optimisation-spec-surgical-routing-v1",
+      "href": "/optimisationManagement/v1/optimisationSpecification/optimisation-spec-surgical-routing",
       "method": "DELETE"
     },
     "activate": {
-      "href": "/optimisationManagement/v1/optimisationSpecification/optimisation-spec-surgical-routing-v1",
+      "href": "/optimisationManagement/v1/optimisationSpecification/optimisation-spec-surgical-routing",
       "method": "PATCH"
     }
   }
@@ -767,7 +797,7 @@ Content-Type: application/json
 Request:
 
 ```http
-GET /optimisationManagement/v1/optimisationSpecification?familyId=optimisation-spec-surgical-routing&lifecycleStatus=ACTIVE&fields=id,href,name,familyId,version,lifecycleStatus,statusChangeDate
+GET /optimisationManagement/v1/optimisationSpecification?id=optimisation-spec-surgical-routing&fields=id,href,name,familyId,version,lifecycleStatus,statusChangeDate
 Cache-Control: no-cache
 ```
 
@@ -785,8 +815,8 @@ Content-Type: application/json
 ```json
 [
   {
-    "id": "optimisation-spec-surgical-routing-v1",
-    "href": "/optimisationManagement/v1/optimisationSpecification/optimisation-spec-surgical-routing-v1",
+    "id": "optimisation-spec-surgical-routing",
+    "href": "/optimisationManagement/v1/optimisationSpecification/optimisation-spec-surgical-routing",
     "name": "Surgical Routing Optimisation Specification",
     "familyId": "optimisation-spec-surgical-routing",
     "version": "1.0.0",
@@ -795,7 +825,7 @@ Content-Type: application/json
     "@type": "OptimisationSpecification",
     "_links": {
       "self": {
-        "href": "/optimisationManagement/v1/optimisationSpecification/optimisation-spec-surgical-routing-v1",
+        "href": "/optimisationManagement/v1/optimisationSpecification/optimisation-spec-surgical-routing",
         "method": "GET"
       },
       "collection": {
@@ -803,7 +833,7 @@ Content-Type: application/json
         "method": "GET"
       },
       "retire": {
-        "href": "/optimisationManagement/v1/optimisationSpecification/optimisation-spec-surgical-routing-v1",
+        "href": "/optimisationManagement/v1/optimisationSpecification/optimisation-spec-surgical-routing",
         "method": "PATCH"
       },
       "createNewVersion": {
@@ -815,12 +845,12 @@ Content-Type: application/json
 ]
 ```
 
-### 18.3. GET /optimisationSpecification/{id} retrieve ACTIVE:
+### 18.3. GET /optimisationSpecification/{id} retrieve ACTIVE by default:
 
 Request:
 
 ```http
-GET /optimisationManagement/v1/optimisationSpecification/optimisation-spec-surgical-routing-v1
+GET /optimisationManagement/v1/optimisationSpecification/optimisation-spec-surgical-routing
 Cache-Control: no-cache
 ```
 
@@ -829,7 +859,7 @@ Response:
 ```http
 HTTP/1.1 200 OK
 Cache-Control: private, max-age=300
-ETag: "od-spec-surgical-routing-v1-r4"
+ETag: "od-spec-surgical-routing-r4"
 x-platform-extension: true
 x-tmf-native: false
 Content-Type: application/json
@@ -837,8 +867,8 @@ Content-Type: application/json
 
 ```json
 {
-  "id": "optimisation-spec-surgical-routing-v1",
-  "href": "/optimisationManagement/v1/optimisationSpecification/optimisation-spec-surgical-routing-v1",
+  "id": "optimisation-spec-surgical-routing",
+  "href": "/optimisationManagement/v1/optimisationSpecification/optimisation-spec-surgical-routing",
   "name": "Surgical Routing Optimisation Specification",
   "description": "Defines the allowed optimisation request contract for surgical routing optimisation.",
   "familyId": "optimisation-spec-surgical-routing",
@@ -889,7 +919,7 @@ Content-Type: application/json
   "@schemaLocation": "https://example.com/schema/optimisation/v1/OptimisationSpecification.schema.json",
   "_links": {
     "self": {
-      "href": "/optimisationManagement/v1/optimisationSpecification/optimisation-spec-surgical-routing-v1",
+      "href": "/optimisationManagement/v1/optimisationSpecification/optimisation-spec-surgical-routing",
       "method": "GET"
     },
     "collection": {
@@ -897,7 +927,7 @@ Content-Type: application/json
       "method": "GET"
     },
     "retire": {
-      "href": "/optimisationManagement/v1/optimisationSpecification/optimisation-spec-surgical-routing-v1",
+      "href": "/optimisationManagement/v1/optimisationSpecification/optimisation-spec-surgical-routing",
       "method": "PATCH"
     },
     "createNewVersion": {
@@ -908,13 +938,22 @@ Content-Type: application/json
 }
 ```
 
+Historical version retrieval uses the same `id` with an explicit `version` filter:
+
+```http
+GET /optimisationManagement/v1/optimisationSpecification/optimisation-spec-surgical-routing?version=1.0.0
+Cache-Control: no-cache
+```
+
+OD MS returns the immutable `ACTIVE` or `RETIRED` version that matches the requested official version. It must not return a DRAFT resource for an official version lookup because DRAFT resources do not expose official public versions.
+
 ### 18.4. PATCH activation of finalised DRAFT:
 
 Request:
 
 ```http
-PATCH /optimisationManagement/v1/optimisationSpecification/optimisation-spec-surgical-routing-v1
-If-Match: "od-spec-surgical-routing-v1-r3"
+PATCH /optimisationManagement/v1/optimisationSpecification/optimisation-spec-surgical-routing
+If-Match: "od-spec-surgical-routing-r3"
 Content-Type: application/merge-patch+json
 ```
 
@@ -930,7 +969,7 @@ Response:
 
 ```http
 HTTP/1.1 200 OK
-ETag: "od-spec-surgical-routing-v1-r4"
+ETag: "od-spec-surgical-routing-r4"
 x-platform-extension: true
 x-tmf-native: false
 Content-Type: application/json
@@ -943,8 +982,8 @@ Response body returns the full activated resource. OD MS transactionally retires
 Request:
 
 ```http
-PUT /optimisationManagement/v1/optimisationSpecification/optimisation-spec-surgical-routing-v1
-If-Match: "od-spec-surgical-routing-v1-r3"
+PUT /optimisationManagement/v1/optimisationSpecification/optimisation-spec-surgical-routing
+If-Match: "od-spec-surgical-routing-r3"
 Content-Type: application/json
 ```
 
@@ -1005,7 +1044,7 @@ Response:
 
 ```http
 HTTP/1.1 200 OK
-ETag: "od-spec-surgical-routing-v1-r4"
+ETag: "od-spec-surgical-routing-r4"
 x-platform-extension: true
 x-tmf-native: false
 Content-Type: application/json
@@ -1018,8 +1057,8 @@ Response body returns the full activated resource. `PUT` is an approved platform
 Request:
 
 ```http
-PATCH /optimisationManagement/v1/optimisationSpecification/optimisation-spec-surgical-routing-v1
-If-Match: "od-spec-surgical-routing-v1-r4"
+PATCH /optimisationManagement/v1/optimisationSpecification/optimisation-spec-surgical-routing
+If-Match: "od-spec-surgical-routing-r4"
 Content-Type: application/merge-patch+json
 ```
 
@@ -1033,7 +1072,7 @@ Response:
 
 ```http
 HTTP/1.1 200 OK
-ETag: "od-spec-surgical-routing-v1-r5"
+ETag: "od-spec-surgical-routing-r5"
 x-platform-extension: true
 x-tmf-native: false
 Content-Type: application/json
@@ -1048,8 +1087,8 @@ Retired specifications expose only lifecycle-authorised read/new-version links s
 Request:
 
 ```http
-DELETE /optimisationManagement/v1/optimisationSpecification/optimisation-spec-surgical-routing-v1
-If-Match: "od-spec-surgical-routing-v1-r1"
+DELETE /optimisationManagement/v1/optimisationSpecification/optimisation-spec-surgical-routing
+If-Match: "od-spec-surgical-routing-r1"
 ```
 
 Response:
