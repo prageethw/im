@@ -249,7 +249,7 @@ Catalogue-management journeys are feature-gated and out of phase-one scope unles
 10. OC MS persists runtime Optimisation with lifecycleStatus = ACKNOWLEDGED.
 11. OC MS stores resolved `optimisationSpecification.id`, `version`, `draftId`, `href`, and optional `etag` as the immutable contract pointer.
 12. OC MS writes OptimisationRequestedEvent with instruction = EXECUTE to outbox in same transaction.
-13. OC MS returns 201 Created with Location, ETag, and runtime resource body after resource persistence and outbox write, before worker execution completes. The response normally shows lifecycleStatus = ACKNOWLEDGED.
+13. OC MS returns 201 Created with Location, ETag, and runtime resource body after resource persistence and outbox write, before worker execution completes. The response always shows lifecycleStatus = ACKNOWLEDGED because ACKNOWLEDGED is the only initial lifecycle state after successful runtime resource creation.
 14. OC MS Outbox Relay publishes OptimisationRequestedEvent to Kafka.
 15. OC MS advances ACKNOWLEDGED -> QUEUED after successful Kafka publish. QUEUED is projected later and is not the initial creation response state.
 16. Python Gurobi Worker consumes OptimisationRequestedEvent.
@@ -336,6 +336,8 @@ Retrial is available only from `FAILED` in the baseline. Retrial is not availabl
 9. OC MS updates runtime lifecycle and result projection.
 10. User observes outcome through OC MS REST status and detail exposed through OSB and NGW.
 ```
+
+Worker-side idempotency in this E2E brief means duplicate event detection using `eventId` or `ce-id`, `optimisationId`, and instruction context before executing work. Detailed worker eligibility and deduplication rules belong in the worker specification when that artifact is introduced.
 
 ## 4. Capability matrix:
 
@@ -532,6 +534,7 @@ Synchronous API latency targets are to be confirmed through NFR baselining. Solv
 | **Long-running Gurobi executions** | Delayed optimisation outcomes and worker capacity pressure. | Asynchronous execution, worker scaling, queue monitoring, timeout controls, and alerting. |
 | **Best-effort cancellation** | Running optimisation may not stop immediately or may produce late outcome. | CANCELLING state, worker cancellation handling, and late outcome idempotency rules. |
 | **Kafka consumer lag** | Execution/result projection delay. | Monitor lag, scale consumers/workers, alert on thresholds. |
+| **OD MS unavailable during runtime creation** | New runtime optimisation creation may fail when OC MS cannot resolve the current ACTIVE specification and has no valid cached immutable ACTIVE contract. | OC MS may use a valid cached immutable ACTIVE contract according to cache policy; otherwise return 503 Service Unavailable and alert on OD dependency health. |
 | **Invalid or stale context datasets** | Poor, infeasible, or failed optimisation outcomes. | Request contract validation, dataset versioning, worker diagnostics, and monitoring. |
 | **DLQ growth** | Poison messages, schema drift, or repeated processing failure. | DLQ monitoring, failure metadata retention, replay and remediation procedures. |
 | **Misconfigured internal model binding** | Valid request contract but worker execution fails. | Deployment validation, contract tests, and pre-production model checks. |
@@ -549,7 +552,6 @@ Synchronous API latency targets are to be confirmed through NFR baselining. Solv
 - OSB MS integrates with NGW using mTLS and OAuth2 system-to-system.
 - User context stops before or at NGW; downstream OD MS and OC MS calls use service identity only.
 - NGW exposes OD MS and OC MS APIs to authorised backend consumers.
-- OC MS calls OD MS using mTLS for specification validation.
 - Kafka is available as the event backbone.
 - Python Gurobi Worker has authorised access to required analytics data sources.
 - Runtime `Optimisation` is asynchronous by design.
@@ -561,6 +563,7 @@ Synchronous API latency targets are to be confirmed through NFR baselining. Solv
 ## 9. Constraints:
 
 - NGW-exposed backend APIs use TMF-style API conventions where appropriate.
+- OC MS calls OD MS directly using service-to-service mTLS for runtime specification validation and resolved contract-pointer capture.
 - `OptimisationSpecification` and `Optimisation` are optimiser-domain platform resources, not native TMF Open API resources.
 - OGW-exposed experience APIs, private MS-to-MS APIs, private MS-to-MS events, and internal Kafka events do not need to be TMF REST compliant.
 - `x-platform-extension: true` and `x-tmf-native: false` are governance documentation response headers on external NGW-facing optimiser resources.
@@ -593,20 +596,22 @@ DRAFT candidate operations require `draftId` where applicable. In particular, DR
 
 ### 10.2. OC MS endpoint summary:
 
+OC MS endpoints are shown using the OC MS resource path defined by the OC MS specification. NGW may mount or route these paths according to platform gateway configuration, but the backend OC resource path remains `/optimisation` in the current baseline.
+
 ```http
-GET /optimisationManagement/v1/optimisation
-POST /optimisationManagement/v1/optimisation
-GET /optimisationManagement/v1/optimisation/{id}
-POST /optimisationManagement/v1/optimisation/{id}/cancellation
-POST /optimisationManagement/v1/optimisation/{id}/retrial
+GET /optimisation
+POST /optimisation
+GET /optimisation/{id}
+POST /optimisation/{id}/cancellation
+POST /optimisation/{id}/retrial
 ```
 
 Unsupported:
 
 ```http
-PUT /optimisationManagement/v1/optimisation/{id}
-PATCH /optimisationManagement/v1/optimisation/{id}
-DELETE /optimisationManagement/v1/optimisation/{id}
+PUT /optimisation/{id}
+PATCH /optimisation/{id}
+DELETE /optimisation/{id}
 ```
 
 ### 10.3. OSB MS endpoint summary:
@@ -651,9 +656,11 @@ CANCELLED
 Lifecycle transition baseline:
 
 ```text
-ACKNOWLEDGED -> QUEUED -> PROCESSING -> COMPLETED
-ACKNOWLEDGED -> QUEUED -> PROCESSING -> INFEASIBLE
-ACKNOWLEDGED -> QUEUED -> PROCESSING -> FAILED
+ACKNOWLEDGED -> QUEUED
+QUEUED -> PROCESSING
+PROCESSING -> COMPLETED
+PROCESSING -> INFEASIBLE
+PROCESSING -> FAILED
 ACKNOWLEDGED -> CANCELLING -> CANCELLED
 QUEUED -> CANCELLING -> CANCELLED
 PROCESSING -> CANCELLING -> CANCELLED
@@ -789,8 +796,11 @@ PUML and DrawIO files are editable source artifacts. Rendered SVG and PNG export
 
 ```text
 od-ms/od-ms-specification.md
+od-ms/od-ms.oas.yaml (pending)
 oc-ms/oc-ms-specification.md
+oc-ms/oc-ms.oas.yaml (pending)
 osb-ms/osb-ms-specification.md
+osb-ms/osb-ms.oas.yaml (pending)
 e2e/optimisation-e2e-solution-brief.md
 e2e/optimisation-logical-view.drawio
 e2e/optimisation-use-case-view.puml
