@@ -54,7 +54,7 @@ Core services:
 |---|---|
 | **OD MS(Optimisation Definition MS)** | Owns the governed `OptimisationSpecification` catalogue and exposes caller-facing request contracts. |
 | **OC MS(Optimisation Controller MS)** | Owns runtime `Optimisation` resources, lifecycle, cancellation, retrial, persistence, event integration, and result projection. |
-| **OSB MS(Optimisation Screen Builder MS)** | Provides the OEX backend-for-frontend experience, shapes views/actions using user context, and calls backend optimisation APIs through NGW. |
+| **OSB MS(Optimisation Screen Builder MS)** | Provides the OEX backend-for-frontend experience, shapes ui views and actions using user context, and calls backend optimisation APIs through NGW. |
 | **Python Gurobi Worker** | Executes or cancels internal deterministic optimisation work based on Kafka worker instructions. |
 
 Operator access to the experience layer is governed by the ACG approval process and Microsoft Entra ID SSO. OGW invokes OSB MS using mTLS and User Context JWT. OSB MS invokes NGW using mTLS and OAuth2 system-to-system. User context stops before NGW; downstream OD MS and OC MS calls use system service identity only.
@@ -71,8 +71,8 @@ OD MS acts as the governed catalogue of optimisation capabilities. It exposes on
 
 ```text
 specCharacteristic[]
-expressionSpecification
-targetEntitySchema
+expressionSpecification{}
+targetEntitySchema{}
 ```
 
 OD MS does not expose Gurobi objectives, candidate resource rules, solver configuration, model bindings, or internal formulation details.

@@ -1,4 +1,4 @@
-# OD MS / Optimisation Definition MS Specification
+# OD MS, Optimisation Definition MS Specification
 
 ## 1. Service purpose:
 
@@ -16,7 +16,7 @@ OD MS follows the TMF-style external resource model:
 - `@type`, `@baseType`, `@schemaLocation`, and `@referredType` follow the TMF polymorphism and extension style.
 - Standard external operations are `GET`, `POST`, `PATCH`, and `DELETE`.
 - `PATCH` uses JSON Merge Patch semantics and requires `Content-Type: application/merge-patch+json`.
-- `PUT` is an approved platform extension for full replacement/finalisation of mutable `DRAFT` specifications only.
+- `PUT` is an approved platform extension for full replacement and finalisation of mutable `DRAFT` specifications only.
 
 Approved platform extensions:
 
@@ -24,8 +24,8 @@ Approved platform extensions:
 |---|---|---|
 | `PUT /optimisationSpecification/{id}` | Full replacement/finalisation of mutable `DRAFT` specifications. | Requires `If-Match`; not allowed for `ACTIVE` or `RETIRED`. |
 | `_links` | HATEOAS controls. | Does not replace `href`; lifecycle-aware and authorisation-aware. |
-| `ETag` / `If-Match` governance | Optimistic concurrency for unsafe existing-resource operations. | Required for `PUT`, `PATCH`, and `DELETE`. |
-| `x-platform-extension` / `x-tmf-native` response headers | Governance/documentation headers for NGW-facing optimiser-domain resources. | Used only on external NGW-facing OD/OC APIs; clients must not use these headers as business-logic switches. |
+| `ETag and If-Match governance | Optimistic concurrency for unsafe existing-resource operations. | Required for `PUT`, `PATCH`, and `DELETE`. |
+| `x-platform-extension` and `x-tmf-native` response headers | Governance/documentation headers for NGW-facing optimiser-domain resources. | Used only on external NGW-facing OD/OC APIs; clients must not use these headers as business-logic switches. |
 
 ## 3. Ownership:
 
@@ -37,10 +37,10 @@ Optimisation capability metadata
 Request contract definition
 Expression specification metadata
 Target entity schema for runtime Optimisation expressions
-Specification characteristic catalogue for discovery and OEX/UI guidance
+Specification characteristic catalogue for discovery and OEX and UI guidance
 Specification lifecycle
-Specification activation/version assignment
-Specification list/retrieve/create/update/delete operations
+Specification activation and version assignment
+Specification list, retrieve, create, update, and delete operations
 ```
 
 OD MS does not own:
@@ -81,7 +81,7 @@ OD MS does not expose runtime optimisation operations. Runtime operations belong
 
 ## 5. OptimisationSpecification resource shape:
 
-`OptimisationSpecification` is a platform optimiser-domain resource modelled using the TMF921 `IntentSpecification` / `EntitySpecification` pattern. It is not a native TMF921 resource name.
+`OptimisationSpecification` is a platform optimiser-domain resource modelled using the TMF921 `IntentSpecification` and `EntitySpecification` pattern. It is not a native TMF921 resource name.
 
 Canonical fields:
 
@@ -158,15 +158,15 @@ The external `OptimisationSpecification` resource must use only the TMF-aligned 
 | `href` | Hyperlink reference to the specification resource. Server assigned. |
 | `name` | Human-readable specification name. Required on create. |
 | `description` | Description of the optimisation capability and contract. |
-| `familyId` | Required stable specification-family identifier shared by all versions of the same `OptimisationSpecification`. OD MS uses it to enforce at most one `ACTIVE` version per family. |
-| `version` | Official specification version within the specification family. Omitted for mutable `DRAFT`; assigned by OD MS only when the draft is activated. Present and immutable for `ACTIVE` and `RETIRED` specifications. |
+| `familyId` | Logical grouping metadata for related optimisation specifications. It supports discovery, reporting, and catalogue grouping, but OD MS must not use it as the lifecycle or versioning control key. |
+| `version` | Official specification version under the immutable `OptimisationSpecification.id`. Omitted for mutable `DRAFT`; assigned by OD MS only when the draft is activated. Present and immutable for `ACTIVE` and `RETIRED` specifications. |
 | `lifecycleStatus` | Specification lifecycle value: `DRAFT`, `ACTIVE`, or `RETIRED`. Created as `DRAFT` by default. |
 | `statusChangeDate` | Date/time the `lifecycleStatus` last changed. Server assigned. |
 | `creationDate` | Date/time the specification resource was created. Server assigned. |
 | `lastUpdate` | Date/time the specification resource was last updated. Server assigned. |
 | `validFor` | Optional validity window for the specification. |
 | `isBundle` | TMF-style bundle indicator. Default should be `false` unless explicitly modelling a bundle. |
-| `specCharacteristic[]` | Discovery/catalogue metadata for supported optimisation fields and OEX/UI guidance. |
+| `specCharacteristic[]` | Discovery/catalogue metadata for supported optimisation fields and OEX and UI guidance. |
 | `expressionSpecification` | Defines the expression specification metadata for runtime optimisation expressions, including `@type`, `expressionType`, `expressionLanguage`, and ontology `iri`. |
 | `targetEntitySchema` | Authoritative schema contract for runtime `Optimisation.expression.expressionValue`. |
 | `relatedParty[]` | Parties or roles associated with the specification. |
@@ -184,14 +184,14 @@ OD MS must keep the three TMF-aligned specification structures separate. They ar
 
 | Structure | Responsibility | Must not be used for |
 |---|---|---|
-| `specCharacteristic[]` | Catalogue/discovery metadata for OEX/UI and API consumers. It advertises supported optimisation capability characteristics, examples, defaults, and display guidance. | It must not be treated as the authoritative validation schema. |
+| `specCharacteristic[]` | Catalogue and discovery metadata for OEX and UI and API consumers. It advertises supported optimisation capability characteristics, examples, defaults, and display guidance. | It must not be treated as the authoritative validation schema. |
 | `expressionSpecification` | Expression-language and ontology binding. It declares `@type = ExpressionSpecification`, `expressionType = JsonLdExpression`, `expressionLanguage = JSON-LD`, and the optimisation ontology `iri`. | It must not contain runtime request values or detailed JSON validation rules. |
 | `targetEntitySchema` | Authoritative validation contract for `Optimisation.expression.expressionValue`, including `context.targets[]`, `context.constraints[]`, and `context.preferences[]`. | It must not be replaced by catalogue characteristics or prose-only rules. |
 
 Baseline rule:
 
 ```text
-specCharacteristic[] = catalogue / discovery / UI guidance
+specCharacteristic[] = catalogue, discovery, and UI guidance
 expressionSpecification = expression type + expression language + ontology IRI
 targetEntitySchema = authoritative runtime expressionValue validation schema
 ```
@@ -207,7 +207,7 @@ OC MS must validate expression.expressionValue against the referenced Optimisati
 OC MS must not resolve or substitute the runtime contract by expression.iri alone.
 ```
 
-The design-time `expressionSpecification` must not be confused with the runtime `expression` instance. `expressionSpecification` declares the expected expression type/language/ontology for runtime requests. The runtime `Optimisation.expression` carries the actual `JsonLdExpression`, and `Optimisation.expression.expressionValue` carries the actual JSON-LD optimisation problem payload.
+The design-time `expressionSpecification` must not be confused with the runtime `expression` instance. `expressionSpecification` declares the expected expression type, expression language, and ontology for runtime requests. The runtime `Optimisation.expression` carries the actual `JsonLdExpression`, and `Optimisation.expression.expressionValue` carries the actual JSON-LD optimisation problem payload.
 
 ## 8. Runtime optimisation context contract:
 
@@ -248,12 +248,12 @@ Meaning:
 
 | Runtime bucket | Meaning |
 |---|---|
-| `context` | The whole optimisation scenario / big picture. |
+| `context` | The whole optimisation scenario, or big picture. |
 | `context.targets[]` | Optimisation goals the optimiser tries to achieve. |
 | `context.constraints[]` | Hard mandatory requirements that must be satisfied. |
 | `context.preferences[]` | Soft ranking or selection preferences used to choose between otherwise valid outcomes. |
 
-OD MS defines this runtime contract using `targetEntitySchema`. `specCharacteristic[]` may describe these fields for discovery, governance, examples, defaults, and OEX/UI prefill guidance, but it must not replace the authoritative schema.
+OD MS defines this runtime contract using `targetEntitySchema`. `specCharacteristic[]` may describe these fields for discovery, governance, examples, defaults, and OEX and UI prefill guidance, but it must not replace the authoritative schema.
 
 ## 9. Embedded schema artifact: optimisation-expression-value.schema.json:
 
@@ -319,7 +319,7 @@ context.preferences[] contains soft ranking or selection preferences.
       "const": "opt:OptimisationProblem"
     },
     "context": {
-      "description": "The full optimisation scenario / big picture. Contains optimisation goals, hard requirements, and soft preferences.",
+      "description": "The full optimisation scenario, or big picture. Contains optimisation goals, hard requirements, and soft preferences.",
       "type": "object",
       "additionalProperties": false,
       "required": ["targets", "constraints", "preferences"],
@@ -431,17 +431,18 @@ There is no `DEPRECATED` state in the optimiser baseline.
 | Lifecycle state | Meaning | Edit/runtime rule |
 |---|---|---|
 | `DRAFT` | Specification is being prepared. | Editable. Not usable for new runtime `Optimisation` creation. No official public `version`; draft revision is represented by `ETag` only. |
-| `ACTIVE` | Specification is approved for runtime use. | Immutable for contract/content changes. Used by OC MS to validate and create runtime `Optimisation` resources. May be moved to `RETIRED` only by governed lifecycle transition, normally when another `DRAFT` in the same `familyId` is activated. |
+| `ACTIVE` | Specification is approved for runtime use. | Immutable for contract and content changes. Used by OC MS to validate and create runtime `Optimisation` resources. May be moved to `RETIRED` only by governed lifecycle transition, normally when a replacement `DRAFT` for the same `OptimisationSpecification.id` is activated. |
 | `RETIRED` | Specification is no longer available for new use. | Immutable retained history/audit record. Not editable and not usable for new runtime `Optimisation` creation. Existing runtime references may continue to resolve it for audit/explainability. |
 
 Baseline immutability rule:
 
 ```text
 Only DRAFT specifications are mutable.
-ACTIVE specifications are contract/content immutable.
+ACTIVE specifications are contract and content immutable.
 RETIRED specifications are fully immutable retained records.
-To change an ACTIVE specification contract, create a new DRAFT in the same familyId and activate it.
+To change an ACTIVE specification contract, create a new DRAFT for the same `OptimisationSpecification.id` and activate it.
 OD MS assigns the official version during activation, not while the resource is still DRAFT.
+`familyId` remains logical grouping metadata and must not drive activation, retirement, or official-version uniqueness decisions.
 ```
 
 ## 12. Version activation and retirement governance:
@@ -454,7 +455,7 @@ ACTIVE: official version is assigned at activation and is immutable.
 RETIRED: retains the assigned official version and is immutable.
 ```
 
-Multiple DRAFT OptimisationSpecification resources may exist in the same familyId at the same time. Official version uniqueness applies only to ACTIVE and RETIRED specifications because DRAFT specifications do not expose an official public version. OD MS enforces only one ACTIVE OptimisationSpecification per familyId.
+Multiple DRAFT OptimisationSpecification candidates may exist for the same `OptimisationSpecification.id` only when OD MS explicitly supports parallel draft candidates. Otherwise, OD MS may restrict each `OptimisationSpecification.id` to one mutable DRAFT at a time. Official version uniqueness applies only to ACTIVE and RETIRED specifications because DRAFT specifications do not expose an official public version. OD MS enforces only one ACTIVE version per `OptimisationSpecification.id`.
 
 Version format baseline:
 
@@ -462,8 +463,8 @@ Version format baseline:
 Official version values use SemVer-compatible MAJOR.MINOR.PATCH format, for example 1.0.0.
 The official version is assigned by OD MS during activation.
 Client requests must not assign or change the official version.
-Within a familyId, an official version value must be unique across ACTIVE and RETIRED specifications as a server-side data-integrity invariant.
-Because the official version is assigned by OD MS, clients cannot directly create a duplicate official version. If OD MS cannot safely assign a new official version because another activation is occurring for the same familyId, OD MS returns 409 Conflict for the concurrent activation conflict.
+Within an `OptimisationSpecification.id`, an official version value must be unique across ACTIVE and RETIRED versions as a server-side data-integrity invariant.
+Because the official version is assigned by OD MS, clients cannot directly create a duplicate official version. If OD MS cannot safely assign a new official version because another activation is occurring for the same `OptimisationSpecification.id`, OD MS returns 409 Conflict for the concurrent activation conflict.
 ```
 
 `POST /optimisationSpecification` always creates a mutable `DRAFT` `OptimisationSpecification` without an official public `version`.
@@ -476,17 +477,17 @@ Because the official version is assigned by OD MS, clients cannot directly creat
 Activation rules:
 
 ```text
-Only one ACTIVE OptimisationSpecification is allowed per familyId.
+Only one ACTIVE version is allowed per `OptimisationSpecification.id`.
 Activation is allowed only from DRAFT.
 Activation validates the full OptimisationSpecification before committing the lifecycle transition.
-When a DRAFT specification is promoted to ACTIVE, OD MS assigns the official version for that specification family and must transactionally retire any previous ACTIVE specification with the same familyId.
-The newly ACTIVE specification becomes contract/content immutable immediately after activation.
+When a DRAFT specification is promoted to ACTIVE, OD MS assigns the official version for that `OptimisationSpecification.id` and must transactionally retire any previous ACTIVE version for the same `OptimisationSpecification.id`.
+The newly ACTIVE specification becomes contract and content immutable immediately after activation.
 The previous ACTIVE specification becomes RETIRED and fully immutable as part of the same transaction.
 ```
 
-`ACTIVE -> RETIRED` is a governed lifecycle transition, not a contract/content update. It is normally performed automatically when a replacement `DRAFT` in the same `familyId` is activated. If a deployment allows explicit retirement, it must be lifecycle-only, require `If-Match`, update `statusChangeDate`, and must not change any contract fields.
+`ACTIVE -> RETIRED` is a governed lifecycle transition, not a contract and content update. It is normally performed automatically when a replacement `DRAFT` for the same `OptimisationSpecification.id` is activated. If a deployment allows explicit retirement, it must be lifecycle-only, require `If-Match`, update `statusChangeDate`, and must not change any contract fields.
 
-`PUT` is not the mechanism for retiring an `ACTIVE` specification. `PUT` remains the approved platform extension for full replacement/finalisation of mutable `DRAFT` specifications only.
+`PUT` is not the mechanism for retiring an `ACTIVE` specification. `PUT` remains the approved platform extension for full replacement and finalisation of mutable `DRAFT` specifications only.
 
 Physical `DELETE` is not used for `ACTIVE` or `RETIRED` specifications.
 
@@ -496,9 +497,9 @@ Physical `DELETE` is not used for `ACTIVE` or `RETIRED` specifications.
 |---|---|
 | `GET /optimisationSpecification` | Lists visible specifications. Supports enumerated first-level filtering and `fields`. |
 | `GET /optimisationSpecification/{id}` | Retrieves one specification. Supports first-level `fields`. |
-| `POST /optimisationSpecification` | Creates a new mutable `DRAFT` specification without an official public `version`. `familyId` is required. Returns an `ETag` for draft revision/concurrency. |
+| `POST /optimisationSpecification` | Creates a new mutable `DRAFT` specification without an official public `version`. `familyId` is required as logical grouping metadata. Returns an `ETag` for draft revision and concurrency. |
 | `PUT /optimisationSpecification/{id}` | Approved platform extension. Full replacement/finalisation of mutable `DRAFT` only. Requires `If-Match` and `Content-Type: application/json`. Rejected for `ACTIVE` and `RETIRED`. |
-| `PATCH /optimisationSpecification/{id}` | TMF-compatible partial update using JSON Merge Patch. Requires `If-Match` and `Content-Type: application/merge-patch+json`. Contract/content updates are allowed only for `DRAFT`. Activation from `DRAFT` is allowed. Retirement of `ACTIVE` is lifecycle-only and does not permit contract/content changes. Rejected for `RETIRED`. |
+| `PATCH /optimisationSpecification/{id}` | TMF-compatible partial update using JSON Merge Patch. Requires `If-Match` and `Content-Type: application/merge-patch+json`. Contract and content updates are allowed only for `DRAFT`. Activation from `DRAFT` is allowed. Retirement of `ACTIVE` is lifecycle-only and does not permit contract and content changes. Rejected for `RETIRED`. |
 | `DELETE /optimisationSpecification/{id}` | Physical delete only for mutable `DRAFT`. Requires `If-Match`. Rejected for `ACTIVE` and `RETIRED`. |
 
 ## 14. Supported list filters:
@@ -508,12 +509,12 @@ Physical `DELETE` is not used for `ACTIVE` or `RETIRED` specifications.
 | Query parameter | Meaning |
 |---|---|
 | `id` | Exact match on resource id. |
-| `familyId` | Exact match on specification family. |
+| `familyId` | Exact match on logical grouping metadata. |
 | `name` | Exact or implementation-defined case-insensitive name match. |
 | `lifecycleStatus` | Exact match on `DRAFT`, `ACTIVE`, or `RETIRED`. |
 | `version` | Exact match on official version. Meaningful only for `ACTIVE` and `RETIRED`. |
-| `lastUpdate.gt` / `lastUpdate.lt` | Optional timestamp range filters for last update. |
-| `statusChangeDate.gt` / `statusChangeDate.lt` | Optional timestamp range filters for lifecycle change date. |
+| `lastUpdate.gt`, `lastUpdate.lt` | Optional timestamp range filters for last update. |
+| `statusChangeDate.gt`, `statusChangeDate.lt` | Optional timestamp range filters for lifecycle change date. |
 | `fields` | Optional sparse fieldset projection. |
 
 Unsupported or malformed query parameters return `400 Bad Request`.
@@ -528,7 +529,7 @@ Unsupported field names still return 400 Bad Request.
 
 ## 15. External response header governance:
 
-OD MS external NGW-facing API responses include the following governance/documentation headers because `OptimisationSpecification` is an optimiser-domain platform resource that follows TMF-style conventions but is not a native TMF Open API resource:
+OD MS external NGW-facing API responses include the following governance and documentation headers because `OptimisationSpecification` is an optimiser-domain platform resource that follows TMF-style conventions but is not a native TMF Open API resource:
 
 ```http
 x-platform-extension: true
@@ -605,9 +606,9 @@ Link relation meaning:
 | `delete` | `DELETE` | Delete mutable `DRAFT`. |
 | `activate` | `PATCH` | Governed activation of a finalised `DRAFT`. |
 | `retire` | `PATCH` | Governed retirement of an `ACTIVE` specification. |
-| `createNewVersion` | `POST` | Create a new mutable `DRAFT` in the same `familyId` from an existing active/retired family. The official `version` is assigned only when the draft is activated. |
+| `createNewVersion` | `POST` | Create a new mutable `DRAFT` for the same `OptimisationSpecification.id`. The official `version` is assigned only when the draft is activated. `familyId` may be retained as logical grouping metadata. |
 
-The `activate` and `retire` link relations point to `PATCH` on the `OptimisationSpecification` resource itself. OD MS does not expose separate `/activate` or `/retire` action endpoints. The `retire` link is lifecycle-only and must not be used to modify an `ACTIVE` specification contract/content.
+The `activate` and `retire` link relations point to `PATCH` on the `OptimisationSpecification` resource itself. OD MS does not expose separate `/activate` or `/retire` action endpoints. The `retire` link is lifecycle-only and must not be used to modify an `ACTIVE` specification contract and content.
 
 ## 18. Operation examples:
 
@@ -935,7 +936,7 @@ x-tmf-native: false
 Content-Type: application/json
 ```
 
-Response body returns the full activated resource. OD MS transactionally retires the previous `ACTIVE` version in the same `familyId` family.
+Response body returns the full activated resource. OD MS transactionally retires the previous `ACTIVE` version for the same `OptimisationSpecification.id`.
 
 ### 18.5. PUT finalise and activate mutable DRAFT:
 
@@ -1038,7 +1039,7 @@ x-tmf-native: false
 Content-Type: application/json
 ```
 
-Response body returns the full retired `OptimisationSpecification`. This operation changes lifecycle metadata only; it must not alter any specification contract/content fields.
+Response body returns the full retired `OptimisationSpecification`. This operation changes lifecycle metadata only; it must not alter any specification contract and content fields.
 
 Retired specifications expose only lifecycle-authorised read/new-version links such as `self`, `collection`, and `createNewVersion`.
 
@@ -1075,7 +1076,7 @@ Core status codes:
 | `403 Forbidden` | Authenticated caller is not allowed. |
 | `404 Not Found` | Resource not found or not visible to caller. |
 | `405 Method Not Allowed` | HTTP method not supported for this resource. |
-| `409 Conflict` | Lifecycle/version conflict, including ACTIVE/RETIRED mutation attempts or concurrent activation conflict for the same familyId. |
+| `409 Conflict` | Lifecycle and version conflict, including ACTIVE or RETIRED mutation attempts or concurrent activation conflict for the same `OptimisationSpecification.id`. |
 | `412 Precondition Failed` | `If-Match` is stale or mismatched. |
 | `415 Unsupported Media Type` | Unsupported request content type. |
 | `422 Unprocessable Entity` | Syntactically valid JSON violates OD MS `OptimisationSpecification` schema or targetEntitySchema contract rules. |
@@ -1087,10 +1088,10 @@ Core status codes:
 Boundary rules:
 
 ```text
-ACTIVE/RETIRED contract or content mutation -> 409 Conflict
-DRAFT contract/content update that fails OptimisationSpecification schema validation -> 422 Unprocessable Entity
-targetEntitySchema / expressionSpecification contract-shape failure -> 422 Unprocessable Entity
-concurrent activation conflict for the same familyId -> 409 Conflict
+ACTIVE or RETIRED contract or content mutation -> 409 Conflict
+DRAFT contract and content update that fails OptimisationSpecification schema validation -> 422 Unprocessable Entity
+targetEntitySchema or expressionSpecification contract-shape failure -> 422 Unprocessable Entity
+concurrent activation conflict for the same `OptimisationSpecification.id` -> 409 Conflict
 server-side official version uniqueness violation -> internal data-integrity failure; OD MS must roll back the activation transaction
 unsupported PATCH Content-Type -> 415 Unsupported Media Type
 unsupported query parameter -> 400 Bad Request
@@ -1107,7 +1108,7 @@ Content-Type: application/json
 {
   "code": "OPTIMISATION_SPECIFICATION_IMMUTABLE",
   "reason": "OptimisationSpecification is immutable",
-  "message": "Only DRAFT OptimisationSpecification resources can be changed. ACTIVE specifications are contract/content immutable and RETIRED specifications are fully immutable retained records.",
+  "message": "Only DRAFT OptimisationSpecification resources can be changed. ACTIVE specifications are contract and content immutable and RETIRED specifications are fully immutable retained records.",
   "status": 409,
   "@type": "Error"
 }
@@ -1124,7 +1125,7 @@ Content-Type: application/json
 {
   "code": "OPTIMISATION_SPECIFICATION_ACTIVATION_CONFLICT",
   "reason": "Concurrent activation conflict",
-  "message": "Another OptimisationSpecification activation is already in progress or has just completed for the same familyId. Refresh the family state and retry if still required.",
+  "message": "Another OptimisationSpecification activation is already in progress or has just completed for the same OptimisationSpecification id. Refresh the specification state and retry if still required.",
   "status": 409,
   "@type": "Error"
 }
@@ -1206,7 +1207,7 @@ OC MS does not validate:
 ```text
 solver feasibility
 candidate ranking
-metric-vs-constraint fit
+metric and constraint fit
 objective trade-off evaluation
 best-candidate selection
 ```
