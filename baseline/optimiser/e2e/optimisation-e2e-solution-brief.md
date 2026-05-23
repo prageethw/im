@@ -57,7 +57,7 @@ Core services:
 | **OSB MS(Optimisation Screen Builder MS)** | Provides the OEX backend-for-frontend experience, shapes UI views and actions using user context, and calls backend optimisation APIs through NGW. |
 | **Python Gurobi Worker** | Executes or cancels internal deterministic optimisation work based on Kafka worker instructions. |
 
-Operator access to the experience layer is governed by the ACG approval process and Microsoft Entra ID SSO. OGW invokes OSB MS using mTLS and User Context JWT. OSB MS invokes NGW using mTLS and OAuth2 system-to-system. User context stops before NGW; downstream OD MS and OC MS calls use system service identity only.
+Operator access to the experience layer is governed by the ACG approval process and Microsoft Entra ID SSO. OGW invokes OSB MS using mTLS and User Context JWT. OSB MS invokes NGW using mTLS and OAuth2 system-to-system. User context stops before NGW; downstream OD MS and OC MS calls use service identity only.
 
 OC MS validates the request structure and referenced ACTIVE OD MS request contract, persists the runtime `Optimisation` resource, returns `201 Created`, writes `OptimisationRequestedEvent` to its outbox, and drives execution asynchronously through Kafka.
 
@@ -308,7 +308,7 @@ Phase-one OEX and OSB status refresh is REST polling against OC MS through NGW. 
 11. Baseline cancellation confirmation is `OptimisationCompletedEvent.status = CANCELLED`; OC MS projects CANCELLED only after that terminal worker confirmation.
 ```
 
-Cancellation is best-effort. Cancellation has no required request body; optional reason or comment metadata does not change cancellation semantics. Cancellation requested for terminal `COMPLETED`, `FAILED`, `INFEASIBLE`, or `CANCELLED` state returns `409 Conflict`.
+Cancellation is best-effort. Cancellation has no required request body; optional reason or comment metadata does not change cancellation semantics. OSB must not send an empty JSON object solely to force `Content-Type`. If no body is supplied by OEX, OSB should call OC MS without a request body. Cancellation requested for terminal `COMPLETED`, `FAILED`, `INFEASIBLE`, or `CANCELLED` state returns `409 Conflict`.
 
 Worker cancellation handling is implementation-specific. The `CANCEL` instruction is best-effort; a worker may complete a solve cycle before honouring cancellation where immediate interruption is not safe or supported.
 
@@ -329,7 +329,7 @@ Worker cancellation handling is implementation-specific. The `CANCEL` instructio
 10. Worker processes the new request asynchronously.
 ```
 
-Retrial is available only from `FAILED` in the baseline. Retrial is not available from `INFEASIBLE` by default because `INFEASIBLE` is a valid optimisation or model outcome, not a technical failure. Retrial has no required request body and does not allow overrides; it resubmits the original accepted expression and reuses the original persisted OC contract pointer, including `id`, `version`, `draftId`, `href`, and optional `etag`.
+Retrial is available only from `FAILED` in the baseline. Retrial is not available from `INFEASIBLE` by default because `INFEASIBLE` is a valid optimisation or model outcome, not a technical failure. Retrial has no required request body and does not allow overrides. OSB must not send an empty JSON object solely to force `Content-Type`. If no body is supplied by OEX, OSB should call OC MS without a request body. Retrial resubmits the original accepted expression and reuses the original persisted OC contract pointer, including `id`, `version`, `draftId`, `href`, and optional `etag`. When OC MS creates the retrial resource, it returns `201 Created` with the new runtime Optimisation id, `Location`, `ETag`, and resource body.
 
 #### 3.3.8. Gurobi execute optimisation:
 
@@ -358,7 +358,7 @@ Retrial is available only from `FAILED` in the baseline. Retrial is not availabl
 | **OEX UI and experience layer** | Provides user/operator-facing experience for discovery, request submission, monitoring, cancellation, retrial, and result viewing. |
 | **OSB MS** | Builds OEX view models, applies user-context filtering, uses backend `_links` plus user context for actions, forwards ETags, and calls backend APIs through NGW. |
 | **NGW** | Backend API entry point for OD MS and OC MS using service identity and mTLS. |
-| **OD MS** | Owns `OptimisationSpecification` catalogue, lifecycle/version governance, `specCharacteristic[]`, `expressionSpecification`, and `targetEntitySchema`. |
+| **OD MS** | Owns `OptimisationSpecification` catalogue, lifecycle and version governance, `id` lineage identity, `draftId` draft provenance, official `version`, logical `familyId` grouping metadata, `specCharacteristic[]`, `expressionSpecification`, and `targetEntitySchema`. |
 | **OD MS Database** | Stores specification lineage records, `draftId`, `familyId`, lifecycle, official version for ACTIVE and RETIRED, ETags, provenance, and immutable retained history. |
 | **OC MS** | Owns runtime `Optimisation` resources, lifecycle, accepted expression values, immutable resolved specification pointer, outbox and inbox, cancellation, retrial, and result projection. |
 | **OC MS Database** | Stores runtime records, lifecycle state, statusChangeDate, sourceContext, expression, resolved specification pointer, result when terminal, relationships, outbox, and inbox records. |
@@ -417,12 +417,14 @@ NGW-to-downstream OD MS and OC MS calls do not carry or expose end-user identity
 
 OC MS calls OD MS directly using service-to-service mTLS for specification validation. This is an internal service path and does not route through NGW.
 
-OC MS validates:
+OC MS resolves and validates the referenced specification contract:
 
 ```text
-OptimisationSpecification exists
-OptimisationSpecification lifecycleStatus = ACTIVE
-expression.expressionValue matches targetEntitySchema
+OptimisationSpecification.id exists
+current ACTIVE version is resolved by OptimisationSpecification.id
+resolved ACTIVE version has lifecycleStatus = ACTIVE
+expression.expressionValue matches the resolved targetEntitySchema
+resolved id, version, draftId, href, and optional etag are persisted on the runtime record
 ```
 
 OC MS may cache immutable ACTIVE specification contracts by id and ETag, but must not infer current active contract by stale `familyId` lookup.
@@ -509,13 +511,18 @@ Every service-to-infrastructure integration must explicitly capture authenticati
 ## 6. Important quality attributes:
 
 ### 6.1. Availability:
+
 Availability SLA is yet to be determined.
-OD MS and OC MS should be deployed as independently scalable and highly available services. Kafka availability is critical for asynchronous worker instruction and outcome exchange. Outbox/inbox patterns reduce data-loss risk during transient service or Kafka failures.
-DB and kafka cluster will have enough redundancy have high availability requirements, and k8s will provide high availabilty by having multiple pods and having capability to orchestrate pods to meet defined avaialbilty.
+
+OD MS and OC MS should be deployed as independently scalable and highly available services. Kafka availability is critical for asynchronous worker instruction and outcome exchange. Outbox and inbox patterns reduce data-loss risk during transient service or Kafka failures.
+
+The database and Kafka cluster must meet the required availability targets for the platform. Kubernetes should run multiple pods where required and orchestrate pod placement and recovery to support the agreed availability posture.
 
 ### 6.2. Scalability:
+
 The production environment is expected to scale dynamically based on demand.
-OD MS scales primarily for capability discovery and specification retrieval. OC MS scales for runtime API traffic, outbox relay throughput, and inbox outcome processing. Python Gurobi workers scale horizontally based on queue depth and solver runtime characteristics. OSB scales for OEX-API view traffic and can cache read-only OD-derived capability/form data only where backend cache headers allow.
+
+OD MS scales primarily for capability discovery and specification retrieval. OC MS scales for runtime API traffic, outbox relay throughput, and inbox outcome processing. Python Gurobi workers scale horizontally based on queue depth and solver runtime characteristics. OSB scales for OEX-API view traffic and can cache read-only OD-derived capability and form data only where backend cache headers allow.
 
 Kubernetes provides the ability to scale pods based on demand.
 
@@ -549,7 +556,7 @@ All synchronous API calls are expected to provide response times below 30 ms whe
 - OGW is the user-context-aware gateway for OEX APIs.
 - OGW integrates with OSB MS using mTLS and User Context JWT.
 - OSB MS integrates with NGW using mTLS and OAuth2 system-to-system.
-- User context stops before or at NGW; downstream OD MS and OC MS calls use system or service identity only.
+- User context stops before or at NGW; downstream OD MS and OC MS calls use service identity only.
 - NGW exposes OD MS and OC MS APIs to authorised backend consumers.
 - OC MS calls OD MS using mTLS for specification validation.
 - Kafka is available as the event backbone.
@@ -573,7 +580,7 @@ All synchronous API calls are expected to provide response times below 30 ms whe
 - Runtime `Optimisation` does not support client-side `PUT`, `PATCH`, or `DELETE`.
 - Cancellation is represented through `lifecycleStatus = CANCELLING` and an `OptimisationRequestedEvent` with `instruction = CANCEL`.
 - Only one `ACTIVE` official `OptimisationSpecification` version is allowed per `OptimisationSpecification.id`.
-- ETag and If-Match is required for unsafe runtime operations such as cancellation and retrial.
+- ETag and If-Match are required for unsafe runtime operations such as cancellation and retrial.
 - Internal Kafka events do not use TMF REST `@type`, `@baseType`, or `@schemaLocation`.
 
 ## 10. Appendix:
