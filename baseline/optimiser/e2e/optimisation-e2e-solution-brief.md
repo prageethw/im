@@ -600,6 +600,8 @@ DELETE /optimisationManagement/v1/optimisationSpecification/{id}
 
 OD `PATCH` requires `Content-Type: application/merge-patch+json`. OD `PUT` requires `Content-Type: application/json` and is allowed only for mutable DRAFT replacement/finalisation.
 
+DRAFT candidate operations require `draftId` where applicable. In particular, DRAFT mutation, activation, and deletion target the selected `(id, draftId)` candidate, while ACTIVE and RETIRED official versions are selected by `id` and `version`, or by `id` alone when resolving the current ACTIVE version.
+
 ### 10.2. OC MS endpoint summary:
 
 ```http
