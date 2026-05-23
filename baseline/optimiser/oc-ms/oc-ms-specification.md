@@ -108,12 +108,12 @@ Field notes:
 | **Field** | **Rule** |
 |---|---|
 | `id` / `href` | Server-assigned runtime resource identity. |
-| `priority` | Optional caller-supplied priority rank represented as a string. Baseline allowed values are `"1"` = highest, `"2"` = normal, and `"3"` = low. If omitted, OC MS applies the default priority policy. |
+| `priority` | Optional caller-supplied priority rank represented as a string. Baseline allowed values are `"1"` = highest, `"2"` = normal, and `"3"` = low. If omitted, OC MS applies the default priority policy. Unsupported priority values return `400 Bad Request`. |
 | `sourceContext` | Optional provenance context identifying the upstream domain and source resource that requested or caused the optimisation. It may be used for audit, traceability, and list filtering. |
 | `optimisationSpecification` | Mandatory immutable reference to the resolved `ACTIVE` `OptimisationSpecification` version used as the exact contract pointer at creation time. Includes `id`, `version`, `draftId`, `href`, and optionally `etag` for cache traceability. |
 | `expression` | Accepted runtime expression submitted by the caller. `expression.iri` is mandatory and must match the referenced ACTIVE specification's `expressionSpecification.iri`. |
 | `result` | Terminal result projection only. Presence depends on lifecycle state. |
-| `optimisationRelationship[]` | Used for relationships such as `retrialOf`. |
+| `optimisationRelationship[]` | Used for relationships between runtime Optimisation resources. The baseline relationship type is `retrialOf`; other relationship types are out of scope for the current baseline. |
 | `lifecycleStatus` / `statusChangeDate` | Runtime state and last lifecycle transition time. |
 | `_links` | Lifecycle-aware HATEOAS action links. |
 
@@ -179,6 +179,8 @@ CANCELLED -> terminal
 ```
 
 `ACKNOWLEDGED -> QUEUED` is driven by OC MS after the OC MS Outbox Relay successfully publishes the `OptimisationRequestedEvent` to the Kafka topic. If publication is delayed, the resource may remain `ACKNOWLEDGED` while the outbox retry policy continues.
+
+`QUEUED -> PROCESSING` is driven by a worker start acknowledgement, worker progress event, or equivalent worker-start notification accepted by OC MS. The exact worker-start signal is platform-internal and does not change the external OC MS API contract.
 
 Retrial does not move the failed Optimisation back to `PROCESSING`. It creates a new linked Optimisation with `retrialOf`.
 
@@ -525,9 +527,33 @@ x-platform-extension: true
 x-tmf-native: false
 ```
 
+```json
+[
+  {
+    "id": "opt-12345",
+    "href": "/optimisation/opt-12345",
+    "lifecycleStatus": "PROCESSING",
+    "statusChangeDate": "2026-05-02T03:01:00Z",
+    "@type": "Optimisation",
+    "_links": {
+      "self": {
+        "href": "/optimisation/opt-12345",
+        "method": "GET"
+      },
+      "cancellation": {
+        "href": "/optimisation/opt-12345/cancellation",
+        "method": "POST"
+      }
+    }
+  }
+]
+```
+
 `X-Total-Count` reflects the total number of resources matching the applied filters before paging and sparse field projection. `X-Result-Count` reflects the number of resources returned in the current response page.
 
 ## 15. GET /optimisation/{id}:
+
+Full `GET /optimisation/{id}` representations include the accepted `expression` unless sparse field projection or a configured representation policy omits it. Examples may omit unchanged fields for brevity when the omitted fields are not material to the rule being illustrated.
 
 ```http
 GET /optimisation/opt-12345
@@ -615,7 +641,6 @@ Active-state example:
 
 Completed-state example:
 
-Examples may omit unchanged fields for brevity. Full `GET /optimisation/{id}` representations include the accepted `expression` unless sparse field projection or a configured representation policy omits it.
 
 ```json
 {
@@ -702,6 +727,34 @@ Baseline cancellation confirmation is `OptimisationCompletedEvent.status = CANCE
 If cancellation is requested when lifecycleStatus is terminal (COMPLETED, FAILED, INFEASIBLE, or CANCELLED), OC MS returns 409 Conflict.
 ```
 
+Successful cancellation response:
+
+```http
+HTTP/1.1 202 Accepted
+ETag: "opt-12345-rev3"
+Content-Type: application/json
+x-platform-extension: true
+x-tmf-native: false
+```
+
+```json
+{
+  "id": "opt-12345",
+  "href": "/optimisation/opt-12345",
+  "lifecycleStatus": "CANCELLING",
+  "statusChangeDate": "2026-05-02T03:02:00Z",
+  "@type": "Optimisation",
+  "_links": {
+    "self": {
+      "href": "/optimisation/opt-12345",
+      "method": "GET"
+    }
+  }
+}
+```
+
+`202 Accepted` means OC MS accepted the cancellation request and emitted, or will emit, a cancellation instruction. It does not mean the worker has confirmed cancellation. Final cancellation is projected only when OC MS receives `OptimisationCompletedEvent.status = CANCELLED`.
+
 Retrial request body:
 
 ```text
@@ -772,7 +825,7 @@ Unsupported request content type returns 415 Unsupported Media Type.
 
 | **Condition** | **Response** |
 |---|---|
-| Missing `optimisationSpecification.id`, missing `expression`, missing `expression.iri`, malformed wrapper, malformed JSON, malformed query parameter, unsupported query parameter, invalid paging parameter, or client-supplied forbidden server-controlled field | `400 Bad Request` |
+| Missing `optimisationSpecification.id`, missing `expression`, missing `expression.iri`, malformed wrapper, malformed JSON, malformed query parameter, unsupported query parameter, invalid paging parameter, unsupported priority value, or client-supplied forbidden server-controlled field | `400 Bad Request` |
 | Referenced `OptimisationSpecification.id` is missing or not visible | `404 Not Found` |
 | Referenced `OptimisationSpecification.id` has no current `ACTIVE` version | `422 Unprocessable Entity` |
 | `expression.iri` does not match the resolved specification version's `expressionSpecification.iri` | `422 Unprocessable Entity` |
@@ -787,7 +840,7 @@ Unsupported request content type returns 415 Unsupported Media Type.
 Boundary rules:
 
 ```text
-400 = malformed request, missing required top-level wrapper fields such as `optimisationSpecification.id`, missing `expression`, missing `expression.iri`, unsupported query/filter parameter, invalid paging parameter, or client-supplied forbidden server-controlled runtime field.
+400 = malformed request, missing required top-level wrapper fields such as `optimisationSpecification.id`, missing `expression`, missing `expression.iri`, unsupported query/filter parameter, invalid paging parameter, unsupported priority value, or client-supplied forbidden server-controlled runtime field.
 422 = request content is syntactically valid but violates the resolved OD contract, including no current ACTIVE version for the referenced specification id, mismatch between `expression.iri` and the resolved specification version's `expressionSpecification.iri`, or `expression.expressionValue` failing `targetEntitySchema`.
 409 = runtime lifecycle/action conflict.
 428 = required If-Match missing.
