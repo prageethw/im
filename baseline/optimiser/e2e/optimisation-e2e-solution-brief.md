@@ -37,12 +37,10 @@ The business need is to allow authorised consumers to discover available optimis
 
 The solution separates:
 
-```text
-definition of optimisation capabilities
-runtime optimisation control
-worker and solver execution
-experience-layer presentation
-```
+- definition of optimisation capabilities
+- runtime optimisation control
+- worker and solver execution
+- experience-layer presentation
 
 ## 2. Solution summary:
 
@@ -69,12 +67,10 @@ NGW-exposed backend APIs use TMF-style API conventions where appropriate. `Optim
 
 OD MS acts as the governed catalogue of optimisation capabilities. It exposes only what callers need to discover and submit a valid optimisation request through:
 
-```text
-specCharacteristic[]
-expressionSpecification{}
-targetEntitySchema{}
-id, draftId, version, familyId, lifecycleStatus, and ETag governance
-```
+- `specCharacteristic[]`
+- `expressionSpecification{}`
+- `targetEntitySchema{}`
+- `id`, `draftId`, `version`, `familyId`, `lifecycleStatus`, and `ETag` governance
 
 OD MS does not expose Gurobi objectives, candidate resource rules, solver configuration, model bindings, or internal formulation details.
 
@@ -86,57 +82,49 @@ DRAFT -> ACTIVE -> RETIRED
 
 OD MS rules:
 
-```text
-DRAFT candidates are mutable and are identified by `id` and `draftId`.
-DRAFT candidates have no official public version; draft revision uses ETag.
-Multiple DRAFT candidates may exist for the same `OptimisationSpecification.id`.
-`draftId` is retained as provenance after activation and retirement.
-Official version is assigned by OD MS only during activation.
-Only one ACTIVE official version is enforced per `OptimisationSpecification.id`.
-Many RETIRED official versions may exist for the same `OptimisationSpecification.id`.
-ACTIVE and RETIRED specifications are immutable.
-Activation of a DRAFT candidate assigns the official version and retires any previous ACTIVE version for the same `OptimisationSpecification.id` transactionally.
-`familyId` is logical grouping metadata and is not the lifecycle or versioning control key.
-```
+- DRAFT candidates are mutable and are identified by `id` and `draftId`.
+- DRAFT candidates have no official public version; draft revision uses `ETag`.
+- Multiple DRAFT candidates may exist for the same `OptimisationSpecification.id`.
+- `draftId` is retained as provenance after activation and retirement.
+- Official version is assigned by OD MS only during activation.
+- Only one ACTIVE official version is enforced per `OptimisationSpecification.id`.
+- Many RETIRED official versions may exist for the same `OptimisationSpecification.id`.
+- ACTIVE and RETIRED specifications are immutable.
+- Activation of a DRAFT candidate assigns the official version and retires any previous ACTIVE version for the same `OptimisationSpecification.id` transactionally.
+- `familyId` is logical grouping metadata and is not the lifecycle or versioning control key.
 
 OD identity baseline:
 
-```text
-id = stable OptimisationSpecification lineage identity.
-draftId = DRAFT candidate identity and provenance identifier after activation or retirement.
-version = official immutable version identity for ACTIVE and RETIRED records.
-familyId = logical grouping metadata only.
-ACTIVE and RETIRED records are primarily selected by id and version.
-DRAFT candidates are selected by id and draftId.
-Read-only provenance lookup by id and draftId is allowed because a draftId can produce at most one ACTIVE or RETIRED official version within an id lineage.
-```
+- `id` is the stable OptimisationSpecification lineage identity.
+- `draftId` is the DRAFT candidate identity and provenance identifier after activation or retirement.
+- `version` is the official immutable version identity for ACTIVE and RETIRED records.
+- `familyId` is logical grouping metadata only.
+- ACTIVE and RETIRED records are primarily selected by `id` and `version`.
+- DRAFT candidates are selected by `id` and `draftId`.
+- Read-only provenance lookup by `id` and `draftId` is allowed because a `draftId` can produce at most one ACTIVE or RETIRED official version within an id lineage.
 
 OC MS acts as the runtime controller. It accepts runtime requests, validates `expression.expressionValue` against the referenced ACTIVE `OptimisationSpecification.targetEntitySchema`, creates runtime optimisation resources, manages lifecycle state, publishes worker instructions, consumes worker outcomes, and projects final results.
 
 OC MS runtime baseline:
 
-```text
-Runtime Optimisation has no business version.
-POST optimisation returns 201 Created because the resource is created immediately.
-Execution is asynchronous.
-Result is terminal-only.
-`optimisationSpecification.id` is mandatory in the runtime create request.
-OC MS resolves the current ACTIVE `OptimisationSpecification` by id at acceptance time.
-OC MS persists the resolved `optimisationSpecification.id`, `version`, `draftId`, `href`, and optional `etag` as the immutable contract pointer for the runtime record.
-`expression.iri` is mandatory and identifies the submitted runtime expression semantics.
-OC MS verifies runtime `expression.iri` against the resolved `OptimisationSpecification.expressionSpecification.iri`.
-OC MS must not resolve or substitute the runtime contract by `familyId`, `draftId`, `version`, or `expression.iri`.
-OC MS must not substitute a newer ACTIVE specification for an already accepted runtime record.
-Retrial reuses the original persisted contract pointer and does not re-resolve the current ACTIVE specification.
-```
+- Runtime Optimisation has no business version.
+- POST optimisation returns `201 Created` because the resource is created immediately.
+- Execution is asynchronous.
+- Result is terminal-only.
+- `optimisationSpecification.id` is mandatory in the runtime create request.
+- OC MS resolves the current ACTIVE `OptimisationSpecification` by id at acceptance time.
+- OC MS persists the resolved `optimisationSpecification.id`, `version`, `draftId`, `href`, and optional `etag` as the immutable contract pointer for the runtime record.
+- `expression.iri` is mandatory and identifies the submitted runtime expression semantics.
+- OC MS verifies runtime `expression.iri` against the resolved `OptimisationSpecification.expressionSpecification.iri`.
+- OC MS must not resolve or substitute the runtime contract by `familyId`, `draftId`, `version`, or `expression.iri`.
+- OC MS must not substitute a newer ACTIVE specification for an already accepted runtime record.
+- Retrial reuses the original persisted contract pointer and does not re-resolve the current ACTIVE specification.
 
 OC runtime create request rule:
 
-```text
-Runtime create requests provide only optimisationSpecification.id as the OD contract reference.
-Clients must not provide optimisationSpecification.version, draftId, href, or etag in create requests.
-OC MS resolves these fields from OD MS and persists them on the accepted runtime record.
-```
+- Runtime create requests provide only `optimisationSpecification.id` as the OD contract reference.
+- Clients must not provide `optimisationSpecification.version`, `draftId`, `href`, or `etag` in create requests.
+- OC MS resolves these fields from OD MS and persists them on the accepted runtime record.
 
 OSB MS acts as the OEX backend-for-frontend. It shapes experience models such as `HomeView`, `CapabilityCard`, `RequestFormModel`, `CreationResultView`, `OptimisationSummaryView`, and `OptimisationDetailView`. OSB response models are experience models, not source-of-truth domain resources. OSB may be owned by the experience team to simplify UI flows by aggregating and shaping payloads for UI components.
 
@@ -261,9 +249,9 @@ Catalogue-management journeys are feature-gated and out of phase-one scope unles
 10. OC MS persists runtime Optimisation with lifecycleStatus = ACKNOWLEDGED.
 11. OC MS stores resolved `optimisationSpecification.id`, `version`, `draftId`, `href`, and optional `etag` as the immutable contract pointer.
 12. OC MS writes OptimisationRequestedEvent with instruction = EXECUTE to outbox in same transaction.
-13. OC MS returns 201 Created with Location, ETag, and runtime resource body after resource persistence and outbox write, before worker execution completes.
+13. OC MS returns 201 Created with Location, ETag, and runtime resource body after resource persistence and outbox write, before worker execution completes. The response normally shows lifecycleStatus = ACKNOWLEDGED.
 14. OC MS Outbox Relay publishes OptimisationRequestedEvent to Kafka.
-15. OC MS advances ACKNOWLEDGED -> QUEUED after successful Kafka publish.
+15. OC MS advances ACKNOWLEDGED -> QUEUED after successful Kafka publish. QUEUED is projected later and is not the initial creation response state.
 16. Python Gurobi Worker consumes OptimisationRequestedEvent.
 17. Worker resolves deterministic model binding and invokes Gurobi Optimiser.
 18. Worker publishes OptimisationCompletedEvent with COMPLETED, INFEASIBLE, FAILED, or CANCELLED.
@@ -301,7 +289,7 @@ Phase-one OEX and OSB status refresh is REST polling against OC MS through NGW. 
 4. OSB forwards If-Match from OC MS ETag and must not generate its own backend ETag.
 5. NGW routes POST /optimisation/{id}/cancellation to OC MS.
 6. OC MS validates ETag and eligible non-terminal lifecycle.
-7. OC MS updates lifecycleStatus to CANCELLING and returns 202 Accepted for the accepted asynchronous cancellation command.
+7. OC MS returns the status defined by the OC MS API contract for accepted cancellation. In the current baseline this is 202 Accepted, with lifecycleStatus = CANCELLING until `OptimisationCompletedEvent.status = CANCELLED` is projected.
 8. OC MS writes OptimisationRequestedEvent with instruction = CANCEL to outbox.
 9. OC MS Outbox Relay publishes event to Kafka.
 10. Worker stops, cancels, or ignores work where safely possible.
@@ -326,7 +314,8 @@ Worker cancellation handling is implementation-specific. The `CANCEL` instructio
 7. New Optimisation links to original through retrialOf.
 8. New Optimisation starts with lifecycleStatus = ACKNOWLEDGED.
 9. OC MS writes OptimisationRequestedEvent with instruction = EXECUTE for the new Optimisation.
-10. Worker processes the new request asynchronously.
+10. OC MS returns 201 Created with Location, ETag, and the new runtime Optimisation body before worker execution completes.
+11. Worker processes the new request asynchronously.
 ```
 
 Retrial is available only from `FAILED` in the baseline. Retrial is not available from `INFEASIBLE` by default because `INFEASIBLE` is a valid optimisation or model outcome, not a technical failure. Retrial has no required request body and does not allow overrides. OSB must not send an empty JSON object solely to force `Content-Type`. If no body is supplied by OEX, OSB should call OC MS without a request body. Retrial resubmits the original accepted expression and reuses the original persisted OC contract pointer, including `id`, `version`, `draftId`, `href`, and optional `etag`. When OC MS creates the retrial resource, it returns `201 Created` with the new runtime Optimisation id, `Location`, `ETag`, and resource body.
@@ -429,7 +418,7 @@ resolved id, version, draftId, href, and optional etag are persisted on the runt
 
 The persisted resolved specification reference is the immutable contract pointer for the accepted runtime Optimisation. OC MS must not re-resolve or replace that pointer later, including during retrial.
 
-OC MS may cache immutable ACTIVE specification contracts by id and ETag, but must not infer current active contract by stale `familyId` lookup.
+OC MS may cache immutable ACTIVE specification contracts by id and ETag, but must not infer current active contract by stale `familyId` lookup. If OD MS is unavailable and OC MS has no valid cached immutable ACTIVE contract for the requested id, OC MS returns 503 Service Unavailable. If a valid cached immutable ACTIVE contract exists, OC MS may proceed according to cache policy.
 
 ### 5.6. Kafka security:
 
@@ -530,7 +519,7 @@ Kubernetes provides the ability to scale pods based on demand.
 
 ### 6.3. Performance:
 
-All synchronous API calls are expected to provide response times below 30 ms where the backend operation is synchronous and does not include solver execution.
+Synchronous API latency targets are to be confirmed through NFR baselining. Solver execution is excluded from REST latency because optimisation execution is asynchronous.
 
 `POST /optimisation` returns `201 Created` after syntactic and OD-MS-contract validation, runtime resource persistence, and outbox write. Solver execution remains asynchronous and decoupled from REST request latency. 
 
@@ -765,30 +754,32 @@ OD MS defines the allowed structure using `OptimisationSpecification.targetEntit
 ```text
 result MUST be absent while lifecycleStatus is ACKNOWLEDGED, QUEUED, PROCESSING, or CANCELLING.
 result MAY be present when lifecycleStatus is COMPLETED, INFEASIBLE, FAILED, or CANCELLED.
+CANCELLED result details may include safe cancellation summary metadata but must not expose worker internals.
 FAILED result details may include safe error codes and messages only.
 ```
 
 ### 10.12. Validation and outcome responsibility:
 
-```text
 OC MS validates:
-required fields
-enum and value-type rules
-request contract shape
-cardinality rules defined by targetEntitySchema
+
+- required fields
+- enum and value-type rules
+- request contract shape
+- cardinality rules defined by `targetEntitySchema`
 
 OC MS does not evaluate:
-solver feasibility
-candidate ranking
-metric-vs-constraint fit
-objective trade-offs
+
+- solver feasibility
+- candidate ranking
+- metric-vs-constraint fit
+- objective trade-offs
 
 Python Gurobi Worker returns terminal status:
-COMPLETED
-INFEASIBLE
-FAILED
-CANCELLED
-```
+
+- `COMPLETED`
+- `INFEASIBLE`
+- `FAILED`
+- `CANCELLED`
 
 Use `400 Bad Request` for malformed requests, missing required top-level request fields, unsupported priority values, or forbidden server-controlled fields. Use `422 OPTIMISATION_CONTRACT_VIOLATION` for OD contract, expression IRI compatibility, targetEntitySchema, and cardinality failures. Use `INFEASIBLE` only when the request is valid and the worker or model determines no feasible solution exists.
 
