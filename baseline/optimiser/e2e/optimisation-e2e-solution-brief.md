@@ -427,6 +427,8 @@ expression.expressionValue matches the resolved targetEntitySchema
 resolved id, version, draftId, href, and optional etag are persisted on the runtime record
 ```
 
+The persisted resolved specification reference is the immutable contract pointer for the accepted runtime Optimisation. OC MS must not re-resolve or replace that pointer later, including during retrial.
+
 OC MS may cache immutable ACTIVE specification contracts by id and ETag, but must not infer current active contract by stale `familyId` lookup.
 
 ### 5.6. Kafka security:
