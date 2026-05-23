@@ -258,20 +258,139 @@ class StorageRenderer(mistune.HTMLRenderer):
         return _centre_table(f"<table>\n{text}</table>")
 
 
-def render_markdown(md_text: str, source_dir: Path) -> Tuple[str, List[ImageRef]]:
-    """Convert Markdown -> (storage_xhtml, list_of_image_refs)."""
+def render_markdown(md_text: str, source_dir: Path,
+                    insert_header: bool = True,
+                    status_text: str = "draft",
+                    status_colour: str = "Green") -> Tuple[str, List[ImageRef]]:
+    """
+    Convert Markdown -> (storage_xhtml, list_of_image_refs).
+
+    When `insert_header` is True (the default), the function:
+      1. Strips any `[TOC]` / `[[_TOC_]]` markers from the raw Markdown.
+      2. Renders the Markdown to storage format.
+      3. Removes any pre-existing `status` / `toc` storage macros.
+      4. Prepends a fresh standard header block (status badge + TOC).
+    """
+    if insert_header:
+        md_text = strip_existing_status_and_toc(md_text)
+
     renderer = StorageRenderer(source_dir=source_dir)
     md = mistune.create_markdown(
         renderer=renderer,
         plugins=["strikethrough", "table", "task_lists", "url", "footnotes"],
     )
     body = md(md_text)
+
+    if insert_header:
+        body, removed = strip_macros_from_storage(body)
+        if removed:
+            LOG.info("Removed %d existing status/toc macro(s) from source", removed)
+        body = build_header(status_text, status_colour) + body
+
     return body, renderer.image_refs
 
 
 # ---------------------------------------------------------------------------
-# Footer
+# Standard header block (status badge + table of contents)
 # ---------------------------------------------------------------------------
+# Inserted at the top of every page so the whole space has a consistent look.
+# - `status` macro renders as a coloured pill (Green/Yellow/Red/Blue/Grey)
+# - `toc` macro auto-generates a hyperlinked outline from page headings
+#
+# The `ac:local-id` / `ac:macro-id` values are fresh UUIDs per render so two
+# rendered pages never collide if pasted into the same parent. (Confluence
+# regenerates these on save anyway, but emitting unique IDs avoids editor
+# warnings about duplicate macro IDs during import.)
+import uuid as _uuid  # noqa: E402 — kept local to header section for readability
+
+
+def build_header(status_text: str = "draft",
+                 status_colour: str = "Green") -> str:
+    """
+    Emit the standard status-pill + TOC header block in Confluence storage
+    format. New UUIDs are generated on every call so each render is unique.
+    """
+    status_macro_id = _uuid.uuid4()
+    toc_macro_id = _uuid.uuid4()
+    toc_local_id = _uuid.uuid4()
+    para1_id = _uuid.uuid4().hex[:12]
+    para2_id = _uuid.uuid4().hex[:12]
+    return (
+        f'<p local-id="{para1_id}">'
+        f'<ac:structured-macro ac:name="status" ac:schema-version="1" '
+        f'ac:macro-id="{status_macro_id}">'
+        f'<ac:parameter ac:name="title">{html.escape(status_text)}</ac:parameter>'
+        f'<ac:parameter ac:name="colour">{html.escape(status_colour)}</ac:parameter>'
+        f'</ac:structured-macro> </p>'
+        f'<ac:structured-macro ac:name="toc" ac:schema-version="1" '
+        f'data-layout="default" ac:local-id="{toc_local_id}" '
+        f'ac:macro-id="{toc_macro_id}">'
+        f'<ac:parameter ac:name="style">none</ac:parameter>'
+        f'</ac:structured-macro>'
+        f'<p local-id="{para2_id}" />\n'
+    )
+
+
+# ---------------------------------------------------------------------------
+# Strip author-written status / TOC so we never duplicate the header
+# ---------------------------------------------------------------------------
+# Authors sometimes paste their own status badge or `[TOC]` / `[[_TOC_]]`
+# marker into the Markdown source. After Markdown -> storage rendering we
+# also need to remove any pre-existing <ac:structured-macro ac:name="toc"|
+# "status"> blocks (e.g. if someone copy-pasted raw storage XHTML in).
+#
+# We do this BEFORE prepending our own header so the final page has exactly
+# one status pill and exactly one TOC.
+
+# Markdown-level TOC markers commonly used by Pandoc / GitLab / mkdocs:
+_MD_TOC_MARKERS = (
+    re.compile(r"^\s*\[TOC\]\s*$", re.IGNORECASE | re.MULTILINE),
+    re.compile(r"^\s*\[\[_TOC_\]\]\s*$", re.IGNORECASE | re.MULTILINE),
+    re.compile(r"^\s*<!--\s*toc\s*-->\s*$", re.IGNORECASE | re.MULTILINE),
+)
+
+# Storage-format macros to remove from rendered output. The regex tolerates
+# any attributes on the opening tag and any inner content (including nested
+# parameters), because Confluence's storage format is intentionally verbose.
+_STORAGE_MACRO_RE = re.compile(
+    r'<ac:structured-macro\b[^>]*\bac:name="(?P<name>toc|status)"[^>]*>'
+    r'.*?</ac:structured-macro>',
+    re.DOTALL | re.IGNORECASE,
+)
+
+# Empty wrapping paragraphs left behind after macro removal (e.g. a <p> that
+# contained only a status macro). Match <p ...> ... </p> where the body is
+# whitespace only.
+_EMPTY_P_RE = re.compile(r"<p\b[^>]*>\s*</p>", re.IGNORECASE)
+
+
+def strip_existing_status_and_toc(md_text: str) -> str:
+    """Remove `[TOC]`-style markers from raw Markdown before rendering."""
+    out = md_text
+    for pat in _MD_TOC_MARKERS:
+        out = pat.sub("", out)
+    return out
+
+
+def strip_macros_from_storage(storage_xhtml: str) -> Tuple[str, int]:
+    """
+    Remove any <ac:structured-macro ac:name="toc"|"status"> blocks from
+    already-rendered storage XHTML. Returns (cleaned, count_removed).
+    Also removes wrapping <p> tags that become empty as a result.
+    """
+    removed = 0
+
+    def _drop(_m: re.Match) -> str:
+        nonlocal removed
+        removed += 1
+        return ""
+
+    cleaned = _STORAGE_MACRO_RE.sub(_drop, storage_xhtml)
+    if removed:
+        cleaned = _EMPTY_P_RE.sub("", cleaned)
+    return cleaned, removed
+
+
 def build_footer(source_path: Path, base_url: Optional[str] = None) -> str:
     """Storage-format 'Published from VS Code' footer block."""
     now = datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M UTC")
@@ -338,7 +457,9 @@ BEGIN STORAGE FORMAT
 OFFLINE_END_MARKER = "\n<!-- ===== END STORAGE FORMAT ===== -->\n"
 
 
-def export_offline(md_path: Path, output_dir: Path) -> Dict[str, Any]:
+def export_offline(md_path: Path, output_dir: Path,
+                   status_text: str = "draft",
+                   status_colour: str = "Green") -> Dict[str, Any]:
     """
     Render Markdown to a single self-contained storage-format file plus a
     sibling `images/` folder. No network calls.
@@ -352,7 +473,10 @@ def export_offline(md_path: Path, output_dir: Path) -> Dict[str, Any]:
             MANIFEST.txt              <-- human-readable summary
     """
     md_text = md_path.read_text(encoding="utf-8")
-    storage_body, image_refs = render_markdown(md_text, md_path.parent)
+    storage_body, image_refs = render_markdown(
+        md_text, md_path.parent,
+        status_text=status_text, status_colour=status_colour,
+    )
 
     output_dir.mkdir(parents=True, exist_ok=True)
     images_dir = output_dir / "images"
@@ -551,6 +675,230 @@ class ConfluenceClient:
 
 
 # ---------------------------------------------------------------------------
+# Connectivity check (read-only — safe to run from a firewalled corporate box)
+# ---------------------------------------------------------------------------
+def check_connectivity(base_url: str, user: str, token: str,
+                       space_key: Optional[str] = None,
+                       verify_ssl: bool = True) -> int:
+    """
+    Run a sequence of read-only probes against Confluence and print a
+    diagnosis. Returns a process exit code (0 = all good, non-zero = fail).
+
+    Probes, in order:
+      1. DNS / TCP / TLS reachability of the base URL
+      2. /rest/api/user/current  -> validates the API token + identifies you
+      3. /rest/api/space         -> validates that we can list spaces
+      4. /rest/api/space/{KEY}   -> if --space provided, confirms write target
+      5. HEAD on a known content endpoint -> sanity-check rate limit headers
+
+    Every probe is a GET. Nothing is created, modified, or deleted.
+    """
+    print("=" * 70)
+    print("Confluence connectivity check")
+    print("=" * 70)
+    print(f"Base URL : {base_url}")
+    print(f"User     : {user}")
+    print(f"Token    : {'*' * 4}{token[-4:] if len(token) >= 4 else '****'} "
+          f"({len(token)} chars)")
+    print(f"Space    : {space_key or '(not specified)'}")
+    print(f"TLS verify: {verify_ssl}")
+    print("-" * 70)
+
+    failures: List[str] = []
+    warnings: List[str] = []
+
+    # --- Probe 0: basic URL sanity ------------------------------------------
+    parsed = urlparse(base_url)
+    if parsed.scheme not in ("http", "https"):
+        print("✗ Base URL must start with http:// or https://")
+        return 2
+    if not parsed.netloc:
+        print("✗ Base URL is missing a hostname")
+        return 2
+    # Cloud tenants must include /wiki — easy thing to get wrong
+    if "atlassian.net" in parsed.netloc and not parsed.path.rstrip("/").endswith("/wiki"):
+        warnings.append(
+            "Cloud base URL should end with /wiki "
+            f"(e.g. https://{parsed.netloc}/wiki). Current path: {parsed.path!r}"
+        )
+
+    try:
+        client = ConfluenceClient(base_url, user, token, verify_ssl=verify_ssl)
+    except Exception as exc:  # noqa: BLE001
+        print(f"✗ Could not initialise HTTP client: {exc}")
+        return 1
+
+    # --- Probe 1: TCP / TLS reachability ------------------------------------
+    print("[1/5] Reachability ...", end=" ", flush=True)
+    try:
+        # No auth, no API call — just see if we can open the socket.
+        # Using HEAD on the base URL is the lightest possible request.
+        r = client.session.head(base_url, timeout=10, allow_redirects=True)
+        print(f"OK (HTTP {r.status_code})")
+    except requests.exceptions.SSLError as exc:
+        print("FAIL")
+        failures.append(
+            f"TLS handshake failed: {exc}. "
+            "If this is Data Center with a self-signed cert, retry with --insecure."
+        )
+    except requests.exceptions.ConnectTimeout:
+        print("FAIL")
+        failures.append(
+            "Connection timed out. The corporate firewall or proxy is likely "
+            "blocking outbound traffic to this host. Check HTTPS_PROXY env var."
+        )
+    except requests.exceptions.ConnectionError as exc:
+        print("FAIL")
+        msg = str(exc)
+        if "NameResolutionError" in msg or "getaddrinfo" in msg:
+            failures.append(f"DNS lookup failed for {parsed.netloc}: {exc}")
+        elif "ProxyError" in msg:
+            failures.append(f"Proxy error: {exc}. Check HTTPS_PROXY / NO_PROXY.")
+        else:
+            failures.append(f"Cannot connect: {exc}")
+    except Exception as exc:  # noqa: BLE001
+        print("FAIL")
+        failures.append(f"Unexpected error: {exc}")
+
+    if failures:
+        _print_diagnosis(failures, warnings)
+        return 1
+
+    # --- Probe 2: authentication -- /rest/api/user/current ------------------
+    print("[2/5] Authentication ...", end=" ", flush=True)
+    try:
+        r = client.session.get(client._url("rest/api/user/current"), timeout=15)
+        if r.status_code == 200:
+            me = r.json()
+            display = me.get("displayName") or me.get("username") or me.get("accountId")
+            account_type = me.get("accountType", "unknown")
+            print(f"OK — authenticated as '{display}' ({account_type})")
+        elif r.status_code == 401:
+            print("FAIL")
+            failures.append(
+                "401 Unauthorized. The API token is invalid, expired, or "
+                "the email/username doesn't match the token owner. For "
+                "Atlassian Cloud, the username MUST be the account email "
+                "and the token must come from id.atlassian.com/manage-profile"
+                "/security/api-tokens."
+            )
+        elif r.status_code == 403:
+            print("FAIL")
+            failures.append(
+                "403 Forbidden. Token is valid but lacks permission to read "
+                "the current user. Token scopes may be restricted, or your "
+                "account has been disabled."
+            )
+        else:
+            print(f"FAIL (HTTP {r.status_code})")
+            failures.append(f"Unexpected status {r.status_code}: {r.text[:300]}")
+    except Exception as exc:  # noqa: BLE001
+        print("FAIL")
+        failures.append(f"Auth probe error: {exc}")
+
+    if failures:
+        _print_diagnosis(failures, warnings)
+        return 1
+
+    # --- Probe 3: list spaces (read scope) ----------------------------------
+    print("[3/5] Read scope (list spaces) ...", end=" ", flush=True)
+    try:
+        r = client.session.get(
+            client._url("rest/api/space"),
+            params={"limit": 1}, timeout=15,
+        )
+        if r.status_code == 200:
+            total = r.json().get("size", 0)
+            print(f"OK ({total} space visible in first page)")
+        else:
+            print(f"FAIL (HTTP {r.status_code})")
+            failures.append(
+                f"Cannot list spaces (HTTP {r.status_code}). Token likely "
+                "lacks `read:confluence-space.summary` scope."
+            )
+    except Exception as exc:  # noqa: BLE001
+        print("FAIL")
+        failures.append(f"Space-list probe error: {exc}")
+
+    # --- Probe 4: target space exists & is writable -------------------------
+    if space_key:
+        print(f"[4/5] Target space '{space_key}' ...", end=" ", flush=True)
+        try:
+            r = client.session.get(
+                client._url(f"rest/api/space/{space_key}"),
+                params={"expand": "permissions"}, timeout=15,
+            )
+            if r.status_code == 200:
+                space = r.json()
+                name = space.get("name", space_key)
+                stype = space.get("type", "unknown")
+                print(f"OK — '{name}' (type={stype})")
+                # Probe write permission by trying to read recent content.
+                # (A true write probe would require creating a page, which
+                # we deliberately don't do here.)
+            elif r.status_code == 404:
+                print("FAIL")
+                failures.append(
+                    f"Space '{space_key}' not found, or your account cannot "
+                    "see it. Double-check the space KEY (not the name) in "
+                    "the URL: .../wiki/spaces/<KEY>/..."
+                )
+            elif r.status_code == 403:
+                print("FAIL")
+                failures.append(
+                    f"Forbidden on space '{space_key}'. Token authenticated "
+                    "but the account lacks View permission on this space."
+                )
+            else:
+                print(f"FAIL (HTTP {r.status_code})")
+                failures.append(f"Space probe returned {r.status_code}")
+        except Exception as exc:  # noqa: BLE001
+            print("FAIL")
+            failures.append(f"Space probe error: {exc}")
+    else:
+        print("[4/5] Target space ... SKIPPED (no --space provided)")
+        warnings.append(
+            "Pass --space <KEY> to verify the target space is reachable "
+            "before publishing."
+        )
+
+    # --- Probe 5: rate-limit / quota headers --------------------------------
+    print("[5/5] Rate-limit headers ...", end=" ", flush=True)
+    try:
+        r = client.session.get(
+            client._url("rest/api/content"),
+            params={"limit": 1}, timeout=15,
+        )
+        remaining = r.headers.get("X-RateLimit-Remaining")
+        limit = r.headers.get("X-RateLimit-Limit")
+        if remaining is not None:
+            print(f"OK (remaining={remaining}/{limit})")
+        else:
+            print("OK (no rate-limit headers exposed)")
+    except Exception as exc:  # noqa: BLE001
+        print(f"WARN: {exc}")
+        warnings.append(f"Rate-limit probe non-fatal error: {exc}")
+
+    _print_diagnosis(failures, warnings)
+    return 0 if not failures else 1
+
+
+def _print_diagnosis(failures: List[str], warnings: List[str]) -> None:
+    print("-" * 70)
+    if failures:
+        print(f"RESULT: ✗ {len(failures)} failure(s) — publishing will NOT work")
+        for i, f in enumerate(failures, 1):
+            print(f"  {i}. {f}")
+    else:
+        print("RESULT: ✓ All probes passed — safe to publish")
+    if warnings:
+        print(f"\n{len(warnings)} warning(s):")
+        for i, w in enumerate(warnings, 1):
+            print(f"  {i}. {w}")
+    print("=" * 70)
+
+
+# ---------------------------------------------------------------------------
 # Orchestration
 # ---------------------------------------------------------------------------
 @dataclass
@@ -565,13 +913,18 @@ class PublishConfig:
     dry_run: bool = False
     update_only: bool = False
     verify_ssl: bool = True
+    status_text: str = "draft"
+    status_colour: str = "Green"
 
 
 def publish(cfg: PublishConfig) -> Dict[str, Any]:
     LOG.info("Reading %s", cfg.md_path)
     md_text = cfg.md_path.read_text(encoding="utf-8")
 
-    storage_body, image_refs = render_markdown(md_text, cfg.md_path.parent)
+    storage_body, image_refs = render_markdown(
+        md_text, cfg.md_path.parent,
+        status_text=cfg.status_text, status_colour=cfg.status_colour,
+    )
     LOG.info("Discovered %d local image reference(s)", len(image_refs))
 
     # Validate every local image actually exists on disk before we touch the API
@@ -653,9 +1006,11 @@ def parse_args(argv: Optional[List[str]] = None) -> argparse.Namespace:
     p = argparse.ArgumentParser(
         description="Publish a Markdown file to Confluence as storage-format XHTML.",
     )
-    p.add_argument("markdown_file", type=Path, help="Path to .md file")
-    p.add_argument("--space", required=True, help="Confluence space key (e.g. ENG)")
-    p.add_argument("--title", required=True, help="Page title")
+    p.add_argument("markdown_file", type=Path, nargs="?",
+                   help="Path to .md file (omit when using --check)")
+    p.add_argument("--space", help="Confluence space key (e.g. ENG). "
+                                    "Required for publish; optional for --check.")
+    p.add_argument("--title", help="Page title (required for publish)")
     p.add_argument("--parent-id", help="Parent page ID (optional)")
     p.add_argument("--base-url", default=os.environ.get("CONFLUENCE_BASE_URL"),
                    help="Confluence base URL incl. /wiki for Cloud "
@@ -671,6 +1026,16 @@ def parse_args(argv: Optional[List[str]] = None) -> argparse.Namespace:
                         "format file plus images/ folder to OUTPUT_DIR. "
                         "No network calls — use this when the corporate "
                         "firewall blocks the Confluence REST API.")
+    p.add_argument("--check", action="store_true",
+                   help="Validate connectivity, auth, and (optionally) space "
+                        "access using read-only API calls. Nothing is created "
+                        "or modified. Run this BEFORE attempting a publish.")
+    p.add_argument("--status", default="draft",
+                   help="Status pill text inserted at top of page "
+                        "(default: 'draft')")
+    p.add_argument("--status-colour", "--status-color", default="Green",
+                   choices=["Grey", "Red", "Yellow", "Green", "Blue"],
+                   help="Status pill colour (default: Green)")
     p.add_argument("--update-only", action="store_true",
                    help="Fail if the target page does not already exist")
     p.add_argument("--insecure", action="store_true",
@@ -686,15 +1051,44 @@ def main(argv: Optional[List[str]] = None) -> int:
         format="%(asctime)s %(levelname)s %(name)s: %(message)s",
     )
 
+    # --check short-circuits everything — read-only probes only
+    if args.check:
+        missing = [n for n, v in [
+            ("--base-url / CONFLUENCE_BASE_URL", args.base_url),
+            ("--user / CONFLUENCE_USER", args.user),
+            ("--token / CONFLUENCE_API_TOKEN", args.token),
+        ] if not v]
+        if missing:
+            LOG.error("Missing required credentials: %s", ", ".join(missing))
+            return 2
+        return check_connectivity(
+            base_url=args.base_url, user=args.user, token=args.token,
+            space_key=args.space, verify_ssl=not args.insecure,
+        )
+
     # Offline export short-circuits everything else — no network needed
     if args.export:
+        if not args.markdown_file:
+            LOG.error("--export requires a markdown_file argument")
+            return 2
         try:
-            result = export_offline(args.markdown_file, args.export)
+            result = export_offline(
+                args.markdown_file, args.export,
+                status_text=args.status, status_colour=args.status_colour,
+            )
         except Exception as exc:  # noqa: BLE001
             LOG.exception("Export failed: %s", exc)
             return 1
         print(json.dumps(result, indent=2))
         return 0
+
+    # Publish mode: markdown_file, --space, and --title are all required
+    if not args.markdown_file:
+        LOG.error("markdown_file argument is required for publish mode")
+        return 2
+    if not args.space or not args.title:
+        LOG.error("--space and --title are required for publish mode")
+        return 2
 
     if not args.dry_run:
         missing = [n for n, v in [
@@ -717,6 +1111,8 @@ def main(argv: Optional[List[str]] = None) -> int:
         dry_run=args.dry_run,
         update_only=args.update_only,
         verify_ssl=not args.insecure,
+        status_text=args.status,
+        status_colour=args.status_colour,
     )
     try:
         result = publish(cfg)
