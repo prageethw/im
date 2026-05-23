@@ -59,7 +59,7 @@ This proposal defines a candidate intent management entity profile rule. It does
 
 ## 2. Proposal flow diagram:
 
-![IntentSpecification mandatory profile proposal](intent_profile_decision.svg)
+![Intent mandatory profile proposal](intent_profile_decision.svg)
 
 ## 3. Context:
 

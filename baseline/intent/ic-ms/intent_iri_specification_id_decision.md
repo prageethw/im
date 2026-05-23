@@ -51,6 +51,11 @@ The two fields serve different purposes:
 
 Draft creation remains lighter and does not require either field. This decision applies when a Draft is moved into admission or when a new runtime Intent is created directly for admission.
 
+## 2. Proposal flow diagram:
+
+![Intent mandatory iri vs spec.id proposal](intent_iri_specification_id_decision.svg)
+
+
 ## 2. Context:
 
 A runtime `Intent` carries structured expression content in `expression.expressionValue`.
