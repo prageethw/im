@@ -29,7 +29,7 @@ rectangle "Persisted Intent response\nafter admission is accepted" as ADMISSION_
   rectangle "Key distinction\n\nintentSpecification.id is mandatory\nin the admission request and\nin the persisted response.\n\nexpression.iri is mandatory\nin the admission request and\npersisted expression." as RESPONSE_DISTINCTION
 }
 
-rectangle "Small Draft add-on:\npre-admission authoring context" as DRAFT #FFF8E1 {
+rectangle "Draft \npre-admission authoring context" as DRAFT #FFF8E1 {
   rectangle "Minimum Draft creation request\n\n- name\n- submit = false\n- @type\n- @baseType" as DRAFT_MIN
 
   rectangle "Strongly recommended\nfor Draft\n\n- humanExpression" as DRAFT_RECOMMENDED
