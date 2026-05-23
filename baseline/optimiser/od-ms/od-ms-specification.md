@@ -161,7 +161,7 @@ The external `OptimisationSpecification` resource must use only the TMF-aligned 
 | Field | Meaning |
 |---|---|
 | `id` | Stable server-assigned `OptimisationSpecification` lineage identifier. It groups the current `ACTIVE` version, retained `RETIRED` versions, and mutable `DRAFT` candidates. A specific immutable `ACTIVE` or `RETIRED` specification version is selected by `id` and `version`. Because `draftId` is retained as provenance, OD MS may also support read-only lookup of `ACTIVE` and `RETIRED` records by `id` and `draftId`. A specific mutable draft candidate is selected by `id` and `draftId`. |
-| `href` | Hyperlink reference to the specification resource. Server assigned. For DRAFT candidates, `href` must include or be accompanied by `draftId` when the link targets a specific mutable draft candidate. For `ACTIVE` and `RETIRED` versions, `href` resolves by `id` and optional `version`; read-only provenance lookup may additionally use `draftId` as a query filter. |
+| `href` | Hyperlink reference to the specification resource. Server assigned. The canonical DRAFT candidate `href` form is `/optimisationManagement/v1/optimisationSpecification/{id}?lifecycleStatus=DRAFT&draftId={draftId}` when the link targets a specific mutable draft candidate. DRAFT mutation links may use `/optimisationManagement/v1/optimisationSpecification/{id}?draftId={draftId}` because the operation itself is restricted to DRAFT candidates. For `ACTIVE` and `RETIRED` versions, `href` resolves by `id` and optional `version`; read-only provenance lookup may additionally use `draftId` as a query filter. |
 | `name` | Human-readable specification name. Required on create. |
 | `description` | Description of the optimisation capability and contract. |
 | `familyId` | Logical grouping metadata for related optimisation specifications. It supports discovery, reporting, and catalogue grouping, but OD MS must not use it as the lifecycle or versioning control key. |
@@ -282,6 +282,8 @@ context.constraints[] contains hard mandatory requirements.
 context.preferences[] contains soft ranking or selection preferences.
 ```
 
+The `example.com` IRIs and JSON-LD aliases in this embedded baseline are illustrative placeholders. The base schema validates the common optimisation expression container shape. Concrete `OptimisationSpecification.targetEntitySchema` artifacts may constrain the exact ontology IRI, JSON-LD aliases, and JSON-LD type values for a specific capability.
+
 ```json
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
@@ -300,30 +302,30 @@ context.preferences[] contains soft ranking or selection preferences.
       "properties": {
         "opt": {
           "type": "string",
-          "const": "https://example.com/ontology/optimisation#"
+          "minLength": 1
         },
         "context": {
           "type": "string",
-          "const": "opt:context"
+          "minLength": 1
         },
         "targets": {
           "type": "string",
-          "const": "opt:targets"
+          "minLength": 1
         },
         "constraints": {
           "type": "string",
-          "const": "opt:constraints"
+          "minLength": 1
         },
         "preferences": {
           "type": "string",
-          "const": "opt:preferences"
+          "minLength": 1
         }
       }
     },
     "@type": {
       "description": "JSON-LD type for the optimisation expression value.",
       "type": "string",
-      "const": "opt:OptimisationProblem"
+      "minLength": 1
     },
     "context": {
       "description": "The full optimisation scenario, or big picture. Contains optimisation goals, hard requirements, and soft preferences.",
@@ -416,8 +418,8 @@ The embedded `optimisation-expression-value.schema.json` validates the runtime `
 
 | Schema element | Baseline rule |
 |---|---|
-| `expressionValue.@context` | Required JSON-LD context for optimiser ontology prefixes and canonical container terms: `context`, `targets`, `constraints`, and `preferences`. |
-| `expressionValue.@type` | Required JSON-LD type. Baseline value is `opt:OptimisationProblem`. |
+| `expressionValue.@context` | Required JSON-LD context for optimiser ontology prefixes and canonical container terms: `context`, `targets`, `constraints`, and `preferences`. The base schema requires these bindings to be present but does not lock them to the illustrative `example.com` IRI or `opt:*` aliases. Concrete capability schemas may add exact `const` values where required. |
+| `expressionValue.@type` | Required JSON-LD type. The base schema requires a non-empty type value. Concrete capability schemas may constrain the exact type, for example `opt:OptimisationProblem`, where that is part of the governed capability contract. |
 | `expressionValue.context` | Required object and canonical optimisation problem container. |
 | `context.targets[]` | Required array containing optimisation goals. It should normally contain at least one target. |
 | `context.constraints[]` | Required array containing hard mandatory requirements. Whether it may be empty is capability-specific and governed by the concrete active `OptimisationSpecification.targetEntitySchema`. |
@@ -537,8 +539,8 @@ Physical `DELETE` is not used for `ACTIVE` or `RETIRED` specifications.
 
 | Operation | Rule |
 |---|---|
-| `GET /optimisationSpecification` | Lists visible specifications. Supports enumerated first-level filtering and `fields`. |
-| `GET /optimisationSpecification/{id}` | Retrieves the current ACTIVE version by default. Historical versions require an explicit `version` query parameter. Draft candidates require explicit `lifecycleStatus=DRAFT` and `draftId` when retrieving one candidate. Supports first-level `fields`. |
+| `GET /optimisationSpecification` | Lists visible specifications. Supports enumerated first-level filtering, `fields`, `offset`, and `limit`. List responses include pagination count headers when supported by the deployment. |
+| `GET /optimisationSpecification/{id}` | Retrieves the current ACTIVE version by default. Historical versions require an explicit `version` query parameter. If the requested `version` matches the current ACTIVE version, OD MS returns the ACTIVE record. Draft candidates require explicit `lifecycleStatus=DRAFT` and `draftId` when retrieving one candidate. Supports first-level `fields`. |
 | `POST /optimisationSpecification` | Creates a new mutable `DRAFT` candidate without an official public `version`. Without `createFrom`, OD MS creates a new lineage and assigns `id` and `draftId`; normal create fields are required. With `createFrom`, OD MS creates a new draft candidate under the referenced existing `id`, derives the starting contract from the source version, and assigns a new `draftId`; `createFrom` is the only required client field. Returns `draftId` and `ETag`. |
 | `PUT /optimisationSpecification/{id}` | Approved platform extension. Full replacement and finalisation of a selected mutable `DRAFT` candidate only. For DRAFT candidate mutation, finalisation, and activation, `draftId` is required as a query parameter. Requires `If-Match` and `Content-Type: application/json`. Rejected for `ACTIVE` and `RETIRED`. |
 | `PATCH /optimisationSpecification/{id}` | TMF-compatible partial update using JSON Merge Patch. Requires `If-Match` and `Content-Type: application/merge-patch+json`. Contract and content updates are allowed only for a selected `DRAFT` candidate. For DRAFT candidate mutation and activation, `draftId` is required as a query parameter. Retirement of `ACTIVE` is lifecycle-only, targets the current ACTIVE version for `id`, does not use `draftId`, and does not permit contract and content changes. Rejected for `RETIRED`. |
@@ -558,9 +560,17 @@ Physical `DELETE` is not used for `ACTIVE` or `RETIRED` specifications.
 | `version` | Exact match on official version. Meaningful only for `ACTIVE` and `RETIRED`. |
 | `lastUpdate.gt`, `lastUpdate.lt` | Optional timestamp range filters for last update. |
 | `statusChangeDate.gt`, `statusChangeDate.lt` | Optional timestamp range filters for lifecycle change date. |
+| `offset` | Optional zero-based start position for list pagination. |
+| `limit` | Optional maximum number of list items returned. |
 | `fields` | Optional sparse fieldset projection. |
 
 Unsupported or malformed query parameters return `400 Bad Request`. Requests combining `lifecycleStatus=DRAFT` with `version` are invalid and return `400 Bad Request`, because DRAFT candidates do not expose official public versions.
+
+Pagination rule:
+
+```text
+OD MS list responses support `offset` and `limit` where pagination is enabled. When result counts are available, list responses include `X-Total-Count` for the total number of matching records and `X-Result-Count` for the number of records returned in the current response. If a deployment does not support count calculation, it may omit these headers but must still honour `offset` and `limit` or reject unsupported parameters with 400 Bad Request.
+```
 
 Default list resolution rule:
 
@@ -589,7 +599,8 @@ Sparse field projection rule:
 
 ```text
 If a requested field is valid but not present for the resource's current lifecycle state, OD MS omits that field silently rather than returning an error.
-For example, fields=id,version on a DRAFT resource returns id and omits version because DRAFT specifications do not expose an official public version. Callers can request draftId for DRAFT records, and may also request draftId on ACTIVE or RETIRED records for provenance. A draftId filter on ACTIVE or RETIRED records is read-only provenance lookup and does not make draftId the official version selector.
+For example, `fields=id,version` on a DRAFT resource returns `id` and omits `version` because DRAFT specifications do not expose an official public version. Callers can request `draftId` for DRAFT records, and may also request `draftId` on ACTIVE or RETIRED records for provenance. A `draftId` filter on ACTIVE or RETIRED records is read-only provenance lookup and does not make `draftId` the official version selector.
+When `fields` is supplied, OD MS returns only requested business fields plus mandatory metadata fields `id`, `href`, and `@type`. `_links` is returned in a sparse response only when `_links` is explicitly requested.
 Unsupported field names still return 400 Bad Request.
 ```
 
@@ -858,7 +869,7 @@ Response body follows the same DRAFT response shape as section 18.1 and includes
 Request:
 
 ```http
-GET /optimisationManagement/v1/optimisationSpecification?id=optimisation-spec-surgical-routing&fields=id,href,name,familyId,draftId,version,lifecycleStatus,statusChangeDate
+GET /optimisationManagement/v1/optimisationSpecification?id=optimisation-spec-surgical-routing&fields=id,href,name,familyId,draftId,version,lifecycleStatus,statusChangeDate,@type,_links
 Cache-Control: no-cache
 ```
 
@@ -1209,6 +1220,8 @@ Core status codes:
 | `501 Not Implemented` | Operation or approved platform extension is not implemented or not enabled in this deployment. |
 | `503 Service Unavailable` | OD MS temporarily unavailable. |
 
+`501 Not Implemented` is returned when an approved platform extension, such as `PUT /optimisationSpecification/{id}`, is not enabled in the deployment receiving the request.
+
 Boundary rules:
 
 ```text
@@ -1290,7 +1303,7 @@ Standard contract error body:
 
 ## 20. Contract violation response:
 
-Use `422 Unprocessable Entity` when the JSON is structurally valid but violates the OD MS `OptimisationSpecification` schema or the request-contract schema rules for `targetEntitySchema`, `expressionSpecification`, or `specCharacteristic[]`.
+Section 19 summarises the error status codes. This section defines the canonical `422 Unprocessable Entity` response used when the JSON is structurally valid but violates the OD MS `OptimisationSpecification` schema or the request-contract schema rules for `targetEntitySchema`, `expressionSpecification`, or `specCharacteristic[]`.
 
 ```http
 HTTP/1.1 422 Unprocessable Entity
