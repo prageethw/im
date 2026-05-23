@@ -148,7 +148,9 @@ _links
 
 `POST /optimisationSpecification` has two create modes. For a new specification lineage, the client omits `id` and `createFrom`; OD MS assigns `id` and `draftId`. For a new draft candidate under an existing lineage, the client provides `createFrom` with source `id` and `version`; OD MS reuses the existing `id` and assigns a new `draftId`.
 
-`version` is included in the canonical field set because it is present on `ACTIVE` and `RETIRED` specifications. Mutable `DRAFT` specifications do not expose an official public `version`. Each mutable draft candidate has a server-assigned `draftId`, and draft revision is represented by `ETag`. When a draft candidate is activated, the same `draftId` remains attached to the resulting `ACTIVE` and later `RETIRED` record as immutable provenance. `draftId` is therefore visible across the lifecycle, but it is used for selection only while the record is `DRAFT`.
+For `createFrom` mode, `createFrom` is the only required client field. OD MS derives the initial draft candidate content from the referenced source version, including `name`, `familyId`, `expressionSpecification`, `targetEntitySchema`, `specCharacteristic[]`, and `@type`. Governance may allow selected fields to be overridden after the draft candidate is created while it remains `DRAFT`.
+
+`version` is included in the canonical field set because it is present on `ACTIVE` and `RETIRED` specifications. Mutable `DRAFT` specifications do not expose an official public `version`. Each mutable draft candidate has a server-assigned `draftId`, and draft revision is represented by `ETag`. When a draft candidate is activated, the same `draftId` remains attached to the resulting `ACTIVE` and later `RETIRED` record as immutable provenance. `draftId` is therefore visible across the lifecycle. It selects a mutable candidate while the record is `DRAFT`, and may also support read-only provenance lookup after the record becomes `ACTIVE` or `RETIRED`.
 
 `_links` is an approved HATEOAS platform extension. It does not replace the standard `href` field.
 
@@ -158,12 +160,12 @@ The external `OptimisationSpecification` resource must use only the TMF-aligned 
 
 | Field | Meaning |
 |---|---|
-| `id` | Stable server-assigned `OptimisationSpecification` lineage identifier. It groups the current `ACTIVE` version, retained `RETIRED` versions, and mutable `DRAFT` candidates. A specific immutable `ACTIVE` or `RETIRED` specification version is selected by `id` and `version`. A specific mutable draft candidate is selected by `id` and `draftId`. |
-| `href` | Hyperlink reference to the specification resource. Server assigned. For DRAFT candidates, `href` must include or be accompanied by `draftId` when the link targets a specific mutable draft candidate. For `ACTIVE` and `RETIRED` versions, `href` resolves by `id` and optional `version`. |
+| `id` | Stable server-assigned `OptimisationSpecification` lineage identifier. It groups the current `ACTIVE` version, retained `RETIRED` versions, and mutable `DRAFT` candidates. A specific immutable `ACTIVE` or `RETIRED` specification version is selected by `id` and `version`. Because `draftId` is retained as provenance, OD MS may also support read-only lookup of `ACTIVE` and `RETIRED` records by `id` and `draftId`. A specific mutable draft candidate is selected by `id` and `draftId`. |
+| `href` | Hyperlink reference to the specification resource. Server assigned. For DRAFT candidates, `href` must include or be accompanied by `draftId` when the link targets a specific mutable draft candidate. For `ACTIVE` and `RETIRED` versions, `href` resolves by `id` and optional `version`; read-only provenance lookup may additionally use `draftId` as a query filter. |
 | `name` | Human-readable specification name. Required on create. |
 | `description` | Description of the optimisation capability and contract. |
 | `familyId` | Logical grouping metadata for related optimisation specifications. It supports discovery, reporting, and catalogue grouping, but OD MS must not use it as the lifecycle or versioning control key. |
-| `draftId` | Server-assigned identifier for the draft candidate that produced the specification record. For `DRAFT` records, `draftId` is part of the mutable draft candidate identity and is required to select a specific draft. When the draft is activated, the same `draftId` is retained on the resulting `ACTIVE` and later `RETIRED` record as immutable provenance. It is not an official public version and must not be used to select `ACTIVE` or `RETIRED` versions. |
+| `draftId` | Server-assigned identifier for the draft candidate that produced the specification record. For `DRAFT` records, `draftId` is part of the mutable draft candidate identity and is required to select a specific draft. When the draft is activated, the same `draftId` is retained on the resulting `ACTIVE` and later `RETIRED` record as immutable provenance. It is not an official public version. It may be used for read-only provenance lookup of `ACTIVE` and `RETIRED` records, but must not be used for mutation, activation, deletion, or retirement. |
 | `version` | Official specification version under the immutable `OptimisationSpecification.id`. Omitted for mutable `DRAFT`; assigned by OD MS only when a selected draft candidate is activated. Present and immutable for `ACTIVE` and `RETIRED` specifications. |
 | `lifecycleStatus` | Specification lifecycle value: `DRAFT`, `ACTIVE`, or `RETIRED`. Created as `DRAFT` by default. |
 | `statusChangeDate` | Date/time the `lifecycleStatus` last changed. Server assigned. |
@@ -475,7 +477,7 @@ Multiple RETIRED versions are allowed and expected because existing runtime `Opt
 
 Multiple mutable DRAFT candidates are allowed for the same `OptimisationSpecification.id` so design alternatives can be prepared in parallel before one candidate is selected for activation. DRAFT candidates are not official versions. Each DRAFT candidate is selected by `draftId` and guarded by its own `ETag`. The selected draft candidate's `draftId` is carried forward after activation so the official version can be traced back to the draft that produced it.
 
-DRAFT specifications do not expose an official public `version`; `draftId` identifies the candidate, while `ETag` represents revision and concurrency. ACTIVE and RETIRED specifications expose both `version` and source `draftId`: `version` is the official selector, while `draftId` is provenance. OD MS enforces only one ACTIVE version per `OptimisationSpecification.id`.
+DRAFT specifications do not expose an official public `version`; `draftId` identifies the candidate, while `ETag` represents revision and concurrency. ACTIVE and RETIRED specifications expose both `version` and source `draftId`: `version` is the official selector, while `draftId` is retained provenance that may also support read-only lookup. OD MS enforces only one ACTIVE version per `OptimisationSpecification.id`.
 
 Identity and provenance sample:
 
@@ -489,9 +491,10 @@ Selection rules:
 
 ```text
 DRAFT candidate selection uses id and draftId.
-ACTIVE and RETIRED version selection uses id and version.
+ACTIVE and RETIRED official version selection uses id and version.
 Default runtime selection by id resolves to the current ACTIVE version.
-draftId remains visible on ACTIVE and RETIRED records as provenance, but it is not the selector for official versions.
+Read-only provenance lookup of ACTIVE and RETIRED records may use id and draftId.
+draftId must not be used for mutation, activation, deletion, or retirement of ACTIVE or RETIRED records.
 ```
 
 Version format baseline:
@@ -504,7 +507,7 @@ Within an `OptimisationSpecification.id`, an official version value must be uniq
 Because the official version is assigned by OD MS, clients cannot directly create a duplicate official version. If OD MS cannot safely assign a new official version because another activation is occurring for the same `OptimisationSpecification.id`, OD MS returns 409 Conflict for the concurrent activation conflict.
 ```
 
-`POST /optimisationSpecification` supports two creation modes. A request without `createFrom` creates a new `OptimisationSpecification` lineage; OD MS assigns both `id` and `draftId`. A request with `createFrom` creates a new mutable `DRAFT` candidate under an existing `OptimisationSpecification.id`; OD MS reuses the existing `id`, assigns a new `draftId`, and does not assign an official public `version` until activation. In both modes OD MS assigns the draft candidate's initial `ETag`.
+`POST /optimisationSpecification` supports two creation modes. A request without `createFrom` creates a new `OptimisationSpecification` lineage; OD MS assigns both `id` and `draftId`. A request with `createFrom` creates a new mutable `DRAFT` candidate under an existing `OptimisationSpecification.id`; OD MS reuses the existing `id`, assigns a new `draftId`, and does not assign an official public `version` until activation. In `createFrom` mode, `createFrom` is the only required client field; OD MS derives the starting draft contract from the referenced source version. In both modes OD MS assigns the draft candidate's initial `ETag`.
 
 `DRAFT -> ACTIVE` is a governed activation transition on one selected `DRAFT` candidate. Activation may be performed by:
 
@@ -535,7 +538,7 @@ Physical `DELETE` is not used for `ACTIVE` or `RETIRED` specifications.
 |---|---|
 | `GET /optimisationSpecification` | Lists visible specifications. Supports enumerated first-level filtering and `fields`. |
 | `GET /optimisationSpecification/{id}` | Retrieves the current ACTIVE version by default. Historical versions require an explicit `version` query parameter. Draft candidates require explicit `lifecycleStatus=DRAFT` and `draftId` when retrieving one candidate. Supports first-level `fields`. |
-| `POST /optimisationSpecification` | Creates a new mutable `DRAFT` candidate without an official public `version`. Without `createFrom`, OD MS creates a new lineage and assigns `id` and `draftId`. With `createFrom`, OD MS creates a new draft candidate under the referenced existing `id` and assigns a new `draftId`. `familyId` is required as logical grouping metadata. Returns `draftId` and `ETag`. |
+| `POST /optimisationSpecification` | Creates a new mutable `DRAFT` candidate without an official public `version`. Without `createFrom`, OD MS creates a new lineage and assigns `id` and `draftId`; normal create fields are required. With `createFrom`, OD MS creates a new draft candidate under the referenced existing `id`, derives the starting contract from the source version, and assigns a new `draftId`; `createFrom` is the only required client field. Returns `draftId` and `ETag`. |
 | `PUT /optimisationSpecification/{id}` | Approved platform extension. Full replacement and finalisation of a selected mutable `DRAFT` candidate only. For DRAFT candidate mutation, finalisation, and activation, `draftId` is required as a query parameter. Requires `If-Match` and `Content-Type: application/json`. Rejected for `ACTIVE` and `RETIRED`. |
 | `PATCH /optimisationSpecification/{id}` | TMF-compatible partial update using JSON Merge Patch. Requires `If-Match` and `Content-Type: application/merge-patch+json`. Contract and content updates are allowed only for a selected `DRAFT` candidate. For DRAFT candidate mutation and activation, `draftId` is required as a query parameter. Retirement of `ACTIVE` is lifecycle-only, targets the current ACTIVE version for `id`, does not use `draftId`, and does not permit contract and content changes. Rejected for `RETIRED`. |
 | `DELETE /optimisationSpecification/{id}` | Physical delete only for a selected mutable `DRAFT` candidate. Requires `draftId` as a query parameter and requires `If-Match`. Rejected for `ACTIVE` and `RETIRED`. |
@@ -548,7 +551,7 @@ Physical `DELETE` is not used for `ACTIVE` or `RETIRED` specifications.
 |---|---|
 | `id` | Exact match on resource id. |
 | `familyId` | Exact match on logical grouping metadata. |
-| `draftId` | Exact match on a draft candidate identity. With `lifecycleStatus=DRAFT`, it selects a mutable draft candidate. With `ACTIVE` or `RETIRED`, it may be used for provenance lookup, but official version selection remains by `id` and `version`. |
+| `draftId` | Exact match on a draft candidate identity. With `lifecycleStatus=DRAFT`, it selects a mutable draft candidate. With `ACTIVE` or `RETIRED`, it may be used for read-only provenance lookup. Official version selection remains by `id` and `version`. |
 | `name` | Exact or implementation-defined case-insensitive name match. |
 | `lifecycleStatus` | Exact match on `DRAFT`, `ACTIVE`, or `RETIRED`. |
 | `version` | Exact match on official version. Meaningful only for `ACTIVE` and `RETIRED`. |
@@ -556,14 +559,15 @@ Physical `DELETE` is not used for `ACTIVE` or `RETIRED` specifications.
 | `statusChangeDate.gt`, `statusChangeDate.lt` | Optional timestamp range filters for lifecycle change date. |
 | `fields` | Optional sparse fieldset projection. |
 
-Unsupported or malformed query parameters return `400 Bad Request`.
+Unsupported or malformed query parameters return `400 Bad Request`. Requests combining `lifecycleStatus=DRAFT` with `version` are invalid and return `400 Bad Request`, because DRAFT candidates do not expose official public versions.
 
 Default list resolution rule:
 
 ```text
 When `id` is supplied without `version`, `lifecycleStatus`, or `draftId`, OD MS returns the current ACTIVE version for that `OptimisationSpecification.id` if one exists.
-To retrieve historical records, callers must explicitly filter by `version`, `lifecycleStatus`, or both.
+To retrieve historical records, callers must explicitly filter by `version`, `lifecycleStatus`, `draftId`, or an allowed combination.
 To retrieve draft candidates, callers must explicitly filter by `lifecycleStatus=DRAFT`; to retrieve one draft candidate, callers must also provide `draftId`.
+To retrieve an ACTIVE or RETIRED record by provenance, callers may provide `id`, `draftId`, and optionally `lifecycleStatus=ACTIVE` or `lifecycleStatus=RETIRED`.
 If no ACTIVE version exists and no `version`, `lifecycleStatus`, or `draftId` filter is supplied, OD MS returns an empty list rather than silently returning DRAFT or RETIRED records.
 ```
 
@@ -573,6 +577,8 @@ Version and lifecycle filter examples:
 GET /optimisationSpecification?id=optimisation-spec-surgical-routing
 GET /optimisationSpecification?id=optimisation-spec-surgical-routing&lifecycleStatus=RETIRED
 GET /optimisationSpecification?id=optimisation-spec-surgical-routing&version=1.0.0
+GET /optimisationSpecification?id=optimisation-spec-surgical-routing&draftId=od-draft-surgical-routing-b
+GET /optimisationSpecification?id=optimisation-spec-surgical-routing&lifecycleStatus=RETIRED&draftId=od-draft-surgical-routing-a
 GET /optimisationSpecification?id=optimisation-spec-surgical-routing&lifecycleStatus=DRAFT
 GET /optimisationSpecification?id=optimisation-spec-surgical-routing&lifecycleStatus=DRAFT&draftId=od-draft-surgical-routing-a
 ```
@@ -581,7 +587,7 @@ Sparse field projection rule:
 
 ```text
 If a requested field is valid but not present for the resource's current lifecycle state, OD MS omits that field silently rather than returning an error.
-For example, fields=id,version on a DRAFT resource returns id and omits version because DRAFT specifications do not expose an official public version. Callers can request draftId for DRAFT records, and may also request draftId on ACTIVE or RETIRED records for provenance.
+For example, fields=id,version on a DRAFT resource returns id and omits version because DRAFT specifications do not expose an official public version. Callers can request draftId for DRAFT records, and may also request draftId on ACTIVE or RETIRED records for provenance. A draftId filter on ACTIVE or RETIRED records is read-only provenance lookup and does not make draftId the official version selector.
 Unsupported field names still return 400 Bad Request.
 ```
 
@@ -621,7 +627,7 @@ Failure rules:
 | Missing `If-Match` on unsafe existing-resource operation | `428 Precondition Required` |
 | Stale or mismatched `If-Match` | `412 Precondition Failed` |
 
-For DRAFT candidate operations, `If-Match` must match the `ETag` of the selected `id` and `draftId` candidate. For ACTIVE retirement, `If-Match` must match the `ETag` of the current ACTIVE version for `id`; `draftId` is not used for ACTIVE retirement.
+For DRAFT candidate operations, `If-Match` must match the `ETag` of the selected `id` and `draftId` candidate. Missing `draftId` where it is required for DRAFT candidate retrieval, mutation, activation, or deletion returns `400 Bad Request`. An unknown `draftId` for the specified `id` returns `404 Not Found`. A stale or mismatched `If-Match` for the selected `id` and `draftId` candidate returns `412 Precondition Failed`. For ACTIVE retirement, `If-Match` must match the `ETag` of the current ACTIVE version for `id`; `draftId` is not used for ACTIVE retirement.
 
 `POST /optimisationSpecification` creates a new server-assigned `DRAFT` candidate and does not normally require `If-Match`. It returns a `draftId` and an `ETag` for future updates to that candidate.
 
@@ -668,7 +674,7 @@ Link relation meaning:
 | `retire` | `PATCH` | Governed retirement of an `ACTIVE` specification. |
 | `createNewVersion` | `POST` | Create a new mutable `DRAFT` candidate for the same `OptimisationSpecification.id`. The POST body must include `createFrom` with source `id` and `version`, or the link-specific `href` must carry equivalent source context. The official `version` is assigned only when a draft candidate is activated. `familyId` may be retained as logical grouping metadata. |
 
-The `activate` and `retire` link relations point to `PATCH` on the `OptimisationSpecification` resource itself. OD MS does not expose separate `/activate` or `/retire` action endpoints. DRAFT candidate action links must include `draftId` when the link targets a specific mutable draft candidate. The `retire` link is lifecycle-only, targets the current ACTIVE version for `id`, does not use `draftId`, and must not be used to modify an `ACTIVE` specification contract and content.
+The `activate` and `retire` link relations point to `PATCH` on the `OptimisationSpecification` resource itself. OD MS does not expose separate `/activate` or `/retire` action endpoints. DRAFT candidate action links must include `draftId` when the link targets a specific mutable draft candidate. `draftId` may be returned on ACTIVE and RETIRED records for provenance. ACTIVE and RETIRED links normally resolve official versions by `id` and optional `version`, or by `id` alone when resolving the current ACTIVE version. Read-only provenance lookup may additionally use `draftId`, but action links for ACTIVE and RETIRED must not use `draftId` for mutation. The `retire` link is lifecycle-only, targets the current ACTIVE version for `id`, does not use `draftId`, and must not be used to modify an `ACTIVE` specification contract and content.
 
 ## 18. Operation examples:
 
@@ -841,7 +847,7 @@ Content-Type: application/json
 }
 ```
 
-OD MS creates a new mutable DRAFT candidate for the same `OptimisationSpecification.id`, copies or derives the starting contract from the referenced immutable version according to platform governance, assigns a new `draftId`, and does not assign an official public `version` until activation.
+OD MS creates a new mutable DRAFT candidate for the same `OptimisationSpecification.id`, copies or derives the starting contract from the referenced immutable version according to platform governance, assigns a new `draftId`, and does not assign an official public `version` until activation. For `createFrom` mode, `createFrom` is the only required client field; fields such as `name`, `familyId`, `expressionSpecification`, `targetEntitySchema`, `specCharacteristic[]`, and `@type` are derived from the source version unless later changed under DRAFT governance.
 
 Response body follows the same DRAFT response shape as section 18.1 and includes the new `draftId`, DRAFT `href`, and DRAFT action links that carry the selected `draftId`.
 
@@ -1001,6 +1007,15 @@ Cache-Control: no-cache
 ```
 
 OD MS returns the immutable `ACTIVE` or `RETIRED` version that matches the requested official version. It must not return a DRAFT resource for an official version lookup because DRAFT resources do not expose official public versions.
+
+ACTIVE and RETIRED records may also be retrieved by source draft provenance:
+
+```http
+GET /optimisationManagement/v1/optimisationSpecification/optimisation-spec-surgical-routing?draftId=od-draft-surgical-routing-a
+Cache-Control: no-cache
+```
+
+OD MS returns the immutable `ACTIVE` or `RETIRED` official version produced from the supplied `draftId`, if the caller can see it. This is read-only provenance lookup. It does not make `draftId` the official version selector and must not be used for mutation, activation, deletion, or retirement.
 
 ### 18.5. GET /optimisationSpecification/{id} retrieve DRAFT candidate:
 
@@ -1202,6 +1217,10 @@ concurrent activation conflict for the same `OptimisationSpecification.id` -> 40
 server-side official version uniqueness violation -> internal data-integrity failure; OD MS must roll back the activation transaction
 unsupported PATCH Content-Type -> 415 Unsupported Media Type
 unsupported query parameter -> 400 Bad Request
+lifecycleStatus=DRAFT combined with version -> 400 Bad Request
+missing draftId where required for DRAFT candidate retrieval, mutation, activation, or deletion -> 400 Bad Request
+unknown draftId for the specified id -> 404 Not Found
+stale or mismatched If-Match for selected (id, draftId) candidate -> 412 Precondition Failed
 ```
 
 Immutable specification response:
