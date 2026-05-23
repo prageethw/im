@@ -657,7 +657,7 @@ DELETE /optimisationSpecification/{id}
 Required request header:
 
 ```http
-If-Match: "<etag>"
+If-Match: "od-spec-surgical-routing-r4"
 ```
 
 Failure rules:
