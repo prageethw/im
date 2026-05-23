@@ -104,7 +104,10 @@ Runtime Optimisation has no business version.
 POST optimisation returns 201 Created because the resource is created immediately.
 Execution is asynchronous.
 Result is terminal-only(not re-occuring).
-optimisationSpecification.id is the immutable contract pointer for the runtime record.
+optimisationSpecification.id is mandatory and is the immutable contract pointer for the runtime record.
+expression.iri is mandatory and identifies the submitted runtime expression semantics.
+OC MS verifies runtime expression.iri against the referenced OptimisationSpecification.expressionSpecification.iri.
+OC MS must not resolve or substitute the runtime contract by expression.iri alone.
 OC MS must not substitute a newer ACTIVE specification from the same familyId.
 ```
 
@@ -226,19 +229,20 @@ Catalogue-management journeys are feature-gated and out of phase-one scope unles
 5. OSB calls NGW using mTLS and OAuth2 system-to-system.
 6. NGW routes POST /optimisation to OC MS.
 7. OC MS validates referenced OptimisationSpecification.id exists and is ACTIVE.
-8. OC MS validates expression.expressionValue against the referenced ACTIVE targetEntitySchema.
-9. OC MS persists runtime Optimisation with lifecycleStatus = ACKNOWLEDGED.
-10. OC MS stores optimisationSpecification.id/href as immutable contract pointer.
-11. OC MS writes OptimisationRequestedEvent with instruction = EXECUTE to outbox in same transaction.
-12. OC MS returns 201 Created with Location, ETag, and runtime resource body after resource persistence and outbox write, before worker execution completes.
-13. OC MS Outbox Relay publishes OptimisationRequestedEvent to Kafka.
-14. OC MS advances ACKNOWLEDGED -> QUEUED after successful Kafka publish.
-15. Python/Gurobi Worker consumes OptimisationRequestedEvent.
-16. Worker resolves deterministic model binding and invokes Gurobi Optimiser.
-17. Worker publishes OptimisationCompletedEvent with COMPLETED, INFEASIBLE, FAILED, or CANCELLED.
-18. OC MS Inbox Consumer applies idempotency and stale/late event checks.
-19. OC MS updates lifecycle/result projection.
-20. Caller polls through User -> OEX -> OGW -> OSB MS -> NGW -> OC MS to retrieve status/result.
+8. OC MS validates runtime expression.iri is present and matches the referenced OptimisationSpecification.expressionSpecification.iri.
+9. OC MS validates expression.expressionValue against the referenced ACTIVE targetEntitySchema.
+10. OC MS persists runtime Optimisation with lifecycleStatus = ACKNOWLEDGED.
+11. OC MS stores optimisationSpecification.id/href as immutable contract pointer.
+12. OC MS writes OptimisationRequestedEvent with instruction = EXECUTE to outbox in same transaction.
+13. OC MS returns 201 Created with Location, ETag, and runtime resource body after resource persistence and outbox write, before worker execution completes.
+14. OC MS Outbox Relay publishes OptimisationRequestedEvent to Kafka.
+15. OC MS advances ACKNOWLEDGED -> QUEUED after successful Kafka publish.
+16. Python/Gurobi Worker consumes OptimisationRequestedEvent.
+17. Worker resolves deterministic model binding and invokes Gurobi Optimiser.
+18. Worker publishes OptimisationCompletedEvent with COMPLETED, INFEASIBLE, FAILED, or CANCELLED.
+19. OC MS Inbox Consumer applies idempotency and stale/late event checks.
+20. OC MS updates lifecycle/result projection.
+21. Caller polls through User -> OEX -> OGW -> OSB MS -> NGW -> OC MS to retrieve status/result.
 ```
 
 #### 3.3.5. Monitor optimisation:
@@ -686,6 +690,8 @@ Do not introduce an alternate success status unless the worker contract is expli
 ### 10.10. Canonical runtime expression shape:
 
 Runtime optimisation requests carry actual runtime values under `expression.expressionValue.context`:
+
+Runtime creation requires both `optimisationSpecification.id` and `expression.iri`. The id selects the exact governed `OptimisationSpecification` contract. The runtime `expression.iri` identifies the submitted expression semantics and must match the referenced `OptimisationSpecification.expressionSpecification.iri`.
 
 ```json
 {
