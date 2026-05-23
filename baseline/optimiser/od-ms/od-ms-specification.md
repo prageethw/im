@@ -127,8 +127,6 @@ entitySpecRelationship[]
 _links
 ```
 
-`familyId` is not a canonical `OptimisationSpecification` field in this baseline. The previous loose grouping role is replaced by `specKey`, which is the mandatory stable logical specification key used by OD MS to resolve the server-assigned `id` when a DRAFT candidate is created.
-
 Required create fields for `POST /optimisationSpecification`:
 
 ```text
