@@ -163,7 +163,7 @@ _links
 
 `POST /optimisationSpecification` always creates a mutable `DRAFT` candidate. The client must provide `specKey`, but must not provide `id`, `draftId`, or `version`. OD MS assigns both the stable server-controlled `id` and the server-controlled `draftId` when the DRAFT candidate is created.
 
-`specKey` is the mandatory stable logical specification key supplied when creating a DRAFT. OD MS uses `specKey` to resolve the server-assigned `OptimisationSpecification.id` for the draft candidate. If a current ACTIVE specification already exists for the same `specKey`, OD MS assigns the new DRAFT candidate to that existing `id`. If no current ACTIVE specification exists for the `specKey`, OD MS creates a new `id`. If only RETIRED versions exist for the `specKey` and no ACTIVE version exists, OD MS creates a new `id` unless a governed lineage-reuse capability is explicitly introduced later.
+`specKey` is the mandatory stable logical specification key supplied when creating a DRAFT. OD MS uses `specKey` to resolve the server-assigned `OptimisationSpecification.id` for the draft candidate. If a current ACTIVE specification already exists for the same `specKey`, OD MS assigns the new DRAFT candidate to that existing `id`. If no current ACTIVE specification exists for the `specKey`, OD MS creates a new `id`. If only RETIRED versions exist for the `specKey` and no ACTIVE version exists, OD MS creates a new `id` unless a governed lineage-reuse capability is explicitly introduced later. Historical lineage continuity across retired-only `specKey` records is intentionally not automatic in the baseline; `specKey` can be used for discovery and reporting across such lineages.
 
 `specKey` is immutable after DRAFT creation. PATCH and PUT must not change `specKey`. If a request attempts to change `specKey`, OD MS returns `400 Bad Request`.
 
@@ -545,6 +545,7 @@ Activation rules:
 ```text
 Only one ACTIVE version is allowed per `OptimisationSpecification.id`.
 Activation is allowed only from a selected DRAFT candidate.
+Activation does not accept a target `id` override. The target lineage is the `id` already resolved and stored on the DRAFT candidate.
 Activation validates the full OptimisationSpecification draft candidate before committing the lifecycle transition.
 Activation must also validate the `specKey` active-uniqueness invariant. If activation would result in more than one ACTIVE `OptimisationSpecification.id` for the same `specKey`, or if OD MS detects an existing duplicate ACTIVE-lineage state for that `specKey`, OD MS must return `409 Conflict`, roll back the transaction, and raise an operational alert.
 When a DRAFT candidate is promoted to ACTIVE, OD MS assigns the official version for that `OptimisationSpecification.id`, carries forward the selected candidate's `draftId` as provenance, and must transactionally retire any previous ACTIVE version for the same `OptimisationSpecification.id`.
@@ -557,7 +558,7 @@ Other DRAFT candidates for the same `OptimisationSpecification.id` remain DRAFT 
 
 `PUT` is not the mechanism for retiring an `ACTIVE` specification. `PUT` remains the approved platform extension for full replacement and finalisation of mutable `DRAFT` specifications only.
 
-`DELETE /optimisationSpecification/draft/{draftId}` physically removes a mutable DRAFT candidate. `DELETE /optimisationSpecification/{id}` is a logical lifecycle retirement operation that retires the current ACTIVE version for the supplied `id`. It must not physically remove ACTIVE or RETIRED records.
+`DELETE /optimisationSpecification/draft/{draftId}` physically removes a mutable DRAFT candidate. `DELETE /optimisationSpecification/{id}` is intentionally a logical lifecycle retirement operation in this platform API. It retires the current ACTIVE version for the supplied `id` and must not physically remove ACTIVE or RETIRED records.
 
 ## 13. Operation governance summary:
 
@@ -657,7 +658,7 @@ DELETE /optimisationSpecification/{id}
 Required request header:
 
 ```http
-If-Match: "od-spec-surgical-routing-r4"
+If-Match: "<etag>"
 ```
 
 Failure rules:
@@ -1174,7 +1175,7 @@ OC MS: stores what was accepted at runtime.
 Worker/model: decides feasibility/cancellation outcome and returns COMPLETED, INFEASIBLE, FAILED, or CANCELLED.
 ```
 
-OC MS validates runtime `Optimisation` requests against the `targetEntitySchema` of the referenced `ACTIVE` `OptimisationSpecification`. Runtime creation requires both `optimisationSpecification.id` and `expression.iri`; OC MS uses the id as the exact contract pointer and verifies the runtime IRI against `OptimisationSpecification.expressionSpecification.iri`.
+OC MS validates runtime `Optimisation` requests against the `targetEntitySchema` of the referenced `ACTIVE` `OptimisationSpecification`. Runtime creation requires both `optimisationSpecification.id` and `expression.iri`; OC MS uses the id as the exact contract pointer and verifies the runtime IRI against `OptimisationSpecification.expressionSpecification.iri`. OC MS does not use `specKey` for runtime contract selection.
 
 OC MS validates:
 
