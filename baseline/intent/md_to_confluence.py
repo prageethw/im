@@ -272,7 +272,10 @@ def render_markdown(md_text: str, source_dir: Path,
       4. Prepends a fresh standard header block (status badge + TOC).
     """
     if insert_header:
-        md_text = strip_existing_status_and_toc(md_text)
+        md_text, removed = strip_existing_status_and_toc(md_text)
+        if removed:
+            LOG.info("Removed %d existing status/toc marker(s) from Markdown",
+                     removed)
 
     renderer = StorageRenderer(source_dir=source_dir)
     md = mistune.create_markdown(
@@ -281,10 +284,10 @@ def render_markdown(md_text: str, source_dir: Path,
     )
     body = md(md_text)
 
+    # Sweep the rendered output too, in case any macro slipped through (e.g.
+    # an admonition-wrapped raw HTML block that mistune handled differently).
     if insert_header:
-        body, removed = strip_macros_from_storage(body)
-        if removed:
-            LOG.info("Removed %d existing status/toc macro(s) from source", removed)
+        body = _EMPTY_P_RE.sub("", body)
         body = build_header(status_text, status_colour) + body
 
     return body, renderer.image_refs
@@ -342,41 +345,37 @@ def build_header(status_text: str = "draft",
 # We do this BEFORE prepending our own header so the final page has exactly
 # one status pill and exactly one TOC.
 
+# Patterns removed from the RAW MARKDOWN before rendering. We do it here
+# (not after rendering) because mistune wraps raw HTML in containers that
+# make post-render regex matching unreliable. Cleaning the Markdown source
+# is simpler and more robust.
+
 # Markdown-level TOC markers commonly used by Pandoc / GitLab / mkdocs:
 _MD_TOC_MARKERS = (
-    re.compile(r"^\s*\[TOC\]\s*$", re.IGNORECASE | re.MULTILINE),
-    re.compile(r"^\s*\[\[_TOC_\]\]\s*$", re.IGNORECASE | re.MULTILINE),
-    re.compile(r"^\s*<!--\s*toc\s*-->\s*$", re.IGNORECASE | re.MULTILINE),
+    re.compile(r"^[ \t]*\[TOC\][ \t]*$", re.IGNORECASE | re.MULTILINE),
+    re.compile(r"^[ \t]*\[\[_TOC_\]\][ \t]*$", re.IGNORECASE | re.MULTILINE),
+    re.compile(r"^[ \t]*<!--\s*toc\s*-->[ \t]*$", re.IGNORECASE | re.MULTILINE),
 )
 
-# Storage-format macros to remove from rendered output. The regex tolerates
-# any attributes on the opening tag and any inner content (including nested
-# parameters), because Confluence's storage format is intentionally verbose.
-_STORAGE_MACRO_RE = re.compile(
-    r'<ac:structured-macro\b[^>]*\bac:name="(?P<name>toc|status)"[^>]*>'
-    r'.*?</ac:structured-macro>',
+# Raw `<ac:structured-macro ac:name="toc|status">...</ac:structured-macro>`
+# blocks that an author pasted into the Markdown source. The regex is
+# permissive about attribute order, whitespace, and multi-line content.
+# Matches either a self-closing `<.../>` form or a paired open/close form.
+_MD_MACRO_RE = re.compile(
+    r'<ac:structured-macro\b[^>]*?\bac:name="(?:toc|status)"[^>]*?'
+    r'(?:/>|>.*?</ac:structured-macro>)',
     re.DOTALL | re.IGNORECASE,
 )
 
-# Empty wrapping paragraphs left behind after macro removal (e.g. a <p> that
-# contained only a status macro). Match <p ...> ... </p> where the body is
-# whitespace only.
+# After stripping a macro, a wrapping <p>...</p> may be left holding only
+# whitespace. Drop those so we don't accumulate blank paragraphs.
 _EMPTY_P_RE = re.compile(r"<p\b[^>]*>\s*</p>", re.IGNORECASE)
 
 
-def strip_existing_status_and_toc(md_text: str) -> str:
-    """Remove `[TOC]`-style markers from raw Markdown before rendering."""
-    out = md_text
-    for pat in _MD_TOC_MARKERS:
-        out = pat.sub("", out)
-    return out
-
-
-def strip_macros_from_storage(storage_xhtml: str) -> Tuple[str, int]:
+def strip_existing_status_and_toc(md_text: str) -> Tuple[str, int]:
     """
-    Remove any <ac:structured-macro ac:name="toc"|"status"> blocks from
-    already-rendered storage XHTML. Returns (cleaned, count_removed).
-    Also removes wrapping <p> tags that become empty as a result.
+    Remove `[TOC]`-style markers AND any raw status/toc storage macros
+    that appear in the Markdown source. Returns (cleaned_md, count_removed).
     """
     removed = 0
 
@@ -385,10 +384,14 @@ def strip_macros_from_storage(storage_xhtml: str) -> Tuple[str, int]:
         removed += 1
         return ""
 
-    cleaned = _STORAGE_MACRO_RE.sub(_drop, storage_xhtml)
-    if removed:
-        cleaned = _EMPTY_P_RE.sub("", cleaned)
-    return cleaned, removed
+    out = _MD_MACRO_RE.sub(_drop, md_text)
+    for pat in _MD_TOC_MARKERS:
+        out, n = pat.subn("", out)
+        removed += n
+
+    # Collapse blank-line runs that pure-deletion may have created
+    out = re.sub(r"\n{3,}", "\n\n", out)
+    return out, removed
 
 
 def build_footer(source_path: Path, base_url: Optional[str] = None) -> str:
