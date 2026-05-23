@@ -127,6 +127,8 @@ entitySpecRelationship[]
 _links
 ```
 
+`familyId` is not a canonical `OptimisationSpecification` field in this baseline. The previous loose grouping role is replaced by `specKey`, which is the mandatory stable logical specification key used by OD MS to resolve the server-assigned `id` when a DRAFT candidate is created.
+
 Required create fields for `POST /optimisationSpecification`:
 
 ```text
@@ -165,9 +167,11 @@ _links
 
 `specKey` is the mandatory stable logical specification key supplied when creating a DRAFT. OD MS uses `specKey` to resolve the server-assigned `OptimisationSpecification.id` for the draft candidate. If a current ACTIVE specification already exists for the same `specKey`, OD MS assigns the new DRAFT candidate to that existing `id`. If no current ACTIVE specification exists for the `specKey`, OD MS creates a new `id`. If only RETIRED versions exist for the `specKey` and no ACTIVE version exists, OD MS creates a new `id` unless a governed lineage-reuse capability is explicitly introduced later. Historical lineage continuity across retired-only `specKey` records is intentionally not automatic in the baseline; `specKey` can be used for discovery and reporting across such lineages.
 
-`specKey` is immutable after DRAFT creation. PATCH and PUT must not change `specKey`. If a request attempts to change `specKey`, OD MS returns `400 Bad Request`.
+`specKey` may be changed while the specification is still `DRAFT`, but only when OD MS validates the change against the current ACTIVE `OptimisationSpecification.id` for the new `specKey`. If an ACTIVE specification already exists for the new `specKey`, the DRAFT candidate's stored `id` must match that ACTIVE `id`. If it does not match, OD MS returns `409 Conflict`. OD MS must not use a `specKey` change to move a DRAFT candidate from one existing ACTIVE lineage to another.
 
 `specKey` is also the active logical uniqueness key. At most one ACTIVE `OptimisationSpecification.id` may exist for a given `specKey`. If OD MS detects more than one ACTIVE lineage for the same `specKey`, that is a server-side data-integrity breach. OD MS must not guess which lineage to use; it must reject the operation, roll back any activation transaction, raise an operational alert, and require administrative remediation.
+
+When `specKey` is changed on a DRAFT candidate, OD MS validates the changed value against the current ACTIVE `OptimisationSpecification.id` for that `specKey`. If an ACTIVE specification already exists for the changed `specKey`, the DRAFT candidate's stored `id` must match that ACTIVE `id`. If it does not match, OD MS returns `409 Conflict`. If no ACTIVE specification exists for the changed `specKey`, the change is allowed only when it does not move the DRAFT away from an existing ACTIVE lineage.
 
 `id` identifies the specification lineage from DRAFT through ACTIVE and RETIRED states. DRAFT operations are addressed by `draftId`; official runtime contract selection after activation is by `id`.
 
@@ -185,7 +189,7 @@ The external `OptimisationSpecification` resource must use only the TMF-aligned 
 | `href` | Hyperlink reference to the specification record. Server assigned. The canonical DRAFT candidate `href` form is `/optimisationManagement/v1/optimisationSpecification/draft/{draftId}`. The canonical current ACTIVE `href` form is `/optimisationManagement/v1/optimisationSpecification/{id}`. A specific ACTIVE or RETIRED version may be retrieved with `/optimisationManagement/v1/optimisationSpecification/{id}?version={version}`. |
 | `name` | Human-readable specification name. Required on create. |
 | `description` | Description of the optimisation capability and contract. |
-| `specKey` | Mandatory stable logical specification key supplied when creating a DRAFT. OD MS uses it to resolve the server-assigned `OptimisationSpecification.id` for the draft candidate. If a current ACTIVE specification already exists for the same `specKey`, the DRAFT is assigned to that existing `id`. If no ACTIVE version exists for the `specKey`, OD MS creates a new `id`. If only RETIRED versions exist for the `specKey`, OD MS creates a new `id` unless governed lineage reuse is explicitly introduced later. `specKey` is immutable after DRAFT creation and is the active logical uniqueness key: at most one ACTIVE lineage may exist for a given `specKey`. |
+| `specKey` | Mandatory stable logical specification key supplied when creating a DRAFT. OD MS uses it to resolve the server-assigned `OptimisationSpecification.id` for the draft candidate. If a current ACTIVE specification already exists for the same `specKey`, the DRAFT is assigned to that existing `id`. If no ACTIVE version exists for the `specKey`, OD MS creates a new `id`. If only RETIRED versions exist for the `specKey`, OD MS creates a new `id` unless governed lineage reuse is explicitly introduced later. `specKey` may be changed while the record remains DRAFT, but OD MS must validate the changed value against the current ACTIVE `OptimisationSpecification.id` for that `specKey`. At most one ACTIVE lineage may exist for a given `specKey`. |
 | `draftId` | Server-assigned identifier for a mutable DRAFT candidate. For `DRAFT` records, `draftId` is the operation selector for retrieve, update, activation, and deletion. When the draft is activated, the same `draftId` is retained on the resulting `ACTIVE` and later `RETIRED` record as immutable provenance. It is not an official public version. |
 | `version` | Official specification version under the immutable `OptimisationSpecification.id`. Omitted for mutable `DRAFT`; assigned by OD MS only when a selected draft candidate is activated. Present and immutable for `ACTIVE` and `RETIRED` specifications. |
 | `lifecycleStatus` | Specification lifecycle value: `DRAFT`, `ACTIVE`, or `RETIRED`. Created as `DRAFT` by default. |
@@ -472,7 +476,7 @@ ACTIVE specifications are contract and content immutable.
 RETIRED specifications are fully immutable retained records.
 To change an ACTIVE specification contract, create a new DRAFT candidate for the same `OptimisationSpecification.id` and activate one selected draft candidate.
 OD MS assigns the official version during activation, not while the resource is still DRAFT.
-`specKey` is used at DRAFT creation time to resolve the server-assigned `id` and remains immutable after DRAFT creation. Activation, retirement, and official version uniqueness are governed by the resolved `OptimisationSpecification.id`. In addition, OD MS must enforce at most one current ACTIVE lineage per `specKey`; a duplicate ACTIVE lineage for the same `specKey` is a data-integrity breach.
+`specKey` is used at DRAFT creation time to resolve the server-assigned `id`. While the record remains DRAFT, `specKey` may be changed only if OD MS validates the change against the current ACTIVE `OptimisationSpecification.id` for the new `specKey`. Activation, retirement, and official version uniqueness are governed by the resolved `OptimisationSpecification.id`. In addition, OD MS must enforce at most one current ACTIVE lineage per `specKey`; a duplicate ACTIVE lineage for the same `specKey` is a data-integrity breach.
 ```
 
 ## 12. Version activation and retirement governance:
@@ -568,8 +572,8 @@ Other DRAFT candidates for the same `OptimisationSpecification.id` remain DRAFT 
 | `GET /optimisationSpecification/{id}` | Retrieves the current ACTIVE version by default. Historical ACTIVE or RETIRED versions require an explicit `version` query parameter. If the requested `version` matches the current ACTIVE version, OD MS returns the ACTIVE record. Supports first-level `fields`. |
 | `GET /optimisationSpecification/draft/{draftId}` | Retrieves one mutable DRAFT candidate. DRAFT records do not expose official public `version`. Supports first-level `fields`. |
 | `POST /optimisationSpecification` | Creates a new mutable DRAFT candidate without an official public `version`. `specKey` is required. `POST` does not accept `id`, `draftId`, or `version`. OD MS resolves `id` from `specKey`, assigns a new `draftId`, and returns `draftId` and `ETag`. |
-| `PUT /optimisationSpecification/draft/{draftId}` | Approved platform extension. Full replacement and finalisation of a mutable DRAFT candidate only. Requires `If-Match` and `Content-Type: application/json`. The body must not change `id`, `draftId`, `version`, or `specKey`. Rejected for ACTIVE and RETIRED official versions. |
-| `PATCH /optimisationSpecification/draft/{draftId}` | TMF-compatible partial update using JSON Merge Patch. Requires `If-Match` and `Content-Type: application/merge-patch+json`. Contract and content updates are allowed only for the selected DRAFT candidate. The patch must not change `id`, `draftId`, `version`, or `specKey`. Activation from DRAFT is allowed by setting `lifecycleStatus` to `ACTIVE`. |
+| `PUT /optimisationSpecification/draft/{draftId}` | Approved platform extension. Full replacement and finalisation of a mutable DRAFT candidate only. Requires `If-Match` and `Content-Type: application/json`. The body must not change `id`, `draftId`, or `version`. If the body changes `specKey`, OD MS must validate the new value against the current ACTIVE `OptimisationSpecification.id` for that `specKey`. Rejected for ACTIVE and RETIRED official versions. |
+| `PATCH /optimisationSpecification/draft/{draftId}` | TMF-compatible partial update using JSON Merge Patch. Requires `If-Match` and `Content-Type: application/merge-patch+json`. Contract and content updates are allowed only for the selected DRAFT candidate. The patch must not change `id`, `draftId`, or `version`. If the patch changes `specKey`, OD MS must validate the new value against the current ACTIVE `OptimisationSpecification.id` for that `specKey`. Activation from DRAFT is allowed by setting `lifecycleStatus` to `ACTIVE`. |
 | `DELETE /optimisationSpecification/draft/{draftId}` | Physical delete only for an unused mutable DRAFT candidate. Requires `If-Match`. Rejected if the draft is already activated or otherwise no longer mutable. |
 | `DELETE /optimisationSpecification/{id}` | Lifecycle retirement of the current ACTIVE version for the supplied `id`. Requires `If-Match` for the current ACTIVE version. Returns `204 No Content` on success. It does not delete the lineage, retained RETIRED versions, or DRAFT candidates. Returns `404 Not Found` when no current ACTIVE version exists. Returns `409 Conflict` only when a current ACTIVE version exists but retirement is blocked by governance. |
 
@@ -580,7 +584,7 @@ Other DRAFT candidates for the same `OptimisationSpecification.id` remain DRAFT 
 | Query parameter | Meaning |
 |---|---|
 | `id` | Stable server-assigned `OptimisationSpecification` lineage identifier resolved from `specKey` when a DRAFT candidate is created. It groups the current `ACTIVE` version, retained `RETIRED` versions, and mutable `DRAFT` candidates. A specific immutable `ACTIVE` or `RETIRED` version is selected by `id` and `version`. The current ACTIVE version is selected by `id` alone. A DRAFT candidate carries its `id`, but DRAFT operations are addressed by `draftId`. |
-| `specKey` | Mandatory stable logical specification key supplied when creating a DRAFT. OD MS uses it to resolve the server-assigned `OptimisationSpecification.id` for the draft candidate. If a current ACTIVE specification already exists for the same `specKey`, the DRAFT is assigned to that existing `id`. If no ACTIVE version exists for the `specKey`, OD MS creates a new `id`. If only RETIRED versions exist for the `specKey`, OD MS creates a new `id` unless governed lineage reuse is explicitly introduced later. `specKey` is immutable after DRAFT creation and is the active logical uniqueness key: at most one ACTIVE lineage may exist for a given `specKey`. |
+| `specKey` | Mandatory stable logical specification key supplied when creating a DRAFT. OD MS uses it to resolve the server-assigned `OptimisationSpecification.id` for the draft candidate. If a current ACTIVE specification already exists for the same `specKey`, the DRAFT is assigned to that existing `id`. If no ACTIVE version exists for the `specKey`, OD MS creates a new `id`. If only RETIRED versions exist for the `specKey`, OD MS creates a new `id` unless governed lineage reuse is explicitly introduced later. `specKey` may be changed while the record remains DRAFT, but OD MS must validate the changed value against the current ACTIVE `OptimisationSpecification.id` for that `specKey`. At most one ACTIVE lineage may exist for a given `specKey`. |
 | `draftId` | Server-assigned identifier for a mutable DRAFT candidate. For `DRAFT` records, `draftId` is the operation selector for retrieve, update, activation, and deletion. When the draft is activated, the same `draftId` is retained on the resulting `ACTIVE` and later `RETIRED` record as immutable provenance. It is not an official public version. |
 | `name` | Exact or implementation-defined case-insensitive name match. |
 | `lifecycleStatus` | Exact match on `DRAFT`, `ACTIVE`, or `RETIRED`. |
@@ -1010,7 +1014,7 @@ If-Match: "od-draft-surgical-routing-a-r3"
 Content-Type: application/json
 ```
 
-The request body contains the full replacement mutable `DRAFT` `OptimisationSpecification` contract and may request activation by setting `lifecycleStatus` to `ACTIVE`. It must include all required client-controlled fields for the final contract. It must not include server-controlled fields or immutable identity fields such as `href`, `id`, `draftId`, `creationDate`, `lastUpdate`, `statusChangeDate`, `_links`, `specKey` changes, or official `version`.
+The request body contains the full replacement mutable `DRAFT` `OptimisationSpecification` contract and may request activation by setting `lifecycleStatus` to `ACTIVE`. It must include all required client-controlled fields for the final contract. It must not include server-controlled fields or immutable identity fields such as `href`, `id`, `draftId`, `creationDate`, `lastUpdate`, `statusChangeDate`, `_links`, or official `version`. If the body changes `specKey`, OD MS must validate the new value against the current ACTIVE `OptimisationSpecification.id` for that `specKey` before accepting the update or activation.
 
 Response:
 
@@ -1098,7 +1102,8 @@ server-side official version uniqueness violation -> internal data-integrity fai
 unsupported PATCH Content-Type -> 415 Unsupported Media Type
 unsupported query parameter -> 400 Bad Request
 client-supplied id, draftId, or version on POST -> 400 Bad Request
-PATCH or PUT attempts to change id, draftId, version, or specKey -> 400 Bad Request
+PATCH or PUT attempts to change id, draftId, or version -> 400 Bad Request
+PATCH or PUT changes specKey and the changed value resolves to a different current ACTIVE OptimisationSpecification id -> 409 Conflict
 lifecycleStatus=DRAFT combined with version -> 400 Bad Request
 unknown draftId in /optimisationSpecification/draft/{draftId} -> 404 Not Found
 stale or mismatched If-Match for selected draftId candidate -> 412 Precondition Failed
