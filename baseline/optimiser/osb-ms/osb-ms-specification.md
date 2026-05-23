@@ -154,6 +154,8 @@ expression.expressionValue.context.constraints[]
 expression.expressionValue.context.preferences[]
 ```
 
+Runtime creation requires both `optimisationSpecification.id` and `expression.iri`. OSB MS must preserve the selected `optimisationSpecification.id` as the exact governed contract pointer and must preserve the runtime `expression.iri` as the submitted expression semantic identifier. OSB MS must not drop, rewrite, infer, or substitute either value before calling OC MS.
+
 OSB MS may construct an OEX-friendly request form from OD MS metadata, but the submitted backend runtime request must still conform to the OC MS `POST /optimisation` contract and the referenced ACTIVE OD MS `targetEntitySchema`.
 
 Request-form generation rules:
@@ -257,6 +259,8 @@ OSB MS may translate the response into an OEX-friendly message, but must not pre
 ## 14. Contract pointer and specification reference behaviour:
 
 OSB MS must preserve the caller-selected or system-selected `optimisationSpecification.id` when submitting the backend runtime request to OC MS.
+
+OSB MS must also preserve the runtime `expression.iri`. Runtime creation requires both `optimisationSpecification.id` and `expression.iri`; OC MS uses the id as the exact contract pointer and verifies the runtime IRI against `OptimisationSpecification.expressionSpecification.iri`.
 
 OC MS persists the referenced `OptimisationSpecification.id` and `href` as the immutable contract pointer for the runtime `Optimisation`. OSB MS must not later substitute a different `OptimisationSpecification`, even a newer ACTIVE specification in the same family, for an already accepted runtime record.
 
