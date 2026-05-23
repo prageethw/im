@@ -25,7 +25,7 @@ Approved platform extensions:
 | `PUT /optimisationSpecification/{id}` | Full replacement and finalisation of mutable `DRAFT` specifications. | Requires `If-Match`; not allowed for `ACTIVE` or `RETIRED`. |
 | `_links` | HATEOAS controls. | Does not replace `href`; lifecycle-aware and authorisation-aware. |
 | `ETag` and `If-Match` governance | Optimistic concurrency for unsafe existing-resource operations. | Required for `PUT`, `PATCH`, and `DELETE`. |
-| `x-platform-extension` and `x-tmf-native` response headers | Governance/documentation headers for NGW-facing optimiser-domain resources. | Used only on external NGW-facing OD/OC APIs; clients must not use these headers as business-logic switches. |
+| `x-platform-extension` and `x-tmf-native` response headers | Governance documentation headers for NGW-facing optimiser-domain resources. | Used only on external NGW-facing OD/OC APIs; clients must not use these headers as business-logic switches. |
 
 ## 3. Ownership:
 
