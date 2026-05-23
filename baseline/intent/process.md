@@ -8,7 +8,8 @@ Key process rules we settled on:
 * Specs first, then design briefs, then diagrams/config.
 * After the user commits, validate the committed GitHub file before moving on to the next.
 * Allowed stale terms only in “do not use” / explanatory wording. Do not treat those as active model drift.
-* Tag clean validated state as baseline-v1.0.
+* Tag clean validated state when we done with a tread.
+* when github become unreliable ask for file upload.
 
 Individual MS solution brief section headings
 # <Full MS Name> Solution Brief
