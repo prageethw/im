@@ -189,7 +189,7 @@ The external `OptimisationSpecification` resource must use only the TMF-aligned 
 | `href` | Hyperlink reference to the specification record. Server assigned. The canonical DRAFT candidate `href` form is `/optimisationManagement/v1/optimisationSpecification/draft/{draftId}`. The canonical current ACTIVE `href` form is `/optimisationManagement/v1/optimisationSpecification/{id}`. A specific ACTIVE or RETIRED version may be retrieved with `/optimisationManagement/v1/optimisationSpecification/{id}?version={version}`. |
 | `name` | Human-readable specification name. Required on create. |
 | `description` | Description of the optimisation capability and contract. |
-| `specKey` | Mandatory stable logical specification key supplied when creating a DRAFT. OD MS uses it to resolve the server-assigned `OptimisationSpecification.id` for the draft candidate. If a current ACTIVE specification already exists for the same `specKey`, the DRAFT is assigned to that existing `id`. If no ACTIVE version exists for the `specKey`, OD MS creates a new `id`. If only RETIRED versions exist for the `specKey`, OD MS creates a new `id` unless governed lineage reuse is explicitly introduced later. `specKey` may be changed while the record remains DRAFT, but OD MS must validate the changed value against the current ACTIVE `OptimisationSpecification.id` for that `specKey`. At most one ACTIVE lineage may exist for a given `specKey`. |
+| `specKey` | Mandatory stable logical specification key supplied when creating a DRAFT. OD MS uses it to resolve the server-assigned `OptimisationSpecification.id` for the draft candidate. If a current ACTIVE specification already exists for the same `specKey`, the DRAFT is assigned to that existing `id`. If no ACTIVE version exists for the `specKey`, OD MS creates a new `id`. If only RETIRED versions exist for the `specKey`, OD MS also creates a new `id` unless governed lineage reuse is explicitly introduced later(human involved). `specKey` may be changed while the record remains DRAFT, but OD MS must validate the changed value against the current ACTIVE `OptimisationSpecification.id` for that `specKey`. At most one ACTIVE lineage may exist for a given `specKey`. |
 | `draftId` | Server-assigned identifier for a mutable DRAFT candidate. For `DRAFT` records, `draftId` is the operation selector for retrieve, update, activation, and deletion. When the draft is activated, the same `draftId` is retained on the resulting `ACTIVE` and later `RETIRED` record as immutable provenance. It is not an official public version. |
 | `version` | Official specification version under the immutable `OptimisationSpecification.id`. Omitted for mutable `DRAFT`; assigned by OD MS only when a selected draft candidate is activated. Present and immutable for `ACTIVE` and `RETIRED` specifications. |
 | `lifecycleStatus` | Specification lifecycle value: `DRAFT`, `ACTIVE`, or `RETIRED`. Created as `DRAFT` by default. |
@@ -217,15 +217,15 @@ OD MS must keep the three TMF-aligned specification structures separate. They ar
 | Structure | Responsibility | Must not be used for |
 |---|---|---|
 | `specCharacteristic[]` | Catalogue and discovery metadata for OEX and UI and API consumers. It advertises supported optimisation capability characteristics, examples, defaults, and display guidance. | It must not be treated as the authoritative validation schema. |
-| `expressionSpecification` | Expression-language and ontology binding. It declares `@type = ExpressionSpecification`, `expressionType = JsonLdExpression`, `expressionLanguage = JSON-LD`, and the optimisation ontology `iri`. | It must not contain runtime request values or detailed JSON validation rules. |
-| `targetEntitySchema` | Authoritative validation contract for `Optimisation.expression.expressionValue`, including `context.targets[]`, `context.constraints[]`, and `context.preferences[]`. | It must not be replaced by catalogue characteristics or prose-only rules. |
+| `expressionSpecification{}` | Expression-language and ontology binding. It declares `@type = ExpressionSpecification`, `expressionType = JsonLdExpression`, `expressionLanguage = JSON-LD`, and the optimisation ontology `iri`. | It must not contain runtime request values or detailed JSON validation rules. |
+| `targetEntitySchema{}` | Authoritative validation contract for `Optimisation.expression.expressionValue`, including `context.targets[]`, `context.constraints[]`, and `context.preferences[]`. | It must not be replaced by catalogue characteristics or prose-only rules. |
 
 Baseline rule:
 
 ```text
 specCharacteristic[] = catalogue, discovery, and UI guidance
-expressionSpecification = expression type + expression language + ontology IRI
-targetEntitySchema = authoritative runtime expressionValue validation schema
+expressionSpecification{} = expression type + expression language + ontology IRI
+targetEntitySchema{} = authoritative runtime expressionValue validation schema
 ```
 
 Runtime contract-selection rule:
@@ -495,7 +495,7 @@ Version cardinality baseline for a given `OptimisationSpecification.id`:
 Zero or one ACTIVE version may exist.
 Zero or many RETIRED versions may exist.
 Zero or many mutable DRAFT candidates may exist.
-Each DRAFT candidate has a server-assigned draftId and its own ETag.
+Each DRAFT candidate has a server-assigned draftId,id and its own ETag.
 When a DRAFT candidate is activated, its draftId is carried forward onto the resulting ACTIVE version and later RETIRED version as provenance.
 Official version values must be unique across ACTIVE and RETIRED versions.
 ```
