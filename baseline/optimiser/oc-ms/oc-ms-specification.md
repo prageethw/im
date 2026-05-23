@@ -8,7 +8,7 @@ OC MS accepts runtime optimisation requests, validates the generic wrapper and t
 
 OC MS validates runtime requests only against the current `ACTIVE` version of the referenced `OptimisationSpecification.id`. OD MS guarantees that `ACTIVE` and `RETIRED` specification versions are immutable, so OC MS can treat the resolved `ACTIVE` specification version as stable for the lifetime of the accepted runtime `Optimisation`.
 
-OC MS does not use `familyId` or `expression.iri` to choose a runtime contract. Runtime validation is anchored on the referenced `OptimisationSpecification.id`; OC MS resolves the current `ACTIVE` version from OD MS at request-acceptance time and persists the resolved `version`, `draftId`, `href`, and `ETag` as contract traceability metadata.
+OC MS does not use `familyId` or `expression.iri` to choose a runtime contract. Runtime validation is anchored on the referenced `OptimisationSpecification.id`; OC MS resolves the current `ACTIVE` version from OD MS at request-acceptance time and persists the resolved `version`, `draftId`, `href`, and `ETag` as contract traceability metadata. `expression.iri` is not a selector; it is a semantic compatibility check against the resolved `ACTIVE` specification.
 
 ## 2. Ownership:
 
@@ -159,7 +159,7 @@ CANCELLED: Optimisation is confirmed cancelled.
 
 Runtime `Optimisation` does not expose a `version` field. ETag is used in HTTP headers for unsafe concurrency.
 
-`statusChangeDate` records when `lifecycleStatus` last changed. It is distinct from `creationDate` and `lastUpdate`.
+`statusChangeDate` records when `lifecycleStatus` last changed. It is distinct from `creationDate` and `lastUpdate`. `statusChangeDate` MUST be updated on every lifecycleStatus transition, including `ACKNOWLEDGED -> QUEUED`, `QUEUED -> PROCESSING`, terminal outcomes, and `CANCELLING -> CANCELLED`.
 
 ## 6. Lifecycle transitions:
 
@@ -237,7 +237,6 @@ Content-Type: application/json
   },
   "optimisationSpecification": {
     "id": "optimisation-spec-surgical-routing",
-    "href": "/optimisationManagement/v1/optimisationSpecification/optimisation-spec-surgical-routing",
     "@type": "OptimisationSpecificationRef",
     "@referredType": "OptimisationSpecification"
   },
@@ -406,7 +405,9 @@ A cached ACTIVE contract for a specific id and version is safe because OD MS mak
 If the referenced specification is missing, no ACTIVE version exists, cache-missing, or cache-stale beyond the local policy, OC MS refreshes from OD MS.
 ```
 
-Runtime requests normally supply only `optimisationSpecification.id`. If a client supplies `optimisationSpecification.version` or `optimisationSpecification.draftId` on creation, OC MS treats those fields as client hints only and must verify them against the current ACTIVE version resolved from OD MS. A mismatch returns `422 Unprocessable Entity`; OC MS must not create a runtime `Optimisation` against a non-current, `DRAFT`, or `RETIRED` specification version.
+Runtime requests must supply only `optimisationSpecification.id` for contract selection. Clients must not supply `optimisationSpecification.version`, `optimisationSpecification.draftId`, `optimisationSpecification.href`, or `optimisationSpecification.etag` on creation. OC MS resolves those fields from OD MS and persists them in the accepted runtime resource. If a client supplies any of those forbidden resolved fields, OC MS returns `400 Bad Request`.
+
+If OD MS is unavailable and OC MS has no valid cached immutable `ACTIVE` contract for the requested `OptimisationSpecification.id`, OC MS returns `503 Service Unavailable`. If OC MS has a valid cached immutable `ACTIVE` contract for the requested id and resolved version, it may proceed according to the configured cache policy.
 
 ## 12. OC MS validation boundary:
 
@@ -443,7 +444,7 @@ resource-selection correctness
 
 After acceptance, OC MS persists the runtime resource and writes `OptimisationRequestedEvent` with `instruction = EXECUTE` to its outbox in the same transaction.
 
-Cancellation uses the same event type with `instruction = CANCEL`. Worker terminal outcomes are returned through `OptimisationCompletedEvent` with `status = COMPLETED`, `FAILED`, `INFEASIBLE`, or `CANCELLED`.
+Cancellation uses the same event type with `instruction = CANCEL`. Worker terminal outcomes are returned through `OptimisationCompletedEvent` with `status = COMPLETED`, `INFEASIBLE`, `FAILED`, or `CANCELLED`.
 
 ## 13. Internal event baseline:
 
@@ -614,6 +615,8 @@ Active-state example:
 
 Completed-state example:
 
+Examples may omit unchanged fields for brevity. Full `GET /optimisation/{id}` representations include the accepted `expression` unless sparse field projection or a configured representation policy omits it.
+
 ```json
 {
   "id": "opt-12345",
@@ -635,7 +638,7 @@ Completed-state example:
     "@referredType": "OptimisationSpecification"
   },
   "result": {
-    "outcome": "SUCCESS",
+    "outcome": "COMPLETED",
     "summary": "Optimisation completed successfully.",
     "outputs": [
       {
@@ -695,7 +698,7 @@ Cancellation semantics:
 ```text
 Cancellation is best-effort.
 OC MS accepts cancellation only for eligible non-terminal lifecycle states.
-CANCELLED is set only after worker confirmation through OptimisationCompletedEvent or an equivalent terminal confirmation path.
+Baseline cancellation confirmation is `OptimisationCompletedEvent.status = CANCELLED`. OC MS sets `CANCELLED` only from that event in the current baseline. Any alternative terminal confirmation path is outside the current baseline.
 If cancellation is requested when lifecycleStatus is terminal (COMPLETED, FAILED, INFEASIBLE, or CANCELLED), OC MS returns 409 Conflict.
 ```
 
@@ -705,6 +708,7 @@ Retrial request body:
 No request body is required.
 Baseline retrial does not allow request overrides.
 Retrial resubmits the original accepted expression and the persisted resolved OptimisationSpecification reference unchanged, including `id`, `version`, `draftId`, `href`, and optional `etag`.
+Retrial does not re-resolve the current `ACTIVE` specification from OD MS. It reuses the original persisted specification `id`, `version`, and `draftId` contract pointer.
 To change targets, constraints, preferences, source context, priority, or the referenced OptimisationSpecification contract, the caller must create a new Optimisation request rather than using retrial.
 ```
 
@@ -768,25 +772,28 @@ Unsupported request content type returns 415 Unsupported Media Type.
 
 | **Condition** | **Response** |
 |---|---|
-| Missing or mismatched `optimisationSpecification.id`, `expression.iri`, supplied specification `version` or `draftId` hint, or referenced `targetEntitySchema` contract failure | `422 Unprocessable Entity` |
+| Missing `optimisationSpecification.id`, missing `expression`, missing `expression.iri`, malformed wrapper, malformed JSON, malformed query parameter, unsupported query parameter, invalid paging parameter, or client-supplied forbidden server-controlled field | `400 Bad Request` |
 | Referenced `OptimisationSpecification.id` is missing or not visible | `404 Not Found` |
 | Referenced `OptimisationSpecification.id` has no current `ACTIVE` version | `422 Unprocessable Entity` |
+| `expression.iri` does not match the resolved specification version's `expressionSpecification.iri` | `422 Unprocessable Entity` |
+| `expression.expressionValue` fails the resolved `targetEntitySchema` | `422 Unprocessable Entity` |
+| OD MS unavailable and OC MS has no valid cached immutable `ACTIVE` contract for the requested id | `503 Service Unavailable` |
 | Cancellation/retrial requested in an invalid lifecycle state | `409 Conflict` |
 | Cancellation requested for a terminal lifecycle state | `409 Conflict` |
 | Missing `If-Match` on cancellation/retrial | `428 Precondition Required` |
 | Stale or wrong `If-Match` on cancellation/retrial | `412 Precondition Failed` |
 | Unsupported `Content-Type` | `415 Unsupported Media Type` |
-| Malformed JSON, malformed query parameter, unsupported query parameter, invalid paging parameter, or client-supplied forbidden server-controlled field | `400 Bad Request` |
 
 Boundary rules:
 
 ```text
-422 = request, expression, or OD targetEntitySchema contract violation, including missing `optimisationSpecification.id`, missing `expression.iri`, mismatch between `expression.iri` and the resolved specification version's `expressionSpecification.iri`, no current ACTIVE version for the referenced specification id, or mismatch between supplied specification `version` or `draftId` hints and the resolved current ACTIVE version.
+400 = malformed request, missing required top-level wrapper fields such as `optimisationSpecification.id`, missing `expression`, missing `expression.iri`, unsupported query/filter parameter, invalid paging parameter, or client-supplied forbidden server-controlled runtime field.
+422 = request content is syntactically valid but violates the resolved OD contract, including no current ACTIVE version for the referenced specification id, mismatch between `expression.iri` and the resolved specification version's `expressionSpecification.iri`, or `expression.expressionValue` failing `targetEntitySchema`.
 409 = runtime lifecycle/action conflict.
 428 = required If-Match missing.
 412 = supplied If-Match does not match current ETag.
 415 = unsupported request media type.
-400 = malformed request, unsupported query/filter parameter, invalid paging parameter, or client-supplied forbidden server-controlled runtime field.
+503 = OD MS is unavailable and OC MS has no valid cached immutable ACTIVE contract for the requested id.
 ```
 
 Contract violation example:
@@ -800,7 +807,7 @@ Content-Type: application/json
 {
   "code": "OPTIMISATION_CONTRACT_VIOLATION",
   "reason": "Optimisation contract violation",
-  "message": "The submitted Optimisation request does not satisfy the resolved ACTIVE OptimisationSpecification contract, including required optimisationSpecification.id, expression.iri, expressionSpecification.iri matching, optional version or draftId hint matching, and targetEntitySchema validation.",
+  "message": "The submitted Optimisation request does not satisfy the resolved ACTIVE OptimisationSpecification contract, including expressionSpecification.iri matching and targetEntitySchema validation.",
   "status": 422,
   "@type": "Error"
 }
@@ -842,11 +849,13 @@ Content-Type: application/json
 
 ## 19. Outcome mapping:
 
+Worker terminal outcomes are carried by `OptimisationCompletedEvent.status` using the same status names that OC MS projects to runtime lifecycle states.
+
 ```text
-SUCCESS -> COMPLETED
-INFEASIBLE -> INFEASIBLE
-FAILURE -> FAILED
-CANCELLED -> CANCELLED
+COMPLETED -> lifecycleStatus COMPLETED
+INFEASIBLE -> lifecycleStatus INFEASIBLE
+FAILED -> lifecycleStatus FAILED
+CANCELLED -> lifecycleStatus CANCELLED
 ```
 
 `INFEASIBLE` is an optimisation outcome produced by the worker/model. It is not a request contract validation error.
