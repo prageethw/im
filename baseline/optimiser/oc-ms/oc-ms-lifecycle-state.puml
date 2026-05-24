@@ -1,0 +1,85 @@
+@startuml oc-ms-lifecycle-state
+' OC MS runtime Optimisation lifecycle state model
+' Focus: runtime execution, cancellation, cancellation failure, and retrial creation context.
+
+hide empty description
+skinparam shadowing false
+skinparam state {
+  BackgroundColor White
+  BorderColor Black
+  FontColor Black
+}
+
+title OC MS - Runtime Optimisation lifecycle state model
+
+[*] --> ACKNOWLEDGED : POST /optimisation\ncreationContext.reason = NEW\nOC persists resource and outbox
+
+FAILED --> ACKNOWLEDGED : POST /optimisation/{id}/retrial\ncreates new Optimisation\ncreationContext.reason = RETRIAL\nrelationshipType = retrialOf
+
+ACKNOWLEDGED --> QUEUED : outbox publish succeeds
+QUEUED --> PROCESSING : worker-start signal accepted by OC MS
+
+PROCESSING --> COMPLETED : OptimisationCompletedEvent.status = COMPLETED
+PROCESSING --> INFEASIBLE : OptimisationCompletedEvent.status = INFEASIBLE
+PROCESSING --> FAILED : OptimisationCompletedEvent.status = FAILED
+
+ACKNOWLEDGED --> CANCELLING : POST cancellation accepted\nstate + cancel outbox committed
+QUEUED --> CANCELLING : POST cancellation accepted\nstate + cancel outbox committed
+PROCESSING --> CANCELLING : POST cancellation accepted\nstate + cancel outbox committed
+
+CANCELLING --> CANCELLED : OptimisationCompletedEvent.status = CANCELLED
+CANCELLING --> CANCELLATIONFAILED : OptimisationCompletedEvent.status = CANCELLATIONFAILED
+
+CANCELLATIONFAILED --> COMPLETED : later terminal outcome\nstatus = COMPLETED
+CANCELLATIONFAILED --> INFEASIBLE : later terminal outcome\nstatus = INFEASIBLE
+CANCELLATIONFAILED --> FAILED : later terminal outcome\nstatus = FAILED
+
+COMPLETED --> [*]
+INFEASIBLE --> [*]
+FAILED --> [*] : terminal unless retrial creates a new Optimisation
+CANCELLED --> [*]
+
+ACKNOWLEDGED : Accepted and persisted
+ACKNOWLEDGED : Outbox event written
+
+QUEUED : Requested event published
+QUEUED : Waiting for worker processing
+
+PROCESSING : Worker has started or is preparing execution
+
+COMPLETED : Terminal success outcome
+INFEASIBLE : Terminal optimisation outcome
+FAILED : Terminal technical or runtime failure
+
+CANCELLING : Cancellation accepted
+CANCELLING : Cancel instruction is durable
+CANCELLING : Final cancellation not confirmed yet
+
+CANCELLED : Terminal cancellation outcome
+CANCELLATIONFAILED : Non-terminal cancellation-command outcome
+CANCELLATIONFAILED : Optimisation may still continue
+CANCELLATIONFAILED : self link only in baseline
+
+note right of CANCELLATIONFAILED
+CANCELLATIONFAILED must not suppress or block
+later valid terminal outcomes.
+It is not retriable in the baseline.
+If it later reaches FAILED, retrial may then be requested from FAILED.
+end note
+
+note bottom of FAILED
+Retrial is an action, not a lifecycle state.
+A successful retrial creates a new Optimisation with:
+creationContext.reason = RETRIAL
+optimisationRelationship.relationshipType = retrialOf
+The original Optimisation remains FAILED.
+end note
+
+note bottom
+The current Kafka event baseline remains limited to:
+OptimisationRequestedEvent
+OptimisationCompletedEvent
+No separate progress, retrial, or cancellation-failed event type is introduced.
+end note
+
+@enduml
