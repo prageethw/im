@@ -1,5 +1,40 @@
 # Optimisation Controller MS Specification
 
+## Document status:
+
+| **Field** | **Value** |
+|---|---|
+| **Status** | Baseline candidate |
+| **Scope** | Optimisation Controller MS API, lifecycle, command, event, and runtime resource specification |
+| **Source path** | `baseline/optimiser/oc-ms/oc-ms-specification.md` |
+| **Source of truth** | GitHub `main` |
+| **Last aligned** | 2026-05-24 |
+| **Alignment scope** | Aligned with OD `specKey`, OC `creationContext`, `CANCELLATIONFAILED`, retrial, caching, and ETag-header baseline. |
+
+
+## Table of contents:
+
+- [1. OC MS summary:](#1.-oc-ms-summary)
+- [2. Ownership:](#2.-ownership)
+- [3. Endpoint set:](#3.-endpoint-set)
+- [4. Runtime Optimisation canonical fields:](#4.-runtime-optimisation-canonical-fields)
+- [5. Runtime lifecycle:](#5.-runtime-lifecycle)
+- [6. Lifecycle transitions:](#6.-lifecycle-transitions)
+- [7. Result presence rules:](#7.-result-presence-rules)
+- [8. HATEOAS by lifecycle:](#8.-hateoas-by-lifecycle)
+- [9. External response header governance:](#9.-external-response-header-governance)
+- [10. POST /optimisation:](#10.-post-optimisation)
+- [11. OD specification lookup and cache posture:](#11.-od-specification-lookup-and-cache-posture)
+- [12. OC MS validation boundary:](#12.-oc-ms-validation-boundary)
+- [13. Internal event baseline:](#13.-internal-event-baseline)
+- [14. GET /optimisation list:](#14.-get-optimisation-list)
+- [15. GET /optimisation/{id}:](#15.-get-optimisationid)
+- [16. Cancellation and retrial:](#16.-cancellation-and-retrial)
+- [17. Header/concurrency rules:](#17.-headerconcurrency-rules)
+- [18. Error handling boundary:](#18.-error-handling-boundary)
+- [19. Outcome mapping:](#19.-outcome-mapping)
+
+
 ## 1. OC MS summary:
 
 Optimisation-Controller-MS (OC MS) owns the runtime `Optimisation` resource. It is a generic optimisation controller, not an intent-only controller.

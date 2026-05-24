@@ -1,5 +1,43 @@
 # Optimisation Definition MS Specification
 
+## Document status:
+
+| **Field** | **Value** |
+|---|---|
+| **Status** | Baseline candidate |
+| **Scope** | Optimisation Definition MS API and resource specification |
+| **Source path** | `baseline/optimiser/od-ms/od-ms-specification.md` |
+| **Source of truth** | GitHub `main` |
+| **Last aligned** | 2026-05-24 |
+| **Alignment scope** | Aligned with OD `specKey`, DRAFT `draftId`, ACTIVE retirement, and OC runtime contract-selection baseline. |
+
+
+## Table of contents:
+
+- [1. Service purpose:](#1.-service-purpose)
+- [2. TMF alignment and platform extensions:](#2.-tmf-alignment-and-platform-extensions)
+- [3. Ownership:](#3.-ownership)
+- [4. Endpoint set:](#4.-endpoint-set)
+- [5. OptimisationSpecification resource shape:](#5.-optimisationspecification-resource-shape)
+- [6. Field semantics:](#6.-field-semantics)
+- [7. TMF-aligned specification responsibility split:](#7.-tmf-aligned-specification-responsibility-split)
+- [8. Runtime optimisation context contract:](#8.-runtime-optimisation-context-contract)
+- [9. Embedded schema artifact: optimisation-expression-value.schema.json:](#9.-embedded-schema-artifact-optimisation-expression-value.schema.json)
+- [10. Embedded schema governance baseline:](#10.-embedded-schema-governance-baseline)
+- [11. Lifecycle model:](#11.-lifecycle-model)
+- [12. Version activation and retirement governance:](#12.-version-activation-and-retirement-governance)
+- [13. Operation governance summary:](#13.-operation-governance-summary)
+- [14. Supported list filters:](#14.-supported-list-filters)
+- [15. External response header governance:](#15.-external-response-header-governance)
+- [16. Concurrency and cache governance:](#16.-concurrency-and-cache-governance)
+- [17. HATEOAS baseline:](#17.-hateoas-baseline)
+- [18. Operation examples:](#18.-operation-examples)
+- [19. Error handling baseline:](#19.-error-handling-baseline)
+- [20. Contract violation response:](#20.-contract-violation-response)
+- [21. Relationship to OC MS:](#21.-relationship-to-oc-ms)
+- [22. Event and subscription posture:](#22.-event-and-subscription-posture)
+
+
 ## 1. Service purpose:
 
 Optimisation Definition MS (OD MS) owns the governed catalogue of `OptimisationSpecification` resources. An `OptimisationSpecification` defines the allowed shape, semantics, lifecycle, and validation contract for runtime `Optimisation` requests.
@@ -456,7 +494,6 @@ The embedded `optimisation-expression-value.schema.json` validates the runtime `
 ```text
 DRAFT -> ACTIVE -> RETIRED
 ```
-![Lifecycle states](od-ms-lifecycle-state.svg)
 
 There is no `DEPRECATED` state in the optimiser baseline.
 
