@@ -492,7 +492,7 @@ Version cardinality baseline for a given `OptimisationSpecification.id`:
 Zero or one ACTIVE version may exist.
 Zero or many RETIRED versions may exist.
 Zero or many mutable DRAFT candidates may exist.
-Each DRAFT candidate has a server-assigned draftId,id and its own ETag.
+Each DRAFT candidate has a server-assigned id, a server-assigned draftId, and its own ETag.
 When a DRAFT candidate is activated, its draftId is carried forward onto the resulting ACTIVE version and later RETIRED version as provenance.
 Official version values must be unique across ACTIVE and RETIRED versions.
 ```
