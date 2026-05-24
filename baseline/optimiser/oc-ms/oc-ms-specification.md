@@ -73,6 +73,7 @@ statusChangeDate
 creationDate
 lastUpdate
 sourceContext
+creationContext
 optimisationSpecification
 expression
 result (terminal only)
@@ -94,6 +95,7 @@ creationDate
 lastUpdate
 result
 optimisationRelationship[]
+creationContext
 _links
 optimisationSpecification.version
 optimisationSpecification.draftId
@@ -111,6 +113,7 @@ Field notes:
 | `id` / `href` | Server-assigned runtime resource identity. |
 | `priority` | Optional caller-supplied priority rank represented as a string. Baseline allowed values are `"1"` = highest, `"2"` = normal, and `"3"` = low. If omitted, OC MS applies the default priority policy. Unsupported priority values return `400 Bad Request`. |
 | `sourceContext` | Optional provenance context identifying the upstream domain and source resource that requested or caused the optimisation. It may be used for audit, traceability, and list filtering. |
+| `creationContext` | Server-assigned creation context for the runtime Optimisation. Baseline `creationContext.reason` values are `NEW` for a normal runtime optimisation request and `RETRIAL` for a new Optimisation created from a retrial request. |
 | `optimisationSpecification` | Mandatory immutable reference to the resolved `ACTIVE` `OptimisationSpecification` version used as the exact contract pointer at creation time. Includes `id`, `version`, `draftId`, `href`, and optionally `etag` for cache traceability. |
 | `expression` | Accepted runtime expression submitted by the caller. `expression.iri` is mandatory and must match the referenced ACTIVE specification's `expressionSpecification.iri`. |
 | `result` | Terminal result projection only. Presence depends on lifecycle state. |
@@ -132,6 +135,15 @@ optimisationSpecification.etag = optional OD MS ETag captured for cache and audi
 
 OC MS stores the resolved `version` even when the request supplies only `optimisationSpecification.id`. This preserves the exact contract used by the runtime `Optimisation` after OD MS later activates a newer version for the same `id`.
 
+Creation context model:
+
+```text
+creationContext.reason = NEW for a normal runtime optimisation request.
+creationContext.reason = RETRIAL for a new Optimisation created by retrying a previous FAILED Optimisation.
+creationContext is assigned by OC MS and must not be supplied by clients.
+Retrial is represented by creationContext plus optimisationRelationship, not by a lifecycleStatus value.
+```
+
 ## 5. Runtime lifecycle:
 
 ```text
@@ -143,6 +155,7 @@ INFEASIBLE
 FAILED
 CANCELLING
 CANCELLED
+CANCELLATIONFAILED
 ```
 
 Rules:
@@ -156,6 +169,7 @@ INFEASIBLE: Worker completed correctly, but no valid solution exists.
 FAILED: Technical/runtime failure occurred.
 CANCELLING: Cancellation command has been accepted and worker should stop or ignore where safely possible.
 CANCELLED: Optimisation is confirmed cancelled.
+CANCELLATIONFAILED: Cancellation was accepted and attempted, but the worker later reported that cancellation could not be honoured, applied, or confirmed. The original optimisation may still continue and may later move to COMPLETED, INFEASIBLE, or FAILED.
 ```
 
 Runtime `Optimisation` does not expose a `version` field. ETag is used in HTTP headers for unsafe concurrency.
@@ -173,6 +187,10 @@ PROCESSING -> FAILED
 ACKNOWLEDGED -> CANCELLING -> CANCELLED
 QUEUED -> CANCELLING -> CANCELLED
 PROCESSING -> CANCELLING -> CANCELLED
+CANCELLING -> CANCELLATIONFAILED
+CANCELLATIONFAILED -> COMPLETED
+CANCELLATIONFAILED -> INFEASIBLE
+CANCELLATIONFAILED -> FAILED
 FAILED -> retrial creates a new Optimisation
 COMPLETED -> terminal
 INFEASIBLE -> terminal by default
@@ -193,7 +211,7 @@ Normative result field rules:
 
 ```text
 result MUST be absent while lifecycleStatus is ACKNOWLEDGED, QUEUED, PROCESSING, or CANCELLING.
-result MAY be present when lifecycleStatus is COMPLETED, INFEASIBLE, FAILED, or CANCELLED.
+result MAY be present when lifecycleStatus is COMPLETED, INFEASIBLE, FAILED, CANCELLED, or CANCELLATIONFAILED.
 FAILED result details may include safe error codes, safe messages, retry guidance, and diagnostic references.
 FAILED result details must not expose sensitive solver internals, Gurobi model formulation, credentials, infrastructure details, or raw stack traces.
 ```
@@ -203,6 +221,7 @@ FAILED result details must not expose sensitive solver internals, Gurobi model f
 ```text
 ACKNOWLEDGED, QUEUED, and PROCESSING: self and cancellation
 CANCELLING: self
+CANCELLATIONFAILED: self
 FAILED: self retrial
 COMPLETED, INFEASIBLE, and CANCELLED: self
 ```
@@ -322,6 +341,9 @@ x-tmf-native: false
   "creationDate": "2026-05-02T03:00:00Z",
   "lastUpdate": "2026-05-02T03:00:00Z",
   "statusChangeDate": "2026-05-02T03:00:00Z",
+  "creationContext": {
+    "reason": "NEW"
+  },
   "optimisationSpecification": {
     "id": "optimisation-spec-surgical-routing",
     "version": "1.1.0",
@@ -448,7 +470,7 @@ resource-selection correctness
 
 After acceptance, OC MS persists the runtime resource and writes `OptimisationRequestedEvent` with `instruction = EXECUTE` to its outbox in the same transaction.
 
-Cancellation uses the same event type with `instruction = CANCEL`. Worker terminal outcomes are returned through `OptimisationCompletedEvent` with `status = COMPLETED`, `INFEASIBLE`, `FAILED`, or `CANCELLED`.
+Cancellation uses the same event type with `instruction = CANCEL`. Worker terminal outcomes are returned through `OptimisationCompletedEvent` with `status = COMPLETED`, `INFEASIBLE`, `FAILED`, `CANCELLED`, or `CANCELLATIONFAILED`.
 
 ## 13. Internal event baseline:
 
@@ -457,7 +479,7 @@ OC MS uses exactly two internal Kafka event types with the Python/Gurobi worker 
 | **Event** | **Emitter** | **Consumer** | **Purpose** | **Key values** |
 |---|---|---|---|---|
 | `OptimisationRequestedEvent` | OC MS / OC MS Outbox Relay | Python/Gurobi Worker | Worker instruction event for execution or cancellation. | `instruction = EXECUTE` or `instruction = CANCEL` |
-| `OptimisationCompletedEvent` | Python/Gurobi Worker | OC MS / OC MS Inbox Consumer | Terminal worker outcome event for lifecycle/result projection. | `status = COMPLETED`, `FAILED`, `INFEASIBLE`, or `CANCELLED` |
+| `OptimisationCompletedEvent` | Python/Gurobi Worker | OC MS / OC MS Inbox Consumer | Terminal worker outcome event for lifecycle/result projection. | `status = COMPLETED`, `FAILED`, `INFEASIBLE`, `CANCELLED`, or `CANCELLATIONFAILED` |
 
 `OptimisationFailedEvent` is not used in the current baseline. Failed, infeasible, and cancelled outcomes are carried by `OptimisationCompletedEvent.status`.
 
@@ -725,7 +747,7 @@ Cancellation semantics:
 ```text
 Cancellation is best-effort.
 OC MS accepts cancellation only for eligible non-terminal lifecycle states.
-Baseline cancellation confirmation is `OptimisationCompletedEvent.status = CANCELLED`. OC MS sets `CANCELLED` only from that event in the current baseline. Any alternative terminal confirmation path is outside the current baseline.
+Baseline cancellation confirmation is `OptimisationCompletedEvent.status = CANCELLED`. OC MS sets `CANCELLED` only from that event in the current baseline. If the worker reports that cancellation could not be honoured, applied, or confirmed, OC MS may project `CANCELLATIONFAILED`. Any alternative terminal confirmation path is outside the current baseline.
 If cancellation is requested when lifecycleStatus is terminal (COMPLETED, FAILED, INFEASIBLE, or CANCELLED), OC MS returns 409 Conflict.
 ```
 
@@ -755,7 +777,7 @@ x-tmf-native: false
 }
 ```
 
-`202 Accepted` means OC MS has validated `If-Match` and lifecycle eligibility, moved the runtime resource to `CANCELLING`, and written the `CANCEL` instruction to the outbox. It does not mean the worker has confirmed cancellation. Final cancellation is projected only when OC MS receives `OptimisationCompletedEvent.status = CANCELLED`.
+`202 Accepted` means OC MS has validated `If-Match` and lifecycle eligibility, moved the runtime resource to `CANCELLING`, and written the `CANCEL` instruction to the outbox. It does not mean the worker has confirmed cancellation. Final cancellation is projected only when OC MS receives `OptimisationCompletedEvent.status = CANCELLED`. If OC MS receives `OptimisationCompletedEvent.status = CANCELLATIONFAILED`, the resource moves to `CANCELLATIONFAILED` and may later move to `COMPLETED`, `INFEASIBLE`, or `FAILED` if a normal terminal optimisation outcome is received.
 
 Retrial request body:
 
@@ -767,7 +789,7 @@ Retrial does not re-resolve the current `ACTIVE` specification from OD MS. It re
 To change targets, constraints, preferences, source context, priority, or the referenced OptimisationSpecification contract, the caller must create a new Optimisation request rather than using retrial.
 ```
 
-Retrial response creates a new Optimisation and links it to the failed optimisation:
+Retrial response creates a new Optimisation and links it to the failed optimisation. The new Optimisation has `creationContext.reason = RETRIAL`; normal runtime creation has `creationContext.reason = NEW`. Retrial is creation context, not a lifecycle state:
 
 ```http
 HTTP/1.1 201 Created
@@ -792,6 +814,9 @@ x-tmf-native: false
   "creationDate": "2026-05-02T04:00:00Z",
   "lastUpdate": "2026-05-02T04:00:00Z",
   "statusChangeDate": "2026-05-02T04:00:00Z",
+  "creationContext": {
+    "reason": "RETRIAL"
+  },
   "optimisationSpecification": {
     "id": "optimisation-spec-surgical-routing",
     "version": "1.1.0",
@@ -992,6 +1017,7 @@ COMPLETED -> lifecycleStatus COMPLETED
 INFEASIBLE -> lifecycleStatus INFEASIBLE
 FAILED -> lifecycleStatus FAILED
 CANCELLED -> lifecycleStatus CANCELLED
+CANCELLATIONFAILED -> lifecycleStatus CANCELLATIONFAILED
 ```
 
-`INFEASIBLE` is an optimisation outcome produced by the worker/model. It is not a request contract validation error.
+`INFEASIBLE` is an optimisation outcome produced by the worker/model. It is not a request contract validation error. `CANCELLATIONFAILED` is a cancellation-command outcome and may be followed by a normal terminal optimisation outcome if the worker later reports `COMPLETED`, `INFEASIBLE`, or `FAILED`.
