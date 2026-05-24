@@ -212,7 +212,7 @@ Normative result field rules:
 ```text
 result MUST be absent while lifecycleStatus is ACKNOWLEDGED, QUEUED, PROCESSING, or CANCELLING.
 result MAY be present when lifecycleStatus is COMPLETED, INFEASIBLE, FAILED, CANCELLED, or CANCELLATIONFAILED.
-For CANCELLATIONFAILED, result may include safe cancellation-attempt outcome details, but the optimisation may still later move to COMPLETED, INFEASIBLE, or FAILED when a normal worker outcome is received.
+For CANCELLATIONFAILED, result may include safe cancellation-attempt outcome details, but the optimisation may still later move to COMPLETED, INFEASIBLE, or FAILED when a normal worker outcome is received. If a later normal terminal outcome is projected, the CANCELLATIONFAILED result details should be superseded by the final outcome details.
 FAILED result details may include safe error codes, safe messages, retry guidance, and diagnostic references.
 FAILED and CANCELLATIONFAILED result details must not expose sensitive solver internals, Gurobi model formulation, credentials, infrastructure details, or raw stack traces.
 ```
@@ -482,7 +482,7 @@ OC MS uses exactly two internal Kafka event types with the Python/Gurobi worker 
 | `OptimisationRequestedEvent` | OC MS / OC MS Outbox Relay | Python/Gurobi Worker | Worker instruction event for execution or cancellation. | `instruction = EXECUTE` or `instruction = CANCEL` |
 | `OptimisationCompletedEvent` | Python/Gurobi Worker | OC MS / OC MS Inbox Consumer | Worker outcome and cancellation-command outcome event for lifecycle/result projection. | `status = COMPLETED`, `FAILED`, `INFEASIBLE`, `CANCELLED`, or `CANCELLATIONFAILED` |
 
-`OptimisationFailedEvent` is not used in the current baseline. Failed, infeasible, cancelled, and cancellation-failed outcomes are carried by `OptimisationCompletedEvent.status`. `CANCELLATIONFAILED` is not necessarily terminal; OC MS may later project `COMPLETED`, `INFEASIBLE`, or `FAILED` for the same Optimisation when a normal worker outcome is received.
+`OptimisationFailedEvent` is not used in the current baseline. Failed, infeasible, cancelled, and cancellation-failed outcomes are carried by `OptimisationCompletedEvent.status`. The event name remains `OptimisationCompletedEvent` in the current baseline even when it carries `CANCELLATIONFAILED` as a cancellation-command outcome. No separate cancellation-failed or progress event type is introduced. `CANCELLATIONFAILED` is not necessarily terminal; OC MS may later project `COMPLETED`, `INFEASIBLE`, or `FAILED` for the same Optimisation when a normal worker outcome is received.
 
 Event identity and idempotency requirements:
 
@@ -559,6 +559,9 @@ x-tmf-native: false
     "href": "/optimisation/opt-12345",
     "lifecycleStatus": "PROCESSING",
     "statusChangeDate": "2026-05-02T03:01:00Z",
+    "creationContext": {
+      "reason": "NEW"
+    },
     "@type": "Optimisation",
     "_links": {
       "self": {
@@ -606,6 +609,9 @@ Active-state example:
   "creationDate": "2026-05-02T03:00:00Z",
   "lastUpdate": "2026-05-02T03:01:00Z",
   "statusChangeDate": "2026-05-02T03:01:00Z",
+  "creationContext": {
+    "reason": "NEW"
+  },
   "optimisationSpecification": {
     "id": "optimisation-spec-surgical-routing",
     "version": "1.1.0",
@@ -678,6 +684,9 @@ Completed-state example:
   "creationDate": "2026-05-02T03:00:00Z",
   "lastUpdate": "2026-05-02T03:03:00Z",
   "statusChangeDate": "2026-05-02T03:03:00Z",
+  "creationContext": {
+    "reason": "NEW"
+  },
   "optimisationSpecification": {
     "id": "optimisation-spec-surgical-routing",
     "version": "1.1.0",
@@ -924,7 +933,7 @@ Unsupported request content type returns 415 Unsupported Media Type.
 | `expression.expressionValue` fails the resolved `targetEntitySchema` | `422 Unprocessable Entity` |
 | OD MS unavailable and OC MS has no valid cached immutable `ACTIVE` contract for the requested id | `503 Service Unavailable` |
 | Cancellation/retrial requested in an invalid lifecycle state | `409 Conflict` |
-| Cancellation requested for a terminal lifecycle state | `409 Conflict` |
+| Cancellation requested from a non-eligible lifecycle state, including `CANCELLING`, `CANCELLATIONFAILED`, or terminal states | `409 Conflict` |
 | Missing `If-Match` on cancellation/retrial | `428 Precondition Required` |
 | Stale or wrong `If-Match` on cancellation/retrial | `412 Precondition Failed` |
 | Unsupported `Content-Type` | `415 Unsupported Media Type` |
@@ -1011,7 +1020,7 @@ Content-Type: application/json
 
 ## 19. Outcome mapping:
 
-Worker terminal outcomes and cancellation-command outcomes are carried by `OptimisationCompletedEvent.status` using the same status names that OC MS projects to runtime lifecycle states.
+Worker terminal outcomes and cancellation-command outcomes are carried by `OptimisationCompletedEvent.status` using the same status names that OC MS projects to runtime lifecycle states. The current baseline keeps this single outcome event type; no separate progress, cancellation-failed, or retrial event type is introduced.
 
 ```text
 COMPLETED -> lifecycleStatus COMPLETED
