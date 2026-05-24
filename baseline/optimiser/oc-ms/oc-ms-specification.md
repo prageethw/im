@@ -511,7 +511,7 @@ Supported first-level filters:
 | Query parameter | Meaning |
 |---|---|
 | `id` | Exact match on runtime Optimisation id. |
-| `lifecycleStatus` | Exact match on runtime lifecycle state. |
+| `lifecycleStatus` | Exact match on runtime lifecycle state. Supported values are `ACKNOWLEDGED`, `QUEUED`, `PROCESSING`, `COMPLETED`, `INFEASIBLE`, `FAILED`, `CANCELLING`, `CANCELLED`, and `CANCELLATIONFAILED`. |
 | `sourceContext.domain` | Exact match on source context domain where present. |
 | `sourceContext.resource.id` | Exact match on source resource id where present. |
 | `optimisationSpecification.id` | Exact match on referenced OptimisationSpecification id. |
@@ -540,7 +540,7 @@ Sparse field projection rule:
 ```text
 fields supports top-level fields only in the baseline. Nested field selection is not supported.
 If a requested field is valid but not present for the resource's current lifecycle state, OC MS omits that field silently rather than returning an error.
-For example, fields=id,result on a PROCESSING resource returns id and omits result because result is not present before terminal outcome projection.
+For example, fields=id,result on a PROCESSING resource returns id and omits result because result is not present before terminal outcome projection. For `CANCELLATIONFAILED`, `result` may be present with cancellation-command outcome details, but it may later be superseded when a valid terminal outcome is projected.
 Unsupported field names still return 400 Bad Request.
 ```
 
@@ -790,7 +790,7 @@ x-tmf-native: false
 }
 ```
 
-`202 Accepted` means OC MS has validated `If-Match` and lifecycle eligibility, moved the runtime resource to `CANCELLING`, and written the `CANCEL` instruction to the outbox. It does not mean the worker has confirmed cancellation. Final cancellation is projected only when OC MS receives `OptimisationCompletedEvent.status = CANCELLED`. If OC MS receives `OptimisationCompletedEvent.status = CANCELLATIONFAILED`, the resource moves to `CANCELLATIONFAILED` and may later move to `COMPLETED`, `INFEASIBLE`, or `FAILED` if a normal terminal optimisation outcome is received.
+`202 Accepted` means OC MS has validated `If-Match` and lifecycle eligibility, moved the runtime resource to `CANCELLING`, and written the `CANCEL` instruction to the outbox. It does not mean the worker has confirmed cancellation. The cancellation response body is a compact representation; full resource retrieval through `GET /optimisation/{id}` returns all fields, including `creationContext`. Final cancellation is projected only when OC MS receives `OptimisationCompletedEvent.status = CANCELLED`. If OC MS receives `OptimisationCompletedEvent.status = CANCELLATIONFAILED`, the resource moves to `CANCELLATIONFAILED` and may later move to `COMPLETED`, `INFEASIBLE`, or `FAILED` if a normal terminal optimisation outcome is received.
 
 Retrial request body:
 
@@ -935,8 +935,7 @@ Unsupported request content type returns 415 Unsupported Media Type.
 | `expression.iri` does not match the resolved specification version's `expressionSpecification.iri` | `422 Unprocessable Entity` |
 | `expression.expressionValue` fails the resolved `targetEntitySchema` | `422 Unprocessable Entity` |
 | OD MS unavailable and OC MS has no valid cached immutable `ACTIVE` contract for the requested id | `503 Service Unavailable` |
-| Cancellation/retrial requested in an invalid lifecycle state | `409 Conflict` |
-| Cancellation requested from a non-eligible lifecycle state, including `CANCELLING`, `CANCELLATIONFAILED`, or terminal states | `409 Conflict` |
+| Cancellation or retrial requested from a non-eligible lifecycle state, including cancellation from `CANCELLING`, `CANCELLATIONFAILED`, or terminal states, or retrial from any state other than `FAILED` | `409 Conflict` |
 | Missing `If-Match` on cancellation/retrial | `428 Precondition Required` |
 | Stale or wrong `If-Match` on cancellation/retrial | `412 Precondition Failed` |
 | Unsupported `Content-Type` | `415 Unsupported Media Type` |
