@@ -29,9 +29,9 @@ OC MS does not own:
 
 ```text
 OptimisationSpecification definitions
-OptimisationSpecification lifecycle/version governance
+OptimisationSpecification lifecycle and version governance
 Gurobi model formulation
-Python/Gurobi solver execution
+Python Gurobi solver execution
 Analytics platform datasets
 Long-running intent control-loop assurance
 ```
@@ -56,7 +56,7 @@ PATCH /optimisation/{id}
 DELETE /optimisation/{id}
 ```
 
-Runtime `Optimisation` is an execution/audit record, not an editable draft definition. Runtime changes occur only through internal event projection and explicit runtime commands such as cancellation and retrial. Clients must not use `PATCH` to edit runtime `Optimisation` resources.
+Runtime `Optimisation` is an execution and audit record, not an editable draft definition. Runtime changes occur only through internal event projection and explicit runtime commands such as cancellation and retrial. Clients must not use `PATCH` to edit runtime `Optimisation` resources.
 
 ## 4. Runtime Optimisation canonical fields:
 
