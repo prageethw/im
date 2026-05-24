@@ -181,7 +181,7 @@ CANCELLED -> terminal
 
 `ACKNOWLEDGED -> QUEUED` is driven by OC MS after the OC MS Outbox Relay successfully publishes the `OptimisationRequestedEvent` to the Kafka topic. If publication is delayed, the resource may remain `ACKNOWLEDGED` while the outbox retry policy continues.
 
-`QUEUED -> PROCESSING` may be driven by an internal worker-start signal, status callback, or platform-local processing marker accepted by OC MS. The current Kafka event baseline remains limited to `OptimisationRequestedEvent` and `OptimisationCompletedEvent`; introducing a separate progress event is outside the current baseline and would require an explicit event-baseline change.
+`QUEUED -> PROCESSING` may be driven by an internal worker-start acknowledgement or equivalent worker-start notification accepted by OC MS. The exact worker-start signal is platform-internal and does not change the external OC MS API contract. The current Kafka event baseline remains limited to `OptimisationRequestedEvent` and `OptimisationCompletedEvent`; introducing a separate progress event is outside the current baseline and would require an explicit event-baseline change.
 
 Retrial does not move the failed Optimisation back to `PROCESSING`. It creates a new linked Optimisation with `retrialOf`.
 
@@ -782,7 +782,15 @@ x-tmf-native: false
 {
   "id": "opt-67890",
   "href": "/optimisation/opt-67890",
+  "@type": "Optimisation",
+  "@baseType": "Entity",
+  "@schemaLocation": "/schema/Optimisation.schema.json",
+  "name": "Hospital surgical slice path optimisation request",
+  "description": "Optimise path selection for hospital surgical slice workload.",
+  "priority": "1",
   "lifecycleStatus": "ACKNOWLEDGED",
+  "creationDate": "2026-05-02T04:00:00Z",
+  "lastUpdate": "2026-05-02T04:00:00Z",
   "statusChangeDate": "2026-05-02T04:00:00Z",
   "optimisationSpecification": {
     "id": "optimisation-spec-surgical-routing",
@@ -793,6 +801,42 @@ x-tmf-native: false
     "@type": "OptimisationSpecificationRef",
     "@referredType": "OptimisationSpecification"
   },
+  "expression": {
+    "@type": "JsonLdExpression",
+    "@baseType": "Expression",
+    "iri": "https://example.com/ontology/optimisation/v1",
+    "expressionValue": {
+      "@context": {
+        "opt": "https://example.com/ontology/optimisation#",
+        "context": "opt:context",
+        "targets": "opt:targets",
+        "constraints": "opt:constraints",
+        "preferences": "opt:preferences"
+      },
+      "@type": "opt:OptimisationProblem",
+      "context": {
+        "targets": [
+          {
+            "maxLatencyMs": 20,
+            "minAvailabilityPercent": 99.95
+          }
+        ],
+        "constraints": [
+          {
+            "locationId": "melbourne-hospital-a",
+            "serviceClass": "surgical-video",
+            "redundancyRequired": true
+          }
+        ],
+        "preferences": [
+          {
+            "preferredAccessTechnology": "5G",
+            "optimiseFor": "lowest-latency"
+          }
+        ]
+      }
+    }
+  },
   "optimisationRelationship": [
     {
       "@type": "EntityRelationship",
@@ -800,7 +844,17 @@ x-tmf-native: false
       "id": "opt-12345",
       "@referredType": "Optimisation"
     }
-  ]
+  ],
+  "_links": {
+    "self": {
+      "href": "/optimisation/opt-67890",
+      "method": "GET"
+    },
+    "cancellation": {
+      "href": "/optimisation/opt-67890/cancellation",
+      "method": "POST"
+    }
+  }
 }
 ```
 
@@ -829,6 +883,7 @@ Strict content type rules:
 POST /optimisation requires Content-Type: application/json.
 POST /optimisation/{id}/cancellation has no required body; if a body is sent it requires Content-Type: application/json.
 POST /optimisation/{id}/retrial has no required body; if a body is sent it requires Content-Type: application/json.
+A body sent without Content-Type, or with an unsupported Content-Type, on cancellation or retrial returns 415 Unsupported Media Type.
 Unsupported request content type returns 415 Unsupported Media Type.
 ```
 
@@ -889,6 +944,23 @@ Content-Type: application/json
   "code": "OPTIMISATION_LIFECYCLE_CONFLICT",
   "reason": "Optimisation lifecycle conflict",
   "message": "Cancellation is not allowed when lifecycleStatus is COMPLETED.",
+  "status": 409,
+  "@type": "Error"
+}
+```
+
+Retrial lifecycle conflict example:
+
+```http
+HTTP/1.1 409 Conflict
+Content-Type: application/json
+```
+
+```json
+{
+  "code": "OPTIMISATION_LIFECYCLE_CONFLICT",
+  "reason": "Optimisation lifecycle conflict",
+  "message": "Retrial is not allowed when lifecycleStatus is INFEASIBLE. INFEASIBLE is a valid optimisation outcome, not a technical execution failure.",
   "status": 409,
   "@type": "Error"
 }
