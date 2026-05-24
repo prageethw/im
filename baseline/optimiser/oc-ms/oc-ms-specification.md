@@ -229,6 +229,7 @@ COMPLETED -> terminal
 INFEASIBLE -> terminal by default
 CANCELLED -> terminal
 ```
+![State chart](oc-ms-lifecycle-state.svg)
 
 `ACKNOWLEDGED -> QUEUED` is driven by OC MS after the OC MS Outbox Relay successfully publishes the `OptimisationRequestedEvent` to the Kafka topic. If publication is delayed, the resource may remain `ACKNOWLEDGED` while the outbox retry policy continues.
 

@@ -492,7 +492,7 @@ The embedded `optimisation-expression-value.schema.json` validates the runtime `
 ```text
 DRAFT -> ACTIVE -> RETIRED
 ```
-
+![State chart](od-ms-lifecycle-state.svg)
 There is no `DEPRECATED` state in the optimiser baseline.
 
 | Lifecycle state | Meaning | Edit/runtime rule |
