@@ -8,7 +8,7 @@ OC MS accepts runtime optimisation requests, validates the generic wrapper and t
 
 OC MS validates runtime requests only against the current `ACTIVE` version of the referenced `OptimisationSpecification.id`. OD MS guarantees that `ACTIVE` and `RETIRED` specification versions are immutable, so OC MS can treat the resolved `ACTIVE` specification version as stable for the lifetime of the accepted runtime `Optimisation`.
 
-OC MS does not use `familyId` or `expression.iri` to choose a runtime contract. Runtime validation is anchored on the referenced `OptimisationSpecification.id`; OC MS resolves the current `ACTIVE` version from OD MS at request-acceptance time and persists the resolved `version`, `draftId`, `href`, and `ETag` as contract traceability metadata. `expression.iri` is not a selector; it is a semantic compatibility check against the resolved `ACTIVE` specification.
+OC MS does not use `specKey`, `draftId`, official specification `version`, or `expression.iri` to choose a runtime contract. Runtime validation is anchored on the referenced `OptimisationSpecification.id`; OC MS resolves the current `ACTIVE` version from OD MS at request-acceptance time and persists the resolved `version`, `draftId`, `href`, and `ETag` as contract traceability metadata. `expression.iri` is not a selector; it is a semantic compatibility check against the resolved `ACTIVE` specification.
 
 ## 2. Ownership:
 
@@ -117,7 +117,7 @@ Field notes:
 | `lifecycleStatus` / `statusChangeDate` | Runtime state and last lifecycle transition time. |
 | `_links` | Lifecycle-aware HATEOAS action links. |
 
-OC MS persists the resolved `OptimisationSpecification.id`, `version`, `draftId`, `href`, and optionally `etag` as the immutable contract pointer for the life of the runtime `Optimisation`. Runtime creation requires both `optimisationSpecification.id` and `expression.iri`. OC MS MUST use `optimisationSpecification.id` to resolve the current `ACTIVE` specification version from OD MS at acceptance time and MUST verify that `expression.iri` matches that resolved version's `expressionSpecification.iri`. OC MS MUST NOT substitute a different specification because of `familyId` or `expressionSpecification.iri`. If the resolved specification version is later `RETIRED`, the runtime `Optimisation` remains valid as an audit record; OC MS does not revalidate or rewrite the persisted specification reference.
+OC MS persists the resolved `OptimisationSpecification.id`, `version`, `draftId`, `href`, and optionally `etag` as the immutable contract pointer for the life of the runtime `Optimisation`. Runtime creation requires both `optimisationSpecification.id` and `expression.iri`. OC MS MUST use `optimisationSpecification.id` to resolve the current `ACTIVE` specification version from OD MS at acceptance time and MUST verify that `expression.iri` matches that resolved version's `expressionSpecification.iri`. OC MS MUST NOT substitute a different specification because of `specKey` or `expressionSpecification.iri`. If the resolved specification version is later `RETIRED`, the runtime `Optimisation` remains valid as an audit record; OC MS does not revalidate or rewrite the persisted specification reference.
 
 Specification reference identity model:
 
@@ -395,12 +395,13 @@ The runtime request must provide expression.iri.
 The referenced OptimisationSpecification.id must exist in OD MS.
 OD MS must return a current ACTIVE version for the referenced OptimisationSpecification.id at request-acceptance time.
 The runtime expression.iri must match the resolved ACTIVE version's expressionSpecification.iri.
-OC MS must not infer the current active contract by stale familyId lookup.
+OC MS must not infer the current active contract by stale `specKey` lookup.
 OC MS must not resolve the runtime contract by expression.iri alone.
-OC MS does not use familyId, draftId, official specification version, or expression.iri to choose a runtime contract.
+OC MS treats `specKey` as OD MS catalogue governance metadata and does not accept or require it in runtime creation requests.
+OC MS does not use `specKey`, `draftId`, official specification `version`, or `expression.iri` to choose a runtime contract.
 OC MS resolves the current ACTIVE version by OptimisationSpecification.id at acceptance time.
 OC MS persists the resolved OptimisationSpecification.id, version, draftId, href, and optionally etag as the immutable contract pointer for the life of the runtime Optimisation.
-OC MS MUST NOT substitute a different specification because of familyId or expressionSpecification.iri.
+OC MS MUST NOT substitute a different specification because of `specKey` or `expressionSpecification.iri`.
 If the resolved specification version is later RETIRED, the runtime Optimisation remains valid as an audit record; OC MS does not revalidate or rewrite the specification reference.
 OC MS may cache immutable ACTIVE OptimisationSpecification contracts by id, version, and ETag.
 A cached ACTIVE contract for a specific id and version is safe because OD MS makes ACTIVE and RETIRED versions immutable.
