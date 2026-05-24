@@ -187,6 +187,53 @@ summary: OEX-friendly creation message that does not imply optimisation completi
 actions[]: available backend-derived actions for the created runtime Optimisation.
 ```
 
+Minimal `OptimisationSummaryView` fields:
+
+```text
+id: runtime Optimisation.id returned by OC MS.
+href: runtime Optimisation.href returned by OC MS.
+name: runtime Optimisation name where returned by OC MS.
+lifecycleStatus: current OC MS lifecycleStatus, including CANCELLATIONFAILED where returned.
+statusChangeDate: timestamp of the last lifecycle change.
+creationContext: OC MS creation context, with reason NEW or RETRIAL where returned.
+creationDate: runtime Optimisation creation timestamp where visible to the user journey.
+lastUpdate: runtime Optimisation last-update timestamp where visible to the user journey.
+optimisationSpecification: resolved specification reference summary containing id, version, draftId, and href where useful for support and audit.
+summary: OEX-friendly lifecycle or result summary that preserves OC MS meaning.
+actions[]: available backend-derived actions after user-context filtering.
+```
+
+Minimal `OptimisationDetailView` fields:
+
+```text
+id: runtime Optimisation.id returned by OC MS.
+href: runtime Optimisation.href returned by OC MS.
+name: runtime Optimisation name where returned by OC MS.
+description: runtime Optimisation description where returned by OC MS.
+lifecycleStatus: current OC MS lifecycleStatus, including CANCELLATIONFAILED where returned.
+statusChangeDate: timestamp of the last lifecycle change.
+creationContext: OC MS creation context, with reason NEW or RETRIAL where returned.
+creationDate: runtime Optimisation creation timestamp.
+lastUpdate: runtime Optimisation last-update timestamp.
+sourceContext: source context where returned and authorised for display.
+optimisationSpecification: resolved specification reference containing id, version, draftId, and href.
+expression: accepted runtime expression where the journey is authorised to display it.
+result: optional result or command-outcome details where returned by OC MS. CANCELLATIONFAILED result details must be replaced, not merged, if a later terminal outcome is projected.
+optimisationRelationship[]: optional runtime relationships such as retrialOf.
+actions[]: available backend-derived actions after user-context filtering.
+```
+
+Minimal `AvailableAction` fields:
+
+```text
+name: OEX action name.
+label: user-facing action label.
+method: backend or OSB method for the action.
+href: OSB experience endpoint for the action.
+enabled: whether the action is currently enabled for the user journey.
+reason: optional reason when the action is hidden or disabled.
+```
+
 OSB may rename, group, or format fields for OEX usability, but it must preserve backend lifecycle semantics, action semantics, status codes, ETags, and diagnostic correlation identifiers.
 
 When displaying runtime optimisation records, OSB should preserve the resolved backend specification pointer in the view model where useful for support and audit. The resolved pointer may include `optimisationSpecification.id`, `version`, `draftId`, and `href` where present in the OC MS response. OD MS and OC MS ETags remain HTTP headers and must not be represented as `etag` payload fields inside `optimisationSpecification`.
@@ -325,7 +372,7 @@ support and diagnostic correlation metadata where applicable
 
 OSB may aggregate from OD MS and OC MS through NGW to build this view. `HomeView` is not a source-of-truth resource and must not be used as the authoritative lifecycle, contract, or result record.
 
-If one backend dependency is unavailable while another is healthy, OSB may return a partial `HomeView` rather than failing the whole request, provided degraded sections are clearly marked and no missing backend data is represented as authoritative. If the unavailable dependency is required for the requested user journey, OSB should preserve the backend failure semantics and return an appropriate error response.
+If one backend dependency is unavailable while another is healthy, OSB may return a partial `HomeView` rather than failing the whole request, provided degraded sections are clearly marked and no missing backend data is represented as authoritative. Degraded sections should be represented as empty or null with an explicit service-health indicator rather than omitted silently. If the unavailable dependency is required for the requested user journey, OSB should preserve the backend failure semantics and return an appropriate error response.
 
 ## 12. Capabilities filtering behaviour:
 
@@ -480,7 +527,7 @@ OSB MS must preserve backend ETag semantics for unsafe runtime operations.
 OSB MS receives or stores the current ETag from OC MS responses.
 For cancellation and retrial, OSB MS forwards If-Match to OC MS through NGW.
 OSB must forward the OC MS ETag and must not generate its own ETag for backend unsafe operations.
-If OSB does not have a current ETag, it must refresh the runtime Optimisation before issuing cancellation or retrial, or return a refresh-required response to OEX.
+If OSB does not have a current ETag, the preferred path is to refresh the runtime Optimisation before issuing cancellation or retrial. A refresh-required response to OEX is permitted when latency, consistency, or user-interaction constraints make automatic refresh inappropriate.
 OC MS remains the runtime concurrency source of truth.
 ```
 
