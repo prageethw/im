@@ -169,7 +169,7 @@ INFEASIBLE: Worker completed correctly, but no valid solution exists.
 FAILED: Technical/runtime failure occurred.
 CANCELLING: Cancellation command has been accepted and worker should stop or ignore where safely possible.
 CANCELLED: Optimisation is confirmed cancelled.
-CANCELLATIONFAILED: Cancellation was accepted and attempted, but the worker later reported that cancellation could not be honoured, applied, or confirmed. The original optimisation may still continue and may later move to COMPLETED, INFEASIBLE, or FAILED.
+CANCELLATIONFAILED: Non-terminal state. Represents failure of the cancellation command only. Cancellation was accepted and attempted, but the worker later reported that cancellation could not be honoured, applied, or confirmed. The optimisation execution may still continue and may later move to COMPLETED, INFEASIBLE, or FAILED.
 ```
 
 Runtime `Optimisation` does not expose a `version` field. ETag is used in HTTP headers for unsafe concurrency.
@@ -495,6 +495,7 @@ OptimisationRequestedEvent and OptimisationCompletedEvent MUST include a unique 
 OptimisationCompletedEvent processing MUST be idempotent.
 OC MS projection MUST safely handle duplicate OptimisationCompletedEvent messages.
 OC MS may use eventId/ce-id, inbox deduplication state, and monotonic lifecycle/statusChangeDate rules to suppress duplicate, stale, or late event projection.
+CANCELLATIONFAILED must not suppress or block projection of subsequent valid terminal outcomes.
 ```
 
 ## 14. GET /optimisation list:
@@ -1022,7 +1023,9 @@ Content-Type: application/json
 
 ## 19. Outcome mapping:
 
-Worker terminal outcomes and cancellation-command outcomes are carried by `OptimisationCompletedEvent.status` using the same status names that OC MS projects to runtime lifecycle states. The current baseline keeps this single outcome event type; no separate progress, cancellation-failed, or retrial event type is introduced.
+Worker terminal outcomes and cancellation-command outcomes are carried by `OptimisationCompletedEvent.status` using the same status names that OC MS projects to runtime lifecycle states.
+
+The current baseline keeps this single outcome event type; no separate progress, cancellation-failed, or retrial event type is introduced.
 
 ```text
 COMPLETED -> lifecycleStatus COMPLETED
