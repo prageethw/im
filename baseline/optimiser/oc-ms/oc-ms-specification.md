@@ -200,10 +200,10 @@ FAILED result details must not expose sensitive solver internals, Gurobi model f
 ## 8. HATEOAS by lifecycle:
 
 ```text
-ACKNOWLEDGED / QUEUED / PROCESSING: self cancellation
+ACKNOWLEDGED, QUEUED, and PROCESSING: self and cancellation
 CANCELLING: self
 FAILED: self retrial
-COMPLETED / INFEASIBLE / CANCELLED: self
+COMPLETED, INFEASIBLE, and CANCELLED: self
 ```
 
 ## 9. External response header governance:
