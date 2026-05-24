@@ -76,7 +76,7 @@ sourceContext
 creationContext
 optimisationSpecification
 expression
-result (terminal only)
+result
 optimisationRelationship[]
 @type
 @baseType
@@ -116,7 +116,7 @@ Field notes:
 | `creationContext` | Server-assigned creation context for the runtime Optimisation. Baseline `creationContext.reason` values are `NEW` for a normal runtime optimisation request and `RETRIAL` for a new Optimisation created from a retrial request. |
 | `optimisationSpecification` | Mandatory immutable reference to the resolved `ACTIVE` `OptimisationSpecification` version used as the exact contract pointer at creation time. Includes `id`, `version`, `draftId`, `href`, and optionally `etag` for cache traceability. |
 | `expression` | Accepted runtime expression submitted by the caller. `expression.iri` is mandatory and must match the referenced ACTIVE specification's `expressionSpecification.iri`. |
-| `result` | Terminal result projection only. Presence depends on lifecycle state. |
+| `result` | Result, terminal outcome, or command-outcome detail projection where available. Presence depends on lifecycle state. |
 | `optimisationRelationship[]` | Used for relationships between runtime Optimisation resources. The baseline relationship type is `retrialOf`; other relationship types are out of scope for the current baseline. |
 | `lifecycleStatus` / `statusChangeDate` | Runtime state and last lifecycle transition time. |
 | `_links` | Lifecycle-aware HATEOAS action links. |
@@ -174,7 +174,7 @@ CANCELLATIONFAILED: Cancellation was accepted and attempted, but the worker late
 
 Runtime `Optimisation` does not expose a `version` field. ETag is used in HTTP headers for unsafe concurrency.
 
-`statusChangeDate` records when `lifecycleStatus` last changed. It is distinct from `creationDate` and `lastUpdate`. `statusChangeDate` MUST be updated on every lifecycleStatus transition, including `ACKNOWLEDGED -> QUEUED`, `QUEUED -> PROCESSING`, terminal outcomes, and `CANCELLING -> CANCELLED`.
+`statusChangeDate` records when `lifecycleStatus` last changed. It is distinct from `creationDate` and `lastUpdate`. `statusChangeDate` MUST be updated on every lifecycleStatus transition, including `ACKNOWLEDGED -> QUEUED`, `QUEUED -> PROCESSING`, `CANCELLING -> CANCELLED`, `CANCELLING -> CANCELLATIONFAILED`, `CANCELLATIONFAILED -> COMPLETED`, `CANCELLATIONFAILED -> INFEASIBLE`, `CANCELLATIONFAILED -> FAILED`, and other terminal outcomes.
 
 ## 6. Lifecycle transitions:
 
@@ -212,8 +212,9 @@ Normative result field rules:
 ```text
 result MUST be absent while lifecycleStatus is ACKNOWLEDGED, QUEUED, PROCESSING, or CANCELLING.
 result MAY be present when lifecycleStatus is COMPLETED, INFEASIBLE, FAILED, CANCELLED, or CANCELLATIONFAILED.
+For CANCELLATIONFAILED, result may include safe cancellation-attempt outcome details, but the optimisation may still later move to COMPLETED, INFEASIBLE, or FAILED when a normal worker outcome is received.
 FAILED result details may include safe error codes, safe messages, retry guidance, and diagnostic references.
-FAILED result details must not expose sensitive solver internals, Gurobi model formulation, credentials, infrastructure details, or raw stack traces.
+FAILED and CANCELLATIONFAILED result details must not expose sensitive solver internals, Gurobi model formulation, credentials, infrastructure details, or raw stack traces.
 ```
 
 ## 8. HATEOAS by lifecycle:
@@ -479,9 +480,9 @@ OC MS uses exactly two internal Kafka event types with the Python/Gurobi worker 
 | **Event** | **Emitter** | **Consumer** | **Purpose** | **Key values** |
 |---|---|---|---|---|
 | `OptimisationRequestedEvent` | OC MS / OC MS Outbox Relay | Python/Gurobi Worker | Worker instruction event for execution or cancellation. | `instruction = EXECUTE` or `instruction = CANCEL` |
-| `OptimisationCompletedEvent` | Python/Gurobi Worker | OC MS / OC MS Inbox Consumer | Terminal worker outcome event for lifecycle/result projection. | `status = COMPLETED`, `FAILED`, `INFEASIBLE`, `CANCELLED`, or `CANCELLATIONFAILED` |
+| `OptimisationCompletedEvent` | Python/Gurobi Worker | OC MS / OC MS Inbox Consumer | Worker outcome and cancellation-command outcome event for lifecycle/result projection. | `status = COMPLETED`, `FAILED`, `INFEASIBLE`, `CANCELLED`, or `CANCELLATIONFAILED` |
 
-`OptimisationFailedEvent` is not used in the current baseline. Failed, infeasible, and cancelled outcomes are carried by `OptimisationCompletedEvent.status`.
+`OptimisationFailedEvent` is not used in the current baseline. Failed, infeasible, cancelled, and cancellation-failed outcomes are carried by `OptimisationCompletedEvent.status`. `CANCELLATIONFAILED` is not necessarily terminal; OC MS may later project `COMPLETED`, `INFEASIBLE`, or `FAILED` for the same Optimisation when a normal worker outcome is received.
 
 Event identity and idempotency requirements:
 
@@ -746,9 +747,9 @@ Cancellation semantics:
 
 ```text
 Cancellation is best-effort.
-OC MS accepts cancellation only for eligible non-terminal lifecycle states.
+OC MS accepts cancellation only from eligible active lifecycle states: `ACKNOWLEDGED`, `QUEUED`, and `PROCESSING`.
 Baseline cancellation confirmation is `OptimisationCompletedEvent.status = CANCELLED`. OC MS sets `CANCELLED` only from that event in the current baseline. If the worker reports that cancellation could not be honoured, applied, or confirmed, OC MS may project `CANCELLATIONFAILED`. Any alternative terminal confirmation path is outside the current baseline.
-If cancellation is requested when lifecycleStatus is terminal (COMPLETED, FAILED, INFEASIBLE, or CANCELLED), OC MS returns 409 Conflict.
+If cancellation is requested when lifecycleStatus is not cancellation-eligible, including `CANCELLING`, `CANCELLATIONFAILED`, `COMPLETED`, `FAILED`, `INFEASIBLE`, or `CANCELLED`, OC MS returns 409 Conflict.
 ```
 
 Successful cancellation response:
@@ -1010,7 +1011,7 @@ Content-Type: application/json
 
 ## 19. Outcome mapping:
 
-Worker terminal outcomes are carried by `OptimisationCompletedEvent.status` using the same status names that OC MS projects to runtime lifecycle states.
+Worker terminal outcomes and cancellation-command outcomes are carried by `OptimisationCompletedEvent.status` using the same status names that OC MS projects to runtime lifecycle states.
 
 ```text
 COMPLETED -> lifecycleStatus COMPLETED
@@ -1020,4 +1021,4 @@ CANCELLED -> lifecycleStatus CANCELLED
 CANCELLATIONFAILED -> lifecycleStatus CANCELLATIONFAILED
 ```
 
-`INFEASIBLE` is an optimisation outcome produced by the worker/model. It is not a request contract validation error. `CANCELLATIONFAILED` is a cancellation-command outcome and may be followed by a normal terminal optimisation outcome if the worker later reports `COMPLETED`, `INFEASIBLE`, or `FAILED`.
+`INFEASIBLE` is an optimisation outcome produced by the worker/model. It is not a request contract validation error. `CANCELLATIONFAILED` is a cancellation-command outcome, not necessarily a terminal optimisation outcome. It may be followed by a normal terminal optimisation outcome if the worker later reports `COMPLETED`, `INFEASIBLE`, or `FAILED`.
