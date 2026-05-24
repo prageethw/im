@@ -99,6 +99,7 @@ optimisationSpecification.version
 optimisationSpecification.draftId
 optimisationSpecification.href
 optimisationSpecification.etag
+optimisationSpecification.specKey
 ```
 
 OC MS resolves and assigns those fields at creation time or during runtime projection. If a client supplies a forbidden server-controlled field, OC MS returns `400 Bad Request`.
@@ -180,7 +181,7 @@ CANCELLED -> terminal
 
 `ACKNOWLEDGED -> QUEUED` is driven by OC MS after the OC MS Outbox Relay successfully publishes the `OptimisationRequestedEvent` to the Kafka topic. If publication is delayed, the resource may remain `ACKNOWLEDGED` while the outbox retry policy continues.
 
-`QUEUED -> PROCESSING` is driven by a worker start acknowledgement, worker progress event, or equivalent worker-start notification accepted by OC MS. The exact worker-start signal is platform-internal and does not change the external OC MS API contract.
+`QUEUED -> PROCESSING` may be driven by an internal worker-start signal, status callback, or platform-local processing marker accepted by OC MS. The current Kafka event baseline remains limited to `OptimisationRequestedEvent` and `OptimisationCompletedEvent`; introducing a separate progress event is outside the current baseline and would require an explicit event-baseline change.
 
 Retrial does not move the failed Optimisation back to `PROCESSING`. It creates a new linked Optimisation with `retrialOf`.
 
@@ -408,7 +409,7 @@ A cached ACTIVE contract for a specific id and version is safe because OD MS mak
 If the referenced specification is missing, no ACTIVE version exists, cache-missing, or cache-stale beyond the local policy, OC MS refreshes from OD MS.
 ```
 
-Runtime requests must supply only `optimisationSpecification.id` for contract selection. Clients must not supply `optimisationSpecification.version`, `optimisationSpecification.draftId`, `optimisationSpecification.href`, or `optimisationSpecification.etag` on creation. OC MS resolves those fields from OD MS and persists them in the accepted runtime resource. If a client supplies any of those forbidden resolved fields, OC MS returns `400 Bad Request`.
+Runtime requests must supply only `optimisationSpecification.id` for contract selection. Clients must not supply `optimisationSpecification.version`, `optimisationSpecification.draftId`, `optimisationSpecification.href`, or `optimisationSpecification.etag` on creation. OC MS resolves those fields from OD MS and persists them in the accepted runtime resource. If a client supplies any of those forbidden resolved fields, or supplies `optimisationSpecification.specKey`, OC MS returns `400 Bad Request`.
 
 If OD MS is unavailable and OC MS has no valid cached immutable `ACTIVE` contract for the requested `OptimisationSpecification.id`, OC MS returns `503 Service Unavailable`. If OC MS has a valid cached immutable `ACTIVE` contract for the requested id and resolved version, it may proceed according to the configured cache policy.
 
@@ -754,7 +755,7 @@ x-tmf-native: false
 }
 ```
 
-`202 Accepted` means OC MS accepted the cancellation request and emitted, or will emit, a cancellation instruction. It does not mean the worker has confirmed cancellation. Final cancellation is projected only when OC MS receives `OptimisationCompletedEvent.status = CANCELLED`.
+`202 Accepted` means OC MS has validated `If-Match` and lifecycle eligibility, moved the runtime resource to `CANCELLING`, and written the `CANCEL` instruction to the outbox. It does not mean the worker has confirmed cancellation. Final cancellation is projected only when OC MS receives `OptimisationCompletedEvent.status = CANCELLED`.
 
 Retrial request body:
 
@@ -767,6 +768,15 @@ To change targets, constraints, preferences, source context, priority, or the re
 ```
 
 Retrial response creates a new Optimisation and links it to the failed optimisation:
+
+```http
+HTTP/1.1 201 Created
+Location: /optimisation/opt-67890
+ETag: "opt-67890-rev1"
+Content-Type: application/json
+x-platform-extension: true
+x-tmf-native: false
+```
 
 ```json
 {
@@ -841,7 +851,7 @@ Unsupported request content type returns 415 Unsupported Media Type.
 Boundary rules:
 
 ```text
-400 = malformed request, missing required top-level wrapper fields such as `optimisationSpecification.id`, missing `expression`, missing `expression.iri`, unsupported query/filter parameter, invalid paging parameter, unsupported priority value, or client-supplied forbidden server-controlled runtime field.
+400 = malformed request, missing required top-level wrapper fields such as `optimisationSpecification.id`, missing `expression`, missing `expression.iri`, unsupported query/filter parameter, invalid paging parameter, unsupported priority value, client-supplied forbidden server-controlled runtime field, or client-supplied `optimisationSpecification.specKey`.
 422 = request content is syntactically valid but violates the resolved OD contract, including no current ACTIVE version for the referenced specification id, mismatch between `expression.iri` and the resolved specification version's `expressionSpecification.iri`, or `expression.expressionValue` failing `targetEntitySchema`.
 409 = runtime lifecycle/action conflict.
 428 = required If-Match missing.
