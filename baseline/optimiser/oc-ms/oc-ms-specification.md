@@ -203,7 +203,7 @@ CANCELLED -> terminal
 
 Retrial does not move the failed Optimisation back to `PROCESSING`. It creates a new linked Optimisation with `retrialOf`.
 
-Retrial is available only from `FAILED` in the baseline. Retrial is not available from `INFEASIBLE` by default because `INFEASIBLE` is a valid optimisation or model outcome, not a technical execution failure. If a consumer wants another attempt after `INFEASIBLE`, it must submit a new `Optimisation` request with changed inputs.
+Retrial is available only from `FAILED` in the baseline. Retrial is not allowed from `ACKNOWLEDGED`, `QUEUED`, `PROCESSING`, `CANCELLING`, `CANCELLATIONFAILED`, `COMPLETED`, `INFEASIBLE`, or `CANCELLED`. `CANCELLATIONFAILED` is not retriable in the baseline; if the optimisation later reaches `FAILED`, retrial may then be requested from `FAILED`. Retrial is not available from `INFEASIBLE` by default because `INFEASIBLE` is a valid optimisation or model outcome, not a technical execution failure. If a consumer wants another attempt after `INFEASIBLE`, it must submit a new `Optimisation` request with changed inputs.
 
 ## 7. Result presence rules:
 
@@ -796,6 +796,8 @@ Retrial request body:
 
 ```text
 No request body is required.
+OC MS accepts retrial only when the original Optimisation lifecycleStatus is FAILED.
+Retrial from any other lifecycleStatus returns 409 Conflict.
 Baseline retrial does not allow request overrides.
 Retrial resubmits the original accepted expression and the persisted resolved OptimisationSpecification reference unchanged, including `id`, `version`, `draftId`, `href`, and optional `etag`.
 Retrial does not re-resolve the current `ACTIVE` specification from OD MS. It reuses the original persisted specification `id`, `version`, and `draftId` contract pointer.
