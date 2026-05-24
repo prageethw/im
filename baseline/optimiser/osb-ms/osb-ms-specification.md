@@ -180,7 +180,7 @@ Minimal `CreationResultView` fields:
 id: new runtime Optimisation.id returned by OC MS.
 href: new runtime Optimisation.href returned by OC MS.
 lifecycleStatus: initial runtime lifecycleStatus, normally ACKNOWLEDGED.
-creationContext: OC MS creation context, with reason NEW for normal creation and RETRIAL for retrial-created resources where returned.
+creationContext: OC MS creation context, with reason NEW for normal creation and RETRIAL for retrial-created resources where returned. When OC MS returns creationContext, OSB must include it in CreationResultView and must not infer, default, or omit it.
 location: backend Location header where returned.
 backendETag: backend HTTP ETag header where returned.
 summary: OEX-friendly creation message that does not imply optimisation completion.
@@ -409,7 +409,8 @@ OSB MS must follow OC MS result presence rules:
 ```text
 result MUST be absent in ACKNOWLEDGED, QUEUED, PROCESSING, and CANCELLING.
 result MAY be present in CANCELLATIONFAILED, COMPLETED, INFEASIBLE, FAILED, and CANCELLED.
-CANCELLATIONFAILED is non-terminal; any result details shown for it are cancellation-command details and may later be superseded by COMPLETED, INFEASIBLE, or FAILED.
+CANCELLATIONFAILED represents a cancellation command outcome, not an optimisation execution outcome. It is non-terminal; any result details shown for it are cancellation-command details and may later be superseded by COMPLETED, INFEASIBLE, or FAILED.
+When a subsequent terminal optimisation outcome is projected after CANCELLATIONFAILED, previously displayed CANCELLATIONFAILED result details must be fully replaced and must not be merged with the final outcome.
 FAILED result details may contain safe error codes and safe messages only.
 OSB MS must not expose sensitive solver internals, Gurobi model formulation, credentials, infrastructure details, or raw stack traces.
 ```
@@ -428,6 +429,8 @@ actionVisible = backend_link_present AND user_context_allows
 
 OSB must not expose cancellation or retrial if the corresponding backend `_links` action is not present in the OC MS response. OSB may hide an available backend action when user context does not allow it, but it must not invent backend actions locally.
 
+OSB must not expose retrial when `lifecycleStatus = CANCELLATIONFAILED`, even though that state is non-terminal. Retrial is exposed only when `lifecycleStatus = FAILED`.
+
 ## 17. Cancellation and retrial behaviour:
 
 ### 17.1. Cancellation:
@@ -445,13 +448,13 @@ If no body is supplied by OEX, OSB should call OC MS without a request body.
 If a cancellation body is supplied, OSB forwards only allowed reason or comment metadata.
 ```
 
-Cancellation is best-effort. OSB preserves the OC MS cancellation response status. In the baseline, OC MS returns `202 Accepted` for an accepted asynchronous cancellation command and exposes `CANCELLING` until cancellation is confirmed or the cancellation command fails. OSB must return an OEX-friendly `CANCELLING` view rather than presenting cancellation as completed. `CANCELLED` is set only after worker confirmation through `OptimisationCompletedEvent.status = CANCELLED`. `CANCELLATIONFAILED` means the cancellation command failed and is non-terminal; OSB should continue polling until OC MS projects `COMPLETED`, `INFEASIBLE`, or `FAILED`. Any alternative terminal confirmation path is outside the current baseline.
+Cancellation is best-effort. OSB preserves the OC MS cancellation response status. In the baseline, OC MS returns `202 Accepted` for an accepted asynchronous cancellation command and exposes `CANCELLING` until cancellation is confirmed or the cancellation command fails. OSB must return an OEX-friendly `CANCELLING` view rather than presenting cancellation as completed. `CANCELLED` is set only after worker confirmation through `OptimisationCompletedEvent.status = CANCELLED`. `CANCELLATIONFAILED` represents a cancellation command outcome, not an optimisation execution outcome. It is non-terminal; OSB should continue polling until OC MS projects `COMPLETED`, `INFEASIBLE`, or `FAILED`. Any alternative terminal confirmation path is outside the current baseline.
 
 If OC MS returns `409 Conflict` because the runtime optimisation is already terminal, OSB MS must show an appropriate lifecycle-conflict message instead of hiding it as a generic failure.
 
 ### 17.2. Retrial:
 
-Retrial is available only from `FAILED` in the baseline.
+Retrial is available only from `FAILED` in the baseline. OSB must not expose retrial when `lifecycleStatus = CANCELLATIONFAILED`, even though that state is non-terminal.
 
 Retrial request body baseline:
 
