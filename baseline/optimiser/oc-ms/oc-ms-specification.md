@@ -31,7 +31,7 @@ OC MS does not own:
 OptimisationSpecification definitions
 OptimisationSpecification lifecycle and version governance
 Gurobi model formulation
-Python Gurobi solver execution
+Python and Gurobi solver execution
 Analytics platform datasets
 Long-running intent control-loop assurance
 ```
@@ -110,7 +110,7 @@ Field notes:
 
 | **Field** | **Rule** |
 |---|---|
-| `id` / `href` | Server-assigned runtime resource identity. |
+| `id` and `href` | Server-assigned runtime resource identity. |
 | `priority` | Optional caller-supplied priority rank represented as a string. Baseline allowed values are `"1"` = highest, `"2"` = normal, and `"3"` = low. If omitted, OC MS applies the default priority policy. Unsupported priority values return `400 Bad Request`. |
 | `sourceContext` | Optional provenance context identifying the upstream domain and source resource that requested or caused the optimisation. It may be used for audit, traceability, and list filtering. |
 | `creationContext` | Server-assigned creation context for the runtime Optimisation. Baseline `creationContext.reason` values are `NEW` for a normal runtime optimisation request and `RETRIAL` for a new Optimisation created from a retrial request. |
@@ -118,7 +118,7 @@ Field notes:
 | `expression` | Accepted runtime expression submitted by the caller. `expression.iri` is mandatory and must match the referenced ACTIVE specification's `expressionSpecification.iri`. |
 | `result` | Result, terminal outcome, or command-outcome detail projection where available. Presence depends on lifecycle state. |
 | `optimisationRelationship[]` | Used for relationships between runtime Optimisation resources. The baseline relationship type is `retrialOf`; other relationship types are out of scope for the current baseline. |
-| `lifecycleStatus` / `statusChangeDate` | Runtime state and last lifecycle transition time. |
+| `lifecycleStatus` and `statusChangeDate` | Runtime state and last lifecycle transition time. |
 | `_links` | Lifecycle-aware HATEOAS action links. |
 
 OC MS persists the resolved `OptimisationSpecification.id`, `version`, `draftId`, `href`, and optionally `etag` as the immutable contract pointer for the life of the runtime `Optimisation`. Runtime creation requires both `optimisationSpecification.id` and `expression.iri`. OC MS MUST use `optimisationSpecification.id` to resolve the current `ACTIVE` specification version from OD MS at acceptance time and MUST verify that `expression.iri` matches that resolved version's `expressionSpecification.iri`. OC MS MUST NOT substitute a different specification because of `specKey` or `expressionSpecification.iri`. If the resolved specification version is later `RETIRED`, the runtime `Optimisation` remains valid as an audit record; OC MS does not revalidate or rewrite the persisted specification reference.
@@ -163,10 +163,10 @@ Rules:
 ```text
 ACKNOWLEDGED: OC MS accepted the request, persisted the Optimisation resource, and wrote the outbox event.
 QUEUED: OptimisationRequestedEvent has been published or is waiting for worker processing.
-PROCESSING: Python/Gurobi worker has started processing.
+PROCESSING: Python and Gurobi worker has started processing.
 COMPLETED: Worker completed successfully and produced a usable result.
 INFEASIBLE: Worker completed correctly, but no valid solution exists.
-FAILED: Technical/runtime failure occurred.
+FAILED: Technical or runtime failure occurred.
 CANCELLING: Cancellation command has been accepted and worker should stop or ignore where safely possible.
 CANCELLED: Optimisation is confirmed cancelled.
 CANCELLATIONFAILED: Non-terminal state. Represents failure of the cancellation command only. Cancellation was accepted and attempted, but the worker later reported that cancellation could not be honoured, applied, or confirmed. The optimisation execution may still continue and may later move to COMPLETED, INFEASIBLE, or FAILED.
@@ -203,7 +203,7 @@ CANCELLED -> terminal
 
 Retrial does not move the failed Optimisation back to `PROCESSING`. It creates a new linked Optimisation with `retrialOf`.
 
-Retrial is available only from `FAILED` in the baseline. Retrial is not available from `INFEASIBLE` by default because `INFEASIBLE` is a valid optimisation/model outcome, not a technical execution failure. If a consumer wants another attempt after `INFEASIBLE`, it must submit a new `Optimisation` request with changed inputs.
+Retrial is available only from `FAILED` in the baseline. Retrial is not available from `INFEASIBLE` by default because `INFEASIBLE` is a valid optimisation or model outcome, not a technical execution failure. If a consumer wants another attempt after `INFEASIBLE`, it must submit a new `Optimisation` request with changed inputs.
 
 ## 7. Result presence rules:
 
@@ -240,7 +240,7 @@ x-platform-extension: true
 x-tmf-native: false
 ```
 
-These headers are governance/documentation indicators only. Clients must not use them as runtime business-logic switches.
+These headers are governance and documentation indicators only. Clients must not use them as runtime business-logic switches.
 
 ## 10. POST /optimisation:
 
@@ -443,7 +443,7 @@ If OD MS is unavailable and OC MS has no valid cached immutable `ACTIVE` contrac
 OC MS validates:
 
 ```text
-generic REST wrapper using its static API/OpenAPI contract
+generic REST wrapper using its static API and OpenAPI contract
 optimisationSpecification.id is present
 expression.iri is present
 referenced OptimisationSpecification.id exists in OD MS
@@ -477,12 +477,12 @@ Cancellation uses the same event type with `instruction = CANCEL`. Worker optimi
 
 ## 13. Internal event baseline:
 
-OC MS uses exactly two internal Kafka event types with the Python/Gurobi worker in the current baseline. These are platform-internal events, not TMF external notification events.
+OC MS uses exactly two internal Kafka event types with the Python and Gurobi worker in the current baseline. These are platform-internal events, not TMF external notification events.
 
 | **Event** | **Emitter** | **Consumer** | **Purpose** | **Key values** |
 |---|---|---|---|---|
-| `OptimisationRequestedEvent` | OC MS / OC MS Outbox Relay | Python/Gurobi Worker | Worker instruction event for execution or cancellation. | `instruction = EXECUTE` or `instruction = CANCEL` |
-| `OptimisationCompletedEvent` | Python/Gurobi Worker | OC MS / OC MS Inbox Consumer | Worker outcome and cancellation-command outcome event for lifecycle/result projection. | `status = COMPLETED`, `FAILED`, `INFEASIBLE`, `CANCELLED`, or `CANCELLATIONFAILED` |
+| `OptimisationRequestedEvent` | OC MS, OC MS Outbox Relay | Python and Gurobi Worker | Worker instruction event for execution or cancellation. | `instruction = EXECUTE` or `instruction = CANCEL` |
+| `OptimisationCompletedEvent` | Python and Gurobi Worker | OC MS, OC MS Inbox Consumer | Worker outcome and cancellation-command outcome event for lifecycle and result projection. | `status = COMPLETED`, `FAILED`, `INFEASIBLE`, `CANCELLED`, or `CANCELLATIONFAILED` |
 
 `OptimisationFailedEvent` is not used in the current baseline. Failed, infeasible, cancelled, and cancellation-failed outcomes are carried by `OptimisationCompletedEvent.status`. The event name remains `OptimisationCompletedEvent` in the current baseline even when it carries `CANCELLATIONFAILED` as a cancellation-command outcome. No separate cancellation-failed or progress event type is introduced. `CANCELLATIONFAILED` is not necessarily terminal; OC MS may later project `COMPLETED`, `INFEASIBLE`, or `FAILED` for the same Optimisation when a normal worker outcome is received.
 
@@ -494,7 +494,7 @@ OptimisationRequestedEvent and OptimisationCompletedEvent MUST include correlati
 OptimisationRequestedEvent and OptimisationCompletedEvent MUST include a unique eventId or CloudEvents ce-id.
 OptimisationCompletedEvent processing MUST be idempotent.
 OC MS projection MUST safely handle duplicate OptimisationCompletedEvent messages.
-OC MS may use eventId/ce-id, inbox deduplication state, and monotonic lifecycle/statusChangeDate rules to suppress duplicate, stale, or late event projection.
+OC MS may use eventId or ce-id, inbox deduplication state, and monotonic lifecycle and statusChangeDate rules to suppress duplicate, stale, or late event projection.
 CANCELLATIONFAILED must not suppress or block projection of subsequent valid terminal outcomes.
 ```
 
@@ -517,9 +517,9 @@ Supported first-level filters:
 | `optimisationSpecification.id` | Exact match on referenced OptimisationSpecification id. |
 | `optimisationSpecification.version` | Exact match on resolved official OptimisationSpecification version persisted at acceptance time. |
 | `optimisationSpecification.draftId` | Exact match on the draft candidate provenance identifier persisted from the resolved OptimisationSpecification version. |
-| `creationDate.gt` / `creationDate.lt` | Optional creation timestamp range filters. |
-| `lastUpdate.gt` / `lastUpdate.lt` | Optional last-update timestamp range filters. |
-| `statusChangeDate.gt` / `statusChangeDate.lt` | Optional lifecycle-state-change timestamp range filters. |
+| `creationDate.gt`, `creationDate.lt` | Optional creation timestamp range filters. |
+| `lastUpdate.gt`, `lastUpdate.lt` | Optional last-update timestamp range filters. |
+| `statusChangeDate.gt`, `statusChangeDate.lt` | Optional lifecycle-state-change date range filters. |
 | `offset` | Zero-based starting position for paging. Default is `0`. |
 | `limit` | Maximum number of resources returned in the current page. Default and maximum are deployment-governed. |
 | `fields` | Optional sparse fieldset projection. |
@@ -751,7 +751,7 @@ Cancellation request body:
 
 ```text
 No request body is required.
-If a request body is supplied, it may contain optional reason/comment metadata only.
+If a request body is supplied, it may contain optional reason or comment metadata only.
 A supplied cancellation body does not change cancellation semantics, worker instruction meaning, or lifecycle eligibility.
 ```
 
@@ -905,7 +905,7 @@ GET /optimisation: no per-item ETag by default; includes X-Total-Count and X-Res
 POST /optimisation/{id}/cancellation: requires If-Match
 POST /optimisation/{id}/retrial: requires If-Match
 missing If-Match -> 428
-stale/wrong If-Match -> 412
+stale or wrong If-Match -> 412
 ```
 
 NGW-facing OC MS resource responses include:
@@ -936,16 +936,16 @@ Unsupported request content type returns 415 Unsupported Media Type.
 | `expression.expressionValue` fails the resolved `targetEntitySchema` | `422 Unprocessable Entity` |
 | OD MS unavailable and OC MS has no valid cached immutable `ACTIVE` contract for the requested id | `503 Service Unavailable` |
 | Cancellation or retrial requested from a non-eligible lifecycle state, including cancellation from `CANCELLING`, `CANCELLATIONFAILED`, or terminal states, or retrial from any state other than `FAILED` | `409 Conflict` |
-| Missing `If-Match` on cancellation/retrial | `428 Precondition Required` |
-| Stale or wrong `If-Match` on cancellation/retrial | `412 Precondition Failed` |
+| Missing `If-Match` on cancellation or retrial | `428 Precondition Required` |
+| Stale or wrong `If-Match` on cancellation or retrial | `412 Precondition Failed` |
 | Unsupported `Content-Type` | `415 Unsupported Media Type` |
 
 Boundary rules:
 
 ```text
-400 = malformed request, missing required top-level wrapper fields such as `optimisationSpecification.id`, missing `expression`, missing `expression.iri`, unsupported query/filter parameter, invalid paging parameter, unsupported priority value, client-supplied forbidden server-controlled runtime field, or client-supplied `optimisationSpecification.specKey`.
+400 = malformed request, missing required top-level wrapper fields such as `optimisationSpecification.id`, missing `expression`, missing `expression.iri`, unsupported query or filter parameter, invalid paging parameter, unsupported priority value, client-supplied forbidden server-controlled runtime field, or client-supplied `optimisationSpecification.specKey`.
 422 = request content is syntactically valid but violates the resolved OD contract, including no current ACTIVE version for the referenced specification id, mismatch between `expression.iri` and the resolved specification version's `expressionSpecification.iri`, or `expression.expressionValue` failing `targetEntitySchema`.
-409 = runtime lifecycle/action conflict.
+409 = runtime lifecycle or action conflict.
 428 = required If-Match missing.
 412 = supplied If-Match does not match current ETag.
 415 = unsupported request media type.
@@ -1034,4 +1034,4 @@ CANCELLED -> lifecycleStatus CANCELLED
 CANCELLATIONFAILED -> lifecycleStatus CANCELLATIONFAILED
 ```
 
-`INFEASIBLE` is an optimisation outcome produced by the worker/model. It is not a request contract validation error. `CANCELLATIONFAILED` is a cancellation-command outcome, not necessarily a terminal optimisation outcome. It may be followed by a normal terminal optimisation outcome if the worker later reports `COMPLETED`, `INFEASIBLE`, or `FAILED`.
+`INFEASIBLE` is an optimisation outcome produced by the worker or model. It is not a request contract validation error. `CANCELLATIONFAILED` is a cancellation-command outcome, not necessarily a terminal optimisation outcome. It may be followed by a normal terminal optimisation outcome if the worker later reports `COMPLETED`, `INFEASIBLE`, or `FAILED`.
