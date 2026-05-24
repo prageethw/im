@@ -227,6 +227,8 @@ FAILED: self retrial
 COMPLETED, INFEASIBLE, and CANCELLED: self
 ```
 
+While `lifecycleStatus = CANCELLATIONFAILED`, the optimisation remains observable but no further cancellation or retrial action is exposed in the baseline. Callers should continue polling until a normal terminal outcome is projected.
+
 ## 9. External response header governance:
 
 OC MS exposes optimiser-domain platform resources using TMF-style resource conventions. `Optimisation` is not a native TMF Open API resource.
@@ -471,7 +473,7 @@ resource-selection correctness
 
 After acceptance, OC MS persists the runtime resource and writes `OptimisationRequestedEvent` with `instruction = EXECUTE` to its outbox in the same transaction.
 
-Cancellation uses the same event type with `instruction = CANCEL`. Worker terminal outcomes are returned through `OptimisationCompletedEvent` with `status = COMPLETED`, `INFEASIBLE`, `FAILED`, `CANCELLED`, or `CANCELLATIONFAILED`.
+Cancellation uses the same event type with `instruction = CANCEL`. Worker optimisation outcomes and cancellation-command outcomes are returned through `OptimisationCompletedEvent` with `status = COMPLETED`, `INFEASIBLE`, `FAILED`, `CANCELLED`, or `CANCELLATIONFAILED`. `COMPLETED`, `INFEASIBLE`, `FAILED`, and `CANCELLED` are terminal lifecycle outcomes. `CANCELLATIONFAILED` is a non-terminal cancellation-command outcome and may later be followed by a normal terminal optimisation outcome.
 
 ## 13. Internal event baseline:
 
