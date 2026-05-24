@@ -428,14 +428,16 @@ OC MS resolves the current ACTIVE version by OptimisationSpecification.id at acc
 OC MS persists the resolved OptimisationSpecification.id, version, draftId, and href as the immutable contract pointer for the life of the runtime Optimisation.
 OC MS MUST NOT substitute a different specification because of `specKey` or `expressionSpecification.iri`.
 If the resolved specification version is later RETIRED, the runtime Optimisation remains valid as an audit record; OC MS does not revalidate or rewrite the specification reference.
-OC MS may cache immutable ACTIVE OptimisationSpecification contracts by id, version, and ETag.
+OC MS may maintain an internal OD contract cache for immutable ACTIVE OptimisationSpecification contracts. The cache is keyed by the resolved specification id and version, and may use the OD MS ETag HTTP header internally for cache validation. The OD MS ETag remains a header value and must not be exposed inside the runtime Optimisation payload.
 A cached ACTIVE contract for a specific id and version is safe because OD MS makes ACTIVE and RETIRED versions immutable.
-If the referenced specification is missing, no ACTIVE version exists, cache-missing, or cache-stale beyond the local policy, OC MS refreshes from OD MS.
+If the referenced specification is missing, no ACTIVE version exists, the OD contract cache is missing, or the OD contract cache is stale beyond the local policy, OC MS refreshes from OD MS.
 ```
 
 Runtime requests must supply only `optimisationSpecification.id` for contract selection. Clients must not supply `optimisationSpecification.version`, `optimisationSpecification.draftId`, `optimisationSpecification.href`, `optimisationSpecification.etag`, or `optimisationSpecification.specKey` on creation. OC MS resolves `version`, `draftId`, and `href` from OD MS and persists them in the accepted runtime resource. OD MS ETags remain HTTP headers and may be used internally for cache validation, but they are not exposed in the runtime payload. If a client supplies any of those forbidden fields, OC MS returns `400 Bad Request`.
 
-If OD MS is unavailable and OC MS has no valid cached immutable `ACTIVE` contract for the requested `OptimisationSpecification.id`, OC MS returns `503 Service Unavailable`. If OC MS has a valid cached immutable `ACTIVE` contract for the requested id and resolved version, it may proceed according to the configured cache policy.
+If OD MS is unavailable and OC MS has no valid cached immutable `ACTIVE` contract for the requested `OptimisationSpecification.id`, OC MS returns `503 Service Unavailable`. If OC MS has a valid cached immutable `ACTIVE` contract for the requested id and resolved version, it may proceed according to the configured OD contract cache policy.
+
+OC MS may maintain a request-result cache for optimisation outcomes. The cache key is a deterministic hash of the canonical accepted runtime optimisation request body after OC MS has resolved the referenced ACTIVE `OptimisationSpecification` version. Each distinct canonical accepted request has its own cache entry. The cache stores the reusable optimisation response or outcome reference according to cache policy. The canonical request hash must be based only on fields that are part of the accepted optimisation problem and must not include transport headers or operational trace metadata. The cache hash is internal metadata and must not replace the runtime `Optimisation.id`, lifecycle, persisted audit record, or external resource representation.
 
 ## 12. OC MS validation boundary:
 
