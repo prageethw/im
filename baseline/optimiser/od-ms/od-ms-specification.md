@@ -46,7 +46,7 @@ OD MS does **not** execute optimisation runs, evaluate solver feasibility, selec
 
 ## 2. TMF alignment and platform extensions:
 
-OD MS follows the TMF-style external resource model:
+OD MS follows the TMF-style external resource model. `OptimisationSpecification` is a platform resource model aligned to TMF resource conventions. It is not a native TMF Open API resource. Optimiser-specific fields, operations, headers, and link relations are allowed only when they are explicit, documented, and guarded as platform extensions.
 
 - `href` remains the standard resource hyperlink.
 - `@type`, `@baseType`, `@schemaLocation`, and `@referredType` follow the TMF polymorphism and extension style.
@@ -58,10 +58,14 @@ Approved platform extensions:
 
 | Extension | Purpose | Guardrail |
 |---|---|---|
+| `specKey` | Stable logical specification key used by OD MS to resolve the server-assigned specification `id` for a DRAFT candidate. | Required on create; not used by OC MS for runtime contract selection. |
+| `draftId` | Server-assigned mutable DRAFT candidate identifier and lifecycle provenance marker. | Selects DRAFT operations only; official runtime selection remains by `id` and `version` after activation. |
 | `PUT /optimisationSpecification/draft/{draftId}` | Full replacement and finalisation of a mutable `DRAFT` candidate. | Requires `If-Match`; not allowed for `ACTIVE` or `RETIRED` official versions. |
+| `DELETE /optimisationSpecification/{id}` | Logical retirement of the current `ACTIVE` version for a specification `id`. | Must not physically delete `ACTIVE` or `RETIRED` records. |
+| `DELETE /optimisationSpecification/draft/{draftId}` | Physical deletion of an unused mutable `DRAFT` candidate. | Not allowed for `ACTIVE` or `RETIRED` official versions. |
 | `_links` | HATEOAS controls. | Does not replace `href`; lifecycle-aware and authorisation-aware. |
-| `ETag` and `If-Match` governance | Optimistic concurrency for unsafe existing-resource operations. | Required for `PUT`, `PATCH`, and `DELETE`. |
-| `x-platform-extension` and `x-tmf-native` response headers | Governance documentation headers for NGW-facing optimiser-domain resources. | Used only on external NGW-facing OD/OC APIs; clients must not use these headers as business-logic switches. |
+| `ETag` and `If-Match` governance | HTTP header based optimistic concurrency for unsafe existing-resource operations. | Required for `PUT`, `PATCH`, and `DELETE`; ETags are headers, not JSON payload fields. |
+| `x-platform-extension` and `x-tmf-native` response headers | Governance documentation headers for NGW-facing optimiser-domain resources. | Used only on external NGW-facing OD and OC APIs; clients must not use these headers as business-logic switches. |
 
 ## 3. Ownership:
 
