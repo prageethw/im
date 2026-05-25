@@ -1,6 +1,5 @@
 @startuml od-ms-lifecycle-state
-' OD MS OptimisationSpecification lifecycle state model
-' Focus: specification definition lifecycle, draft candidate lifecycle, activation, retirement, and deletion semantics.
+' OD MS OptimisationSpecification lifecycle states only.
 
 hide empty description
 skinparam shadowing false
@@ -10,55 +9,24 @@ skinparam state {
   FontColor Black
 }
 
-title OD MS - OptimisationSpecification lifecycle state model
+title OD MS - OptimisationSpecification lifecycle states
 
-[*] --> DRAFT : POST /optimisationSpecification\ncreate draft candidate\nOD assigns id and draftId
+[*] --> DRAFT : create
+DRAFT --> ACTIVE : activate
+ACTIVE --> RETIRED : retire
+ACTIVE --> RETIRED : replacement activated
+DRAFT --> [*] : delete draft
 
-state DRAFT {
-  [*] --> Editing
-  Editing : Mutable definition candidate
-  Editing : No official version
-  Editing : Selected by draftId
-  Editing : Guarded by ETag
-}
-
-DRAFT --> DRAFT : PATCH /draft/{draftId}\nupdate mutable draft
-DRAFT --> DRAFT : PUT /draft/{draftId}\nreplace mutable draft
-DRAFT --> ACTIVE : PATCH /draft/{draftId}\nlifecycleStatus = ACTIVE
-DRAFT --> ACTIVE : PUT /draft/{draftId}\nfinalise and activate
-DRAFT --> [*] : DELETE /draft/{draftId}\nphysical draft delete
-
-ACTIVE --> RETIRED : DELETE /optimisationSpecification/{id}\nretire current ACTIVE
-ACTIVE --> RETIRED : replacement DRAFT activated\ntransactionally retire previous ACTIVE
-
-RETIRED --> [*] : retained immutable history\nno physical delete in baseline
+DRAFT : Mutable candidate
+DRAFT : No official version
+DRAFT : Identified by draftId
 
 ACTIVE : Immutable official version
-ACTIVE : Used for new runtime Optimisation creation
-ACTIVE : Selected by id, or id + version
-ACTIVE : Carries source draftId as provenance
+ACTIVE : Used for new runtime creation
+ACTIVE : Identified by id and version
 
-RETIRED : Immutable retained version
-RETIRED : Not usable for new runtime creation
-RETIRED : Resolves historical runtime references
-RETIRED : Carries source draftId as provenance
-
-note right of DRAFT
-DRAFT operations are addressed by draftId.
-The draft carries the server-assigned id resolved from specKey.
-PATCH and PUT apply only to DRAFT candidates.
-end note
-
-note right of ACTIVE
-Only one ACTIVE version may exist per OptimisationSpecification.id.
-At most one ACTIVE lineage may exist per specKey.
-Activation assigns the official version.
-end note
-
-note bottom of RETIRED
-RETIRED records are immutable retained history.
-If only RETIRED versions exist for a specKey,
-new draft creation creates a new id unless governed lineage reuse is introduced later.
-end note
+RETIRED : Immutable retained history
+RETIRED : Not used for new runtime creation
+RETIRED : Resolves historical references
 
 @enduml
