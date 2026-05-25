@@ -126,8 +126,9 @@ OC MS runtime baseline:
 OC runtime create request rule:
 
 - Runtime create requests provide only `optimisationSpecification.id` as the OD contract reference.
-- Clients must not provide `optimisationSpecification.version`, `draftId`, `href`, `specKey`, or `optimisationSpecification.etag` in create requests.
-- OC MS resolves `version`, `draftId`, and `href` from OD MS and persists them on the accepted runtime record. ETags remain HTTP headers and internal cache metadata only.
+- Clients must not provide resolved specification fields such as `optimisationSpecification.version`, `draftId`, or `href` in create requests.
+- Clients must not provide `specKey` in runtime create requests because `specKey` is OD catalogue metadata, not an OC runtime selector.
+- OC MS resolves `version`, `draftId`, and `href` from OD MS and persists them on the accepted runtime record. ETags and If-Match are HTTP headers only and are not JSON payload fields.
 
 OSB MS acts as the OEX backend-for-frontend. It shapes experience models such as `HomeView`, `CapabilityCard`, `RequestFormModel`, `CreationResultView`, `OptimisationSummaryView`, and `OptimisationDetailView`. OSB response models are experience models, not source-of-truth domain resources. OSB may be owned by the experience team to simplify UI flows by aggregating and shaping payloads for UI components.
 
