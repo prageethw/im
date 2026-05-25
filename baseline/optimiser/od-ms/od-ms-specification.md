@@ -124,8 +124,8 @@ Endpoint responsibility:
 | Operation | Target | Meaning |
 |---|---|---|
 | `GET /optimisationSpecification` | Collection | List visible DRAFT, ACTIVE, and RETIRED records according to filters and caller authorisation. |
-| `POST /optimisationSpecification` | Collection | Create a mutable DRAFT candidate only. `specKey` is required; OD MS resolves `id` from `specKey` and assigns `draftId`. |
-| `GET /optimisationSpecification/{id}` | Lineage/current official version | Retrieve the current ACTIVE version by default, or an ACTIVE/RETIRED official version with `version`. Read-only provenance lookup may use `draftId`, but DRAFT candidate mutation and retrieval use `/optimisationSpecification/draft/{draftId}`. |
+| `POST /optimisationSpecification` | Collection | Create a mutable DRAFT candidate only. `specKey` is required; OD MS resolves `id` from `specKey` and assigns a new `draftId`. |
+| `GET /optimisationSpecification/{id}` | Lineage current official version | Retrieve the current ACTIVE version by default, or an ACTIVE and RETIRED official version with `version`. Read-only provenance lookup may use `draftId`, but DRAFT candidate mutation and retrieval use `/optimisationSpecification/draft/{draftId}`. |
 | `DELETE /optimisationSpecification/{id}` | Current ACTIVE official version | Retire the current ACTIVE version for the supplied `id`. This is a lifecycle retirement operation, not physical deletion. |
 | `GET /optimisationSpecification/draft/{draftId}` | DRAFT candidate | Retrieve one mutable DRAFT candidate. |
 | `PATCH /optimisationSpecification/draft/{draftId}` | DRAFT candidate | Partially update a mutable DRAFT candidate, or activate the selected DRAFT candidate. |
