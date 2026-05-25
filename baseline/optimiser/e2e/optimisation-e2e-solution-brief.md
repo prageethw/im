@@ -62,7 +62,7 @@ OC MS validates the request structure and referenced ACTIVE OD MS request contra
 
 Kafka carries worker instructions and outcomes, with a dedicated DLQ for unprocessable events. The Python Gurobi Worker consumes `EXECUTE` or `CANCEL` instructions and returns optimisation outcomes and cancellation-command outcomes through `OptimisationCompletedEvent`.
 
-NGW-exposed backend APIs use TMF-style API conventions where appropriate. `OptimisationSpecification` and `Optimisation` are optimiser-domain platform resources, not native TMF Open API resources. OGW-exposed experience APIs. Private MS-to-MS APIs, and internal Kafka events do not need to be TMF-compliant.
+NGW-exposed backend APIs use TMF-style API conventions where appropriate. `OptimisationSpecification` and `Optimisation` are optimiser-domain platform resources, not native TMF Open API resources. However OGW-exposed experience APIs, private MS-to-MS APIs, and internal Kafka events do not need to be TMF-compliant.
 
 Platform resource model extensions are deliberate and documented in the owning service specifications. OD MS owns `specKey`, `draftId`, DRAFT candidate operations, and ACTIVE retirement semantics. OC MS owns runtime `creationContext`, cancellation and retrial commands, and the `CANCELLATIONFAILED` lifecycle value. OSB exposes experience-layer view models over these backend platform resources and must preserve their semantics.
 
