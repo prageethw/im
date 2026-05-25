@@ -60,7 +60,7 @@ Operator access to the experience layer is governed by the ACG approval process 
 
 OC MS validates the request structure and referenced ACTIVE OD MS request contract, persists the runtime `Optimisation` resource, returns `201 Created`, writes `OptimisationRequestedEvent` to its outbox, and drives execution asynchronously through Kafka.
 
-Kafka carries worker instructions and outcomes, with a dedicated DLQ for unprocessable events. The Python Gurobi Worker consumes `EXECUTE` or `CANCEL` instructions and returns optimisation outcomes and cancellation-command outcomes through `OptimisationCompletedEvent`.
+Kafka carries worker instructions and outcomes, with a dedicated DLQ for unprocessable events. The Python Gurobi Worker consumes `EXECUTE` or `CANCEL` instructions and returns optimisation command outcomes through `OptimisationCompletedEvent`.
 
 NGW-exposed backend APIs use TMF-style API conventions where appropriate. `OptimisationSpecification` and `Optimisation` are optimiser-domain platform resources, not native TMF Open API resources. However OGW-exposed experience APIs, private MS-to-MS APIs, and internal Kafka events do not need to be TMF-compliant.
 
