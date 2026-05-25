@@ -257,7 +257,7 @@ Catalogue-management journeys are feature-gated and out of phase-one scope unles
 15. OC MS advances ACKNOWLEDGED -> QUEUED after successful Kafka publish. QUEUED is projected later and is not the initial creation response state.
 16. Python Gurobi Worker consumes OptimisationRequestedEvent.
 17. Worker resolves deterministic model binding and invokes Gurobi Optimiser.
-18. Worker publishes OptimisationCompletedEvent with COMPLETED, INFEASIBLE, FAILED, CANCELLED, or CANCELLATIONFAILED.
+18. Worker publishes OptimisationCompletedEvent with COMPLETED, INFEASIBLE, FAILED, CANCELLED, or CANCELLATIONFAILED. COMPLETED, INFEASIBLE, FAILED, and CANCELLED are terminal lifecycle outcomes. CANCELLATIONFAILED is a non-terminal cancellation-command outcome.
 19. OC MS Inbox Consumer applies idempotency and stale and late event checks.
 20. OC MS updates lifecycle and result projection.
 21. Caller polls through User -> OEX -> OGW -> OSB MS -> NGW -> OC MS to retrieve status and result.
@@ -279,7 +279,7 @@ Catalogue-management journeys are feature-gated and out of phase-one scope unles
 9. Caller receives current state.
 ```
 
-Phase-one OEX and OSB status refresh is REST polling against OC MS through NGW. OSB must not infer terminal status locally; terminal state must come from OC MS.
+Phase-one OEX and OSB status refresh is REST polling against OC MS through NGW. OSB must not infer terminal status locally; terminal state and any later terminal outcome after CANCELLATIONFAILED must come from OC MS.
 
 #### 3.3.6. Cancel optimisation:
 
@@ -333,7 +333,7 @@ Retrial is available only from `FAILED` in the baseline. Retrial is not availabl
 3. Worker resolves runtime context and internal deterministic model binding.
 4. Worker invokes Gurobi Optimiser.
 5. Gurobi Optimiser returns solver output, infeasibility information, failure information, or cancellation confirmation.
-6. Worker maps outcome to COMPLETED, INFEASIBLE, FAILED, CANCELLED, or CANCELLATIONFAILED.
+6. Worker maps optimisation outcomes to COMPLETED, INFEASIBLE, FAILED, or CANCELLED, and maps cancellation-command failure to CANCELLATIONFAILED.
 7. Worker publishes OptimisationCompletedEvent.
 8. OC MS Inbox Consumer applies idempotency and stale and late event checks.
 9. OC MS updates runtime lifecycle and result projection.
@@ -423,7 +423,7 @@ resolved id, version, draftId, href are persisted on the runtime record
 
 The persisted resolved specification reference is the immutable contract pointer for the accepted runtime Optimisation. OC MS must not re-resolve or replace that pointer later, including during retrial.
 
-OC MS may cache immutable ACTIVE specification contracts by `id` and `version`, using OD MS ETag headers internally for cache validation, but must not infer the current active contract by stale `specKey` lookup. If OD MS is unavailable and OC MS has no valid cached immutable ACTIVE contract for the requested id, OC MS returns 503 Service Unavailable. If a valid cached immutable ACTIVE contract exists, OC MS may proceed according to cache policy. OC MS may separately maintain a request-result cache keyed by a deterministic hash of the canonical accepted runtime optimisation request body after the ACTIVE specification version is resolved. The request-result cache hash is internal metadata and does not replace runtime Optimisation identity, lifecycle, audit, or external representation.
+OC MS may cache immutable ACTIVE specification contracts by `id` and `version`, using OD MS ETag headers internally for cache validation, but must not infer the current active contract by stale `specKey` lookup. If OD MS is unavailable and OC MS has no valid cached immutable ACTIVE contract for the requested id, OC MS returns 503 Service Unavailable. If a valid cached immutable ACTIVE contract exists, OC MS may proceed according to cache policy. OC MS may separately maintain a request-result cache keyed by a deterministic hash of the canonical accepted runtime optimisation request body after the ACTIVE specification version is resolved. The request-result cache hash is internal metadata and does not replace runtime Optimisation identity, lifecycle, audit, or external representation. Request-result cache TTL and eviction policy are deployment-governed and outside this E2E baseline.
 
 ### 5.6. Kafka security:
 
@@ -568,6 +568,7 @@ Synchronous API latency targets are to be confirmed through NFR baselining. Solv
 - NGW-exposed backend APIs use TMF-style API conventions where appropriate.
 - OC MS calls OD MS directly using service-to-service mTLS for runtime specification validation and resolved contract-pointer capture.
 - `OptimisationSpecification` and `Optimisation` are optimiser-domain platform resources, not native TMF Open API resources.
+- Optimiser resources are platform resource models aligned to TMF conventions; approved optimiser-specific fields, operations, headers, link relations, and lifecycle values are documented in the owning service specifications.
 - OGW-exposed experience APIs, private MS-to-MS APIs, private MS-to-MS events, and internal Kafka events do not need to be TMF REST compliant.
 - `x-platform-extension: true` and `x-tmf-native: false` are governance documentation response headers on external NGW-facing optimiser resources.
 - Do not expose Gurobi model formulation, solver configuration, objective internals, candidate-resource rules, or model binding through public APIs or OSB views.
@@ -703,7 +704,7 @@ EXECUTE
 CANCEL
 ```
 
-### 10.8. Worker terminal status values:
+### 10.8. Worker outcome and cancellation-command status values:
 
 ```text
 COMPLETED
@@ -715,7 +716,7 @@ CANCELLATIONFAILED
 
 ### 10.9. Outcome mapping:
 
-Worker emits `OptimisationCompletedEvent.status` using one of:
+Worker emits `OptimisationCompletedEvent.status` using one of the following optimisation outcome or cancellation-command status values:
 
 ```text
 COMPLETED
@@ -725,7 +726,7 @@ CANCELLED
 CANCELLATIONFAILED
 ```
 
-OC MS maps worker status to runtime lifecycle status as follows:
+OC MS maps worker optimisation outcome and cancellation-command status values to runtime lifecycle status as follows:
 
 ```text
 COMPLETED -> lifecycleStatus COMPLETED
@@ -735,7 +736,7 @@ CANCELLED -> lifecycleStatus CANCELLED
 CANCELLATIONFAILED -> lifecycleStatus CANCELLATIONFAILED
 ```
 
-Do not introduce an alternate success status unless the worker contract is explicitly changed to emit one.
+`CANCELLATIONFAILED` is not a terminal optimisation outcome. It represents cancellation-command failure and may later be followed by COMPLETED, INFEASIBLE, or FAILED. Do not introduce an alternate success status unless the worker contract is explicitly changed to emit one.
 
 ### 10.10. Canonical runtime expression shape:
 
@@ -776,7 +777,7 @@ OD MS defines the allowed structure using `OptimisationSpecification.targetEntit
 result MUST be absent while lifecycleStatus is ACKNOWLEDGED, QUEUED, PROCESSING, or CANCELLING.
 result MAY be present when lifecycleStatus is COMPLETED, INFEASIBLE, FAILED, CANCELLED, or CANCELLATIONFAILED.
 CANCELLED result details may include safe cancellation summary metadata but must not expose worker internals.
-CANCELLATIONFAILED result details may include safe cancellation command outcome metadata, but must be superseded by any later COMPLETED, INFEASIBLE, or FAILED terminal outcome.
+CANCELLATIONFAILED result details may include safe cancellation command outcome metadata, but must be fully replaced and not merged when a later COMPLETED, INFEASIBLE, or FAILED terminal outcome is projected.
 FAILED result details may include safe error codes and messages only.
 ```
 
@@ -796,12 +797,15 @@ OC MS does not evaluate:
 - metric-vs-constraint fit
 - objective trade-offs
 
-Python Gurobi Worker returns terminal status:
+Python Gurobi Worker returns terminal optimisation outcomes and cancellation-command outcomes:
 
 - `COMPLETED`
 - `INFEASIBLE`
 - `FAILED`
 - `CANCELLED`
+- `CANCELLATIONFAILED`
+
+`CANCELLATIONFAILED` is not terminal and must not block later projection of COMPLETED, INFEASIBLE, or FAILED.
 
 Use `400 Bad Request` for malformed requests, missing required top-level request fields, unsupported priority values, or forbidden server-controlled fields. Use `422 OPTIMISATION_CONTRACT_VIOLATION` for OD contract, expression IRI compatibility, targetEntitySchema, and cardinality failures. Use `INFEASIBLE` only when the request is valid and the worker or model determines no feasible solution exists.
 
@@ -812,8 +816,12 @@ PUML and DrawIO files are editable source artifacts. Rendered SVG and PNG export
 ```text
 od-ms/od-ms-specification.md
 od-ms/od-ms.oas.yaml (pending)
+od-ms/od-ms-lifecycle-state.puml
+od-ms/od-ms-lifecycle-state.svg
 oc-ms/oc-ms-specification.md
 oc-ms/oc-ms.oas.yaml (pending)
+oc-ms/oc-ms-lifecycle-state.puml
+oc-ms/oc-ms-lifecycle-state.svg
 osb-ms/osb-ms-specification.md
 osb-ms/osb-ms.oas.yaml (pending)
 e2e/optimisation-e2e-solution-brief.md
