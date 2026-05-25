@@ -27,7 +27,7 @@ User context may include tenant, claims,
 roles/scopes, and entitlements.
 end note
 
-OGW -> OSB : 3. Invoke OSB MS\nmTLS + User Context JWT\ncorrelationId / traceId
+OGW -> OSB : 3. Invoke OSB MS\nmTLS + User Context JWT\ncorrelationId and traceId
 
 OSB -> OSB : 4. Apply user-context filtering\nand build capability query
 
@@ -42,17 +42,17 @@ Request guidance exposes expressionSpecification.iri
 so runtime expression.iri can be preserved.
 end note
 
-OSB -> NGW : 5. Call NGW\nmTLS + OAuth2 system identity\ncorrelationId / traceId\n(no user context downstream)
+OSB -> NGW : 5. Call NGW\nmTLS + OAuth2 system identity\ncorrelationId and traceId\n(no user context downstream)
 
 note right of NGW
 User context stops before/at NGW.
 Downstream OD MS calls use system/service identity only.
 end note
 
-NGW -> ODMS : 6. GET /optimisationSpecification\nlifecycleStatus = ACTIVE\noptional familyId/name/fields filters\nmTLS + service/system auth
+NGW -> ODMS : 6. GET /optimisationSpecification\nlifecycleStatus = ACTIVE\noptional specKey, name, and fields filters\nmTLS + service identity
 
 note right of ODMS
-OD MS authorises the calling service/system.
+OD MS authorises the calling service identity.
 OD MS does not receive or depend on end-user
 identity, claims, roles, or scopes.
 end note
@@ -60,7 +60,7 @@ end note
 == Data Retrieval ==
 
 ODMS -> ODDB : 7. Read visible ACTIVE\nOptimisationSpecification records
-ODDB --> ODMS : Specification records\nfamilyId + name + lifecycleStatus\nspecCharacteristic[]\nexpressionSpecification.iri\ntargetEntitySchema metadata
+ODDB --> ODMS : Specification records\nspecKey + name + lifecycleStatus\nspecCharacteristic[]\nexpressionSpecification.iri\ntargetEntitySchema metadata
 
 == Discovery Response ==
 
