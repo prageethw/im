@@ -1,6 +1,6 @@
 # Optimisation Screen Builder MS Specification
 
-## Document status:
+**Document status:**
 
 | **Field** | **Value** |
 |---|---|

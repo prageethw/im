@@ -1,6 +1,6 @@
 # End-to-End Solution Brief — Optimisation Platform
 
-## Document status:
+**Document status:**
 
 | **Field** | **Value** |
 |---|---|
