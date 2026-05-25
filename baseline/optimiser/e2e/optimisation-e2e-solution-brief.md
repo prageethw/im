@@ -59,7 +59,7 @@ Operator access to the experience layer is governed by the ACG approval process 
 
 OC MS validates the request structure and referenced ACTIVE OD MS request contract, persists the runtime `Optimisation` resource, returns `201 Created`, writes `OptimisationRequestedEvent` to its outbox, and drives execution asynchronously through Kafka.
 
-Kafka carries worker instructions and outcomes, with a dedicated DLQ for unprocessable events. The Python Gurobi Worker consumes `EXECUTE` or `CANCEL` instructions and returns terminal outcomes through `OptimisationCompletedEvent`.
+Kafka carries worker instructions and outcomes, with a dedicated DLQ for unprocessable events. The Python Gurobi Worker consumes `EXECUTE` or `CANCEL` instructions and returns optimisation outcomes and cancellation-command outcomes through `OptimisationCompletedEvent`.
 
 NGW-exposed backend APIs use TMF-style API conventions where appropriate. `OptimisationSpecification` and `Optimisation` are optimiser-domain platform resources, not native TMF Open API resources. OGW-exposed experience APIs, private MS-to-MS APIs, and internal Kafka events do not need to be TMF-compliant.
 
@@ -274,7 +274,7 @@ Catalogue-management journeys are feature-gated and out of phase-one scope unles
 4. OSB validates access to the requested optimisation view.
 5. OSB calls NGW using mTLS and OAuth2 system-to-system.
 6. NGW routes GET /optimisation/{id} to OC MS.
-7. OC MS returns lifecycleStatus, status reason, result when terminal, failure details, and links and actions where applicable.
+7. OC MS returns lifecycleStatus, status reason, terminal result where present, cancellation-command outcome details where present, failure details, and links and actions where applicable.
 8. OSB shapes OptimisationDetailView or OptimisationSummaryView.
 9. Caller receives current state.
 ```
@@ -355,7 +355,7 @@ Worker-side idempotency in this E2E brief means duplicate event detection using 
 | **OD MS** | Owns `OptimisationSpecification` catalogue, lifecycle and version governance, `id` lineage identity, `draftId` draft provenance, official `version`, `specKey` logical key, `specCharacteristic[]`, `expressionSpecification`, and `targetEntitySchema`. |
 | **OD MS Database** | Stores specification lineage records, `draftId`, `specKey`, lifecycle, official version for ACTIVE and RETIRED, ETags, provenance, and immutable retained history. |
 | **OC MS** | Owns runtime `Optimisation` resources, lifecycle, accepted expression values, immutable resolved specification pointer, outbox and inbox, cancellation, retrial, and result projection. |
-| **OC MS Database** | Stores runtime records, lifecycle state, statusChangeDate, sourceContext, expression, resolved specification pointer, result when terminal, relationships, outbox, and inbox records. |
+| **OC MS Database** | Stores runtime records, lifecycle state, statusChangeDate, sourceContext, expression, resolved specification pointer, terminal result or cancellation-command outcome details where present, relationships, outbox, and inbox records. |
 | **OC MS Outbox Relay** | Publishes `OptimisationRequestedEvent` to Kafka after DB commit; successful publish drives ACKNOWLEDGED -> QUEUED. |
 | **Kafka topic** | Internal event stream for worker instructions and outcomes. |
 | **Kafka DLQ** | Holds events that cannot be safely processed after retry handling. |
@@ -528,14 +528,14 @@ Synchronous API latency targets are to be confirmed through NFR baselining. Solv
 
 `POST /optimisation` returns `201 Created` after syntactic and OD-MS-contract validation, runtime resource persistence, and outbox write. Solver execution remains asynchronous and decoupled from REST request latency. 
 
-`GET /optimisation/{id}` provides polling of lifecycle and result state. Runtime `result` is absent until terminal state. OSB and OEX status refresh is REST polling against OC MS through NGW in phase one. Polling cadence is owned by OSB MS in coordination with OEX UI/platform UX.
+`GET /optimisation/{id}` provides polling of lifecycle and result state. Runtime `result` is absent during active processing states, may be present for CANCELLATIONFAILED, and may be present for terminal states according to OC MS result rules. OSB and OEX status refresh is REST polling against OC MS through NGW in phase one. Polling cadence is owned by OSB MS in coordination with OEX UI/platform UX.
 
 ## 7. Risks:
 
 | **Risk** | **Impact** | **Mitigation** |
 |---|---|---|
 | **Long-running Gurobi executions** | Delayed optimisation outcomes and worker capacity pressure. | Asynchronous execution, worker scaling, queue monitoring, timeout controls, and alerting. |
-| **Best-effort cancellation** | Running optimisation may not stop immediately or may produce late outcome. | CANCELLING state, worker cancellation handling, and late outcome idempotency rules. |
+| **Best-effort cancellation** | Running optimisation may not stop immediately, may produce a late outcome, or may report that cancellation could not be honoured or confirmed. | CANCELLING state, CANCELLATIONFAILED state, worker cancellation handling, and late outcome idempotency rules. |
 | **Kafka consumer lag** | Execution/result projection delay. | Monitor lag, scale consumers/workers, alert on thresholds. |
 | **OD MS unavailable during runtime creation** | New runtime optimisation creation may fail when OC MS cannot resolve the current ACTIVE specification and has no valid cached immutable ACTIVE contract. | OC MS may use a valid cached immutable ACTIVE contract according to cache policy; otherwise return 503 Service Unavailable and alert on OD dependency health. |
 | **Invalid or stale context datasets** | Poor, infeasible, or failed optimisation outcomes. | Request contract validation, dataset versioning, worker diagnostics, and monitoring. |
@@ -577,7 +577,7 @@ Synchronous API latency targets are to be confirmed through NFR baselining. Solv
 - Runtime `Optimisation` does not expose a `version` field.
 - Runtime `Optimisation` does not support client-side `PUT`, `PATCH`, or `DELETE`.
 - Cancellation is represented through `lifecycleStatus = CANCELLING` and an `OptimisationRequestedEvent` with `instruction = CANCEL`.
-- Only one `ACTIVE` official `OptimisationSpecification` version is allowed per `OptimisationSpecification.id`.
+- Only one `ACTIVE` official `OptimisationSpecification` version is allowed per `OptimisationSpecification.id`, and OD MS also enforces at most one current ACTIVE lineage per `specKey`.
 - ETag and If-Match are required for unsafe runtime operations such as cancellation and retrial.
 - Internal Kafka events do not use TMF REST `@type`, `@baseType`, or `@schemaLocation`.
 
@@ -695,7 +695,7 @@ OptimisationRequestedEvent
 OptimisationCompletedEvent
 ```
 
-A separate `OptimisationFailedEvent` is not used by default. Failed, infeasible, and cancelled outcomes are represented inside `OptimisationCompletedEvent.status`.
+A separate `OptimisationFailedEvent` is not used by default. Failed, infeasible, cancelled, and cancellation-failed outcomes are represented inside `OptimisationCompletedEvent.status`.
 
 ### 10.7. Worker instructions:
 
