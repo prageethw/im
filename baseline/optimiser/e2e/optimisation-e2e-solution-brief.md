@@ -9,6 +9,7 @@
 | **Source path** | `baseline/optimiser/e2e/optimisation-e2e-solution-brief.md` |
 | **Source of truth** | GitHub `main` |
 | **Last aligned** | 2026-05-24 |
+| **Last verified against OD/OC/OSB specs** | 2026-05-24 |
 | **Alignment scope** | Aligned with committed OD MS, OC MS, and OSB MS specifications, including OD `specKey`, DRAFT `draftId`, official version, OC resolved contract-pointer rules, OC `creationContext.reason`, non-terminal `CANCELLATIONFAILED`, header-only ETag handling, OD and OC lifecycle diagrams, and platform resource model extension posture. |
 
 ## Table of contents:
@@ -302,7 +303,7 @@ Phase-one OEX and OSB status refresh is REST polling against OC MS through NGW. 
 
 Cancellation is best-effort. Cancellation has no required request body; optional reason or comment metadata does not change cancellation semantics. OSB must not send an empty JSON object solely to force `Content-Type`. If no body is supplied by OEX, OSB should call OC MS without a request body. Cancellation requested from a non-eligible lifecycle state, including `CANCELLING`, `CANCELLATIONFAILED`, or terminal states, returns `409 Conflict`.
 
-Worker cancellation handling is implementation-specific. The `CANCEL` instruction is best-effort; a worker may complete a solve cycle before honouring cancellation where immediate interruption is not safe or supported.
+Worker cancellation handling is implementation-specific. The `CANCEL` instruction is best-effort; a worker may complete a solve cycle before honouring cancellation where immediate interruption is not safe or supported. If `CANCEL` arrives but the worker completes first, OC MS projects the actual terminal outcome; cancellation remains best-effort.
 
 #### 3.3.7. Retry failed optimisation:
 
@@ -471,6 +472,8 @@ Stale or wrong If-Match -> 412 Precondition Failed
 ```
 
 OSB forwards OC MS ETags and must not generate backend unsafe-operation ETags.
+
+OD and OC ETags are conveyed through HTTP headers. Experience and view payloads must not embed ETag fields.
 
 ### 5.8. Event security and integrity:
 
