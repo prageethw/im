@@ -9,7 +9,7 @@
 | **Source path** | `baseline/optimiser/e2e/optimisation-e2e-solution-brief.md` |
 | **Source of truth** | GitHub `main` |
 | **Last aligned** | 2026-05-24 |
-| **Alignment scope** | Aligned with committed OD MS, OC MS, and OSB MS specifications, including OD `specKey`, DRAFT `draftId`, official version, OC resolved contract-pointer rules, OC `creationContext`, `CANCELLATIONFAILED`, and header-only ETag handling. |
+| **Alignment scope** | Aligned with committed OD MS, OC MS, and OSB MS specifications, including OD `specKey`, DRAFT `draftId`, official version, OC resolved contract-pointer rules, OC `creationContext.reason`, non-terminal `CANCELLATIONFAILED`, header-only ETag handling, OD and OC lifecycle diagrams, and platform resource model extension posture. |
 
 ## Table of contents:
 
@@ -126,7 +126,7 @@ OC MS runtime baseline:
 OC runtime create request rule:
 
 - Runtime create requests provide only `optimisationSpecification.id` as the OD contract reference.
-- Clients must not provide `optimisationSpecification.version`, `draftId`, `href`, `specKey`, or payload `etag` in create requests.
+- Clients must not provide `optimisationSpecification.version`, `draftId`, `href`, `specKey`, or `optimisationSpecification.etag` in create requests.
 - OC MS resolves `version`, `draftId`, and `href` from OD MS and persists them on the accepted runtime record. ETags remain HTTP headers and internal cache metadata only.
 
 OSB MS acts as the OEX backend-for-frontend. It shapes experience models such as `HomeView`, `CapabilityCard`, `RequestFormModel`, `CreationResultView`, `OptimisationSummaryView`, and `OptimisationDetailView`. OSB response models are experience models, not source-of-truth domain resources. OSB may be owned by the experience team to simplify UI flows by aggregating and shaping payloads for UI components.
@@ -146,7 +146,7 @@ The diagram is intentionally simplified and shows the main optimisation platform
 | **5** | Monitor optimisation | User, OEX, or authorised platform service | Read current lifecycle state and result when available. | Caller sees acknowledged, queued, processing, completed, infeasible, failed, cancelling, cancellation-failed, or cancelled state. |
 | **6** | Cancel optimisation | User, OEX, or authorised platform service | Request cancellation for eligible non-terminal optimisation using `If-Match`. | OC MS accepts the asynchronous cancellation command, moves to `CANCELLING`, and sends a best-effort cancel instruction. |
 | **7** | Retry failed optimisation | User, OEX, or authorised platform service | Retry a `FAILED` optimisation. | New `ACKNOWLEDGED` optimisation is created with `retrialOf` attribute; original failed record stays failed. |
-| **8** | Execute optimisation | Python Gurobi Worker | Consume worker instruction and execute deterministic optimisation model. | Worker emits `OptimisationCompletedEvent` with `COMPLETED`, `INFEASIBLE`, `FAILED`, or `CANCELLED`. |
+| **8** | Execute optimisation | Python Gurobi Worker | Consume worker instruction and execute deterministic optimisation model, or process a cancellation command. | Worker emits `OptimisationCompletedEvent` with optimisation outcomes `COMPLETED`, `INFEASIBLE`, `FAILED`, or `CANCELLED`, and may emit cancellation-command outcome `CANCELLATIONFAILED`. |
 | **9** | Retrieve optimisation outcome | User, OEX, or authorised platform service | Retrieve completed result, infeasible explanation, failure details, or cancellation state. | Caller receives final projected runtime state/result from OC MS. |
 
 ### 3.2. Logical view:
