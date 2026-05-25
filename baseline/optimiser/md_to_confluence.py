@@ -354,6 +354,7 @@ def build_header(status_text: str = "draft",
         f'data-layout="default" ac:local-id="{toc_local_id}" '
         f'ac:macro-id="{toc_macro_id}">'
         f'<ac:parameter ac:name="style">none</ac:parameter>'
+        f'<ac:parameter ac:name="exclude">(?i)document\\s+status.*|status</ac:parameter>'
         f'</ac:structured-macro>'
         f'<p local-id="{para2_id}" />\n'
     )
@@ -398,6 +399,15 @@ _MANUAL_TOC_HEADING_RE = re.compile(
     r"[ \t:.]*$",
     re.IGNORECASE | re.MULTILINE,
 )
+# A manually-written "## Document status" (or "## Status") heading. The
+# auto-injected status pill replaces it, so we strip the heading and any
+# content (table or paragraph) that follows until the next heading.
+_MANUAL_STATUS_HEADING_RE = re.compile(
+    r"^(?P<hashes>\#{1,6})[ \t]+"
+    r"(?:document[ \t]+status|status)"
+    r"[ \t:.]*$",
+    re.IGNORECASE | re.MULTILINE,
+)
 _ANCHOR_LIST_ITEM_RE = re.compile(
     r"^[ \t]*(?:[-*+]|\d+\.)[ \t]+.*\]\(#[^)]+\)",
 )
@@ -423,6 +433,47 @@ _MD_MACRO_RE = re.compile(
 # After stripping a macro, a wrapping <p>...</p> may be left holding only
 # whitespace. Drop those so we don't accumulate blank paragraphs.
 _EMPTY_P_RE = re.compile(r"<p\b[^>]*>\s*</p>", re.IGNORECASE)
+
+
+def _strip_manual_status_blocks(md_text: str) -> Tuple[str, int]:
+    """
+    Remove hand-written "## Document status" (or "## Status") sections,
+    including any Markdown table or paragraph that follows the heading,
+    up to (but not including) the next heading. Returns (cleaned, count).
+
+    Algorithm:
+      1. Find each heading line that looks like a status heading.
+      2. Consume the heading + every subsequent line that is blank, a
+         Markdown table row (starts with `|`), or non-heading paragraph
+         text. Stop at the first heading line encountered.
+      3. Delete the heading and all consumed lines.
+    """
+    lines = md_text.splitlines(keepends=True)
+    keep: List[str] = []
+    i = 0
+    removed_blocks = 0
+    n_lines = len(lines)
+
+    while i < n_lines:
+        line = lines[i]
+        if _MANUAL_STATUS_HEADING_RE.match(line):
+            # Consume the heading + the whole block beneath it. We accept
+            # blank lines, table rows (lines beginning with `|`), and
+            # paragraph lines. We stop at the next Markdown heading.
+            j = i + 1
+            while j < n_lines:
+                s = lines[j]
+                if _NEXT_HEADING_RE.match(s):
+                    break
+                j += 1
+            removed_blocks += 1
+            i = j
+            continue
+
+        keep.append(line)
+        i += 1
+
+    return "".join(keep), removed_blocks
 
 
 def _strip_manual_toc_blocks(md_text: str) -> Tuple[str, int]:
