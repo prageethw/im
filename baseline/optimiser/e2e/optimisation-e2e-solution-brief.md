@@ -103,7 +103,7 @@ OD identity baseline:
 - `version` is the official immutable version identity for ACTIVE and RETIRED records.
 - `specKey` is the logical specification key used for discovery and active-lineage uniqueness; it is not used by OC MS for runtime contract selection.
 - ACTIVE and RETIRED records are primarily selected by `id` and `version`.
-- DRAFT candidates are selected by `id` and `draftId`.
+- DRAFT candidates carry an `id` but DRAFT operations are addressed by `draftId`.
 - Read-only provenance lookup by `id` and `draftId` is allowed because a `draftId` can produce at most one ACTIVE or RETIRED official version within an id lineage.
 
 OC MS acts as the runtime controller. It accepts runtime requests, validates `expression.expressionValue` against the referenced ACTIVE `OptimisationSpecification.targetEntitySchema`, creates runtime optimisation resources, manages lifecycle state, publishes worker instructions, consumes worker outcomes, and projects final results.
@@ -230,7 +230,7 @@ Catalogue-management journeys are feature-gated and out of phase-one scope unles
 2. OSB exposes this only when catalogue management is enabled and user context allows it.
 3. OSB calls NGW using mTLS and OAuth2 system-to-system.
 4. NGW routes activation PATCH or PUT to OD MS.
-5. OD MS validates ETag, selected `id` and `draftId`, DRAFT lifecycle, and full specification contract.
+5. OD MS validates ETag, selected `draftId`, the DRAFT lifecycle, the draft’s resolved `id`, and the full specification contract.
 6. OD MS assigns official version during activation.
 7. OD MS moves the selected DRAFT candidate to ACTIVE.
 8. OD MS transactionally retires any previous ACTIVE version for the same `OptimisationSpecification.id`.
