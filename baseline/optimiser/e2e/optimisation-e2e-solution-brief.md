@@ -8,8 +8,8 @@
 | **Scope** | Optimisation platform end-to-end architecture |
 | **Source path** | `baseline/optimiser/e2e/optimisation-e2e-solution-brief.md` |
 | **Source of truth** | GitHub `main` |
-| **Last aligned** | 2026-05-23 |
-| **Alignment scope** | Aligned with committed OD MS, OC MS, and OSB MS specifications, including OD `draftId`, official version, and OC resolved contract-pointer rules. |
+| **Last aligned** | 2026-05-24 |
+| **Alignment scope** | Aligned with committed OD MS, OC MS, and OSB MS specifications, including OD `specKey`, DRAFT `draftId`, official version, OC resolved contract-pointer rules, OC `creationContext`, `CANCELLATIONFAILED`, and header-only ETag handling. |
 
 ## Table of contents:
 
@@ -63,6 +63,8 @@ Kafka carries worker instructions and outcomes, with a dedicated DLQ for unproce
 
 NGW-exposed backend APIs use TMF-style API conventions where appropriate. `OptimisationSpecification` and `Optimisation` are optimiser-domain platform resources, not native TMF Open API resources. OGW-exposed experience APIs, private MS-to-MS APIs, and internal Kafka events do not need to be TMF-compliant.
 
+Platform resource model extensions are deliberate and documented in the owning service specifications. OD MS owns `specKey`, `draftId`, DRAFT candidate operations, and ACTIVE retirement semantics. OC MS owns runtime `creationContext`, cancellation and retrial commands, and the `CANCELLATIONFAILED` lifecycle value. OSB exposes experience-layer view models over these backend platform resources and must preserve their semantics.
+
 ## 3. Solution elaboration:
 
 OD MS acts as the governed catalogue of optimisation capabilities. It exposes only what callers need to discover and submit a valid optimisation request through:
@@ -70,7 +72,7 @@ OD MS acts as the governed catalogue of optimisation capabilities. It exposes on
 - `specCharacteristic[]`
 - `expressionSpecification{}`
 - `targetEntitySchema{}`
-- `id`, `draftId`, `version`, `familyId`, `lifecycleStatus`, and `ETag` governance
+- `id`, `specKey`, `draftId`, `version`, `lifecycleStatus`, and HTTP `ETag` governance
 
 OD MS does not expose Gurobi objectives, candidate resource rules, solver configuration, model bindings, or internal formulation details.
 
@@ -91,14 +93,14 @@ OD MS rules:
 - Many RETIRED official versions may exist for the same `OptimisationSpecification.id`.
 - ACTIVE and RETIRED specifications are immutable.
 - Activation of a DRAFT candidate assigns the official version and retires any previous ACTIVE version for the same `OptimisationSpecification.id` transactionally.
-- `familyId` is logical grouping metadata and is not the lifecycle or versioning control key.
+- `specKey` is the mandatory logical specification key used by OD MS to resolve the server-assigned specification `id` for a DRAFT candidate.
 
 OD identity baseline:
 
 - `id` is the stable OptimisationSpecification lineage identity.
 - `draftId` is the DRAFT candidate identity and provenance identifier after activation or retirement.
 - `version` is the official immutable version identity for ACTIVE and RETIRED records.
-- `familyId` is logical grouping metadata only.
+- `specKey` is the logical specification key used for discovery and active-lineage uniqueness; it is not used by OC MS for runtime contract selection.
 - ACTIVE and RETIRED records are primarily selected by `id` and `version`.
 - DRAFT candidates are selected by `id` and `draftId`.
 - Read-only provenance lookup by `id` and `draftId` is allowed because a `draftId` can produce at most one ACTIVE or RETIRED official version within an id lineage.
@@ -110,21 +112,22 @@ OC MS runtime baseline:
 - Runtime Optimisation has no business version.
 - POST optimisation returns `201 Created` because the resource is created immediately.
 - Execution is asynchronous.
-- Result is terminal-only.
+- Runtime Optimisation includes `creationContext.reason = NEW` for normal requests and `creationContext.reason = RETRIAL` for retrial-created resources.
+- Result is absent during active processing states and may be present according to OC MS lifecycle rules.
 - `optimisationSpecification.id` is mandatory in the runtime create request.
 - OC MS resolves the current ACTIVE `OptimisationSpecification` by id at acceptance time.
-- OC MS persists the resolved `optimisationSpecification.id`, `version`, `draftId`, `href`, and optional `etag` as the immutable contract pointer for the runtime record.
+- OC MS persists the resolved `optimisationSpecification.id`, `version`, `draftId`, and `href` as the immutable contract pointer for the runtime record. OD MS ETags may be retained internally for cache validation, audit, and troubleshooting, but are not exposed inside the runtime payload.
 - `expression.iri` is mandatory and identifies the submitted runtime expression semantics.
 - OC MS verifies runtime `expression.iri` against the resolved `OptimisationSpecification.expressionSpecification.iri`.
-- OC MS must not resolve or substitute the runtime contract by `familyId`, `draftId`, `version`, or `expression.iri`.
+- OC MS must not resolve or substitute the runtime contract by `specKey`, `draftId`, `version`, or `expression.iri`.
 - OC MS must not substitute a newer ACTIVE specification for an already accepted runtime record.
 - Retrial reuses the original persisted contract pointer and does not re-resolve the current ACTIVE specification.
 
 OC runtime create request rule:
 
 - Runtime create requests provide only `optimisationSpecification.id` as the OD contract reference.
-- Clients must not provide `optimisationSpecification.version`, `draftId`, `href`, or `etag` in create requests.
-- OC MS resolves these fields from OD MS and persists them on the accepted runtime record.
+- Clients must not provide `optimisationSpecification.version`, `draftId`, `href`, `specKey`, or payload `etag` in create requests.
+- OC MS resolves `version`, `draftId`, and `href` from OD MS and persists them on the accepted runtime record. ETags remain HTTP headers and internal cache metadata only.
 
 OSB MS acts as the OEX backend-for-frontend. It shapes experience models such as `HomeView`, `CapabilityCard`, `RequestFormModel`, `CreationResultView`, `OptimisationSummaryView`, and `OptimisationDetailView`. OSB response models are experience models, not source-of-truth domain resources. OSB may be owned by the experience team to simplify UI flows by aggregating and shaping payloads for UI components.
 
@@ -140,7 +143,7 @@ The diagram is intentionally simplified and shows the main optimisation platform
 | **2** | Create optimisation specification | Optimisation domain engineer | Create a governed `OptimisationSpecification` DRAFT in OD MS after agreement with E2E teams. | Mutable DRAFT specification is created without an official public version. |
 | **3** | Activate optimisation specification | Optimisation domain engineer | Promote a reviewed DRAFT candidate to ACTIVE. | OD MS assigns official version and retires previous ACTIVE for the same `OptimisationSpecification.id`. |
 | **4** | Create runtime optimisation | User, OEX, or authorised platform service | Submit a runtime `Optimisation` request to OC MS using a referenced ACTIVE specification and valid expression value. | OC MS returns `201 Created` and creates an `ACKNOWLEDGED` optimisation. Execution proceeds asynchronously. |
-| **5** | Monitor optimisation | User, OEX, or authorised platform service | Read current lifecycle state and result when available. | Caller sees acknowledged, queued, processing, completed, infeasible, failed, cancelling, or cancelled state. |
+| **5** | Monitor optimisation | User, OEX, or authorised platform service | Read current lifecycle state and result when available. | Caller sees acknowledged, queued, processing, completed, infeasible, failed, cancelling, cancellation-failed, or cancelled state. |
 | **6** | Cancel optimisation | User, OEX, or authorised platform service | Request cancellation for eligible non-terminal optimisation using `If-Match`. | OC MS accepts the asynchronous cancellation command, moves to `CANCELLING`, and sends a best-effort cancel instruction. |
 | **7** | Retry failed optimisation | User, OEX, or authorised platform service | Retry a `FAILED` optimisation. | New `ACKNOWLEDGED` optimisation is created with `retrialOf` attribute; original failed record stays failed. |
 | **8** | Execute optimisation | Python Gurobi Worker | Consume worker instruction and execute deterministic optimisation model. | Worker emits `OptimisationCompletedEvent` with `COMPLETED`, `INFEASIBLE`, `FAILED`, or `CANCELLED`. |
@@ -209,7 +212,7 @@ Normal OEX capability browsing defaults to ACTIVE capabilities only. `capability
 6. NGW routes create request to OD MS.
 7. OD MS authenticates and authorises the service caller.
 8. OD MS validates OptimisationSpecification request shape.
-9. OD MS persists a mutable DRAFT candidate with `id`, `draftId`, optional `familyId`, and without official public version.
+9. OD MS persists a mutable DRAFT candidate with `id`, `draftId`, `specKey`, and without official public version.
 10. OD MS returns 201 Created with Location, ETag, `id`, and `draftId`.
 11. OSB shapes catalogue-management response if catalogue management is enabled.
 ```
@@ -246,15 +249,15 @@ Catalogue-management journeys are feature-gated and out of phase-one scope unles
 7. OC MS validates referenced `OptimisationSpecification.id` exists and resolves the current ACTIVE version at request-acceptance time.
 8. OC MS validates runtime expression.iri is present and matches the referenced OptimisationSpecification.expressionSpecification.iri.
 9. OC MS validates expression.expressionValue against the referenced ACTIVE targetEntitySchema.
-10. OC MS persists runtime Optimisation with lifecycleStatus = ACKNOWLEDGED.
-11. OC MS stores resolved `optimisationSpecification.id`, `version`, `draftId`, `href`, and optional `etag` as the immutable contract pointer.
+10. OC MS persists runtime Optimisation with lifecycleStatus = ACKNOWLEDGED and creationContext.reason = NEW.
+11. OC MS stores resolved `optimisationSpecification.id`, `version`, `draftId`, and `href` as the immutable contract pointer. OD MS ETags remain HTTP headers and may be retained internally for cache validation, audit, and troubleshooting only.
 12. OC MS writes OptimisationRequestedEvent with instruction = EXECUTE to outbox in same transaction.
 13. OC MS returns 201 Created with Location, ETag, and runtime resource body after resource persistence and outbox write, before worker execution completes. The response always shows lifecycleStatus = ACKNOWLEDGED because ACKNOWLEDGED is the only initial lifecycle state after successful runtime resource creation.
 14. OC MS Outbox Relay publishes OptimisationRequestedEvent to Kafka.
 15. OC MS advances ACKNOWLEDGED -> QUEUED after successful Kafka publish. QUEUED is projected later and is not the initial creation response state.
 16. Python Gurobi Worker consumes OptimisationRequestedEvent.
 17. Worker resolves deterministic model binding and invokes Gurobi Optimiser.
-18. Worker publishes OptimisationCompletedEvent with COMPLETED, INFEASIBLE, FAILED, or CANCELLED.
+18. Worker publishes OptimisationCompletedEvent with COMPLETED, INFEASIBLE, FAILED, CANCELLED, or CANCELLATIONFAILED.
 19. OC MS Inbox Consumer applies idempotency and stale and late event checks.
 20. OC MS updates lifecycle and result projection.
 21. Caller polls through User -> OEX -> OGW -> OSB MS -> NGW -> OC MS to retrieve status and result.
@@ -289,14 +292,14 @@ Phase-one OEX and OSB status refresh is REST polling against OC MS through NGW. 
 4. OSB forwards If-Match from OC MS ETag and must not generate its own backend ETag.
 5. NGW routes POST /optimisation/{id}/cancellation to OC MS.
 6. OC MS validates ETag and eligible non-terminal lifecycle.
-7. OC MS returns the status defined by the OC MS API contract for accepted cancellation. In the current baseline this is 202 Accepted, with lifecycleStatus = CANCELLING until `OptimisationCompletedEvent.status = CANCELLED` is projected.
+7. OC MS returns the status defined by the OC MS API contract for accepted cancellation. In the current baseline this is 202 Accepted, with lifecycleStatus = CANCELLING until a cancellation command outcome or terminal optimisation outcome is projected.
 8. OC MS writes OptimisationRequestedEvent with instruction = CANCEL to outbox.
 9. OC MS Outbox Relay publishes event to Kafka.
 10. Worker stops, cancels, or ignores work where safely possible.
-11. Baseline cancellation confirmation is `OptimisationCompletedEvent.status = CANCELLED`; OC MS projects CANCELLED only after that terminal worker confirmation.
+11. Baseline cancellation confirmation is `OptimisationCompletedEvent.status = CANCELLED`; OC MS projects CANCELLED only after that worker confirmation. If the worker reports `CANCELLATIONFAILED`, OC MS projects non-terminal CANCELLATIONFAILED and continues to accept a later valid terminal outcome of COMPLETED, INFEASIBLE, or FAILED.
 ```
 
-Cancellation is best-effort. Cancellation has no required request body; optional reason or comment metadata does not change cancellation semantics. OSB must not send an empty JSON object solely to force `Content-Type`. If no body is supplied by OEX, OSB should call OC MS without a request body. Cancellation requested for terminal `COMPLETED`, `FAILED`, `INFEASIBLE`, or `CANCELLED` state returns `409 Conflict`.
+Cancellation is best-effort. Cancellation has no required request body; optional reason or comment metadata does not change cancellation semantics. OSB must not send an empty JSON object solely to force `Content-Type`. If no body is supplied by OEX, OSB should call OC MS without a request body. Cancellation requested from a non-eligible lifecycle state, including `CANCELLING`, `CANCELLATIONFAILED`, or terminal states, returns `409 Conflict`.
 
 Worker cancellation handling is implementation-specific. The `CANCEL` instruction is best-effort; a worker may complete a solve cycle before honouring cancellation where immediate interruption is not safe or supported.
 
@@ -312,13 +315,13 @@ Worker cancellation handling is implementation-specific. The `CANCEL` instructio
 5. OC MS validates original Optimisation lifecycleStatus = FAILED.
 6. OC MS creates a new Optimisation resource.
 7. New Optimisation links to original through retrialOf.
-8. New Optimisation starts with lifecycleStatus = ACKNOWLEDGED.
+8. New Optimisation starts with lifecycleStatus = ACKNOWLEDGED and creationContext.reason = RETRIAL.
 9. OC MS writes OptimisationRequestedEvent with instruction = EXECUTE for the new Optimisation.
 10. OC MS returns 201 Created with Location, ETag, and the new runtime Optimisation body before worker execution completes.
 11. Worker processes the new request asynchronously.
 ```
 
-Retrial is available only from `FAILED` in the baseline. Retrial is not available from `INFEASIBLE` by default because `INFEASIBLE` is a valid optimisation or model outcome, not a technical failure. Retrial has no required request body and does not allow overrides. OSB must not send an empty JSON object solely to force `Content-Type`. If no body is supplied by OEX, OSB should call OC MS without a request body. Retrial resubmits the original accepted expression and reuses the original persisted OC contract pointer, including `id`, `version`, `draftId`, `href`, and optional `etag`. When OC MS creates the retrial resource, it returns `201 Created` with the new runtime Optimisation id, `Location`, `ETag`, and resource body.
+Retrial is available only from `FAILED` in the baseline. Retrial is not available from `INFEASIBLE` by default because `INFEASIBLE` is a valid optimisation or model outcome, not a technical failure. Retrial has no required request body and does not allow overrides. OSB must not send an empty JSON object solely to force `Content-Type`. If no body is supplied by OEX, OSB should call OC MS without a request body. Retrial resubmits the original accepted expression and reuses the original persisted OC contract pointer, including `id`, `version`, `draftId`, and `href`. When OC MS creates the retrial resource, it returns `201 Created` with the new runtime Optimisation id, `Location`, `ETag`, and resource body.
 
 #### 3.3.8. Gurobi execute optimisation:
 
@@ -330,7 +333,7 @@ Retrial is available only from `FAILED` in the baseline. Retrial is not availabl
 3. Worker resolves runtime context and internal deterministic model binding.
 4. Worker invokes Gurobi Optimiser.
 5. Gurobi Optimiser returns solver output, infeasibility information, failure information, or cancellation confirmation.
-6. Worker maps outcome to COMPLETED, INFEASIBLE, FAILED, or CANCELLED.
+6. Worker maps outcome to COMPLETED, INFEASIBLE, FAILED, CANCELLED, or CANCELLATIONFAILED.
 7. Worker publishes OptimisationCompletedEvent.
 8. OC MS Inbox Consumer applies idempotency and stale and late event checks.
 9. OC MS updates runtime lifecycle and result projection.
@@ -349,8 +352,8 @@ Worker-side idempotency in this E2E brief means duplicate event detection using 
 | **OEX UI and experience layer** | Provides user/operator-facing experience for discovery, request submission, monitoring, cancellation, retrial, and result viewing. |
 | **OSB MS** | Builds OEX view models, applies user-context filtering, uses backend `_links` plus user context for actions, forwards ETags, and calls backend APIs through NGW. |
 | **NGW** | Backend API entry point for OD MS and OC MS using service identity and mTLS. |
-| **OD MS** | Owns `OptimisationSpecification` catalogue, lifecycle and version governance, `id` lineage identity, `draftId` draft provenance, official `version`, logical `familyId` grouping metadata, `specCharacteristic[]`, `expressionSpecification`, and `targetEntitySchema`. |
-| **OD MS Database** | Stores specification lineage records, `draftId`, `familyId`, lifecycle, official version for ACTIVE and RETIRED, ETags, provenance, and immutable retained history. |
+| **OD MS** | Owns `OptimisationSpecification` catalogue, lifecycle and version governance, `id` lineage identity, `draftId` draft provenance, official `version`, `specKey` logical key, `specCharacteristic[]`, `expressionSpecification`, and `targetEntitySchema`. |
+| **OD MS Database** | Stores specification lineage records, `draftId`, `specKey`, lifecycle, official version for ACTIVE and RETIRED, ETags, provenance, and immutable retained history. |
 | **OC MS** | Owns runtime `Optimisation` resources, lifecycle, accepted expression values, immutable resolved specification pointer, outbox and inbox, cancellation, retrial, and result projection. |
 | **OC MS Database** | Stores runtime records, lifecycle state, statusChangeDate, sourceContext, expression, resolved specification pointer, result when terminal, relationships, outbox, and inbox records. |
 | **OC MS Outbox Relay** | Publishes `OptimisationRequestedEvent` to Kafka after DB commit; successful publish drives ACKNOWLEDGED -> QUEUED. |
@@ -415,12 +418,12 @@ OptimisationSpecification.id exists
 current ACTIVE version is resolved by OptimisationSpecification.id
 resolved ACTIVE version has lifecycleStatus = ACTIVE
 expression.expressionValue matches the resolved targetEntitySchema
-resolved id, version, draftId, href, and optional etag are persisted on the runtime record
+resolved id, version, draftId, href are persisted on the runtime record
 ```
 
 The persisted resolved specification reference is the immutable contract pointer for the accepted runtime Optimisation. OC MS must not re-resolve or replace that pointer later, including during retrial.
 
-OC MS may cache immutable ACTIVE specification contracts by id and ETag, but must not infer current active contract by stale `familyId` lookup. If OD MS is unavailable and OC MS has no valid cached immutable ACTIVE contract for the requested id, OC MS returns 503 Service Unavailable. If a valid cached immutable ACTIVE contract exists, OC MS may proceed according to cache policy.
+OC MS may cache immutable ACTIVE specification contracts by `id` and `version`, using OD MS ETag headers internally for cache validation, but must not infer the current active contract by stale `specKey` lookup. If OD MS is unavailable and OC MS has no valid cached immutable ACTIVE contract for the requested id, OC MS returns 503 Service Unavailable. If a valid cached immutable ACTIVE contract exists, OC MS may proceed according to cache policy. OC MS may separately maintain a request-result cache keyed by a deterministic hash of the canonical accepted runtime optimisation request body after the ACTIVE specification version is resolved. The request-result cache hash is internal metadata and does not replace runtime Optimisation identity, lifecycle, audit, or external representation.
 
 ### 5.6. Kafka security:
 
@@ -585,14 +588,16 @@ Synchronous API latency targets are to be confirmed through NFR baselining. Solv
 GET /optimisationManagement/v1/optimisationSpecification
 POST /optimisationManagement/v1/optimisationSpecification
 GET /optimisationManagement/v1/optimisationSpecification/{id}
-PATCH /optimisationManagement/v1/optimisationSpecification/{id}
-PUT /optimisationManagement/v1/optimisationSpecification/{id}
 DELETE /optimisationManagement/v1/optimisationSpecification/{id}
+GET /optimisationManagement/v1/optimisationSpecification/draft/{draftId}
+PATCH /optimisationManagement/v1/optimisationSpecification/draft/{draftId}
+PUT /optimisationManagement/v1/optimisationSpecification/draft/{draftId}
+DELETE /optimisationManagement/v1/optimisationSpecification/draft/{draftId}
 ```
 
 OD `PATCH` requires `Content-Type: application/merge-patch+json`. OD `PUT` requires `Content-Type: application/json` and is allowed only for mutable DRAFT replacement/finalisation.
 
-DRAFT candidate operations require `draftId` where applicable. In particular, DRAFT mutation, activation, and deletion target the selected `(id, draftId)` candidate, while ACTIVE and RETIRED official versions are selected by `id` and `version`, or by `id` alone when resolving the current ACTIVE version.
+DRAFT candidate operations use `/optimisationSpecification/draft/{draftId}`. ACTIVE retirement uses `DELETE /optimisationSpecification/{id}` and retires the current ACTIVE version for that `id`. ACTIVE and RETIRED official versions are selected by `id` and `version`, or by `id` alone when resolving the current ACTIVE version.
 
 ### 10.2. OC MS endpoint summary:
 
@@ -639,6 +644,7 @@ COMPLETED
 INFEASIBLE
 FAILED
 CANCELLING
+CANCELLATIONFAILED
 CANCELLED
 ```
 
@@ -651,7 +657,8 @@ CANCELLED
 | `INFEASIBLE` | Worker/model determined no feasible solution exists. Not retriable by default. |
 | `FAILED` | Technical/runtime failure occurred. Retriable by creating a new linked Optimisation. |
 | `CANCELLING` | Cancellation was requested and is being handled. |
-| `CANCELLED` | Optimisation was cancelled after `OptimisationCompletedEvent.status = CANCELLED` confirms cancellation was honoured(safely). |
+| `CANCELLATIONFAILED` | Non-terminal cancellation command outcome. Cancellation could not be honoured or confirmed, and optimisation execution may still later reach COMPLETED, INFEASIBLE, or FAILED. |
+| `CANCELLED` | Optimisation was cancelled after `OptimisationCompletedEvent.status = CANCELLED` confirms cancellation was honoured safely. |
 
 Lifecycle transition baseline:
 
@@ -664,10 +671,14 @@ PROCESSING -> FAILED
 ACKNOWLEDGED -> CANCELLING -> CANCELLED
 QUEUED -> CANCELLING -> CANCELLED
 PROCESSING -> CANCELLING -> CANCELLED
-FAILED -> retrial creates new ACKNOWLEDGED Optimisation
+CANCELLING -> CANCELLATIONFAILED
+CANCELLATIONFAILED -> COMPLETED
+CANCELLATIONFAILED -> INFEASIBLE
+CANCELLATIONFAILED -> FAILED
+FAILED -> retrial creates new ACKNOWLEDGED Optimisation with creationContext.reason = RETRIAL
 ```
 
-`statusChangeDate` is updated on every lifecycle transition, including ACKNOWLEDGED -> QUEUED, QUEUED -> PROCESSING, terminal outcomes, and CANCELLING -> CANCELLED.
+`statusChangeDate` is updated on every lifecycle transition, including ACKNOWLEDGED -> QUEUED, QUEUED -> PROCESSING, terminal outcomes, CANCELLING -> CANCELLED, CANCELLING -> CANCELLATIONFAILED, and later CANCELLATIONFAILED -> terminal outcome transitions.
 
 ### 10.5. Kafka topics:
 
@@ -699,6 +710,7 @@ COMPLETED
 INFEASIBLE
 FAILED
 CANCELLED
+CANCELLATIONFAILED
 ```
 
 ### 10.9. Outcome mapping:
@@ -710,6 +722,7 @@ COMPLETED
 INFEASIBLE
 FAILED
 CANCELLED
+CANCELLATIONFAILED
 ```
 
 OC MS maps worker status to runtime lifecycle status as follows:
@@ -719,6 +732,7 @@ COMPLETED -> lifecycleStatus COMPLETED
 INFEASIBLE -> lifecycleStatus INFEASIBLE
 FAILED -> lifecycleStatus FAILED
 CANCELLED -> lifecycleStatus CANCELLED
+CANCELLATIONFAILED -> lifecycleStatus CANCELLATIONFAILED
 ```
 
 Do not introduce an alternate success status unless the worker contract is explicitly changed to emit one.
@@ -760,8 +774,9 @@ OD MS defines the allowed structure using `OptimisationSpecification.targetEntit
 
 ```text
 result MUST be absent while lifecycleStatus is ACKNOWLEDGED, QUEUED, PROCESSING, or CANCELLING.
-result MAY be present when lifecycleStatus is COMPLETED, INFEASIBLE, FAILED, or CANCELLED.
+result MAY be present when lifecycleStatus is COMPLETED, INFEASIBLE, FAILED, CANCELLED, or CANCELLATIONFAILED.
 CANCELLED result details may include safe cancellation summary metadata but must not expose worker internals.
+CANCELLATIONFAILED result details may include safe cancellation command outcome metadata, but must be superseded by any later COMPLETED, INFEASIBLE, or FAILED terminal outcome.
 FAILED result details may include safe error codes and messages only.
 ```
 
