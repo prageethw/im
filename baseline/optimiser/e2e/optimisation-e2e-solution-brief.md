@@ -817,6 +817,8 @@ Use `400 Bad Request` for malformed requests, missing required top-level request
 
 PUML and DrawIO files are editable source artifacts. Rendered SVG and PNG exports are the preferred review and consumption artifacts where available.
 
+OSB MS has no lifecycle state diagram in the baseline because OSB is an experience-layer facade and does not own resource lifecycle state. Runtime lifecycle is owned by OC MS.
+
 ```text
 od-ms/od-ms-specification.md
 od-ms/od-ms.oas.yaml (pending)
