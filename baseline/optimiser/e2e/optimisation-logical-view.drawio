@@ -138,7 +138,7 @@
                     <mxGeometry x="391.53846153846155" y="-574.2857142857142" width="181.25874125874125" height="71.66666666666669" as="geometry"/>
                 </mxCell>
                 <mxCell id="1g_pKyIUPg_Uf4EWA1Bv-7" value="OEX Layer&lt;br&gt;&lt;span style=&quot;font-size:11px&quot;&gt;Experience, UI, API façade&lt;br&gt;&lt;/span&gt;" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=default;fontStyle=1;container=0;" parent="1" vertex="1">
-                    <mxGeometry x="391.54" y="-377" width="211.47" height="50" as="geometry"/>
+                    <mxGeometry x="391.54" y="-384" width="211.47" height="50" as="geometry"/>
                 </mxCell>
                 <mxCell id="1g_pKyIUPg_Uf4EWA1Bv-8" value="Authenticate" style="endArrow=block;html=1;rounded=0;strokeWidth=2;strokeColor=default;" parent="1" source="1g_pKyIUPg_Uf4EWA1Bv-5" target="1g_pKyIUPg_Uf4EWA1Bv-6" edge="1">
                     <mxGeometry relative="1" as="geometry">
