@@ -17,7 +17,7 @@ participant "NGW" as NGW
 participant "OC MS" as OCMS
 database "OC MS DB" as OCDB
 
-== Status / Result Request ==
+== Status and Result Request ==
 
 Caller -> OGW : 1. Request optimisation\nstatus or result
 OGW -> OGW : 2. Authenticate caller/session\nand derive user context
@@ -27,7 +27,7 @@ User context may include tenant, claims,
 roles/scopes, and entitlements.
 end note
 
-OGW -> OSB : 3. Invoke OSB MS\nmTLS + User Context JWT\ncorrelationId / traceId
+OGW -> OSB : 3. Invoke OSB MS\nmTLS + User Context JWT\ncorrelationId and traceId
 
 OSB -> OSB : 4. Validate access to\nrequested optimisation view\nusing user context
 
@@ -39,17 +39,17 @@ by OSB MS before the request crosses NGW.
 Backend OC MS decision still wins.
 end note
 
-OSB -> NGW : 5. Forward status/result request\nmTLS + OAuth2 system identity\ncorrelationId / traceId\n(no user context downstream)
+OSB -> NGW : 5. Forward status and result request\nmTLS + OAuth2 system identity\ncorrelationId and traceId\n(no user context downstream)
 
 note right of NGW
 User context stops before/at NGW.
 Downstream OC MS call uses system/service identity only.
 end note
 
-NGW -> OCMS : 6. Route GET /optimisation/{id}\nmTLS + service/system auth
+NGW -> OCMS : 6. Route GET /optimisation/{id}\nmTLS + service identity
 
 note right of OCMS
-OC MS authorises the calling service/system.
+OC MS authorises the calling service identity.
 OC MS does not receive or depend on end-user
 identity, claims, roles, or scopes.
 end note
@@ -57,11 +57,11 @@ end note
 == Data Retrieval ==
 
 OCMS -> OCDB : 7. Read runtime Optimisation\nby id
-OCDB --> OCMS : Runtime record\nlifecycleStatus + result if terminal\nETag + _links
+OCDB --> OCMS : Runtime record\nlifecycleStatus + result where present\nETag header + _links
 
 == Response ==
 
-OCMS --> NGW : 8. Return runtime Optimisation\nlifecycleStatus\nstatusChangeDate\nresult if terminal\n_links/actions where applicable
+OCMS --> NGW : 8. Return runtime Optimisation\nlifecycleStatus\nstatusChangeDate\nresult where present\n_links/actions where applicable
 NGW --> OSB : 9. Return response to OSB MS
 
 OSB -> OSB : 10. Shape OptimisationDetailView\nor OptimisationSummaryView
@@ -69,10 +69,11 @@ OSB -> OSB : 10. Shape OptimisationDetailView\nor OptimisationSummaryView
 note right of OSB
 OSB may format labels and guidance for OEX,
 but it must not infer terminal status locally.
+CANCELLATIONFAILED is non-terminal; OSB continues polling.
 Terminal state must come from OC MS.
 end note
 
-OSB --> OGW : 11. OEX-friendly status/result view\nwith backend correlation/trace details
+OSB --> OGW : 11. OEX-friendly status and result view\nwith backend correlation/trace details
 OGW --> Caller : 12. Current lifecycle/result state
 
 == Read-Only Boundary ==

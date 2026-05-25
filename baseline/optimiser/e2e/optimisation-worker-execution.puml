@@ -35,40 +35,44 @@ Gurobi --> Worker : 6. Return solver output,\ninfeasibility information,\nor fai
 
 == Outcome Mapping and Publishing ==
 
-Worker -> Worker : 7. Map worker result to\nCOMPLETED / INFEASIBLE / FAILED / CANCELLED
+Worker -> Worker : 7. Map outcome to\nCOMPLETED, INFEASIBLE, FAILED, CANCELLED,\nor CANCELLATIONFAILED
 
 note right of Worker
 Worker emits OptimisationCompletedEvent.status as:
-COMPLETED, INFEASIBLE, FAILED, or CANCELLED.
+COMPLETED, INFEASIBLE, FAILED, CANCELLED,
+or CANCELLATIONFAILED.
 
-INFEASIBLE is a valid optimisation/model outcome.
+CANCELLATIONFAILED is a cancellation-command outcome,
+not an optimisation execution outcome.
+INFEASIBLE is a valid optimisation or model outcome.
 It is not a contract validation error.
 end note
 
-Worker -> Kafka : 8. Publish OptimisationCompletedEvent\nstatus = COMPLETED / INFEASIBLE / FAILED / CANCELLED\neventId + optimisationId\ncorrelationId + traceId
+Worker -> Kafka : 8. Publish OptimisationCompletedEvent\nstatus = COMPLETED, INFEASIBLE, FAILED,\nCANCELLED, or CANCELLATIONFAILED\neventId + optimisationId\ncorrelationId + traceId
 
 == Result Ingestion ==
 
 Kafka -> Inbox : 9. Consume OptimisationCompletedEvent
 Inbox -> Inbox : 10. Apply idempotency\nand stale/late-event checks
-Inbox -> OCDB : 11. Project lifecycle/result\nCOMPLETED / INFEASIBLE / FAILED / CANCELLED
+Inbox -> OCDB : 11. Project lifecycle/result\nCOMPLETED, INFEASIBLE, FAILED,\nCANCELLED, or CANCELLATIONFAILED
 OCDB --> Inbox : Projection stored
 
 note right of OCDB
-Runtime result is terminal-only.
+Runtime result is absent during active processing.
 
 result is absent while lifecycleStatus is
 ACKNOWLEDGED, QUEUED, PROCESSING, or CANCELLING.
 
 result may be present when lifecycleStatus is
-COMPLETED, INFEASIBLE, FAILED, or CANCELLED.
+COMPLETED, INFEASIBLE, FAILED, CANCELLED,
+or CANCELLATIONFAILED.
 end note
 
 == User Observation ==
 
-Caller -> OGW : 12. Poll optimisation status/result
+Caller -> OGW : 12. Poll optimisation status and result
 OGW -> OGW : 13. Authenticate caller/session\nand derive user context
-OGW -> OSB : 14. Invoke OSB MS\nmTLS + User Context JWT\ncorrelationId / traceId
+OGW -> OSB : 14. Invoke OSB MS\nmTLS + User Context JWT\ncorrelationId and traceId
 
 OSB -> OSB : 15. Authorise result visibility\nusing user context
 
@@ -80,19 +84,19 @@ by OSB MS before the request crosses NGW.
 Backend OC MS decision still wins.
 end note
 
-OSB -> NGW : 16. Forward read request\nmTLS + OAuth2 system identity\ncorrelationId / traceId\n(no user context downstream)
+OSB -> NGW : 16. Forward read request\nmTLS + OAuth2 system identity\ncorrelationId and traceId\n(no user context downstream)
 
 note right of NGW
 User context stops before/at NGW.
 Downstream OC MS calls use system/service identity only.
 end note
 
-NGW -> OCMS : 17. Route GET /optimisation/{id}\nmTLS + service/system auth
+NGW -> OCMS : 17. Route GET /optimisation/{id}\nmTLS + service identity
 OCMS -> OCDB : 18. Read lifecycle/result
 OCDB --> OCMS : Runtime Optimisation
-OCMS --> NGW : Runtime Optimisation\nlifecycleStatus + result if terminal\nETag + _links
+OCMS --> NGW : Runtime Optimisation\nlifecycleStatus + result where present\nETag + _links
 NGW --> OSB : Return response
 OSB --> OGW : Shape OptimisationDetailView
-OGW --> Caller : Current optimisation status/result
+OGW --> Caller : Current optimisation status and result
 
 @enduml

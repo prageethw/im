@@ -23,7 +23,7 @@ participant "Python/Gurobi\nWorker" as Worker
 == Request Retrial ==
 
 Caller -> OGW : 1. Request retrial\nfor failed runtime Optimisation
-OGW -> OSB : 2. Invoke OSB MS\nmTLS + User Context JWT\ncorrelationId / traceId
+OGW -> OSB : 2. Invoke OSB MS\nmTLS + User Context JWT\ncorrelationId and traceId
 
 OSB -> OSB : 3. Check user context\nand current ETag availability
 
@@ -58,13 +58,13 @@ NGW -> OCMS : 5. Route retrial request
 OCMS -> OCDB : 6. Validate If-Match\nand original lifecycle state
 OCDB --> OCMS : Current original Optimisation
 
-alt Original lifecycleStatus is not FAILED
+alt Original lifecycleStatus is not FAILED\nincluding CANCELLATIONFAILED
   OCMS --> NGW : 409 Conflict\nRetrial allowed only from FAILED
   NGW --> OSB : 409 Conflict
   OSB --> OGW : Lifecycle conflict view
   OGW --> Caller : Retrial not allowed
 else Original lifecycleStatus = FAILED
-  OCMS -> OCDB : 7. Create new Optimisation\nlifecycleStatus = ACKNOWLEDGED\noptimisationRelationship = retrialOf\nreuse accepted expression and expression.iri\nreuse OptimisationSpecification.id/href
+  OCMS -> OCDB : 7. Create new Optimisation\ncreationContext.reason = RETRIAL\nlifecycleStatus = ACKNOWLEDGED\noptimisationRelationship = retrialOf\nreuse accepted expression and expression.iri\nreuse OptimisationSpecification id, version, draftId, and href
   OCDB --> OCMS : New Optimisation persisted
 
   note right of OCDB
@@ -91,6 +91,6 @@ OCMS -> OCDB : 10. Advance new Optimisation\nACKNOWLEDGED -> QUEUED\nafter succe
 
 Kafka -> Worker : 11. Consume OptimisationRequestedEvent\nfor new Optimisation
 Worker -> Worker : 12. Execute deterministic\noptimisation work
-Worker -> Kafka : 13. Publish OptimisationCompletedEvent\nstatus = COMPLETED / INFEASIBLE / FAILED / CANCELLED
+Worker -> Kafka : 13. Publish OptimisationCompletedEvent\nstatus = COMPLETED, INFEASIBLE,\nFAILED, CANCELLED, or CANCELLATIONFAILED
 
 @enduml

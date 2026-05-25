@@ -26,7 +26,7 @@ queue "OC MS Inbox" as Inbox
 
 Caller -> OGW : 1. Start optimisation journey
 OGW -> OGW : 2. Authenticate/session check\nand derive user context
-OGW -> OSB : 3. Invoke OSB MS\nmTLS + User Context JWT\ncorrelationId / traceId
+OGW -> OSB : 3. Invoke OSB MS\nmTLS + User Context JWT\ncorrelationId and traceId
 
 OSB -> OSB : 4. Apply user-context filtering\nand shape runtime request
 
@@ -34,10 +34,10 @@ OSB -> NGW : 5. Submit optimisation request\nmTLS + OAuth2 system identity\n(no 
 
 note right of NGW
 User context stops before/at NGW.
-Downstream OD/OC calls use system/service identity only.
+Downstream OD and OC calls use service identity only.
 end note
 
-NGW -> OCMS : 6. POST /optimisation\nmTLS + service/system auth
+NGW -> OCMS : 6. POST /optimisation\nmTLS + service identity
 
 == Validate Contract ==
 
@@ -49,11 +49,11 @@ end note
 
 ODMS --> OCMS : ACTIVE specification\nexpressionSpecification.iri + targetEntitySchema
 
-OCMS -> OCMS : 8. Validate expression.iri\nagainst expressionSpecification.iri\nand expression.expressionValue\nagainst targetEntitySchema\ncontext.targets[] / constraints[] / preferences[]
+OCMS -> OCMS : 8. Validate expression.iri\nagainst expressionSpecification.iri\nand expression.expressionValue\nagainst targetEntitySchema\ncontext.targets[], constraints[], and preferences[]
 
 == Persist Runtime Resource ==
 
-OCMS -> OCDB : 9. Persist runtime Optimisation\nlifecycleStatus = ACKNOWLEDGED\nstore immutable OptimisationSpecification.id/href\nand accepted expression.iri
+OCMS -> OCDB : 9. Persist runtime Optimisation\ncreationContext.reason = NEW\nlifecycleStatus = ACKNOWLEDGED\nstore resolved OptimisationSpecification\nid, version, draftId, and href\nand accepted expression.iri
 OCDB --> OCMS : Persisted
 
 OCMS -> Outbox : 10. Write OptimisationRequestedEvent\ninstruction = EXECUTE\nsame transaction
@@ -75,27 +75,27 @@ Kafka -> Worker : 14. Consume OptimisationRequestedEvent\ninstruction = EXECUTE
 Worker -> Worker : 15. Resolve internal deterministic\nmodel binding
 Worker -> Worker : 16. Invoke Gurobi Optimiser
 
-Worker -> Kafka : 17. Publish OptimisationCompletedEvent\nstatus = COMPLETED / INFEASIBLE / FAILED / CANCELLED
+Worker -> Kafka : 17. Publish OptimisationCompletedEvent\nstatus = COMPLETED, INFEASIBLE, FAILED,\nCANCELLED, or CANCELLATIONFAILED
 
 == Project Outcome ==
 
 Kafka -> Inbox : 18. Consume OptimisationCompletedEvent
 Inbox -> Inbox : 19. Apply idempotency\nand stale/late event checks
-Inbox -> OCDB : 20. Update lifecycle/result projection\nCOMPLETED / INFEASIBLE / FAILED / CANCELLED
+Inbox -> OCDB : 20. Update lifecycle/result projection\nCOMPLETED, INFEASIBLE, FAILED,\nCANCELLED, or CANCELLATIONFAILED
 OCDB --> Inbox : Projection stored
 
 == Poll Runtime Status ==
 
-Caller -> OGW : 21. Poll optimisation status/result
+Caller -> OGW : 21. Poll optimisation status and result
 OGW -> OSB : 22. Invoke OSB MS\nmTLS + User Context JWT
 OSB -> OSB : 23. Authorise visibility\nusing user context
 OSB -> NGW : 24. GET /optimisation/{id}\nmTLS + OAuth2 system identity\n(no user context downstream)
 NGW -> OCMS : 25. Route GET /optimisation/{id}
 OCMS -> OCDB : 26. Read lifecycle/result
-OCDB --> OCMS : Current status/result
+OCDB --> OCMS : Current status and result
 OCMS --> NGW : Return runtime Optimisation
 NGW --> OSB : Return response
 OSB --> OGW : Shape OptimisationDetailView
-OGW --> Caller : Current optimisation status/result
+OGW --> Caller : Current optimisation status and result
 
 @enduml

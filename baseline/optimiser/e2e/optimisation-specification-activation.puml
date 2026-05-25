@@ -27,7 +27,7 @@ User context may include tenant, claims,
 roles/scopes, and entitlements.
 end note
 
-OGW -> OSB : 3. Invoke OSB MS\nmTLS + User Context JWT\ncorrelationId / traceId
+OGW -> OSB : 3. Invoke OSB MS\nmTLS + User Context JWT\ncorrelationId and traceId
 
 OSB -> OSB : 4. Validate user context\nand catalogue-management access
 
@@ -40,36 +40,36 @@ User-context-related authorisation is performed
 by OSB MS before the request crosses NGW.
 end note
 
-OSB -> NGW : 5. Forward activation request\nIf-Match = OD MS ETag\nmTLS + OAuth2 system identity\ncorrelationId / traceId\n(no user context downstream)
+OSB -> NGW : 5. Forward activation request\nIf-Match = OD MS ETag\nmTLS + OAuth2 system identity\ncorrelationId and traceId\n(no user context downstream)
 
 note right of NGW
 User context stops before/at NGW.
 Downstream OD MS calls use system/service identity only.
 end note
 
-NGW -> ODMS : 6. PATCH or PUT /optimisationSpecification/{id}\nactivation request\nmTLS + service/system auth
+NGW -> ODMS : 6. PATCH or PUT\n/optimisationSpecification/draft/{draftId}\nactivation request\nmTLS + service identity
 
 note right of ODMS
-OD MS authorises the calling service/system.
+OD MS authorises the calling service identity.
 OD MS does not receive or depend on end-user
 identity, claims, roles, or scopes.
 end note
 
 == Validation ==
 
-ODMS -> ODDB : 7. Validate If-Match\nfor selected DRAFT specification
+ODMS -> ODDB : 7. Validate If-Match\nfor selected draftId
 ODDB --> ODMS : If-Match confirmed
 
 ODMS -> ODMS : 8. Validate lifecycleStatus = DRAFT
 ODMS -> ODMS : 9. Validate full OptimisationSpecification\nspecCharacteristic[]\nexpressionSpecification\ntargetEntitySchema
-ODMS -> ODMS : 10. Validate activation governance\nfamilyId present\none ACTIVE per familyId
+ODMS -> ODMS : 10. Validate activation governance\nspecKey active uniqueness\none ACTIVE lineage per specKey
 
 == Lifecycle Transition ==
 
 ODMS -> ODDB : 11. Assign official version\nand move selected DRAFT -> ACTIVE
 ODDB --> ODMS : DRAFT activated
 
-ODMS -> ODDB : 12. Transactionally move previous ACTIVE\nin same familyId -> RETIRED
+ODMS -> ODDB : 12. Transactionally move previous ACTIVE\nfor same id -> RETIRED
 ODDB --> ODMS : Previous ACTIVE retired
 
 note right of ODMS
@@ -78,7 +78,7 @@ during activation.
 
 ACTIVE and RETIRED specifications are immutable.
 Only one ACTIVE OptimisationSpecification
-is enforced per familyId.
+is enforced per specKey.
 end note
 
 == Activation Response ==

@@ -23,7 +23,7 @@ rectangle "Optimisation Platform" {
   usecase "Submit runtime\noptimisation" as UC_Submit
   usecase "Monitor optimisation\nstatus and outcome" as UC_Monitor
   usecase "Cancel active\noptimisation" as UC_Cancel
-  usecase "Retry failed\noptimisation" as UC_Retry
+  usecase "Retry FAILED\noptimisation" as UC_Retry
   usecase "Execute optimisation\nwork" as UC_Execute
 }
 

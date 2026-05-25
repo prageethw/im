@@ -27,7 +27,7 @@ User context may include tenant, claims,
 roles/scopes, and entitlements.
 end note
 
-OGW -> OSB : 3. Invoke OSB MS\nmTLS + User Context JWT\ncorrelationId / traceId
+OGW -> OSB : 3. Invoke OSB MS\nmTLS + User Context JWT\ncorrelationId and traceId
 
 OSB -> OSB : 4. Validate user context\nand catalogue-management access
 
@@ -40,33 +40,33 @@ User-context-related filtering and authorisation
 are performed by OSB MS before the request crosses NGW.
 end note
 
-OSB -> NGW : 5. Forward create request\nmTLS + OAuth2 system identity\ncorrelationId / traceId\n(no user context downstream)
+OSB -> NGW : 5. Forward create request\nmTLS + OAuth2 system identity\ncorrelationId and traceId\n(no user context downstream)
 
 note right of NGW
 User context stops before/at NGW.
 Downstream OD MS calls use system/service identity only.
 end note
 
-NGW -> ODMS : 6. POST /optimisationSpecification\nmTLS + service/system auth
+NGW -> ODMS : 6. POST /optimisationSpecification\nmTLS + service identity
 
 note right of ODMS
-OD MS authorises the calling service/system.
+OD MS authorises the calling service identity.
 OD MS does not receive or depend on end-user
 identity, claims, roles, or scopes.
 end note
 
 == Validation and Persistence ==
 
-ODMS -> ODMS : 7. Validate create request\nname + familyId\nexpressionSpecification\ntargetEntitySchema\n@type
-ODMS -> ODMS : 8. Reject server-controlled fields\nid / href / creationDate / lastUpdate\nstatusChangeDate / version / _links
+ODMS -> ODMS : 7. Validate create request\nspecKey + name\nexpressionSpecification\ntargetEntitySchema\n@type
+ODMS -> ODMS : 8. Reject server-controlled fields\nid, href, draftId, creationDate, lastUpdate\nstatusChangeDate, version, and _links
 ODMS -> ODMS : 9. Validate TMF-style specification shape\nspecCharacteristic[]\nexpressionSpecification\ntargetEntitySchema
 
-ODMS -> ODDB : 10. Persist new OptimisationSpecification\nlifecycleStatus = DRAFT\nno official public version\nETag represents draft revision
+ODMS -> ODDB : 10. Persist new DRAFT candidate\nresolve id from specKey\nassign draftId\nno official public version
 ODDB --> ODMS : DRAFT persisted
 
 == Create Response ==
 
-ODMS --> NGW : 11. 201 Created\nLocation + ETag\nDRAFT OptimisationSpecification
+ODMS --> NGW : 11. 201 Created\nLocation + ETag header\nDRAFT OptimisationSpecification
 NGW --> OSB : 12. Return response to OSB MS
 
 OSB -> OSB : 13. Shape catalogue-management\nexperience response
@@ -82,8 +82,9 @@ for runtime optimisation.
 DRAFT has no official public version.
 Official version is assigned by OD MS only during activation.
 
-Multiple DRAFT specifications may exist in the same familyId.
-Only one ACTIVE specification is enforced per familyId.
+Multiple DRAFT candidates may exist for the same id.
+Only one ACTIVE version is enforced per id.
+Only one ACTIVE lineage is enforced per specKey.
 end note
 
 @enduml
