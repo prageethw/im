@@ -24,7 +24,7 @@ queue "OC MS Inbox" as Inbox
 == Request Cancellation ==
 
 Caller -> OGW : 1. Request cancellation\nfor runtime Optimisation
-OGW -> OSB : 2. Invoke OSB MS\nmTLS + User Context JWT\ncorrelationId / traceId
+OGW -> OSB : 2. Invoke OSB MS\nmTLS + User Context JWT\ncorrelationId and traceId
 
 OSB -> OCMS : 3. Read current state/action model\nthrough NGW if needed
 note right of OSB
@@ -50,7 +50,7 @@ OSB -> NGW : 5. POST /optimisation/{id}/cancellation\nIf-Match = OC MS ETag\nmTL
 
 note right of NGW
 User context stops before/at NGW.
-Downstream OC MS call uses system/service identity only.
+Downstream OC MS call uses service identity only.
 end note
 
 NGW -> OCMS : 6. Route cancellation request
@@ -60,19 +60,19 @@ NGW -> OCMS : 6. Route cancellation request
 OCMS -> OCDB : 7. Validate If-Match\nand current lifecycle state
 OCDB --> OCMS : Current runtime Optimisation
 
-alt Terminal lifecycle state
-  OCMS --> NGW : 409 Conflict\nCOMPLETED / FAILED / INFEASIBLE / CANCELLED
+alt Non-eligible lifecycle state
+  OCMS --> NGW : 409 Conflict\nterminal state, CANCELLING, or CANCELLATIONFAILED
   NGW --> OSB : 409 Conflict
   OSB --> OGW : Lifecycle conflict view
   OGW --> Caller : Cancellation not allowed
-else Eligible non-terminal lifecycle
+else Eligible lifecycleStatus\nACKNOWLEDGED, QUEUED, or PROCESSING
   OCMS -> OCDB : 8. Set lifecycleStatus = CANCELLING\nupdate statusChangeDate
   OCDB --> OCMS : Updated
 
   OCMS -> Outbox : 9. Write OptimisationRequestedEvent\ninstruction = CANCEL\neventId + optimisationId\ncorrelationId + traceId
   Outbox --> OCMS : Outbox record stored
 
-  OCMS --> NGW : 202 Accepted or 200 OK\nCANCELLING resource + ETag
+  OCMS --> NGW : 202 Accepted\nCANCELLING resource + ETag
   NGW --> OSB : Cancellation accepted
   OSB --> OGW : Cancellation view\nbest-effort in progress
   OGW --> Caller : Cancellation requested
@@ -93,23 +93,23 @@ end note
 
 Worker -> Worker : 12. Stop, cancel, or ignore safely\naccording to worker capability
 
-Worker -> Kafka : 13. Publish OptimisationCompletedEvent\nstatus = CANCELLED / COMPLETED / INFEASIBLE / FAILED\nwhere supported by worker contract
+Worker -> Kafka : 13. Publish OptimisationCompletedEvent\nstatus = CANCELLED, CANCELLATIONFAILED,\nCOMPLETED, INFEASIBLE, or FAILED
 
-== Project Terminal State ==
+== Project Outcome ==
 
-Kafka -> Inbox : 14. Consume worker terminal confirmation
+Kafka -> Inbox : 14. Consume worker outcome\nor cancellation-command outcome
 Inbox -> Inbox : 15. Apply idempotency\nand stale/late event checks
-Inbox -> OCDB : 16. Project final lifecycle/result\nCANCELLED / COMPLETED / INFEASIBLE / FAILED
+Inbox -> OCDB : 16. Project lifecycle/result\nCANCELLED, CANCELLATIONFAILED,\nCOMPLETED, INFEASIBLE, or FAILED
 OCDB --> Inbox : Projection stored
 
 == Poll Updated Status ==
 
-Caller -> OGW : 17. Poll status/result
+Caller -> OGW : 17. Poll status and result
 OGW -> OSB : 18. Invoke OSB MS\nmTLS + User Context JWT
 OSB -> NGW : 19. GET /optimisation/{id}\nmTLS + OAuth2 system identity
 NGW -> OCMS : 20. Route GET /optimisation/{id}
 OCMS -> OCDB : 21. Read lifecycle/result
-OCDB --> OCMS : Current status/result
+OCDB --> OCMS : Current status and result
 OCMS --> NGW : Runtime Optimisation
 NGW --> OSB : Runtime state
 OSB --> OGW : OptimisationDetailView
