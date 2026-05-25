@@ -56,6 +56,31 @@ import requests  # pip install requests
 from requests.adapters import HTTPAdapter
 from urllib3.util.retry import Retry
 
+# ---------------------------------------------------------------------------
+# Optional system-trust-store integration
+# ---------------------------------------------------------------------------
+# Corporate networks (Zscaler, Netskope, etc.) terminate TLS with an internal
+# CA. Python's `requests` library uses `certifi` by default, which doesn't
+# include corporate CAs — leading to CERTIFICATE_VERIFY_FAILED errors.
+#
+# `truststore` (PEP 543) delegates verification to the operating system, which
+# already trusts the corp CA (because IT installed it system-wide). It also
+# tolerates legacy CAs without a `keyUsage` extension that OpenSSL 3.x rejects.
+#
+# We call inject_into_ssl() if it's available; the call is a no-op if the
+# library is missing. Set CONFLUENCE_USE_SYSTEM_TRUST=0 to opt out.
+def _enable_system_trust() -> bool:
+    if os.environ.get("CONFLUENCE_USE_SYSTEM_TRUST", "1") == "0":
+        return False
+    try:
+        import truststore  # type: ignore
+        truststore.inject_into_ssl()
+        return True
+    except ImportError:
+        return False
+
+_SYSTEM_TRUST_ACTIVE = _enable_system_trust()
+
 LOG = logging.getLogger("md2confluence")
 
 # ---------------------------------------------------------------------------
@@ -258,20 +283,285 @@ class StorageRenderer(mistune.HTMLRenderer):
         return _centre_table(f"<table>\n{text}</table>")
 
 
-def render_markdown(md_text: str, source_dir: Path) -> Tuple[str, List[ImageRef]]:
-    """Convert Markdown -> (storage_xhtml, list_of_image_refs)."""
+def render_markdown(md_text: str, source_dir: Path,
+                    insert_header: bool = True,
+                    status_text: str = "draft",
+                    status_colour: str = "Green") -> Tuple[str, List[ImageRef]]:
+    """
+    Convert Markdown -> (storage_xhtml, list_of_image_refs).
+
+    When `insert_header` is True (the default), the function:
+      1. Strips any `[TOC]` / `[[_TOC_]]` markers from the raw Markdown.
+      2. Renders the Markdown to storage format.
+      3. Removes any pre-existing `status` / `toc` storage macros.
+      4. Prepends a fresh standard header block (status badge + TOC).
+    """
+    if insert_header:
+        md_text, removed = strip_existing_status_and_toc(md_text)
+        if removed:
+            LOG.info("Removed %d existing status/toc marker(s) from Markdown",
+                     removed)
+
     renderer = StorageRenderer(source_dir=source_dir)
     md = mistune.create_markdown(
         renderer=renderer,
         plugins=["strikethrough", "table", "task_lists", "url", "footnotes"],
     )
     body = md(md_text)
+
+    # Sweep the rendered output too, in case any macro slipped through (e.g.
+    # an admonition-wrapped raw HTML block that mistune handled differently).
+    if insert_header:
+        body = _EMPTY_P_RE.sub("", body)
+        body = build_header(status_text, status_colour) + body
+
     return body, renderer.image_refs
 
 
 # ---------------------------------------------------------------------------
-# Footer
+# Standard header block (status badge + table of contents)
 # ---------------------------------------------------------------------------
+# Inserted at the top of every page so the whole space has a consistent look.
+# - `status` macro renders as a coloured pill (Green/Yellow/Red/Blue/Grey)
+# - `toc` macro auto-generates a hyperlinked outline from page headings
+#
+# The `ac:local-id` / `ac:macro-id` values are fresh UUIDs per render so two
+# rendered pages never collide if pasted into the same parent. (Confluence
+# regenerates these on save anyway, but emitting unique IDs avoids editor
+# warnings about duplicate macro IDs during import.)
+import uuid as _uuid  # noqa: E402 — kept local to header section for readability
+
+
+def build_header(status_text: str = "draft",
+                 status_colour: str = "Green") -> str:
+    """
+    Emit the standard status-pill + TOC header block in Confluence storage
+    format. New UUIDs are generated on every call so each render is unique.
+    """
+    status_macro_id = _uuid.uuid4()
+    toc_macro_id = _uuid.uuid4()
+    toc_local_id = _uuid.uuid4()
+    para1_id = _uuid.uuid4().hex[:12]
+    para2_id = _uuid.uuid4().hex[:12]
+    return (
+        f'<p local-id="{para1_id}">'
+        f'<ac:structured-macro ac:name="status" ac:schema-version="1" '
+        f'ac:macro-id="{status_macro_id}">'
+        f'<ac:parameter ac:name="title">{html.escape(status_text)}</ac:parameter>'
+        f'<ac:parameter ac:name="colour">{html.escape(status_colour)}</ac:parameter>'
+        f'</ac:structured-macro> </p>'
+        f'<ac:structured-macro ac:name="toc" ac:schema-version="1" '
+        f'data-layout="default" ac:local-id="{toc_local_id}" '
+        f'ac:macro-id="{toc_macro_id}">'
+        f'<ac:parameter ac:name="style">none</ac:parameter>'
+        f'</ac:structured-macro>'
+        f'<p local-id="{para2_id}" />\n'
+    )
+
+
+# ---------------------------------------------------------------------------
+# Strip author-written status / TOC so we never duplicate the header
+# ---------------------------------------------------------------------------
+# Authors sometimes paste their own status badge or `[TOC]` / `[[_TOC_]]`
+# marker into the Markdown source. After Markdown -> storage rendering we
+# also need to remove any pre-existing <ac:structured-macro ac:name="toc"|
+# "status"> blocks (e.g. if someone copy-pasted raw storage XHTML in).
+#
+# We do this BEFORE prepending our own header so the final page has exactly
+# one status pill and exactly one TOC.
+
+# Patterns removed from the RAW MARKDOWN before rendering. We do it here
+# (not after rendering) because mistune wraps raw HTML in containers that
+# make post-render regex matching unreliable. Cleaning the Markdown source
+# is simpler and more robust.
+
+# Markdown-level TOC markers commonly used by Pandoc / GitLab / mkdocs:
+_MD_TOC_MARKERS = (
+    re.compile(r"^[ \t]*\[TOC\][ \t]*$", re.IGNORECASE | re.MULTILINE),
+    re.compile(r"^[ \t]*\[\[_TOC_\]\][ \t]*$", re.IGNORECASE | re.MULTILINE),
+    re.compile(r"^[ \t]*<!--\s*toc\s*-->[ \t]*$", re.IGNORECASE | re.MULTILINE),
+)
+
+# Manually-authored TOC blocks: a heading whose text looks like "Table of
+# Contents" / "Contents" / "Index", followed by a bullet list of in-page
+# anchor links. We match the heading line, then consume every following line
+# that is part of the bullet list (blank lines inside the list are allowed),
+# stopping at the next heading or the first non-list / non-blank line.
+#
+# The list-detection part uses a fairly conservative definition of "bullet
+# list item": leading whitespace, then `-`, `*`, `+`, or `N.`, then content
+# that includes at least one in-page link `](#...)`. This avoids accidentally
+# eating prose lists that happen to follow a Contents heading.
+_MANUAL_TOC_HEADING_RE = re.compile(
+    r"^(?P<hashes>\#{1,6})[ \t]+"
+    r"(?:table\s+of\s+contents|contents|index|toc)"
+    r"[ \t:.]*$",
+    re.IGNORECASE | re.MULTILINE,
+)
+_ANCHOR_LIST_ITEM_RE = re.compile(
+    r"^[ \t]*(?:[-*+]|\d+\.)[ \t]+.*\]\(#[^)]+\)",
+)
+_NEXT_HEADING_RE = re.compile(r"^\#{1,6}[ \t]+")
+
+# H1 headings to strip from the Markdown source. The Confluence page title
+# already serves as the document's top-level heading, so an in-body H1 is
+# redundant (and would appear as a duplicate H1 in the TOC macro).
+# Matches both ATX-style (`# Heading`) and Setext-style (`Heading\n=====`).
+_ATX_H1_RE = re.compile(r"^[ \t]*\#[ \t]+[^\n]*\n?", re.MULTILINE)
+_SETEXT_H1_RE = re.compile(r"^[^\n]+\n=+[ \t]*\n?", re.MULTILINE)
+
+# Raw `<ac:structured-macro ac:name="toc|status">...</ac:structured-macro>`
+# blocks that an author pasted into the Markdown source. The regex is
+# permissive about attribute order, whitespace, and multi-line content.
+# Matches either a self-closing `<.../>` form or a paired open/close form.
+_MD_MACRO_RE = re.compile(
+    r'<ac:structured-macro\b[^>]*?\bac:name="(?:toc|status)"[^>]*?'
+    r'(?:/>|>.*?</ac:structured-macro>)',
+    re.DOTALL | re.IGNORECASE,
+)
+
+# After stripping a macro, a wrapping <p>...</p> may be left holding only
+# whitespace. Drop those so we don't accumulate blank paragraphs.
+_EMPTY_P_RE = re.compile(r"<p\b[^>]*>\s*</p>", re.IGNORECASE)
+
+
+def _strip_manual_toc_blocks(md_text: str) -> Tuple[str, int]:
+    """
+    Remove hand-written "## Table of contents" sections followed by a bullet
+    list of in-page anchor links. Returns (cleaned, count_removed_blocks).
+
+    Algorithm:
+      1. Find each heading line that looks like a Contents heading.
+      2. Walk forward line-by-line. A line is part of the TOC block if it's
+         blank, indented continuation, or a bullet/numbered item that links
+         to an in-page anchor (`](#...)`). Stop at the first line that is
+         neither of those and isn't blank — in particular, stop at the next
+         heading.
+      3. Delete the heading and all consumed lines.
+    """
+    lines = md_text.splitlines(keepends=True)
+    keep: List[str] = []
+    i = 0
+    removed_blocks = 0
+    n_lines = len(lines)
+
+    while i < n_lines:
+        line = lines[i]
+        if _MANUAL_TOC_HEADING_RE.match(line):
+            # Look ahead: do we have at least one anchor-list item before the
+            # next heading? If not, leave this heading alone (it might just
+            # be a section called "Contents" with prose underneath).
+            j = i + 1
+            saw_anchor_item = False
+            scan = j
+            while scan < n_lines:
+                s = lines[scan]
+                if _NEXT_HEADING_RE.match(s):
+                    break
+                if _ANCHOR_LIST_ITEM_RE.match(s):
+                    saw_anchor_item = True
+                    break
+                if s.strip() == "":
+                    scan += 1
+                    continue
+                # Some other content — not a TOC block
+                break
+
+            if not saw_anchor_item:
+                keep.append(line)
+                i += 1
+                continue
+
+            # Consume the heading + the whole TOC block. We accept blank
+            # lines and indented continuation lines as part of the list.
+            j = i + 1
+            while j < n_lines:
+                s = lines[j]
+                if _NEXT_HEADING_RE.match(s):
+                    break
+                if s.strip() == "":
+                    j += 1
+                    continue
+                if _ANCHOR_LIST_ITEM_RE.match(s):
+                    j += 1
+                    continue
+                # Indented continuation of a previous bullet (nested list)
+                if s.startswith(("  ", "\t")) and s.strip():
+                    j += 1
+                    continue
+                break
+            removed_blocks += 1
+            i = j
+            continue
+
+        keep.append(line)
+        i += 1
+
+    return "".join(keep), removed_blocks
+
+
+def strip_existing_status_and_toc(md_text: str) -> Tuple[str, int]:
+    """
+    Remove `[TOC]`-style markers, raw status/toc storage macros, AND any
+    manually-authored "Table of contents" sections that appear in the
+    Markdown source. Returns (cleaned_md, count_removed).
+    """
+    removed = 0
+
+    def _drop(_m: re.Match) -> str:
+        nonlocal removed
+        removed += 1
+        return ""
+
+    # 1. Raw storage macros (status / toc)
+    out = _MD_MACRO_RE.sub(_drop, md_text)
+
+    # 2. Inline TOC markers ([TOC], [[_TOC_]], <!-- toc -->)
+    for pat in _MD_TOC_MARKERS:
+        out, n = pat.subn("", out)
+        removed += n
+
+    # 3. Hand-written "## Table of contents" + bullet-anchor list blocks
+    out, n = _strip_manual_toc_blocks(out)
+    removed += n
+
+    # 4. H1 headings (ATX `# ...` and Setext `...\n===`). The page title
+    #    already serves this role.
+    out, n = _strip_h1_headings(out)
+    removed += n
+
+    # Collapse blank-line runs created by deletions
+    out = re.sub(r"\n{3,}", "\n\n", out)
+    return out, removed
+
+
+def _strip_h1_headings(md_text: str) -> Tuple[str, int]:
+    """
+    Remove all top-level (H1) headings from the Markdown source.
+
+    Handles two cases:
+      * ATX style:    `# Heading`
+      * Setext style: `Heading\n=======`
+
+    Care is taken NOT to strip inside fenced code blocks — a line like
+    `# hello world` inside a ```python block is a comment, not a heading.
+    """
+    # Split on fenced code blocks so we only process Markdown prose regions.
+    # A simple state machine is more robust than a single regex here.
+    parts = re.split(r"(```[^\n]*\n.*?\n```)", md_text, flags=re.DOTALL)
+    removed = 0
+    for idx, part in enumerate(parts):
+        if part.startswith("```"):
+            continue  # leave fenced blocks untouched
+        # ATX `# Heading` — but not `##`, `###`, etc.
+        part_new, n1 = _ATX_H1_RE.subn("", part)
+        # Setext `Heading\n=====`
+        part_new, n2 = _SETEXT_H1_RE.subn("", part_new)
+        removed += n1 + n2
+        parts[idx] = part_new
+    return "".join(parts), removed
+
+
 def build_footer(source_path: Path, base_url: Optional[str] = None) -> str:
     """Storage-format 'Published from VS Code' footer block."""
     now = datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M UTC")
@@ -338,7 +628,9 @@ BEGIN STORAGE FORMAT
 OFFLINE_END_MARKER = "\n<!-- ===== END STORAGE FORMAT ===== -->\n"
 
 
-def export_offline(md_path: Path, output_dir: Path) -> Dict[str, Any]:
+def export_offline(md_path: Path, output_dir: Path,
+                   status_text: str = "draft",
+                   status_colour: str = "Green") -> Dict[str, Any]:
     """
     Render Markdown to a single self-contained storage-format file plus a
     sibling `images/` folder. No network calls.
@@ -352,11 +644,17 @@ def export_offline(md_path: Path, output_dir: Path) -> Dict[str, Any]:
             MANIFEST.txt              <-- human-readable summary
     """
     md_text = md_path.read_text(encoding="utf-8")
-    storage_body, image_refs = render_markdown(md_text, md_path.parent)
+    storage_body, image_refs = render_markdown(
+        md_text, md_path.parent,
+        status_text=status_text, status_colour=status_colour,
+    )
 
     output_dir.mkdir(parents=True, exist_ok=True)
     images_dir = output_dir / "images"
     images_dir.mkdir(exist_ok=True)
+    # Note: footer + comment header are intentionally omitted from offline
+    # exports — the output should be a clean Confluence page body, ready
+    # to paste with no manual cleanup.
 
     # Copy each discovered image into the bundle under its disambiguated name
     copied: List[Tuple[str, str]] = []
@@ -375,22 +673,11 @@ def export_offline(md_path: Path, output_dir: Path) -> Dict[str, Any]:
             LOG.error("Image not found: %s (referenced as %s)", m.abs_path, m.src)
         raise FileNotFoundError(f"{len(missing)} image(s) missing on disk")
 
-    footer = build_footer(md_path, base_url=None)
-    final_body = storage_body + footer
-
-    image_list = (
-        "\n".join(f"  - {fn}   (from {src})" for fn, src in copied) or "  (none)"
-    )
-    header = OFFLINE_INSTRUCTIONS.format(
-        generated_at=datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M UTC"),
-        source_path=md_path.resolve(),
-        image_count=len(copied),
-        image_list=image_list,
-    )
-
     out_file = output_dir / f"{md_path.stem}.confluence.xhtml"
-    out_file.write_text(header + final_body + OFFLINE_END_MARKER, encoding="utf-8")
+    out_file.write_text(storage_body, encoding="utf-8")
 
+    # The MANIFEST.txt remains as a sidecar so users know which images to
+    # drag-attach — it lives alongside the XHTML file, not inside it.
     manifest = output_dir / "MANIFEST.txt"
     manifest.write_text(
         "Confluence offline export\n"
@@ -398,7 +685,12 @@ def export_offline(md_path: Path, output_dir: Path) -> Dict[str, Any]:
         f"Source:    {md_path.resolve()}\n"
         f"Body file: {out_file.name}\n"
         f"Images:    {len(copied)} file(s) in images/\n\n"
-        + "\n".join(f"  {fn}" for fn, _ in copied)
+        "To publish:\n"
+        f"  1. Paste the contents of {out_file.name} into Confluence's\n"
+        "     source / storage-format editor.\n"
+        "  2. Drag-attach every file from images/ to the same page.\n\n"
+        "Images to attach:\n"
+        + ("\n".join(f"  {fn}" for fn, _ in copied) or "  (none)")
         + "\n",
         encoding="utf-8",
     )
@@ -578,6 +870,7 @@ def check_connectivity(base_url: str, user: str, token: str,
           f"({len(token)} chars)")
     print(f"Space    : {space_key or '(not specified)'}")
     print(f"TLS verify: {verify_ssl}")
+    print(f"System trust store: {'ACTIVE (truststore)' if _SYSTEM_TRUST_ACTIVE else 'inactive (using certifi)'}")
     print("-" * 70)
 
     failures: List[str] = []
@@ -789,13 +1082,19 @@ class PublishConfig:
     dry_run: bool = False
     update_only: bool = False
     verify_ssl: bool = True
+    status_text: str = "draft"
+    status_colour: str = "Green"
 
 
 def publish(cfg: PublishConfig) -> Dict[str, Any]:
     LOG.info("Reading %s", cfg.md_path)
     md_text = cfg.md_path.read_text(encoding="utf-8")
 
-    storage_body, image_refs = render_markdown(md_text, cfg.md_path.parent)
+    storage_body, image_refs = render_markdown(
+        md_text, cfg.md_path.parent,
+        status_text=cfg.status_text, status_colour=cfg.status_colour,
+    )
+    # Footer intentionally omitted — keep the page clean.
     LOG.info("Discovered %d local image reference(s)", len(image_refs))
 
     # Validate every local image actually exists on disk before we touch the API
@@ -805,8 +1104,7 @@ def publish(cfg: PublishConfig) -> Dict[str, Any]:
             LOG.error("Image not found: %s (referenced as %s)", m.abs_path, m.src)
         raise FileNotFoundError(f"{len(missing)} image(s) missing on disk")
 
-    footer = build_footer(cfg.md_path, cfg.base_url)
-    final_body = storage_body + footer
+    final_body = storage_body
 
     if cfg.dry_run:
         LOG.info("DRY RUN — emitting storage XHTML to stdout")
@@ -901,6 +1199,12 @@ def parse_args(argv: Optional[List[str]] = None) -> argparse.Namespace:
                    help="Validate connectivity, auth, and (optionally) space "
                         "access using read-only API calls. Nothing is created "
                         "or modified. Run this BEFORE attempting a publish.")
+    p.add_argument("--status", default="draft",
+                   help="Status pill text inserted at top of page "
+                        "(default: 'draft')")
+    p.add_argument("--status-colour", "--status-color", default="Green",
+                   choices=["Grey", "Red", "Yellow", "Green", "Blue"],
+                   help="Status pill colour (default: Green)")
     p.add_argument("--update-only", action="store_true",
                    help="Fail if the target page does not already exist")
     p.add_argument("--insecure", action="store_true",
@@ -937,7 +1241,10 @@ def main(argv: Optional[List[str]] = None) -> int:
             LOG.error("--export requires a markdown_file argument")
             return 2
         try:
-            result = export_offline(args.markdown_file, args.export)
+            result = export_offline(
+                args.markdown_file, args.export,
+                status_text=args.status, status_colour=args.status_colour,
+            )
         except Exception as exc:  # noqa: BLE001
             LOG.exception("Export failed: %s", exc)
             return 1
@@ -973,6 +1280,8 @@ def main(argv: Optional[List[str]] = None) -> int:
         dry_run=args.dry_run,
         update_only=args.update_only,
         verify_ssl=not args.insecure,
+        status_text=args.status,
+        status_colour=args.status_colour,
     )
     try:
         result = publish(cfg)
