@@ -87,7 +87,7 @@ DRAFT -> ACTIVE -> RETIRED
 
 OD MS rules:
 
-- DRAFT candidates are mutable and are identified by `id` and `draftId`.
+- DRAFT candidates are mutable and carry both `id` and `draftId`; DRAFT operations are addressed by `draftId`.
 - DRAFT candidates have no official public version; draft revision uses `ETag`.
 - Multiple DRAFT candidates may exist for the same `OptimisationSpecification.id`.
 - `draftId` is retained as provenance after activation and retirement.
@@ -261,7 +261,7 @@ Catalogue-management journeys are feature-gated and out of phase-one scope unles
 15. OC MS advances ACKNOWLEDGED -> QUEUED after successful Kafka publish. QUEUED is projected later and is not the initial creation response state.
 16. OW MS consumes OptimisationRequestedEvent.
 17. OW MS resolves deterministic model binding and invokes Gurobi Optimiser.
-18. OW MS publishes OptimisationCompletedEvent with execution outcomes COMPLETED, INFEASIBLE, or FAILED, and cancellation-command outcomes CANCELLED or CANCELLATIONFAILED. COMPLETED, INFEASIBLE, FAILED, and CANCELLED are terminal lifecycle outcomes. CANCELLATIONFAILED is a non-terminal cancellation-command outcome.
+18. OW MS publishes OptimisationCompletedEvent with execution outcomes COMPLETED, INFEASIBLE, or FAILED, and cancellation-command outcomes CANCELLED or CANCELLATIONFAILED. COMPLETED, INFEASIBLE, and FAILED are terminal execution outcomes. CANCELLED is a terminal cancellation-command outcome. CANCELLATIONFAILED is a non-terminal cancellation-command outcome.
 19. OC MS Inbox Consumer applies idempotency and stale and late event checks.
 20. OC MS updates lifecycle and result projection.
 21. Caller polls through User -> OEX -> OGW -> OSB MS -> NGW -> OC MS to retrieve status and result.
