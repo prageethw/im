@@ -741,7 +741,7 @@ If a remote dependency circuit breaker affects the externally meaningful respons
 x-cb-triggered: true
 ```
 
-This header may appear on successful fallback responses or hard-failure responses. HTTP status and response body remain authoritative for success or failure. `x-cb-triggered: true` only indicates that a remote dependency circuit breaker affected the response path.
+This header may appear on successful fallback responses or hard-failure responses. HTTP status and response body remain authoritative for success or failure. `x-cb-triggered: true` only indicates that a remote dependency circuit breaker affected the externally meaningful response path.
 
 OD MS must not use cached or default fallback to fake specification creation, DRAFT update, activation, retirement, ETag validation, lifecycle governance, security visibility, or audit state. If OD MS cannot safely complete a source-of-truth operation because a required remote dependency is unavailable, it must fail fast with the appropriate error status.
 

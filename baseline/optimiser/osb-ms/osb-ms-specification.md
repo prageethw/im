@@ -372,7 +372,7 @@ support and diagnostic correlation metadata where applicable
 
 OSB may aggregate from OD MS and OC MS through NGW to build this view. `HomeView` is not a source-of-truth resource and must not be used as the authoritative lifecycle, contract, or result record.
 
-If one backend dependency is unavailable while another is healthy, OSB may return a partial `HomeView` rather than failing the whole request, provided the returned view remains semantically safe and no missing backend data is represented as authoritative. OSB does not add circuit-breaker markers into response payloads in the baseline; if a remote dependency circuit breaker affects the externally meaningful response path, OSB marks the REST response with `x-cb-triggered: true`. If the unavailable dependency is required for the requested user journey and no safe fallback is available, OSB should preserve the backend failure semantics and return an appropriate error response.
+If one backend dependency is unavailable while another is healthy, OSB may return a partial `HomeView` rather than failing the whole request, provided the returned view remains semantically safe and no missing backend data is represented as authoritative. OSB does not add circuit-breaker indicators into response payloads in the baseline; if a remote dependency circuit breaker affects the externally meaningful response path, OSB marks the REST response with `x-cb-triggered: true`. If the unavailable dependency is required for the requested user journey and no safe fallback is available, OSB should preserve the backend failure semantics and return an appropriate error response.
 
 ## 12. Capabilities filtering behaviour:
 
@@ -565,7 +565,7 @@ If a remote dependency circuit breaker affects the externally meaningful respons
 x-cb-triggered: true
 ```
 
-This header may appear on successful fallback responses or hard-failure responses. HTTP status and response body remain authoritative for success or failure. `x-cb-triggered: true` only indicates that a remote dependency circuit breaker affected the response path. OSB MS does not add circuit-breaker markers into response payloads in the baseline.
+This header may appear on successful fallback responses or hard-failure responses. HTTP status and response body remain authoritative for success or failure. `x-cb-triggered: true` only indicates that a remote dependency circuit breaker affected the externally meaningful response path. OSB MS does not add circuit-breaker indicators into response payloads in the baseline.
 
 OSB MS may return a safe pre-cached object or instantly generated default payload only where the response is non-authoritative and does not change source-of-truth semantics. Examples include optional home-view sections, summary widgets, display hints, or empty non-authoritative lists where the user journey remains safe.
 

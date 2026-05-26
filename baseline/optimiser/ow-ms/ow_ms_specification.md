@@ -9,7 +9,7 @@
 | **Source path** | `baseline/optimiser/ow-ms/ow_ms_specification.md` |
 | **Source of truth** | GitHub `main` |
 | **Last aligned** | 2026-05-26 |
-| **Alignment scope** | Aligned with OC MS `OptimisationRequestedEvent`, `OptimisationCompletedEvent`, `creationContext.reason`, `CANCELLATIONFAILED`, retrial, result projection, ETag-header baseline, and circuit-breaker response signalling. |
+| **Alignment scope** | Aligned with OC MS `OptimisationRequestedEvent`, `OptimisationCompletedEvent`, `creationContext.reason`, `CANCELLATIONFAILED`, retrial, result projection, ETag-header baseline, and circuit-breaker/backpressure behaviour. |
 
 ## Table of contents:
 

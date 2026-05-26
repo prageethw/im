@@ -1037,7 +1037,7 @@ If a remote dependency circuit breaker affects the externally meaningful respons
 x-cb-triggered: true
 ```
 
-This header may appear on successful fallback responses or hard-failure responses. HTTP status and response body remain authoritative for success or failure. `x-cb-triggered: true` only indicates that a remote dependency circuit breaker affected the response path.
+This header may appear on successful fallback responses or hard-failure responses. HTTP status and response body remain authoritative for success or failure. `x-cb-triggered: true` only indicates that a remote dependency circuit breaker affected the externally meaningful response path.
 
 OC MS may proceed with runtime creation using a valid cached immutable ACTIVE OD contract only where the cache policy allows it and the cached contract is semantically safe for the requested `OptimisationSpecification.id` and resolved version. If OD MS is unavailable and OC MS has no valid cached immutable ACTIVE contract, OC MS must fail fast with `503 Service Unavailable` and include `x-cb-triggered: true`.
 
