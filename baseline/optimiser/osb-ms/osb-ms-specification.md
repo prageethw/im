@@ -75,11 +75,9 @@ OSB MS does not own:
 
 Source-of-truth ownership:
 
-```text
-OD MS: owns OptimisationSpecification definitions, lifecycle governance, and version governance.
-OC MS: owns runtime Optimisation resources, lifecycle, event projection, and result projection.
-OSB MS: owns OEX experience facade behaviour and context-aware facade behaviour only.
-```
+- OD MS: owns OptimisationSpecification definitions, lifecycle governance, and version governance.
+- OC MS: owns runtime Optimisation resources, lifecycle, event projection, and result projection.
+- OSB MS: owns OEX experience facade behaviour and context-aware facade behaviour only.
 
 ## 3. API compliance:
 
@@ -106,26 +104,22 @@ OSB uses pluralised experience endpoint names intentionally. Backend OC MS and O
 
 ## 5. Phase one endpoint set:
 
-```http
-GET /optimisationExperience/v1/home
-GET /optimisationExperience/v1/capabilities
-GET /optimisationExperience/v1/capabilities/{capabilityId}/request-form
-POST /optimisationExperience/v1/optimisations
-GET /optimisationExperience/v1/optimisations
-GET /optimisationExperience/v1/optimisations/{id}
-POST /optimisationExperience/v1/optimisations/{id}/cancellation
-POST /optimisationExperience/v1/optimisations/{id}/retrial
-```
+- GET /optimisationExperience/v1/home
+- GET /optimisationExperience/v1/capabilities
+- GET /optimisationExperience/v1/capabilities/{capabilityId}/request-form
+- POST /optimisationExperience/v1/optimisations
+- GET /optimisationExperience/v1/optimisations
+- GET /optimisationExperience/v1/optimisations/{id}
+- POST /optimisationExperience/v1/optimisations/{id}/cancellation
+- POST /optimisationExperience/v1/optimisations/{id}/retrial
 
 OC MS `/optimisation/hub` subscription endpoints are not part of the OSB phase-one endpoint set. Webhook subscription management and notification delivery are OC MS responsibilities, not OSB MS responsibilities.
 
 Path identity rules:
 
-```text
-capabilityId maps to OD MS OptimisationSpecification.id in phase one.
-OSB aliases or slugs are not introduced in the baseline.
-If OSB aliases are introduced later, their derivation, stability, and version-activation behaviour must be specified explicitly.
-```
+- capabilityId maps to OD MS OptimisationSpecification.id in phase one.
+- OSB aliases or slugs are not introduced in the baseline.
+- If OSB aliases are introduced later, their derivation, stability, and version-activation behaviour must be specified explicitly.
 
 Capability browsing normally resolves current ACTIVE specifications by `capabilityId`, which maps to `OptimisationSpecification.id`. OSB may display `specKey`, `version`, and `draftId` when returned by OD MS, but it must not use `specKey` or `draftId` to choose the runtime contract for OC MS creation.
 
@@ -339,13 +333,11 @@ OSB MS must not invent, override, or expose its own versioning semantics for `Op
 
 The baseline `HomeView` is an experience model containing:
 
-```text
-visible optimisation capabilities
-recent and active runtime Optimisation summaries where useful
-high-level counts or status buckets where useful
-available top-level actions
-support and diagnostic correlation metadata where applicable
-```
+- visible optimisation capabilities
+- recent and active runtime Optimisation summaries where useful
+- high-level counts or status buckets where useful
+- available top-level actions
+- support and diagnostic correlation metadata where applicable
 
 OSB may aggregate from OD MS and OC MS through NGW to build this view. `HomeView` is not a source-of-truth resource and must not be used as the authoritative lifecycle, contract, or result record.
 
@@ -378,11 +370,9 @@ OSB MS should return `201 Created` to OEX when OC MS returns `201 Created`, beca
 
 OSB MS must preserve this semantic distinction:
 
-```text
-Resource creation is immediate.
-Execution is asynchronous.
-201 Created from OC MS does not mean the optimisation is feasible, started, solvable, or guaranteed to produce a valid result.
-```
+- Resource creation is immediate.
+- Execution is asynchronous.
+- `201 Created` from OC MS does not mean the optimisation is feasible, started, solvable, or guaranteed to produce a valid result.
 
 OSB MS may translate the response into an OEX-friendly message, but must not present creation as successful optimisation completion. OSB MS MUST NOT translate OC MS `201 Created` into a message implying optimisation completion.
 
@@ -506,19 +496,15 @@ OSB may cache read-only capability, form, and view data only where backend cache
 
 OD MS capability and form data:
 
-```text
-ACTIVE OptimisationSpecification versions are immutable.
-OSB may cache OD-derived capability and form data only in line with OD and NGW cache policy.
-OSB must not use cached OD data to bypass backend validation.
-```
+- ACTIVE OptimisationSpecification versions are immutable.
+- OSB may cache OD-derived capability and form data only in line with OD and NGW cache policy.
+- OSB must not use cached OD data to bypass backend validation.
 
 OC MS runtime data:
 
-```text
-Runtime Optimisation state changes over time.
-OSB should avoid long-lived caching for runtime status and detail views.
-OSB must not use cached runtime state alone to determine action eligibility.
-```
+- Runtime Optimisation state changes over time.
+- OSB should avoid long-lived caching for runtime status and detail views.
+- OSB must not use cached runtime state alone to determine action eligibility.
 
 OSB must not treat an OC request-result cache hit as an OSB-owned result or lifecycle shortcut. Any cached optimisation outcome remains governed by OC MS and must be surfaced only through OC MS runtime resource semantics.
 
@@ -611,6 +597,7 @@ OSB MS must preserve important backend error semantics:
 | Missing or invalid authentication | `401` | Show authentication or session guidance. |
 | User context not authorised for journey or action | `403` | Show not authorised, or hide the action where appropriate. |
 | Unsupported OSB method or endpoint | `405` | Show integration or client routing error. |
+| Unexpected OSB MS failure | `500` | Show generic temporary failure, preserve correlation and trace identifiers, and avoid implying backend validation or optimisation failure. |
 | OD MS or OC MS unavailable | `503` | Show temporary unavailability and retry guidance without implying validation failure. |
 
 OSB integration defects, including sending forbidden OC create fields such as `optimisationSpecification.version`, `optimisationSpecification.draftId`, `optimisationSpecification.href`, `optimisationSpecification.specKey`, or an etag payload field, must be surfaced as request correction or integration-fix guidance and must not be hidden as generic optimisation failure.
