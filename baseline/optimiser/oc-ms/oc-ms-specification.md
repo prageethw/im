@@ -314,9 +314,9 @@ x-platform-extension: true
 x-tmf-native: false
 ```
 
-These headers are governance and documentation indicators only. Clients must not use them as runtime business-logic switches.
+These headers are governance and documentation indicators only. Clients must not use them as runtime business-logic switches. They apply to runtime `Optimisation` resource responses and `/optimisation/hub` subscription responses where those endpoints are exposed through NGW.
 
-`x-cb-triggered: true` may also be returned when a remote dependency circuit breaker changes the externally meaningful response path. It is diagnostic only and must not be used as a business-logic switch or lifecycle/outcome indicator.
+`x-cb-triggered: true` may also be returned when a remote dependency circuit breaker changes the externally meaningful response path. It is diagnostic only and must not be used as a business-logic switch, subscription state indicator, or lifecycle/outcome indicator.
 
 ## 10. POST /optimisation:
 
@@ -1067,6 +1067,9 @@ GET /optimisation/{id}: returns ETag
 GET /optimisation: no per-item ETag by default; includes X-Total-Count and X-Result-Count
 POST /optimisation/{id}/cancellation: requires If-Match
 POST /optimisation/{id}/retrial: requires If-Match
+POST /optimisation/hub: returns Location and ETag
+GET /optimisation/hub/{id}: returns ETag where subscription ETags are enabled
+DELETE /optimisation/hub/{id}: requires If-Match where subscription ETags are enabled
 missing If-Match -> 428
 stale or wrong If-Match -> 412
 ```
@@ -1084,6 +1087,7 @@ Strict content type rules:
 POST /optimisation requires Content-Type: application/json.
 POST /optimisation/{id}/cancellation has no required body; if a body is sent it requires Content-Type: application/json.
 POST /optimisation/{id}/retrial has no required body; if a body is sent it requires Content-Type: application/json.
+POST /optimisation/hub requires Content-Type: application/json.
 A body sent without Content-Type, or with an unsupported Content-Type, on cancellation or retrial returns 415 Unsupported Media Type.
 Unsupported request content type returns 415 Unsupported Media Type.
 ```
@@ -1121,8 +1125,10 @@ While a circuit breaker is open, OC MS must monitor recovery through bounded hea
 | `expression.expressionValue` fails the resolved `targetEntitySchema` | `422 Unprocessable Entity` |
 | OD MS unavailable and OC MS has no valid cached immutable `ACTIVE` contract for the requested id | `503 Service Unavailable` |
 | Cancellation requested from a non-eligible lifecycle state, including `CANCELLING`, `CANCELLATIONFAILED`, or terminal states, or retrial requested from `ACKNOWLEDGED`, `QUEUED`, `PROCESSING`, `CANCELLING`, `CANCELLATIONFAILED`, `COMPLETED`, `INFEASIBLE`, or `CANCELLED` | `409 Conflict` |
-| Missing `If-Match` on cancellation or retrial | `428 Precondition Required` |
-| Stale or wrong `If-Match` on cancellation or retrial | `412 Precondition Failed` |
+| Invalid `/optimisation/hub` callback URL, malformed subscription body, unsupported subscription query filter, or unsupported event type | `400 Bad Request` |
+| Subscription resource not found or not visible | `404 Not Found` |
+| Missing `If-Match` on cancellation, retrial, or subscription delete where ETag governance applies | `428 Precondition Required` |
+| Stale or wrong `If-Match` on cancellation, retrial, or subscription delete where ETag governance applies | `412 Precondition Failed` |
 | Unsupported `Content-Type` | `415 Unsupported Media Type` |
 
 Boundary rules:
@@ -1135,6 +1141,7 @@ Boundary rules:
 412 = supplied If-Match does not match current ETag.
 415 = unsupported request media type.
 503 = OD MS is unavailable and OC MS has no valid cached immutable ACTIVE contract for the requested id.
+Subscription-management errors use the same error envelope and preserve callback/query validation details at a safe level.
 ```
 
 Contract violation example:
@@ -1277,7 +1284,9 @@ x-tmf-native: false
 }
 ```
 
-`GET /optimisation/hub/{id}` retrieves the subscription where authorised and may return an `ETag`. `DELETE /optimisation/hub/{id}` removes the subscription where authorised and requires `If-Match` where the platform applies optimistic concurrency to subscription resources.
+`GET /optimisation/hub/{id}` retrieves the subscription where authorised and may return an `ETag`. `DELETE /optimisation/hub/{id}` removes the subscription where authorised and requires `If-Match` where the platform applies optimistic concurrency to subscription resources. If subscription ETags are enabled, the `If-Match` value must match the current subscription `ETag`.
+
+OC MS must not allow `/optimisation/hub` subscriptions to expose internal `OptimisationRequestedEvent` or `OptimisationCompletedEvent` payloads. The only external event type baselined for subscription is `OptimisationStatusChangeEvent`.
 
 ### 20.2. OptimisationStatusChangeEvent baseline:
 
@@ -1307,7 +1316,7 @@ CANCELLATIONFAILED -> INFEASIBLE
 CANCELLATIONFAILED -> FAILED
 ```
 
-The event may include safe summary metadata but should not embed large result payloads by default. Consumers should use the `href` in the event to retrieve the authoritative current representation when needed.
+The event may include safe summary metadata but should not embed large result payloads by default. Consumers should use the `href` in the event to retrieve the authoritative current representation when needed. If the event and subsequent `GET /optimisation/{id}` disagree, the GET representation wins.
 
 Example callback payload:
 
@@ -1317,6 +1326,7 @@ Example callback payload:
   "eventType": "OptimisationStatusChangeEvent",
   "eventTime": "2026-05-26T13:40:00Z",
   "correlationId": "corr-12345",
+  "traceId": "trace-12345",
   "event": {
     "optimisation": {
       "id": "opt-12345",
@@ -1342,6 +1352,7 @@ For `CANCELLATIONFAILED`, the event must preserve the non-terminal semantics:
   "eventType": "OptimisationStatusChangeEvent",
   "eventTime": "2026-05-26T13:41:00Z",
   "correlationId": "corr-12345",
+  "traceId": "trace-12345",
   "event": {
     "optimisation": {
       "id": "opt-12345",
@@ -1368,8 +1379,9 @@ External events are emitted only after OC MS has persisted the lifecycle or resu
 External event payloads are notifications, not the source of truth.
 GET /optimisation/{id} remains the authoritative current-state read.
 External event payloads must include an `eventId` so subscribers can deduplicate deliveries.
+External event payloads should include `correlationId` and `traceId` where available for support and tracing.
 External event delivery is at-least-once.
-Subscribers must handle duplicate events idempotently.
+Subscribers must handle duplicate events idempotently and must tolerate out-of-order delivery by using `statusChangeDate` and the authoritative `GET /optimisation/{id}` representation.
 Callback delivery must use governed outbound security, such as mTLS, signed request, shared secret, OAuth client credentials, or another platform-approved callback authentication mechanism.
 Callback delivery failure must not roll back OC MS lifecycle or result projection.
 A callback `2xx` response means delivered. Non-`2xx` response, timeout, DNS failure, TLS failure, or callback authentication failure is a delivery failure and follows retry, DLQ, or subscription-suspension policy.
