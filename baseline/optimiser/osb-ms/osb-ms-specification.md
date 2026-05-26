@@ -575,7 +575,7 @@ While a circuit breaker is open, OSB MS must monitor recovery through bounded he
 
 ## 20. Runtime status refresh:
 
-Phase-one OEX and OSB status refresh is REST polling against OC MS through NGW.
+Phase-one OEX and OSB status refresh is REST polling against OC MS through NGW. OC MS may also expose `/optimisation/hub` webhook subscriptions for external status-change notification, but that subscription capability is OC-owned and is not part of the OSB phase-one endpoint set.
 
 Rules:
 
@@ -675,6 +675,7 @@ OSB MS is not:
 - Contract validator of record.
 - Runtime lifecycle owner.
 - Optimiser Kafka event publisher or consumer.
+- Owner of OC MS `/optimisation/hub` subscriptions or `OptimisationStatusChangeEvent` delivery.
 - Solver or orchestration engine.
 - Replacement for OD MS or OC MS.
 
@@ -689,5 +690,6 @@ OSB MS must not:
 - Bypass NGW for OD or OC calls without explicit approval.
 - Forward end-user context to OD MS or OC MS.
 - Invent lifecycle transitions not present in OC MS.
+- Reinterpret OC-owned `OptimisationStatusChangeEvent` notifications as OSB-owned lifecycle or result state.
 - Invent specification version semantics not present in OD MS.
 - Force stale request-form submissions through OC MS validation.
