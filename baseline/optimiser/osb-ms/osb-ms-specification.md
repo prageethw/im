@@ -75,9 +75,11 @@ OSB MS does not own:
 
 Source-of-truth ownership:
 
-- OD MS: owns OptimisationSpecification definitions, lifecycle governance, and version governance.
-- OC MS: owns runtime Optimisation resources, lifecycle, event projection, and result projection.
-- OSB MS: owns OEX experience facade behaviour and context-aware facade behaviour only.
+```text
+OD MS: owns OptimisationSpecification definitions, lifecycle governance, and version governance.
+OC MS: owns runtime Optimisation resources, lifecycle, event projection, and result projection.
+OSB MS: owns OEX experience facade behaviour and context-aware facade behaviour only.
+```
 
 ## 3. API compliance:
 
@@ -95,8 +97,10 @@ OSB MS may transform backend OD and OC responses into UI-friendly models, but it
 
 Avoid using backend resource namespaces directly from OSB:
 
-- `/optimisation`
-- `/optimisationSpecification`
+```http
+/optimisation
+/optimisationSpecification
+```
 
 Those backend namespaces belong to OC MS and OD MS behind NGW.
 
@@ -104,24 +108,28 @@ OSB uses pluralised experience endpoint names intentionally. Backend OC MS and O
 
 ## 5. Phase one endpoint set:
 
-- GET /optimisationExperience/v1/home
-- GET /optimisationExperience/v1/capabilities
-- GET /optimisationExperience/v1/capabilities/{capabilityId}/request-form
-- POST /optimisationExperience/v1/optimisations
-- GET /optimisationExperience/v1/optimisations
-- GET /optimisationExperience/v1/optimisations/{id}
-- POST /optimisationExperience/v1/optimisations/{id}/cancellation
-- POST /optimisationExperience/v1/optimisations/{id}/retrial
-
-OC MS `/optimisation/hub` subscription endpoints are not part of the OSB phase-one endpoint set. Webhook subscription management and notification delivery are OC MS responsibilities, not OSB MS responsibilities.
+```http
+GET /optimisationExperience/v1/home
+GET /optimisationExperience/v1/capabilities
+GET /optimisationExperience/v1/capabilities/{capabilityId}/request-form
+POST /optimisationExperience/v1/optimisations
+GET /optimisationExperience/v1/optimisations
+GET /optimisationExperience/v1/optimisations/{id}
+POST /optimisationExperience/v1/optimisations/{id}/cancellation
+POST /optimisationExperience/v1/optimisations/{id}/retrial
+```
 
 Path identity rules:
 
-- capabilityId maps to OD MS OptimisationSpecification.id in phase one.
-- OSB aliases or slugs are not introduced in the baseline.
-- If OSB aliases are introduced later, their derivation, stability, and version-activation behaviour must be specified explicitly.
+```text
+capabilityId maps to OD MS OptimisationSpecification.id in phase one.
+OSB aliases or slugs are not introduced in the baseline.
+If OSB aliases are introduced later, their derivation, stability, and version-activation behaviour must be specified explicitly.
+```
 
 Capability browsing normally resolves current ACTIVE specifications by `capabilityId`, which maps to `OptimisationSpecification.id`. OSB may display `specKey`, `version`, and `draftId` when returned by OD MS, but it must not use `specKey` or `draftId` to choose the runtime contract for OC MS creation.
+
+
 
 ## 6. OSB response model baseline:
 
@@ -141,82 +149,95 @@ Minimal OSB view model types:
 
 Minimal `CapabilityCard` fields:
 
-- capabilityId: OD MS OptimisationSpecification.id used by OSB capability routes.
-- name: display name derived from the ACTIVE OptimisationSpecification.
-- description: short user-facing description where available.
-- specKey: stable logical specification key where useful for catalogue browsing.
-- version: current ACTIVE official version where visible to the user journey.
-- status: lifecycle summary, normally ACTIVE for runtime OEX browsing.
-- actions[]: available top-level actions such as requestForm.
+```text
+capabilityId: OD MS OptimisationSpecification.id used by OSB capability routes.
+name: display name derived from the ACTIVE OptimisationSpecification.
+description: short user-facing description where available.
+specKey: stable logical specification key where useful for catalogue browsing.
+version: current ACTIVE official version where visible to the user journey.
+status: lifecycle summary, normally ACTIVE for runtime OEX browsing.
+actions[]: available top-level actions such as requestForm.
+```
 
 Minimal `RequestFormModel` fields:
 
-- capabilityId: OD MS OptimisationSpecification.id.
-- expressionIri: value expected for Optimisation.expression.iri.
-- schemaRef: targetEntitySchema reference or embedded schema metadata used to build the form.
-- fields[]: OEX field definitions derived from targetEntitySchema and supported by specCharacteristic guidance.
-- fields[].name: field name or path used in the generated expression payload.
-- fields[].valueType: UI-friendly value type.
-- fields[].required: whether the field is required by the resolved schema.
-- fields[].default: optional default or prefill value where allowed.
-- fields[].examples[]: optional examples derived from OD MS metadata.
-- actions[]: available form actions such as submit and refreshForm.
+```text
+capabilityId: OD MS OptimisationSpecification.id.
+expressionIri: value expected for Optimisation.expression.iri.
+schemaRef: targetEntitySchema reference or embedded schema metadata used to build the form.
+fields[]: OEX field definitions derived from targetEntitySchema and supported by specCharacteristic guidance.
+fields[].name: field name or path used in the generated expression payload.
+fields[].valueType: UI-friendly value type.
+fields[].required: whether the field is required by the resolved schema.
+fields[].default: optional default or prefill value where allowed.
+fields[].examples[]: optional examples derived from OD MS metadata.
+actions[]: available form actions such as submit and refreshForm.
+```
 
 Minimal `CreationResultView` fields:
 
-- id: new runtime Optimisation.id returned by OC MS.
-- href: new runtime Optimisation.href returned by OC MS.
-- lifecycleStatus: initial runtime lifecycleStatus, normally ACKNOWLEDGED.
-- creationContext: OC MS creation context, with reason NEW for normal creation and RETRIAL for retrial-created resources where returned. When OC MS returns creationContext, OSB must include it in CreationResultView and must not infer, default, or omit it.
-- location: backend Location header where returned.
-- backendETag: backend HTTP ETag header where returned.
-- summary: OEX-friendly creation message that does not imply optimisation completion.
-- actions[]: available backend-derived actions for the created runtime Optimisation.
+```text
+id: new runtime Optimisation.id returned by OC MS.
+href: new runtime Optimisation.href returned by OC MS.
+lifecycleStatus: initial runtime lifecycleStatus, normally ACKNOWLEDGED.
+creationContext: OC MS creation context, with reason NEW for normal creation and RETRIAL for retrial-created resources where returned. When OC MS returns creationContext, OSB must include it in CreationResultView and must not infer, default, or omit it.
+location: backend Location header where returned.
+backendETag: backend HTTP ETag header where returned.
+summary: OEX-friendly creation message that does not imply optimisation completion.
+actions[]: available backend-derived actions for the created runtime Optimisation.
+```
 
 Minimal `OptimisationSummaryView` fields:
 
-- id: runtime Optimisation.id returned by OC MS.
-- href: runtime Optimisation.href returned by OC MS.
-- name: runtime Optimisation name where returned by OC MS.
-- lifecycleStatus: current OC MS lifecycleStatus, including CANCELLATIONFAILED where returned.
-- statusChangeDate: timestamp of the last lifecycle change.
-- creationContext: OC MS creation context, with reason NEW or RETRIAL where returned.
-- creationDate: runtime Optimisation creation timestamp where visible to the user journey.
-- lastUpdate: runtime Optimisation last-update timestamp where visible to the user journey.
-- optimisationSpecification: resolved specification reference summary containing id, version, draftId, and href where useful for support and audit.
-- summary: OEX-friendly lifecycle or result summary that preserves OC MS meaning.
-- actions[]: available backend-derived actions after user-context filtering.
+```text
+id: runtime Optimisation.id returned by OC MS.
+href: runtime Optimisation.href returned by OC MS.
+name: runtime Optimisation name where returned by OC MS.
+lifecycleStatus: current OC MS lifecycleStatus, including CANCELLATIONFAILED where returned.
+statusChangeDate: timestamp of the last lifecycle change.
+creationContext: OC MS creation context, with reason NEW or RETRIAL where returned.
+creationDate: runtime Optimisation creation timestamp where visible to the user journey.
+lastUpdate: runtime Optimisation last-update timestamp where visible to the user journey.
+optimisationSpecification: resolved specification reference summary containing id, version, draftId, and href where useful for support and audit.
+summary: OEX-friendly lifecycle or result summary that preserves OC MS meaning.
+actions[]: available backend-derived actions after user-context filtering.
+```
 
 Minimal `OptimisationDetailView` fields:
 
-- id: runtime Optimisation.id returned by OC MS.
-- href: runtime Optimisation.href returned by OC MS.
-- name: runtime Optimisation name where returned by OC MS.
-- description: runtime Optimisation description where returned by OC MS.
-- lifecycleStatus: current OC MS lifecycleStatus, including CANCELLATIONFAILED where returned.
-- statusChangeDate: timestamp of the last lifecycle change.
-- creationContext: OC MS creation context, with reason NEW or RETRIAL where returned.
-- creationDate: runtime Optimisation creation timestamp.
-- lastUpdate: runtime Optimisation last-update timestamp.
-- sourceContext: source context where returned and authorised for display.
-- optimisationSpecification: resolved specification reference containing id, version, draftId, and href.
-- expression: accepted runtime expression where the journey is authorised to display it.
-- result: optional result or command-outcome details where returned by OC MS. CANCELLATIONFAILED result details must be replaced, not merged, if a later terminal outcome is projected.
-- optimisationRelationship[]: optional runtime relationships such as retrialOf.
-- actions[]: available backend-derived actions after user-context filtering.
+```text
+id: runtime Optimisation.id returned by OC MS.
+href: runtime Optimisation.href returned by OC MS.
+name: runtime Optimisation name where returned by OC MS.
+description: runtime Optimisation description where returned by OC MS.
+lifecycleStatus: current OC MS lifecycleStatus, including CANCELLATIONFAILED where returned.
+statusChangeDate: timestamp of the last lifecycle change.
+creationContext: OC MS creation context, with reason NEW or RETRIAL where returned.
+creationDate: runtime Optimisation creation timestamp.
+lastUpdate: runtime Optimisation last-update timestamp.
+sourceContext: source context where returned and authorised for display.
+optimisationSpecification: resolved specification reference containing id, version, draftId, and href.
+expression: accepted runtime expression where the journey is authorised to display it.
+result: optional result or command-outcome details where returned by OC MS. CANCELLATIONFAILED result details must be replaced, not merged, if a later terminal outcome is projected.
+optimisationRelationship[]: optional runtime relationships such as retrialOf.
+actions[]: available backend-derived actions after user-context filtering.
+```
 
 Minimal `AvailableAction` fields:
 
-- name: OEX action name.
-- label: user-facing action label.
-- method: backend or OSB method for the action.
-- href: OSB experience endpoint for the action.
-- enabled: whether the action is currently enabled for the user journey.
-- reason: optional reason when the action is hidden or disabled.
+```text
+name: OEX action name.
+label: user-facing action label.
+method: backend or OSB method for the action.
+href: OSB experience endpoint for the action.
+enabled: whether the action is currently enabled for the user journey.
+reason: optional reason when the action is hidden or disabled.
+```
 
 OSB may rename, group, or format fields for OEX usability, but it must preserve backend lifecycle semantics, action semantics, status codes, ETags, and diagnostic correlation identifiers.
 
 When displaying runtime optimisation records, OSB should preserve the resolved backend specification pointer in the view model where useful for support and audit. The resolved pointer may include `optimisationSpecification.id`, `version`, `draftId`, and `href` where present in the OC MS response. OD MS and OC MS ETags remain HTTP headers and must not be represented as `etag` payload fields inside `optimisationSpecification`.
+
 
 ## 7. Security and identity boundary:
 
@@ -252,13 +273,15 @@ User -> OEX UI -> OGW -> OSB MS -> NGW -> OC MS
 
 OSB MS must preserve the runtime expression shape expected by OC MS:
 
-- expression.@type = JsonLdExpression
-- expression.@baseType = Expression
-- expression.iri = optimisation ontology and model IRI
-- expression.expressionValue as required by the selected ACTIVE OptimisationSpecification.targetEntitySchema
-- expression.expressionValue.context.targets[] where defined by the selected schema
-- expression.expressionValue.context.constraints[] where defined by the selected schema
-- expression.expressionValue.context.preferences[] where defined by the selected schema
+```text
+expression.@type = JsonLdExpression
+expression.@baseType = Expression
+expression.iri = optimisation ontology and model IRI
+expression.expressionValue as required by the selected ACTIVE OptimisationSpecification.targetEntitySchema
+expression.expressionValue.context.targets[] where defined by the selected schema
+expression.expressionValue.context.constraints[] where defined by the selected schema
+expression.expressionValue.context.preferences[] where defined by the selected schema
+```
 
 Runtime creation requires both `optimisationSpecification.id` and `expression.iri`. OSB MS must preserve the selected `optimisationSpecification.id` as the exact governed contract pointer and must preserve the runtime `expression.iri` as the submitted expression semantic identifier. OSB MS must not drop, rewrite, infer, or substitute either value before calling OC MS. OSB MS must not send `optimisationSpecification.version`, `optimisationSpecification.draftId`, `optimisationSpecification.href`, `optimisationSpecification.specKey`, or an `etag` payload field in runtime creation requests. OC MS resolves and persists the resolved specification pointer and returns ETags only as HTTP headers.
 
@@ -266,22 +289,26 @@ OSB MS may construct an OEX-friendly request form from OD MS metadata, but the s
 
 Request-form generation rules:
 
-- Request forms may be generated from OD MS specCharacteristic[], expressionSpecification, and targetEntitySchema.
-- specCharacteristic[] is UI guidance, discovery metadata, defaults, examples, and display guidance only.
-- targetEntitySchema remains the authoritative validation contract.
-- expressionSpecification provides expression type, language, and ontology binding.
-- OSB form validation is pre-validation only.
-- OC MS remains the final runtime contract validator.
+```text
+Request forms may be generated from OD MS specCharacteristic[], expressionSpecification, and targetEntitySchema.
+specCharacteristic[] is UI guidance, discovery metadata, defaults, examples, and display guidance only.
+targetEntitySchema remains the authoritative validation contract.
+expressionSpecification provides expression type, language, and ontology binding.
+OSB form validation is pre-validation only.
+OC MS remains the final runtime contract validator.
+```
 
 Request-form staleness rules:
 
-- OSB builds request forms from the current ACTIVE OptimisationSpecification at form-load time.
-- The user may submit the form after OD MS has activated a newer official version for the same OptimisationSpecification.id.
-- OSB must still submit only optimisationSpecification.id and expression.iri to OC MS.
-- OC MS resolves the current ACTIVE version again at acceptance time and remains the final validator.
-- If OC MS rejects the submission because the request no longer satisfies the current ACTIVE contract, OSB must preserve the backend status and show an OEX-friendly refresh-form message.
-- OSB should include a refresh-form action or equivalent OEX guidance when backend validation indicates the submitted form may be stale.
-- OSB must not force a stale request form through by sending version, draftId, href, specKey, or an etag payload field to OC MS.
+```text
+OSB builds request forms from the current ACTIVE OptimisationSpecification at form-load time.
+The user may submit the form after OD MS has activated a newer official version for the same OptimisationSpecification.id.
+OSB must still submit only optimisationSpecification.id and expression.iri to OC MS.
+OC MS resolves the current ACTIVE version again at acceptance time and remains the final validator.
+If OC MS rejects the submission because the request no longer satisfies the current ACTIVE contract, OSB must preserve the backend status and show an OEX-friendly refresh-form message.
+OSB should include a refresh-form action or equivalent OEX guidance when backend validation indicates the submitted form may be stale.
+OSB must not force a stale request form through by sending version, draftId, href, specKey, or an etag payload field to OC MS.
+```
 
 ## 9. Catalogue and specification flow:
 
@@ -301,16 +328,18 @@ Only approved optimisation domain engineers can access catalogue write, activati
 
 When catalogue-management journeys are enabled, OSB MS must preserve OD MS governance:
 
-- DRAFT specifications are mutable.
-- DRAFT specifications have no official public version.
-- Official version is assigned by OD MS during activation.
-- ACTIVE and RETIRED specifications are immutable.
-- Multiple DRAFT candidates may exist for the same OptimisationSpecification.id.
-- Each DRAFT candidate has a server-assigned draftId.
-- Only one ACTIVE version is enforced per OptimisationSpecification.id.
-- specKey is the OD MS logical specification key. OD MS uses it when creating DRAFT candidates to resolve the server-assigned OptimisationSpecification.id.
-- PATCH requires application/merge-patch+json.
-- PUT requires application/json and is allowed only for mutable DRAFT replacement and finalisation.
+```text
+DRAFT specifications are mutable.
+DRAFT specifications have no official public version.
+Official version is assigned by OD MS during activation.
+ACTIVE and RETIRED specifications are immutable.
+Multiple DRAFT candidates may exist for the same OptimisationSpecification.id.
+Each DRAFT candidate has a server-assigned draftId.
+Only one ACTIVE version is enforced per OptimisationSpecification.id.
+specKey is the OD MS logical specification key. OD MS uses it when creating DRAFT candidates to resolve the server-assigned OptimisationSpecification.id.
+PATCH requires application/merge-patch+json.
+PUT requires application/json and is allowed only for mutable DRAFT replacement and finalisation.
+```
 
 OSB MS must not invent, override, or expose its own versioning semantics for `OptimisationSpecification`.
 
@@ -333,11 +362,13 @@ OSB MS must not invent, override, or expose its own versioning semantics for `Op
 
 The baseline `HomeView` is an experience model containing:
 
-- visible optimisation capabilities
-- recent and active runtime Optimisation summaries where useful
-- high-level counts or status buckets where useful
-- available top-level actions
-- support and diagnostic correlation metadata where applicable
+```text
+visible optimisation capabilities
+recent and active runtime Optimisation summaries where useful
+high-level counts or status buckets where useful
+available top-level actions
+support and diagnostic correlation metadata where applicable
+```
 
 OSB may aggregate from OD MS and OC MS through NGW to build this view. `HomeView` is not a source-of-truth resource and must not be used as the authoritative lifecycle, contract, or result record.
 
@@ -370,9 +401,11 @@ OSB MS should return `201 Created` to OEX when OC MS returns `201 Created`, beca
 
 OSB MS must preserve this semantic distinction:
 
-- Resource creation is immediate.
-- Execution is asynchronous.
-- `201 Created` from OC MS does not mean the optimisation is feasible, started, solvable, or guaranteed to produce a valid result.
+```text
+Resource creation is immediate.
+Execution is asynchronous.
+201 Created from OC MS does not mean the optimisation is feasible, started, solvable, or guaranteed to produce a valid result.
+```
 
 OSB MS may translate the response into an OEX-friendly message, but must not present creation as successful optimisation completion. OSB MS MUST NOT translate OC MS `201 Created` into a message implying optimisation completion.
 
@@ -380,9 +413,11 @@ OSB MS may translate the response into an OEX-friendly message, but must not pre
 
 Runtime creation request rule:
 
-- OSB sends only the selected optimisationSpecification.id to OC MS.
-- OSB must not send optimisationSpecification.version, optimisationSpecification.draftId, optimisationSpecification.href, optimisationSpecification.specKey, or an etag payload field in the create request.
-- OC MS resolves version, draftId, and href from the current ACTIVE OD MS specification and returns the persisted resolved pointer. ETags remain HTTP headers.
+```text
+OSB sends only the selected optimisationSpecification.id to OC MS.
+OSB must not send optimisationSpecification.version, optimisationSpecification.draftId, optimisationSpecification.href, optimisationSpecification.specKey, or an etag payload field in the create request.
+OC MS resolves version, draftId, and href from the current ACTIVE OD MS specification and returns the persisted resolved pointer. ETags remain HTTP headers.
+```
 
 Backend request shape sent from OSB to OC MS:
 
@@ -418,12 +453,14 @@ If a specification is later `RETIRED`, existing runtime optimisation records rem
 
 OSB MS must follow OC MS result presence rules:
 
-- result MUST be absent in ACKNOWLEDGED, QUEUED, PROCESSING, and CANCELLING.
-- result MAY be present in CANCELLATIONFAILED, COMPLETED, INFEASIBLE, FAILED, and CANCELLED.
-- CANCELLATIONFAILED represents a cancellation command outcome, not an optimisation execution outcome. It is non-terminal; any result details shown for it are cancellation-command details and may later be superseded by COMPLETED, INFEASIBLE, or FAILED.
-- When a subsequent terminal optimisation outcome is projected after CANCELLATIONFAILED, previously displayed CANCELLATIONFAILED result details must be fully replaced and must not be merged with the final outcome.
-- FAILED result details may contain safe error codes and safe messages only.
-- OSB MS must not expose sensitive solver internals, Gurobi model formulation, credentials, infrastructure details, or raw stack traces.
+```text
+result MUST be absent in ACKNOWLEDGED, QUEUED, PROCESSING, and CANCELLING.
+result MAY be present in CANCELLATIONFAILED, COMPLETED, INFEASIBLE, FAILED, and CANCELLED.
+CANCELLATIONFAILED represents a cancellation command outcome, not an optimisation execution outcome. It is non-terminal; any result details shown for it are cancellation-command details and may later be superseded by COMPLETED, INFEASIBLE, or FAILED.
+When a subsequent terminal optimisation outcome is projected after CANCELLATIONFAILED, previously displayed CANCELLATIONFAILED result details must be fully replaced and must not be merged with the final outcome.
+FAILED result details may contain safe error codes and safe messages only.
+OSB MS must not expose sensitive solver internals, Gurobi model formulation, credentials, infrastructure details, or raw stack traces.
+```
 
 OSB MS may present human-friendly labels, progress indicators, or guidance, but must not invent backend result values that are not present in the OC MS response.
 
@@ -449,12 +486,14 @@ OSB MS exposes cancellation only when the user context and backend lifecycle sta
 
 Cancellation request body baseline:
 
-- No request body is required.
-- If a body is supplied by OEX, it may contain optional reason or comment metadata only.
-- A supplied cancellation body must not change backend cancellation semantics.
-- OSB must not send an empty JSON object solely to force Content-Type.
-- If no body is supplied by OEX, OSB should call OC MS without a request body.
-- If a cancellation body is supplied, OSB forwards only allowed reason or comment metadata.
+```text
+No request body is required.
+If a body is supplied by OEX, it may contain optional reason or comment metadata only.
+A supplied cancellation body must not change backend cancellation semantics.
+OSB must not send an empty JSON object solely to force Content-Type.
+If no body is supplied by OEX, OSB should call OC MS without a request body.
+If a cancellation body is supplied, OSB forwards only allowed reason or comment metadata.
+```
 
 Cancellation is best-effort. OSB preserves the OC MS cancellation response status. In the baseline, OC MS returns `202 Accepted` for an accepted asynchronous cancellation command and exposes `CANCELLING` until cancellation is confirmed or the cancellation command fails. OSB must return an OEX-friendly `CANCELLING` view rather than presenting cancellation as completed. `CANCELLED` is set only after worker confirmation through `OptimisationCompletedEvent.status = CANCELLED`. `CANCELLATIONFAILED` represents a cancellation command outcome, not an optimisation execution outcome. It is non-terminal; OSB should continue polling until OC MS projects `COMPLETED`, `INFEASIBLE`, or `FAILED`. Any alternative terminal confirmation path is outside the current baseline.
 
@@ -466,13 +505,15 @@ Retrial is available only from `FAILED` in the baseline. OSB must not expose ret
 
 Retrial request body baseline:
 
-- No request body is required.
-- Baseline retrial does not allow request overrides.
-- Retrial resubmits the original accepted expression and the original persisted OptimisationSpecification contract pointer unchanged, including id, version, draftId, and href. ETags remain HTTP headers and are not part of the contract pointer payload.
-- To change targets, constraints, preferences, source context, priority, or the referenced OptimisationSpecification, the caller must create a new Optimisation request rather than using retrial.
-- OSB must not send an empty JSON object solely to force Content-Type.
-- If no body is supplied by OEX, OSB should call OC MS without a request body.
-- Retrial request bodies with override fields must be rejected by OSB before calling OC MS.
+```text
+No request body is required.
+Baseline retrial does not allow request overrides.
+Retrial resubmits the original accepted expression and the original persisted OptimisationSpecification contract pointer unchanged, including id, version, draftId, and href. ETags remain HTTP headers and are not part of the contract pointer payload.
+To change targets, constraints, preferences, source context, priority, or the referenced OptimisationSpecification, the caller must create a new Optimisation request rather than using retrial.
+OSB must not send an empty JSON object solely to force Content-Type.
+If no body is supplied by OEX, OSB should call OC MS without a request body.
+Retrial request bodies with override fields must be rejected by OSB before calling OC MS.
+```
 
 When OC MS creates a retrial Optimisation, OSB preserves the OC MS creation semantics, `Location` header, `ETag` header where returned, and new runtime Optimisation id. If OC MS returns `201 Created` for the new retrial resource, OSB should return `201 Created` with an OEX-friendly `CreationResultView`. The retrial-created resource has `creationContext.reason = RETRIAL` and a `retrialOf` relationship to the original FAILED Optimisation.
 
@@ -482,11 +523,13 @@ Retrial is not available from `INFEASIBLE` by default because `INFEASIBLE` is a 
 
 OSB MS must preserve backend ETag semantics for unsafe runtime operations.
 
-- OSB MS receives or stores the current ETag from OC MS responses.
-- For cancellation and retrial, OSB MS forwards If-Match to OC MS through NGW.
-- OSB must forward the OC MS ETag and must not generate its own ETag for backend unsafe operations.
-- If OSB does not have a current ETag, the preferred path is to refresh the runtime Optimisation before issuing cancellation or retrial. A refresh-required response to OEX is permitted when latency, consistency, or user-interaction constraints make automatic refresh inappropriate.
-- OC MS remains the runtime concurrency source of truth.
+```text
+OSB MS receives or stores the current ETag from OC MS responses.
+For cancellation and retrial, OSB MS forwards If-Match to OC MS through NGW.
+OSB must forward the OC MS ETag and must not generate its own ETag for backend unsafe operations.
+If OSB does not have a current ETag, the preferred path is to refresh the runtime Optimisation before issuing cancellation or retrial. A refresh-required response to OEX is permitted when latency, consistency, or user-interaction constraints make automatic refresh inappropriate.
+OC MS remains the runtime concurrency source of truth.
+```
 
 Backend `412 Precondition Failed` and `428 Precondition Required` must not be hidden as generic failures.
 
@@ -496,17 +539,19 @@ OSB may cache read-only capability, form, and view data only where backend cache
 
 OD MS capability and form data:
 
-- ACTIVE OptimisationSpecification versions are immutable.
-- OSB may cache OD-derived capability and form data only in line with OD and NGW cache policy.
-- OSB must not use cached OD data to bypass backend validation.
+```text
+ACTIVE OptimisationSpecification versions are immutable.
+OSB may cache OD-derived capability and form data only in line with OD and NGW cache policy.
+OSB must not use cached OD data to bypass backend validation.
+```
 
 OC MS runtime data:
 
-- Runtime Optimisation state changes over time.
-- OSB should avoid long-lived caching for runtime status and detail views.
-- OSB must not use cached runtime state alone to determine action eligibility.
-
-OSB must not treat an OC request-result cache hit as an OSB-owned result or lifecycle shortcut. Any cached optimisation outcome remains governed by OC MS and must be surfaced only through OC MS runtime resource semantics.
+```text
+Runtime Optimisation state changes over time.
+OSB should avoid long-lived caching for runtime status and detail views.
+OSB must not use cached runtime state alone to determine action eligibility.
+```
 
 ### 19.1. Circuit breaker and remote dependency behaviour:
 
@@ -530,15 +575,17 @@ While a circuit breaker is open, OSB MS must monitor recovery through bounded he
 
 ## 20. Runtime status refresh:
 
-Phase-one OEX and OSB status refresh is REST polling against OC MS through NGW. OSB MS does not own, proxy, create, manage, or deliver optimisation webhook subscriptions or `OptimisationStatusChangeEvent` notifications. Those capabilities are owned by OC MS through `/optimisation/hub`.
+Phase-one OEX and OSB status refresh is REST polling against OC MS through NGW.
 
 Rules:
 
-- OSB observes runtime progress through OC MS REST APIs in the phase-one baseline.
-- OSB must not infer terminal status locally.
-- Terminal state must come from OC MS.
-- Polling cadence is owned by OSB MS in coordination with the OEX UI and platform UX. It is not owned by OD MS or OC MS.
-- OSB must implement backoff, timeout handling, and a reasonable maximum poll rate to avoid runaway polling against OC MS. Specific cadence values are implementation-defined unless set by platform operational policy.
+```text
+OSB observes runtime progress through OC MS REST APIs.
+OSB must not infer terminal status locally.
+Terminal state must come from OC MS.
+Polling cadence is owned by OSB MS in coordination with the OEX UI and platform UX. It is not owned by OD MS or OC MS.
+OSB must implement backoff, timeout handling, and a reasonable maximum poll rate to avoid runaway polling against OC MS. Specific cadence values are implementation-defined unless set by platform operational policy.
+```
 
 ## 21. Filtering, fields, and count handling:
 
@@ -569,15 +616,19 @@ OSB may further restrict optimisation list results based on the User Context JWT
 
 When proxying or translating `fields`:
 
-- OD MS and OC MS baseline fields projection supports top-level fields only.
-- Nested field selection is not supported in the baseline.
-- Valid-but-absent lifecycle fields are omitted silently by OD MS and OC MS.
-- Unsupported field names return 400 from backend services.
+```text
+OD MS and OC MS baseline fields projection supports top-level fields only.
+Nested field selection is not supported in the baseline.
+Valid-but-absent lifecycle fields are omitted silently by OD MS and OC MS.
+Unsupported field names return 400 from backend services.
+```
 
 When displaying backend list counts:
 
-- X-Total-Count reflects total resources matching backend filters before paging and sparse projection.
-- X-Result-Count reflects resources returned in the current response page.
+```text
+X-Total-Count reflects total resources matching backend filters before paging and sparse projection.
+X-Result-Count reflects resources returned in the current response page.
+```
 
 OSB MS may transform these into UI pagination metadata but must preserve their meaning.
 
@@ -594,17 +645,11 @@ OSB MS must preserve important backend error semantics:
 | Unsupported media type | `415` | Treat as OSB or client integration defect. |
 | Backend resource not found or not visible | `404` | Show not found or no longer visible. |
 | Malformed request, unsupported filter, or forbidden server-controlled runtime field | `400` | Show request correction guidance. |
-| Missing or invalid authentication | `401` | Show authentication or session guidance. |
-| User context not authorised for journey or action | `403` | Show not authorised, or hide the action where appropriate. |
-| Unsupported OSB method or endpoint | `405` | Show integration or client routing error. |
-| Unexpected OSB MS failure | `500` | Show generic temporary failure, preserve correlation and trace identifiers, and avoid implying backend validation or optimisation failure. |
 | OD MS or OC MS unavailable | `503` | Show temporary unavailability and retry guidance without implying validation failure. |
 
 OSB integration defects, including sending forbidden OC create fields such as `optimisationSpecification.version`, `optimisationSpecification.draftId`, `optimisationSpecification.href`, `optimisationSpecification.specKey`, or an etag payload field, must be surfaced as request correction or integration-fix guidance and must not be hidden as generic optimisation failure.
 
 OSB MS may map backend error bodies to OEX-friendly messages, but it must preserve the backend status and correlation information for support and troubleshooting.
-
-If a remote dependency circuit breaker affects the externally meaningful response path, OSB may include `x-cb-triggered: true` while preserving the authoritative HTTP status and backend error semantics. The header is diagnostic only and must not be represented as lifecycle, validation, authorisation, or outcome state.
 
 OSB must preserve `correlationId` and `traceId` from backend headers and backend error bodies where present, and pass them through to OEX-layer error responses or logging following platform trace-header conventions. OSB may add its own correlation identifier, but it must not discard backend diagnostic identifiers.
 
@@ -614,12 +659,12 @@ OSB MS does not publish or consume the optimiser Kafka worker events.
 
 Internal optimiser eventing remains owned by OC MS and OW MS:
 
-- `OptimisationRequestedEvent`
-- `OptimisationCompletedEvent`
+```text
+OptimisationRequestedEvent
+OptimisationCompletedEvent
+```
 
-OSB MS observes runtime progress through OC MS REST APIs exposed through NGW in the phase-one baseline. OC MS owns `/optimisation/hub` and `OptimisationStatusChangeEvent` notification delivery where the notification capability is enabled.
-
-OSB MS does not own, proxy, create, manage, or deliver webhook subscriptions or webhook events. It must not reinterpret webhook notifications as OSB-owned lifecycle or result state.
+OSB MS observes runtime progress only through OC MS REST APIs exposed through NGW.
 
 ## 24. OSB MS non-goals:
 
@@ -630,7 +675,6 @@ OSB MS is not:
 - Contract validator of record.
 - Runtime lifecycle owner.
 - Optimiser Kafka event publisher or consumer.
-- Owner, proxy, manager, or delivery component for OC MS `/optimisation/hub` subscriptions or `OptimisationStatusChangeEvent` notifications.
 - Solver or orchestration engine.
 - Replacement for OD MS or OC MS.
 
@@ -645,7 +689,5 @@ OSB MS must not:
 - Bypass NGW for OD or OC calls without explicit approval.
 - Forward end-user context to OD MS or OC MS.
 - Invent lifecycle transitions not present in OC MS.
-- Reinterpret OC-owned `OptimisationStatusChangeEvent` notifications as OSB-owned lifecycle or result state.
-- Expose OC MS `/optimisation/hub` as an OSB-owned endpoint.
 - Invent specification version semantics not present in OD MS.
 - Force stale request-form submissions through OC MS validation.
