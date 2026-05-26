@@ -764,7 +764,7 @@ External webhook event type:
 OptimisationStatusChangeEvent
 ```
 
-A separate internal `OptimisationFailedEvent` is not used by default. Failed, infeasible, cancelled, and cancellation-failed worker outcomes are represented inside `OptimisationCompletedEvent.status`.
+A separate internal failed-optimisation event type is not used by default. Failed, infeasible, cancelled, and cancellation-failed worker outcomes are represented inside `OptimisationCompletedEvent.status`.
 
 ### 10.7. External webhook subscription baseline:
 

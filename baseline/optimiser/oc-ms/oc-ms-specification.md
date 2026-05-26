@@ -50,29 +50,26 @@ OC MS does not use `specKey`, `draftId`, official specification `version`, or `e
 
 OC MS owns:
 
-```text
-Runtime Optimisation resource
-Runtime lifecycle
-Syntactic and OD-MS-contract validation
-OC MS outbox write
-Publishing worker instruction events to t7.optimisation.events
-Inbox consumption of OptimisationCompletedEvent worker outcomes
-Runtime result projection
-Cancellation and retrial controls
-External webhook subscription records for OptimisationStatusChangeEvent
-OC-owned OptimisationStatusChangeEvent notification publication after runtime projection
-```
+- Runtime Optimisation resource.
+- Runtime lifecycle.
+- Syntactic and OD-MS-contract validation.
+- OC MS outbox write.
+- Publishing worker instruction events to `t7.optimisation.events`.
+- Inbox consumption of `OptimisationCompletedEvent` worker outcomes.
+- Runtime result projection.
+- Cancellation and retrial controls.
+- External webhook subscription records for `OptimisationStatusChangeEvent`.
+- OC-owned `OptimisationStatusChangeEvent` notification publication after runtime projection.
+- External notification delivery outbox, retry, DLQ, delivery audit, and subscription suspension handling for `OptimisationStatusChangeEvent` where implemented by OC MS or its governed delivery component.
 
 OC MS does not own:
 
-```text
-OptimisationSpecification definitions
-OptimisationSpecification lifecycle and version governance
-Gurobi model formulation
-OW MS execution and Gurobi solver execution
-Analytics platform datasets
-Long-running intent control-loop assurance
-```
+- OptimisationSpecification definitions.
+- OptimisationSpecification lifecycle and version governance.
+- Gurobi model formulation.
+- OW MS execution and Gurobi solver execution.
+- Analytics platform datasets.
+- Long-running intent control-loop assurance.
 
 ## 3. Endpoint set:
 
@@ -110,50 +107,48 @@ Runtime `Optimisation` is an execution and audit record, not an editable draft d
 
 ## 4. Runtime Optimisation canonical fields:
 
+The runtime `Optimisation` canonical fields and forbidden create fields in this section apply to `POST /optimisation` only. `/optimisation/hub` subscription resources have their own resource shape and server-controlled fields defined in Section 20.
+
 Canonical runtime `Optimisation` fields:
 
-```text
-id
-href
-name
-description
-priority
-lifecycleStatus
-statusChangeDate
-creationDate
-lastUpdate
-sourceContext
-creationContext
-optimisationSpecification
-expression
-result
-optimisationRelationship[]
-@type
-@baseType
-@schemaLocation
-_links
-```
+- `id`
+- `href`
+- `name`
+- `description`
+- `priority`
+- `lifecycleStatus`
+- `statusChangeDate`
+- `creationDate`
+- `lastUpdate`
+- `sourceContext`
+- `creationContext`
+- `optimisationSpecification`
+- `expression`
+- `result`
+- `optimisationRelationship[]`
+- `@type`
+- `@baseType`
+- `@schemaLocation`
+- `_links`
 
 Client create requests must not provide server-controlled runtime fields:
 
-```text
-id
-href
-lifecycleStatus
-statusChangeDate
-creationDate
-lastUpdate
-result
-optimisationRelationship[]
-creationContext
-_links
-optimisationSpecification.version
-optimisationSpecification.draftId
-optimisationSpecification.href
-optimisationSpecification.specKey
-optimisationSpecification.etag
-etag or any ETag-like payload field
-```
+- `id`
+- `href`
+- `lifecycleStatus`
+- `statusChangeDate`
+- `creationDate`
+- `lastUpdate`
+- `result`
+- `optimisationRelationship[]`
+- `creationContext`
+- `_links`
+- `optimisationSpecification.version`
+- `optimisationSpecification.draftId`
+- `optimisationSpecification.href`
+- `optimisationSpecification.specKey`
+- `optimisationSpecification.etag`
+- `etag` or any ETag-like payload field
 
 OC MS resolves and assigns those fields at creation time or during runtime projection. If a client supplies a forbidden server-controlled field, OC MS returns `400 Bad Request`.
 
@@ -490,24 +485,22 @@ On `POST /optimisation`, OC MS validates the runtime request against the current
 
 Rules:
 
-```text
-The runtime request must provide optimisationSpecification.id.
-The runtime request must provide expression.iri.
-The referenced OptimisationSpecification.id must exist in OD MS.
-OD MS must return a current ACTIVE version for the referenced OptimisationSpecification.id at request-acceptance time.
-The runtime expression.iri must match the resolved ACTIVE version's expressionSpecification.iri.
-OC MS must not infer the current active contract by stale `specKey` lookup.
-OC MS must not resolve the runtime contract by expression.iri alone.
-OC MS treats `specKey` as OD MS catalogue governance metadata and does not accept or require it in runtime creation requests.
-OC MS does not use `specKey`, `draftId`, official specification `version`, or `expression.iri` to choose a runtime contract.
-OC MS resolves the current ACTIVE version by OptimisationSpecification.id at acceptance time.
-OC MS persists the resolved OptimisationSpecification.id, version, draftId, and href as the immutable contract pointer for the life of the runtime Optimisation.
-OC MS MUST NOT substitute a different specification because of `specKey` or `expressionSpecification.iri`.
-If the resolved specification version is later RETIRED, the runtime Optimisation remains valid as an audit record; OC MS does not revalidate or rewrite the specification reference.
-OC MS may maintain an internal OD contract cache for immutable ACTIVE OptimisationSpecification contracts. The cache is keyed by the resolved specification id and version, and may use the OD MS ETag HTTP header internally for cache validation. The OD MS ETag remains a header value and must not be exposed inside the runtime Optimisation payload.
-A cached ACTIVE contract for a specific id and version is safe because OD MS makes ACTIVE and RETIRED versions immutable.
-If the referenced specification is missing, no ACTIVE version exists, the OD contract cache is missing, or the OD contract cache is stale beyond the local policy, OC MS refreshes from OD MS.
-```
+- The runtime request must provide `optimisationSpecification.id`.
+- The runtime request must provide `expression.iri`.
+- The referenced `OptimisationSpecification.id` must exist in OD MS.
+- OD MS must return a current ACTIVE version for the referenced `OptimisationSpecification.id` at request-acceptance time.
+- The runtime `expression.iri` must match the resolved ACTIVE version's `expressionSpecification.iri`.
+- OC MS must not infer the current active contract by stale `specKey` lookup.
+- OC MS must not resolve the runtime contract by `expression.iri` alone.
+- OC MS treats `specKey` as OD MS catalogue governance metadata and does not accept or require it in runtime creation requests.
+- OC MS does not use `specKey`, `draftId`, official specification `version`, or `expression.iri` to choose a runtime contract.
+- OC MS resolves the current ACTIVE version by `OptimisationSpecification.id` at acceptance time.
+- OC MS persists the resolved `OptimisationSpecification.id`, `version`, `draftId`, and `href` as the immutable contract pointer for the life of the runtime Optimisation.
+- OC MS must not substitute a different specification because of `specKey` or `expressionSpecification.iri`.
+- If the resolved specification version is later RETIRED, the runtime Optimisation remains valid as an audit record; OC MS does not revalidate or rewrite the specification reference.
+- OC MS may maintain an internal OD contract cache for immutable ACTIVE OptimisationSpecification contracts. The cache is keyed by the resolved specification id and version, and may use the OD MS ETag HTTP header internally for cache validation. The OD MS ETag remains a header value and must not be exposed inside the runtime Optimisation payload.
+- A cached ACTIVE contract for a specific id and version is safe because OD MS makes ACTIVE and RETIRED versions immutable.
+- If the referenced specification is missing, no ACTIVE version exists, the OD contract cache is missing, or the OD contract cache is stale beyond the local policy, OC MS refreshes from OD MS.
 
 Runtime requests must supply only `optimisationSpecification.id` for contract selection. Clients must not supply `optimisationSpecification.version`, `optimisationSpecification.draftId`, `optimisationSpecification.href`, or `optimisationSpecification.specKey` on creation. OC MS resolves `version`, `draftId`, and `href` from OD MS and persists them in the accepted runtime resource. OD MS ETags remain HTTP headers and may be used internally for cache validation, but they are not exposed in the runtime payload. If a client supplies any of those forbidden fields, OC MS returns `400 Bad Request`. If a client supplies ETag-like metadata in the JSON payload, OC MS also returns `400 Bad Request` because ETag is not a valid runtime payload field.
 
@@ -556,14 +549,14 @@ Cancellation uses the same event type with `instruction = CANCEL`. OW MS executi
 
 OC MS uses exactly two internal Kafka event types with OW MS in the current baseline. These are platform-internal events, not TMF external notification events.
 
-External optimisation notification is a separate OC-owned webhook model described in Section 20. OW MS does not publish external notification events, and external consumers must not subscribe directly to `OptimisationRequestedEvent` or `OptimisationCompletedEvent`.
+External optimisation notification is a separate OC-owned webhook model described in Section 20. OW MS does not publish external notification events, and external consumers must not subscribe directly to `OptimisationRequestedEvent` or `OptimisationCompletedEvent`. `OptimisationStatusChangeEvent` must be derived from OC MS persisted runtime state, not forwarded directly from OW MS `OptimisationCompletedEvent` payloads.
 
 | **Event** | **Emitter** | **Consumer** | **Purpose** | **Key values** |
 |---|---|---|---|---|
 | `OptimisationRequestedEvent` | OC MS, OC MS Outbox Relay | OW MS | OW MS instruction event for execution or cancellation. | `instruction = EXECUTE` or `instruction = CANCEL` |
 | `OptimisationCompletedEvent` | OW MS | OC MS, OC MS Inbox Consumer | OW MS outcome and cancellation-command outcome event for lifecycle and result projection. | `status = COMPLETED`, `FAILED`, `INFEASIBLE`, `CANCELLED`, or `CANCELLATIONFAILED` |
 
-`OptimisationFailedEvent` is not used in the current baseline. Failed, infeasible, cancelled, and cancellation-failed outcomes are carried by `OptimisationCompletedEvent.status`. The event name remains `OptimisationCompletedEvent` in the current baseline even when it carries `CANCELLATIONFAILED` as a cancellation-command outcome. No separate cancellation-failed or progress event type is introduced. `CANCELLATIONFAILED` is not necessarily terminal; OC MS may later project `COMPLETED`, `INFEASIBLE`, or `FAILED` for the same Optimisation when a normal worker outcome is received.
+No separate failed-optimisation event type is used in the current baseline. Failed, infeasible, cancelled, and cancellation-failed outcomes are carried by `OptimisationCompletedEvent.status`. The event name remains `OptimisationCompletedEvent` in the current baseline even when it carries `CANCELLATIONFAILED` as a cancellation-command outcome. No separate cancellation-failed or progress event type is introduced. `CANCELLATIONFAILED` is not necessarily terminal; OC MS may later project `COMPLETED`, `INFEASIBLE`, or `FAILED` for the same Optimisation when a normal worker outcome is received.
 
 Event identity and idempotency requirements:
 
@@ -1111,6 +1104,8 @@ OC MS may proceed with runtime creation using a valid cached immutable ACTIVE OD
 
 OC MS must not use cached or default fallback to fake runtime creation, contract validation, lifecycle projection, cancellation acceptance, retrial creation, ETag validation, result projection, security visibility, or audit state. For command and state-changing operations, OC MS may return a normal success status only when the operation has genuinely completed its required validation, persistence, concurrency, and durability obligations.
 
+OC MS must not use cached or default fallback to fake webhook subscription creation, subscription deletion, callback delivery success, `subscriptionStatus`, or delivery audit state. If subscription persistence or required delivery infrastructure is unavailable and no safe durable handoff exists, OC MS must fail fast or mark delivery failure according to governed notification policy.
+
 For OC MS runtime creation and cancellation, Kafka broker unavailability does not necessarily fail the REST command if OC MS can durably persist the runtime state and outbox record; the outbox relay handles later Kafka publication according to retry and DLQ policy.
 
 While a circuit breaker is open, OC MS must monitor recovery through bounded health probes or test calls according to platform circuit-breaker policy. Probe behaviour must be rate-limited and must not overload a recovering dependency.
@@ -1119,7 +1114,9 @@ While a circuit breaker is open, OC MS must monitor recovery through bounded hea
 
 | **Condition** | **Response** |
 |---|---|
+| Missing or invalid authentication | `401 Unauthorized` |
 | Missing `optimisationSpecification.id`, missing `expression`, missing `expression.iri`, malformed wrapper, malformed JSON, malformed query parameter, unsupported query parameter, invalid paging parameter, unsupported priority value, or client-supplied forbidden server-controlled field | `400 Bad Request` |
+| Client-supplied subscription `id`, `href`, `subscriptionStatus`, `creationDate`, `lastUpdate`, `_links`, or ETag-like payload field on `POST /optimisation/hub` | `400 Bad Request` |
 | Referenced `OptimisationSpecification.id` is missing or not visible | `404 Not Found` |
 | Referenced `OptimisationSpecification.id` has no current `ACTIVE` version | `422 Unprocessable Entity` |
 | `expression.iri` does not match the resolved specification version's `expressionSpecification.iri` | `422 Unprocessable Entity` |
@@ -1132,16 +1129,21 @@ While a circuit breaker is open, OC MS must monitor recovery through bounded hea
 | Missing `If-Match` on cancellation, retrial, or subscription delete | `428 Precondition Required` |
 | Stale or wrong `If-Match` on cancellation, retrial, or subscription delete | `412 Precondition Failed` |
 | Unsupported `Content-Type`, including invalid body content type on cancellation, retrial, hub create, or hub delete where a body is supplied | `415 Unsupported Media Type` |
+| HTTP method not supported for the runtime resource or subscription resource | `405 Method Not Allowed` |
+| Unexpected OC MS failure | `500 Internal Server Error` |
 
 Boundary rules:
 
 ```text
-400 = malformed request, missing required top-level wrapper fields such as `optimisationSpecification.id`, missing `expression`, missing `expression.iri`, unsupported query or filter parameter, invalid paging parameter, unsupported priority value, client-supplied forbidden server-controlled runtime field, or client-supplied `optimisationSpecification.specKey`.
+400 = malformed request, missing required top-level wrapper fields such as `optimisationSpecification.id`, missing `expression`, missing `expression.iri`, unsupported query or filter parameter, invalid paging parameter, unsupported priority value, client-supplied forbidden server-controlled runtime field, client-supplied `optimisationSpecification.specKey`, or client-supplied server-controlled subscription field on `POST /optimisation/hub`.
 422 = request content is syntactically valid but violates the resolved OD contract, including no current ACTIVE version for the referenced specification id, mismatch between `expression.iri` and the resolved specification version's `expressionSpecification.iri`, or `expression.expressionValue` failing `targetEntitySchema`.
 409 = runtime lifecycle or action conflict.
 428 = required If-Match missing.
 412 = supplied If-Match does not match current ETag.
 415 = unsupported request media type.
+401 = missing or invalid authentication.
+405 = method not allowed for the runtime resource or subscription resource.
+500 = unexpected OC MS failure.
 503 = OD MS is unavailable and OC MS has no valid cached immutable ACTIVE contract for the requested id.
 Subscription-management errors use the same error envelope and preserve callback/query validation details at a safe level.
 ```
@@ -1267,11 +1269,11 @@ lastUpdate
 _links
 ```
 
-`id` and `href` are server-assigned. `callback` is the subscriber-owned HTTPS endpoint. `query` is the optional subscription filter string. `subscriptionStatus` is `ACTIVE` for an accepted subscription unless the subscription is later suspended or removed by governed delivery policy. `@type` is `EventSubscription`. `_links` exposes only valid subscription actions for the current caller.
+`id` and `href` are server-assigned. `callback` is the subscriber-owned HTTPS endpoint. `query` is the optional subscription filter string. Baseline `subscriptionStatus` values are `ACTIVE` and `SUSPENDED`. `ACTIVE` means callback delivery is enabled. `SUSPENDED` means delivery has been paused by governed delivery policy, for example repeated callback delivery failure. Deleted subscriptions are removed by `DELETE /optimisation/hub/{id}` and are not represented as a normal active resource state in the baseline. `@type` is `EventSubscription`. `_links` exposes only valid subscription actions for the current caller.
 
-Baseline subscription query filtering supports `eventType`. The only supported baseline `eventType` is `OptimisationStatusChangeEvent`. Future governed extensions may add filters such as `lifecycleStatus`, `sourceContext.domain`, `sourceContext.resource.id`, and `optimisationSpecification.id`. Unsupported query filters or unsupported event types return `400 Bad Request`.
+Baseline subscription query filtering supports `eventType`. If `query` is omitted, OC MS defaults the subscription to `eventType=OptimisationStatusChangeEvent`. The only supported baseline `eventType` is `OptimisationStatusChangeEvent`. In the baseline, `OptimisationStatusChangeEvent` subscriptions are resource-type subscriptions. Per-`optimisationId` filtering is not included unless introduced later as a governed query filter. Future governed extensions may add filters such as `lifecycleStatus`, `sourceContext.domain`, `sourceContext.resource.id`, and `optimisationSpecification.id`. Unsupported query filters or unsupported event types return `400 Bad Request`.
 
-Callback URLs must use HTTPS and must pass platform callback security validation before the subscription is accepted. OC MS must reject loopback, private administrative, malformed, or otherwise disallowed callback targets according to platform SSRF and outbound-callback security policy.
+Callback URLs must use HTTPS and must pass platform callback security validation before the subscription is accepted. OC MS must reject loopback, private administrative, malformed, or otherwise disallowed callback targets according to platform SSRF and outbound-callback security policy. Callback authentication material, shared secrets, OAuth client credentials, signing keys, or mTLS trust material must be stored using approved secret-management mechanisms and must not be returned in subscription GET responses or event payloads.
 
 Example subscription request:
 
@@ -1369,7 +1371,7 @@ OC MS must not allow `/optimisation/hub` subscriptions to expose internal `Optim
 
 ### 20.2. OptimisationStatusChangeEvent baseline:
 
-`OptimisationStatusChangeEvent` is owned by OC MS. It is emitted only after OC MS has durably persisted the lifecycle or result projection for the runtime `Optimisation` resource.
+`OptimisationStatusChangeEvent` is owned by OC MS. It is emitted only after OC MS has durably persisted the lifecycle or result projection for the runtime `Optimisation` resource. Subscriptions are forward-looking in the baseline. Creating a subscription does not trigger replay or backfill of historical lifecycle transitions unless a future governed replay capability is explicitly introduced.
 
 External event delivery flow:
 
@@ -1397,7 +1399,7 @@ CANCELLATIONFAILED -> FAILED
 
 Initial `201 Created` already returns the initial `ACKNOWLEDGED` representation to the caller. A separate `OptimisationStatusChangeEvent` for initial `ACKNOWLEDGED` creation is not required in the baseline unless a future event policy explicitly enables creation notifications.
 
-The event may include safe summary metadata but should not embed large result payloads by default. The baseline callback payload is intentionally a notification summary and must not include full `expression`, full `result.outputs[]`, or sensitive worker diagnostics by default. Consumers should use the `href` in the event to retrieve the authoritative current representation when needed. If the event and subsequent `GET /optimisation/{id}` disagree, the GET representation wins.
+The event may include safe summary metadata but should not embed large result payloads by default. The baseline callback payload is intentionally a notification summary and must not include full `expression`, full `result.outputs[]`, or sensitive worker diagnostics by default. The event `statusChangeDate` must match the persisted runtime `Optimisation.statusChangeDate` for the projected lifecycle transition. Consumers should use the `href` in the event to retrieve the authoritative current representation when needed. If the event and subsequent `GET /optimisation/{id}` disagree, the GET representation wins.
 
 Example callback payload:
 
@@ -1463,14 +1465,14 @@ OW MS events remain internal and must not be exposed to external subscribers.
 External events are emitted only after OC MS has persisted the lifecycle or result projection.
 External event payloads are notifications, not the source of truth.
 GET /optimisation/{id} remains the authoritative current-state read.
-External event payloads must include an `eventId` so subscribers can deduplicate deliveries.
+External event payloads must include an `eventId` so subscribers can deduplicate deliveries. `eventId` is the subscriber-visible deduplication key and must remain stable across retries of the same notification delivery.
 External event payloads must include `eventType`, `eventVersion`, and `eventTime`.
 External event payloads should include `correlationId`, `traceId`, and `subscriptionId` where available for support, tracing, and delivery correlation.
 External event delivery is at-least-once.
 Subscribers must handle duplicate events idempotently and must tolerate out-of-order delivery by using `statusChangeDate` and the authoritative `GET /optimisation/{id}` representation.
 Callback delivery must use governed outbound security, such as mTLS, signed request, shared secret, OAuth client credentials, or another platform-approved callback authentication mechanism.
-Callback delivery failure must not roll back OC MS lifecycle or result projection.
-A callback `2xx` response means delivered. Non-`2xx` response, timeout, DNS failure, TLS failure, or callback authentication failure is a delivery failure and follows platform-governed durable delivery, retry, DLQ, or suspension policy.
+Callback delivery failure must not roll back OC MS lifecycle or result projection. Webhook delivery state, retry state, DLQ state, or subscription suspension must not change runtime `Optimisation.lifecycleStatus` or `result`.
+Any HTTP `2xx` response from the callback endpoint means delivered. Redirects, non-`2xx` responses, timeouts, DNS failures, TLS failures, and authentication failures are delivery failures and follow platform-governed durable delivery, retry, DLQ, or suspension policy.
 Webhook payloads must not expose Gurobi model formulation, solver configuration, raw worker diagnostics, credentials, internal Kafka details, or raw stack traces.
 ```
 
