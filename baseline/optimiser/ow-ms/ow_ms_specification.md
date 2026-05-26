@@ -99,12 +99,19 @@ EXECUTE
 CANCEL
 ```
 
-The worker emits outcomes using `OptimisationCompletedEvent.status` values:
+OW MS emits execution outcomes and cancellation-command outcomes through `OptimisationCompletedEvent.status`.
+
+Execution outcomes:
 
 ```text
 COMPLETED
 INFEASIBLE
 FAILED
+```
+
+Cancellation-command outcomes:
+
+```text
 CANCELLED
 CANCELLATIONFAILED
 ```
@@ -143,10 +150,12 @@ ce-source
 ce-id
 ce-time
 ce-subject
-correlationid
-traceid
+correlationId
+traceId
 content-type
 ```
+
+Header names may be normalised by the transport, but the logical field names are `correlationId` and `traceId`.
 
 Required event body fields:
 
@@ -220,6 +229,8 @@ Baseline race and cancellation rules:
 
 ```text
 If CANCEL arrives before a matching EXECUTE is observed, OW MS may record cancellation intent in the job registry or route the event to retry according to ordering policy. If CANCEL arrives before execution starts and OW MS can suppress execution safely, OW MS emits CANCELLED.
+OW MS must emit `CANCELLED` for a pre-execution cancellation only when it can prove the matching execution was not started or has been safely suppressed; otherwise it must retry, route to DLQ, or emit `CANCELLATIONFAILED` according to policy.
+If the CANCEL intent expires or is cleared before the matching EXECUTE arrives, OW MS must execute the later EXECUTE as normal and publish the actual execution outcome. OC MS will project the final state after `CANCELLATIONFAILED` according to normal outcome and idempotency rules.
 If CANCEL arrives while execution is running and Gurobi can be stopped safely, OW MS emits CANCELLED.
 If CANCEL arrives but cancellation cannot be honoured, applied, or confirmed safely, OW MS emits CANCELLATIONFAILED.
 If CANCEL arrives but execution completes before cancellation is applied, OW MS emits the actual terminal optimisation outcome rather than `CANCELLED`.
@@ -227,6 +238,8 @@ If CANCEL arrives for unknown work and no safe local job record exists, OW MS em
 ```
 
 If the worker reports `CANCELLATIONFAILED`, OC MS may keep observing for a later normal terminal optimisation outcome, depending on the worker execution state and OC MS idempotency rules.
+
+If OW MS emits `CANCELLATIONFAILED` while the corresponding `EXECUTE` remains running or later completes, OW MS must still publish the subsequent valid execution outcome for that `optimisationId`, subject to idempotency and ordering policy.
 
 ## 8. Gurobi Python API integration:
 
@@ -277,6 +290,8 @@ sourceContext
 priority
 creationContext.reason
 ```
+
+Recognised `creationContext.reason` values are `NEW` and `RETRIAL`. Unknown values must not change execution semantics; OW MS may reject them, ignore them, or treat them as diagnostic according to event-version policy.
 
 Model binding may maintain internal traceability metadata such as `modelBindingId`, `modelBindingVersion`, model artifact version, or configuration version. This metadata is internal unless OC MS result projection explicitly allows a safe reference.
 
@@ -372,10 +387,12 @@ ce-source
 ce-id
 ce-time
 ce-subject
-correlationid
-traceid
+correlationId
+traceId
 content-type
 ```
+
+Header names may be normalised by the transport, but the logical field names are `correlationId` and `traceId`.
 
 Required event body fields:
 
@@ -422,6 +439,8 @@ Example:
 ```
 
 The event must not include raw Gurobi model formulation, solver configuration, objective internals, credential material, infrastructure internals, or raw stack traces.
+
+OW MS must not mark local work as safely complete or remove required job-registry ownership until `OptimisationCompletedEvent` publication has succeeded, been durably handed off for retry, or been routed to DLQ according to platform policy.
 
 ## 14. Safe result payload baseline:
 
@@ -522,6 +541,8 @@ Poison event that repeatedly fails processing
 ```
 
 Non-retryable failures are contract, compatibility, integrity, or model-binding failures where retry is not expected to succeed without a governed correction.
+
+OW MS must reject unsupported `eventVersion` values unless backward-compatible handling is explicitly implemented and tested. Unsupported incompatible versions are non-retryable and DLQ-eligible.
 
 Schema-invalid, unsupported, or non-processable poison events are routed to DLQ only after the configured retry policy is exhausted, unless the failure is classified as non-retryable by platform policy.
 
@@ -728,6 +749,7 @@ Result size limits and large-artifact storage policy.
 Model artifact checksum or signature validation mechanism.
 Graceful shutdown policy for in-flight jobs.
 Backpressure thresholds for worker and Gurobi license capacity.
+Maximum CANCEL intent retention window before retry, DLQ, or CANCELLATIONFAILED handling.
 ```
 
 These open items do not change the OC MS platform event boundary or OC MS ownership of runtime lifecycle projection.
