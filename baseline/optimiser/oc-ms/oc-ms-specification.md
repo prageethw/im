@@ -251,6 +251,27 @@ FAILED result details may include safe error codes, safe messages, retry guidanc
 FAILED and CANCELLATIONFAILED result details must not expose sensitive solver internals, Gurobi model formulation, credentials, infrastructure details, or raw stack traces.
 ```
 
+Minimal result shape:
+
+| **Field** | **Rule** |
+|---|---|
+| `outcome` | Required when `result` is present. Must match the projected outcome: `COMPLETED`, `INFEASIBLE`, `FAILED`, `CANCELLED`, or `CANCELLATIONFAILED`. |
+| `summary` | Required when `result` is present. Safe human-readable summary suitable for external consumers. |
+| `code` | Optional safe machine-readable outcome or diagnostic code. Required for `FAILED` and recommended for `INFEASIBLE`, `CANCELLED`, and `CANCELLATIONFAILED`. |
+| `outputs[]` | Optional successful output values. Normally used only for `COMPLETED`. |
+| `diagnostics[]` | Optional safe diagnostic references or messages. Must not expose solver internals, raw stack traces, credentials, infrastructure details, or Gurobi model formulation. |
+| `retryGuidance` | Optional safe retry guidance. Normally used for `FAILED`; not used to imply retrial is available unless the lifecycle action link is present. |
+
+Outcome-specific result rules:
+
+```text
+COMPLETED: result.outcome = COMPLETED and result.outputs[] may contain safe optimisation outputs.
+INFEASIBLE: result.outcome = INFEASIBLE and result.summary or diagnostics explain why no feasible solution exists at a safe level.
+FAILED: result.outcome = FAILED and result.code, summary, diagnostics, or retryGuidance may describe the technical or runtime failure safely.
+CANCELLED: result.outcome = CANCELLED and result.summary may confirm cancellation was honoured(safely).
+CANCELLATIONFAILED: result.outcome = CANCELLATIONFAILED and result.summary or diagnostics may describe the failed cancellation command. This result is non-terminal and must be replaced, not merged, if a later terminal optimisation outcome is projected.
+```
+
 ## 8. HATEOAS by lifecycle:
 
 ```text
@@ -531,6 +552,51 @@ OptimisationCompletedEvent processing MUST be idempotent.
 OC MS projection MUST safely handle duplicate OptimisationCompletedEvent messages.
 OC MS may use eventId or ce-id, inbox deduplication state, and monotonic lifecycle and statusChangeDate rules to suppress duplicate, stale, or late event projection.
 CANCELLATIONFAILED must not suppress or block projection of subsequent valid terminal outcomes.
+```
+
+CloudEvents header baseline:
+
+| **Header** | **Rule** |
+|---|---|
+| `ce-specversion` | Required. Use the platform-supported CloudEvents version. |
+| `ce-id` | Required unique event id for idempotency. May also be carried as `eventId` in the event body where required by platform convention. |
+| `ce-type` | Required. `OptimisationRequestedEvent` or `OptimisationCompletedEvent`. |
+| `ce-source` | Required. Emitting component, such as `optimisation-controller-ms` or `python-gurobi-worker`. |
+| `ce-time` | Required event creation timestamp. |
+| `ce-subject` | Recommended. Runtime `Optimisation.id`. |
+| `correlationId` | Required platform correlation id. |
+| `traceId` | Required platform trace id. |
+
+`OptimisationRequestedEvent` body baseline:
+
+| **Field** | **Rule** |
+|---|---|
+| `eventId` | Unique event id when body-level event identity is used in addition to `ce-id`. |
+| `optimisationId` | Runtime `Optimisation.id` created by OC MS. |
+| `instruction` | `EXECUTE` or `CANCEL`. |
+| `creationContext` | Present for `EXECUTE`; includes `reason = NEW` or `RETRIAL`. |
+| `optimisationSpecification` | Resolved immutable contract pointer with `id`, `version`, `draftId`, and `href`. ETags are headers or internal cache metadata only, not event payload fields. |
+| `expression` | Accepted runtime expression for `EXECUTE`. |
+| `cancellation` | Optional safe cancellation reason or comment metadata for `CANCEL` only. |
+| `correlationId` and `traceId` | Required diagnostic context. |
+
+`OptimisationCompletedEvent` body baseline:
+
+| **Field** | **Rule** |
+|---|---|
+| `eventId` | Unique event id when body-level event identity is used in addition to `ce-id`. |
+| `optimisationId` | Runtime `Optimisation.id` whose lifecycle or result is being projected. |
+| `status` | `COMPLETED`, `INFEASIBLE`, `FAILED`, `CANCELLED`, or `CANCELLATIONFAILED`. |
+| `result` | Optional safe outcome detail using the OC MS result shape. Required where the worker has safe useful output or diagnostics to project. |
+| `correlationId` and `traceId` | Required diagnostic context. |
+
+DLQ posture:
+
+```text
+Events that cannot be deserialised, validated, correlated to a known optimisationId, or safely projected after configured retry handling go to the optimiser DLQ.
+DLQ entries must retain enough metadata for diagnosis and controlled replay decisions.
+Automatic replay from DLQ is outside the current baseline.
+DLQ handling must not expose solver internals or sensitive infrastructure details through external OC MS payloads.
 ```
 
 ## 14. GET /optimisation list:
