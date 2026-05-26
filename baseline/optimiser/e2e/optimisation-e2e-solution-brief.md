@@ -9,8 +9,8 @@
 | **Source path** | `baseline/optimiser/e2e/optimisation-e2e-solution-brief.md` |
 | **Source of truth** | GitHub `main` |
 | **Last aligned** | 2026-05-24 |
-| **Last verified against OD/OC/OSB/OW specs** | 2026-05-26 |
-| **Alignment scope** | Aligned with committed OD MS, OC MS, OSB MS, and OW MS specifications, including OD `specKey`, DRAFT `draftId`, official version, OC resolved contract-pointer rules, OC `creationContext.reason`, non-terminal `CANCELLATIONFAILED`, header-only ETag handling, OD and OC lifecycle diagrams, and platform resource model extension posture. |
+| **Last verified against OD/OC/OSB specs** | 2026-05-24 |
+| **Alignment scope** | Aligned with committed OD MS, OC MS, and OSB MS specifications, including OD `specKey`, DRAFT `draftId`, official version, OC resolved contract-pointer rules, OC `creationContext.reason`, non-terminal `CANCELLATIONFAILED`, header-only ETag handling, OD and OC lifecycle diagrams, and platform resource model extension posture. |
 
 ## Table of contents:
 
@@ -54,13 +54,15 @@ Core services:
 | **OD MS(Optimisation Definition MS)** | Owns the governed `OptimisationSpecification` catalogue, lifecycle, draft candidate identity, official versioning, and caller-facing request contracts. |
 | **OC MS(Optimisation Controller MS)** | Owns runtime `Optimisation` resources, lifecycle, cancellation, retrial, persistence, event integration, result projection, and resolved specification contract pointers. |
 | **OSB MS(Optimisation Screen Builder MS)** | Provides the OEX backend-for-frontend experience, shapes UI views and actions using user context, and calls backend optimisation APIs through NGW. |
-| **OW MS(Optimisation Worker MS)** | Python worker service that consumes Kafka worker instructions, executes or cancels deterministic optimisation work through the Gurobi Python API, and emits worker outcome events. |
+| **OW MS (Optimisation Worker MS)** | Python worker service that consumes Kafka worker instructions, integrates with the Gurobi Python API, executes or cancels optimisation work, and emits outcome facts. |
+
+OW MS means Optimisation Worker MS. OW MS emits outcome facts only; OC MS owns REST-visible lifecycle and result projection.
 
 Operator access to the experience layer is governed by the ACG approval process and Microsoft Entra ID SSO. OGW invokes OSB MS using mTLS and User Context JWT. OSB MS invokes NGW using mTLS and OAuth2 system-to-system. User context stops before NGW; downstream OD MS and OC MS calls use service identity only.
 
 OC MS validates the request structure and referenced ACTIVE OD MS request contract, persists the runtime `Optimisation` resource, returns `201 Created`, writes `OptimisationRequestedEvent` to its outbox, and drives execution asynchronously through Kafka.
 
-Kafka carries worker instructions and outcomes, with a dedicated DLQ for unprocessable events. OW MS consumes `EXECUTE` or `CANCEL` instructions and returns optimisation outcome and cancellation-command outcome facts through `OptimisationCompletedEvent`. OC MS remains the owner of REST-visible lifecycle projection.
+Kafka carries worker instructions and outcomes, with a dedicated DLQ for unprocessable events. OW MS consumes `EXECUTE` or `CANCEL` instructions and returns optimisation command outcomes through `OptimisationCompletedEvent`.
 
 NGW-exposed backend APIs use TMF-style API conventions where appropriate. `OptimisationSpecification` and `Optimisation` are optimiser-domain platform resources, not native TMF Open API resources. However OGW-exposed experience APIs, private MS-to-MS APIs, and internal Kafka events do not need to be TMF-compliant.
 
@@ -132,8 +134,6 @@ OC runtime create request rule:
 - OC MS resolves `version`, `draftId`, and `href` from OD MS and persists them on the accepted runtime record. ETags and If-Match are HTTP headers only and are not JSON payload fields.
 
 OSB MS acts as the OEX backend-for-frontend. It shapes experience models such as `HomeView`, `CapabilityCard`, `RequestFormModel`, `CreationResultView`, `OptimisationSummaryView`, and `OptimisationDetailView`. OSB response models are experience models, not source-of-truth domain resources. OSB may be owned by the experience team to simplify UI flows by aggregating and shaping payloads for UI components.
-
-OW MS means Optimisation Worker MS. OW MS is the Python worker service that consumes OC MS worker instructions from Kafka, integrates with the Gurobi Python API, applies worker-side idempotency and job-registry rules, and emits outcome facts back to Kafka. OW MS does not own OC MS REST-visible lifecycle state and must not write OC MS runtime database tables; OC MS remains the lifecycle and result projection owner.
 
 ### 3.1. Use case view:
 
@@ -260,7 +260,7 @@ Catalogue-management journeys are feature-gated and out of phase-one scope unles
 14. OC MS Outbox Relay publishes OptimisationRequestedEvent to Kafka.
 15. OC MS advances ACKNOWLEDGED -> QUEUED after successful Kafka publish. QUEUED is projected later and is not the initial creation response state.
 16. OW MS consumes OptimisationRequestedEvent.
-17. OW MS resolves deterministic model binding and invokes the Gurobi Python API.
+17. OW MS resolves deterministic model binding and invokes Gurobi Optimiser.
 18. OW MS publishes OptimisationCompletedEvent with COMPLETED, INFEASIBLE, FAILED, CANCELLED, or CANCELLATIONFAILED. COMPLETED, INFEASIBLE, FAILED, and CANCELLED are terminal lifecycle outcomes. CANCELLATIONFAILED is a non-terminal cancellation-command outcome.
 19. OC MS Inbox Consumer applies idempotency and stale and late event checks.
 20. OC MS updates lifecycle and result projection.
@@ -299,13 +299,13 @@ Phase-one OEX and OSB status refresh is REST polling against OC MS through NGW. 
 7. OC MS returns the status defined by the OC MS API contract for accepted cancellation. In the current baseline this is 202 Accepted, with lifecycleStatus = CANCELLING until a cancellation command outcome or terminal optimisation outcome is projected.
 8. OC MS writes OptimisationRequestedEvent with instruction = CANCEL to outbox.
 9. OC MS Outbox Relay publishes event to Kafka.
-10. Worker stops, cancels, or ignores work where safely possible.
-11. Baseline cancellation confirmation is `OptimisationCompletedEvent.status = CANCELLED`; OC MS projects CANCELLED only after that worker confirmation. If the worker reports `CANCELLATIONFAILED`, OC MS projects non-terminal CANCELLATIONFAILED and continues to accept a later valid terminal outcome of COMPLETED, INFEASIBLE, or FAILED.
+10. OW MS stops, cancels, or ignores work where safely possible.
+11. Baseline cancellation confirmation is `OptimisationCompletedEvent.status = CANCELLED`; OC MS projects CANCELLED only after that worker confirmation. If OW MS reports `CANCELLATIONFAILED`, OC MS projects non-terminal CANCELLATIONFAILED and continues to accept a later valid terminal outcome of COMPLETED, INFEASIBLE, or FAILED.
 ```
 
 Cancellation is best-effort. Cancellation has no required request body; optional reason or comment metadata does not change cancellation semantics. OSB must not send an empty JSON object solely to force `Content-Type`. If no body is supplied by OEX, OSB should call OC MS without a request body. Cancellation requested from a non-eligible lifecycle state, including `CANCELLING`, `CANCELLATIONFAILED`, or terminal states, returns `409 Conflict`.
 
-Worker cancellation handling is implementation-specific. The `CANCEL` instruction is best-effort; a worker may complete a solve cycle before honouring cancellation where immediate interruption is not safe or supported. If `CANCEL` arrives but the worker completes first, OC MS projects the actual terminal outcome; cancellation remains best-effort.
+OW MS cancellation handling is implementation-specific. The `CANCEL` instruction is best-effort; OW MS may complete a solve cycle before honouring cancellation where immediate interruption is not safe or supported. If `CANCEL` arrives but OW MS completes first, OC MS projects the actual terminal outcome; cancellation remains best-effort.
 
 #### 3.3.7. Retry failed optimisation:
 
@@ -322,20 +322,20 @@ Worker cancellation handling is implementation-specific. The `CANCEL` instructio
 8. New Optimisation starts with lifecycleStatus = ACKNOWLEDGED and creationContext.reason = RETRIAL.
 9. OC MS writes OptimisationRequestedEvent with instruction = EXECUTE for the new Optimisation.
 10. OC MS returns 201 Created with Location, ETag, and the new runtime Optimisation body before worker execution completes.
-11. Worker processes the new request asynchronously.
+11. OW MS processes the new request asynchronously.
 ```
 
 Retrial is available only from `FAILED` in the baseline. Retrial is not available from `INFEASIBLE` by default because `INFEASIBLE` is a valid optimisation or model outcome, not a technical failure. Retrial has no required request body and does not allow overrides. OSB must not send an empty JSON object solely to force `Content-Type`. If no body is supplied by OEX, OSB should call OC MS without a request body. Retrial resubmits the original accepted expression and reuses the original persisted OC contract pointer, including `id`, `version`, `draftId`, and `href`. When OC MS creates the retrial resource, it returns `201 Created` with the new runtime Optimisation id, `Location`, `ETag`, and resource body.
 
-#### 3.3.8. OW MS execute optimisation:
+#### 3.3.8. OW MS executes optimisation:
 
-![OW MS execute optimisation](optimisation-worker-execution.svg)
+![OW MS executes optimisation](optimisation-worker-execution.svg)
 
 ```text
 1. OW MS consumes OptimisationRequestedEvent with instruction = EXECUTE.
-2. Worker validates event idempotency and execution eligibility.
+2. OW MS validates event idempotency and execution eligibility.
 3. OW MS resolves runtime context and internal deterministic model binding.
-4. OW MS invokes the Gurobi Python API.
+4. OW MS invokes Gurobi Optimiser.
 5. Gurobi Optimiser returns solver output, infeasibility information, failure information, or cancellation confirmation.
 6. OW MS maps optimisation outcomes to COMPLETED, INFEASIBLE, FAILED, or CANCELLED, and maps cancellation-command failure to CANCELLATIONFAILED.
 7. OW MS publishes OptimisationCompletedEvent.
@@ -344,7 +344,7 @@ Retrial is available only from `FAILED` in the baseline. Retrial is not availabl
 10. User observes outcome through OC MS REST status and detail exposed through OSB and NGW.
 ```
 
-OW MS-side idempotency means duplicate event detection using `eventId` or `ce-id`, `optimisationId`, and instruction context before executing work. Detailed worker eligibility, deduplication, job-registry, Gurobi integration, backpressure, and safe result rules are defined in the OW MS specification.
+OW MS idempotency in this E2E brief means duplicate event detection using `eventId` or `ce-id`, `optimisationId`, and instruction context before executing work. Detailed OW MS eligibility and deduplication rules belong in `ow-ms/ow_ms_specification.md`.
 
 ## 4. Capability matrix:
 
@@ -363,9 +363,9 @@ OW MS-side idempotency means duplicate event detection using `eventId` or `ce-id
 | **OC MS Outbox Relay** | Publishes `OptimisationRequestedEvent` to Kafka after DB commit; successful publish drives ACKNOWLEDGED -> QUEUED. |
 | **Kafka topic** | Internal event stream for worker instructions and outcomes. |
 | **Kafka DLQ** | Holds events that cannot be safely processed after retry handling. |
-| **OW MS** | Python worker service that consumes requested events, executes or cancels work through the Gurobi Python API, maintains worker-side idempotency and job-registry behaviour, and emits completed outcome events. |
+| **OW MS** | Optimisation Worker MS. Python worker service that consumes requested events, executes or cancels work through the Gurobi Python API, and emits `OptimisationCompletedEvent` outcome facts. |
 | **Internal deterministic optimisation models** | Own solver-specific objective formulation, constraints, candidate-resource rules, model binding, and solver configuration. |
-| **Gurobi Optimiser** | Executes mathematical optimisation prepared by OW MS and the internal model layer. |
+| **Gurobi Optimiser** | Executes mathematical optimisation prepared by worker model layer. |
 | **Analytics platform/data sources** | Provides authorised datasets required by the worker or model layer. |
 | **OC MS Inbox Consumer** | Consumes worker outcomes, applies idempotency/stale and late checks, and projects lifecycle and result. |
 | **Operational support and monitoring** | Monitors service health, Kafka lag, outbox and inbox processing, worker failures, solver failures, DLQ, and lifecycle and result trends. |
@@ -524,7 +524,7 @@ The database and Kafka cluster must meet the required availability targets for t
 
 The production environment is expected to scale dynamically based on demand.
 
-OD MS scales primarily for capability discovery and specification retrieval. OC MS scales for runtime API traffic, outbox relay throughput, and inbox outcome processing. OW MS workers scale horizontally based on queue depth, worker capacity, Gurobi licence capacity, and solver runtime characteristics. OSB scales for OEX-API view traffic and can cache read-only OD-derived capability and form data only where backend cache headers allow.
+OD MS scales primarily for capability discovery and specification retrieval. OC MS scales for runtime API traffic, outbox relay throughput, and inbox outcome processing. OW MS instances scale horizontally based on queue depth, solver runtime characteristics, and Gurobi licence or runtime capacity. OSB scales for OEX-API view traffic and can cache read-only OD-derived capability and form data only where backend cache headers allow.
 
 Kubernetes provides the ability to scale pods based on demand.
 
@@ -562,7 +562,7 @@ Synchronous API latency targets are to be confirmed through NFR baselining. Solv
 - User context stops before or at NGW; downstream OD MS and OC MS calls use service identity only.
 - NGW exposes OD MS and OC MS APIs to authorised backend consumers.
 - Kafka is available as the event backbone.
-- OW MS has authorised access to required analytics data sources, Gurobi licence material through approved secret management, and governed model artifacts required for execution.
+- OW MS has authorised access to required analytics data sources and required Gurobi runtime dependencies.
 - Runtime `Optimisation` is asynchronous by design.
 - `sourceContext` is optional and may be omitted for generic optimisation requests.
 - Runtime `Optimisation` does not expose a business `version` field.
@@ -742,7 +742,7 @@ CANCELLED -> lifecycleStatus CANCELLED
 CANCELLATIONFAILED -> lifecycleStatus CANCELLATIONFAILED
 ```
 
-`CANCELLATIONFAILED` is not a terminal optimisation outcome. It represents cancellation-command failure and may later be followed by COMPLETED, INFEASIBLE, or FAILED. Do not introduce an alternate success status unless the worker contract is explicitly changed to emit one.
+`CANCELLATIONFAILED` is not a terminal optimisation outcome. It represents cancellation-command failure and may later be followed by COMPLETED, INFEASIBLE, or FAILED. Do not introduce an alternate success status unless the OW MS contract is explicitly changed to emit one.
 
 ### 10.10. Canonical runtime expression shape:
 
@@ -803,7 +803,7 @@ OC MS does not evaluate:
 - metric-vs-constraint fit
 - objective trade-offs
 
-OW MS returns terminal optimisation outcomes and cancellation-command outcomes through `OptimisationCompletedEvent.status`:
+OW MS returns terminal optimisation outcomes and cancellation-command outcomes:
 
 - `COMPLETED`
 - `INFEASIBLE`
