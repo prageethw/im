@@ -64,7 +64,7 @@ OC MS validates the request structure and referenced ACTIVE OD MS request contra
 
 Kafka carries worker instructions and outcomes, with a dedicated DLQ for unprocessable events. OW MS consumes `EXECUTE` or `CANCEL` instructions and emits execution outcomes and cancellation-command outcomes through `OptimisationCompletedEvent`.
 
-NGW-exposed backend APIs use TMF-style API conventions where appropriate. `OptimisationSpecification` and `Optimisation` are optimiser-domain platform resources, not native TMF Open API resources. However OGW-exposed experience APIs, private MS-to-MS APIs, and internal Kafka events do not need to be TMF-compliant.
+NGW-exposed backend APIs use TMF-style API conventions where appropriate. `OptimisationSpecification` and `Optimisation` are optimiser-domain platform resources, not native TMF Open API resources. OGW-exposed experience APIs, private MS-to-MS APIs, and internal Kafka events do not need to be TMF-compliant.
 
 Platform resource model extensions are deliberate and documented in the owning service specifications. OD MS owns `specKey`, `draftId`, DRAFT candidate operations, and ACTIVE retirement semantics. OC MS owns runtime `creationContext`, cancellation and retrial commands, and the `CANCELLATIONFAILED` lifecycle value. OSB exposes experience-layer view models over these backend platform resources and must preserve their semantics.
 
@@ -559,6 +559,7 @@ Use `x-cb-triggered: true` only when a remote dependency circuit breaker changes
 | Safe cached or precomputed object available because source dependency is unavailable | Return approved cached or precomputed object. | Normal success status. | `x-cb-triggered: true` |
 | Safe default payload available because dependency-backed content is unavailable | Return approved default payload instantly. | Normal success status. | `x-cb-triggered: true` |
 | Required remote dependency unavailable and no safe fallback exists | Fail fast. | Usually `503 Service Unavailable`. | `x-cb-triggered: true` |
+| OD MS unavailable during runtime creation and no valid cached ACTIVE contract exists | Fail fast; OC MS must not accept the runtime request without resolved contract validation. | `503 Service Unavailable`. | `x-cb-triggered: true` |
 | Command or state-changing operation cannot reach required remote dependency and cannot safely complete | Do not fake acceptance. Fail fast. | Appropriate failure, usually `503`. | `x-cb-triggered: true` |
 | Local validation failure, malformed request, lifecycle conflict, or stale ETag | Return normal domain/API error. | `400`, `409`, `412`, `428`, or equivalent. | N/A |
 | Local application error not caused by remote dependency circuit breaker | Return normal internal error. | `500 Internal Server Error`. | N/A |

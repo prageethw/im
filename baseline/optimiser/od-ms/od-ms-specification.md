@@ -204,11 +204,9 @@ _links
 
 `specKey` is the mandatory stable logical specification key supplied when creating a DRAFT. OD MS uses `specKey` to resolve the server-assigned `OptimisationSpecification.id` for the draft candidate. If a current ACTIVE specification already exists for the same `specKey`, OD MS assigns the new DRAFT candidate to that existing `id`. If no current ACTIVE specification exists for the `specKey`, OD MS creates a new `id`. If only RETIRED versions exist for the `specKey` and no ACTIVE version exists, OD MS creates a new `id` unless a governed lineage-reuse capability is explicitly introduced later through governed platform change. Historical lineage continuity across retired-only `specKey` records is intentionally not automatic in the baseline; `specKey` can be used for discovery and reporting across such lineages.
 
-`specKey` may be changed while the specification is still `DRAFT`, but only when OD MS validates the change against the current ACTIVE `OptimisationSpecification.id` for the new `specKey`. If an ACTIVE specification already exists for the new `specKey`, the DRAFT candidate's stored `id` must match that ACTIVE `id`. If it does not match, OD MS returns `409 Conflict`. OD MS must not use a `specKey` change to move a DRAFT candidate from one existing ACTIVE lineage to another.
+`specKey` may be changed while the specification is still `DRAFT`, but OD MS must validate the changed value against the current ACTIVE `OptimisationSpecification.id` for the new `specKey`. If an ACTIVE specification already exists for the changed `specKey`, the DRAFT candidate's stored `id` must match that ACTIVE `id`. If it does not match, OD MS returns `409 Conflict`. OD MS must not use a `specKey` change to move a DRAFT candidate from one existing ACTIVE lineage to another. If no ACTIVE specification exists for the changed `specKey`, the change is allowed only when it does not move the DRAFT away from an existing ACTIVE lineage.
 
 `specKey` is also the active logical uniqueness key. At most one ACTIVE `OptimisationSpecification.id` may exist for a given `specKey`. If OD MS detects more than one ACTIVE lineage for the same `specKey`, that is a server-side data-integrity breach. OD MS must not guess which lineage to use; it must reject the operation, roll back any activation transaction, raise an operational alert, and require administrative remediation.
-
-When `specKey` is changed on a DRAFT candidate, OD MS validates the changed value against the current ACTIVE `OptimisationSpecification.id` for that `specKey`. If an ACTIVE specification already exists for the changed `specKey`, the DRAFT candidate's stored `id` must match that ACTIVE `id`. If it does not match, OD MS returns `409 Conflict`. If no ACTIVE specification exists for the changed `specKey`, the change is allowed only when it does not move the DRAFT away from an existing ACTIVE lineage.
 
 `id` identifies the specification lineage from DRAFT through ACTIVE and RETIRED states. DRAFT operations are addressed by `draftId`; official runtime contract selection after activation is by `id`.
 
@@ -344,7 +342,7 @@ context.constraints[] contains hard mandatory requirements.
 context.preferences[] contains soft ranking or selection preferences.
 ```
 
-The `example.com` IRIs and JSON-LD aliases in this embedded baseline are illustrative placeholders. The base schema validates the common optimisation expression container shape. Concrete `OptimisationSpecification.targetEntitySchema` artifacts may constrain the exact ontology IRI, JSON-LD aliases, and JSON-LD type values for a specific capability.
+The `example.com` IRIs and JSON-LD aliases in this embedded baseline are illustrative placeholders. The embedded schema is a baseline container schema; concrete `OptimisationSpecification` records may reference stricter governed schema artifacts for specific optimisation capabilities. The base schema validates the common optimisation expression container shape. Concrete `OptimisationSpecification.targetEntitySchema` artifacts may constrain the exact ontology IRI, JSON-LD aliases, and JSON-LD type values for a specific capability.
 
 ```json
 {
@@ -684,6 +682,8 @@ x-tmf-native: false
 
 These headers apply to OD MS external API responses only. They are not used on internal Kafka events, database records, or private worker contracts.
 
+`x-cb-triggered: true` may also be returned when a remote dependency circuit breaker changes the externally meaningful response path. It is diagnostic only and must not be used as a business-logic switch.
+
 Clients must not use these headers as runtime business-logic switches.
 
 ## 16. Concurrency and cache governance:
@@ -727,7 +727,7 @@ The only explicit client cache override documented by OD MS is:
 Cache-Control: no-cache
 ```
 
-The `private, max-age=300` posture is suitable for initial synchronous discovery/validation flows. OC MS may cache immutable `ACTIVE` specification contracts by `id` and `ETag`; because `ACTIVE` specifications are immutable, a cached contract for a specific `id` is safe. OC MS must not rely on a stale `specKey` lookup to infer the current active contract; runtime validation is against the referenced `OptimisationSpecification.id` resolved by OD MS.
+The `private, max-age=300` posture is suitable for initial synchronous discovery/validation flows. OC MS may cache immutable specification contracts by resolved `id` and `version`, using the OD MS `ETag` header internally for cache validation or traceability. Because `ACTIVE` and `RETIRED` versions are immutable, a cached contract for a specific `id` and `version` is safe. OC MS must not use a stale `id`-only or `specKey` lookup to infer the current ACTIVE contract; runtime validation is against the referenced `OptimisationSpecification.id` resolved by OD MS.
 
 ### 16.1. Circuit breaker and remote dependency behaviour:
 
@@ -1093,6 +1093,8 @@ DELETE /optimisationManagement/v1/optimisationSpecification/optimisation-spec-su
 If-Match: "od-spec-surgical-routing-r4"
 ```
 
+The `If-Match` value must be the `ETag` of the current ACTIVE version for the supplied `id`.
+
 Response:
 
 ```http
@@ -1271,7 +1273,7 @@ Content-Type: application/json
 ```text
 OD MS: defines what is allowed.
 OC MS: stores what was accepted at runtime.
-Worker/model: decides feasibility/cancellation outcome and returns COMPLETED, INFEASIBLE, FAILED, or CANCELLED.
+Worker/model: decides execution outcomes and cancellation-command outcomes. Execution outcomes are COMPLETED, INFEASIBLE, or FAILED. Cancellation-command outcomes are CANCELLED or CANCELLATIONFAILED.
 ```
 
 OC MS validates runtime `Optimisation` requests against the `targetEntitySchema` of the referenced `ACTIVE` `OptimisationSpecification`. Runtime creation requires both `optimisationSpecification.id` and `expression.iri`; OC MS uses the id as the exact contract pointer and verifies the runtime IRI against `OptimisationSpecification.expressionSpecification.iri`. OC MS does not use `specKey` for runtime contract selection.
