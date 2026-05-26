@@ -71,33 +71,29 @@ Approved platform extensions:
 
 OD MS owns:
 
-```text
-OptimisationSpecification resource
-Optimisation capability metadata
-Request contract definition
-Expression specification metadata
-Target entity schema for runtime Optimisation expressions
-Specification characteristic catalogue for discovery and OEX and UI guidance
-Specification lifecycle
-Specification activation and version assignment
-Specification list, retrieve, create, update, and delete operations
-```
+- OptimisationSpecification resource
+- Optimisation capability metadata
+- Request contract definition
+- Expression specification metadata
+- Target entity schema for runtime Optimisation expressions
+- Specification characteristic catalogue for discovery, OEX, and UI guidance
+- Specification lifecycle
+- Specification activation and version assignment
+- Specification list, retrieve, create, update, and delete operations
 
 OD MS does not own:
 
-```text
-Runtime Optimisation resources
-Runtime expression values
-Runtime expression.expressionValue.context.targets[] values
-Runtime expression.expressionValue.context.constraints[] values
-Runtime expression.expressionValue.context.preferences[] values
-Actual candidate resource instances submitted in a runtime request
-Candidate-resource selection
-Solver feasibility evaluation
-Gurobi model execution
-Runtime optimisation outcome
-Runtime optimisation result projection
-```
+- Runtime Optimisation resources
+- Runtime expression values
+- Runtime `expression.expressionValue.context.targets[]` values
+- Runtime `expression.expressionValue.context.constraints[]` values
+- Runtime `expression.expressionValue.context.preferences[]` values
+- Actual candidate resource instances submitted in a runtime request
+- Candidate-resource selection
+- Solver feasibility evaluation
+- Gurobi model execution
+- Runtime optimisation outcome
+- Runtime optimisation result projection
 
 ## 4. Endpoint set:
 
