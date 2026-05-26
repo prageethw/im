@@ -10,7 +10,7 @@
 | **Source of truth** | GitHub `main` |
 | **Last aligned** | 2026-05-24 |
 | **Last verified against OD/OC/OSB specs** | 2026-05-24 |
-| **Alignment scope** | Aligned with committed OD MS, OC MS, and OSB MS specifications, including OD `specKey`, DRAFT `draftId`, official version, OC resolved contract-pointer rules, OC `creationContext.reason`, non-terminal `CANCELLATIONFAILED`, header-only ETag handling, OD and OC lifecycle diagrams, and platform resource model extension posture. |
+| **Alignment scope** | Aligned with committed OD MS, OC MS, and OSB MS specifications, including OD `specKey`, DRAFT `draftId`, official version, OC resolved contract-pointer rules, OC `creationContext.reason`, non-terminal `CANCELLATIONFAILED`, header-only ETag handling, circuit-breaker response signalling, OD and OC lifecycle diagrams, and platform resource model extension posture. |
 
 ## Table of contents:
 
@@ -535,6 +535,33 @@ Synchronous API latency targets are to be confirmed through NFR baselining. Solv
 `POST /optimisation` returns `201 Created` after syntactic and OD-MS-contract validation, runtime resource persistence, and outbox write. Solver execution remains asynchronous and decoupled from REST request latency. 
 
 `GET /optimisation/{id}` provides polling of lifecycle and result state. Runtime `result` is absent during active processing states, may be present for CANCELLATIONFAILED, and may be present for terminal states according to OC MS result rules. OSB and OEX status refresh is REST polling against OC MS through NGW in phase one. Polling cadence is owned by OSB MS in coordination with OEX UI/platform UX.
+
+### 6.4. Circuit breaker and dependency fallback baseline:
+
+Each optimiser microservice must apply circuit breakers, timeouts, bounded retries, and isolation to every remote dependency call. Remote dependencies include other microservices, databases, Kafka, Redis or cache stores, external data sources, model registries, Gurobi runtime or solver dependencies, and other external platform or system dependencies.
+
+When a remote dependency is unavailable, timing out, unhealthy, or repeatedly failing, the circuit breaker opens and the service stops sending normal traffic to that dependency for the configured cool-down period. While the circuit breaker is open, the service monitors dependency recovery using bounded health probes or test calls according to the circuit-breaker policy. These probes are used to decide when the dependency path can move to half-open and then closed again. Probe behaviour must be rate-limited and must not overload a recovering dependency.
+
+When a circuit breaker is triggered, the service chooses the safest valid behaviour for the operation. Depending on the endpoint and dependency, this may be fail fast, return a safe pre-cached object, return a safe instantly generated default payload, bypass a non-critical dependency, or defer through a durable asynchronous mechanism where applicable.
+
+HTTP status and response body remain authoritative for success or failure. `x-cb-triggered: true` only indicates that a remote dependency circuit breaker affected the externally meaningful response path.
+
+Use `x-cb-triggered: true` only when a remote dependency circuit breaker changes the externally meaningful response path. Do not use `x-cb-triggered` for local validation errors, malformed requests, lifecycle conflicts, stale ETags, local application errors, or normal cache bypass where the service still returns a source-of-truth response.
+
+| **Dependency / situation** | **Safe behaviour when CB is triggered** | **HTTP status / outcome** | **Header** |
+|---|---|---|---|
+| Non-critical cache or Redis unavailable, source of truth still available | Bypass cache and use source of truth. | Normal success status. | N/A |
+| Safe cached or precomputed object available because source dependency is unavailable | Return approved cached or precomputed object. | Normal success status. | `x-cb-triggered: true` |
+| Safe default payload available because dependency-backed content is unavailable | Return approved default payload instantly. | Normal success status. | `x-cb-triggered: true` |
+| Required remote dependency unavailable and no safe fallback exists | Fail fast. | Usually `503 Service Unavailable`. | `x-cb-triggered: true` |
+| Command or state-changing operation cannot reach required remote dependency and cannot safely complete | Do not fake acceptance. Fail fast. | Appropriate failure, usually `503`. | `x-cb-triggered: true` |
+| Local validation failure, malformed request, lifecycle conflict, or stale ETag | Return normal domain/API error. | `400`, `409`, `412`, `428`, or equivalent. | N/A |
+| Local application error not caused by remote dependency circuit breaker | Return normal internal error. | `500 Internal Server Error`. | N/A |
+| OW MS solver/runtime dependency unavailable during asynchronous execution | Do not fake success. Retry, DLQ, backpressure, or emit safe `FAILED` as governed. | Event outcome, not REST. | N/A |
+
+Circuit-breaker fallback must not silently alter source-of-truth semantics. Default or cached fallback must not be used to fake command acceptance, contract validation, lifecycle projection, cancellation confirmation, retrial creation, optimisation result, security visibility, or audit state.
+
+For command and state-changing operations, the service may return a normal success status only when the operation has genuinely completed its required validation, persistence, concurrency, and durability obligations.
 
 ## 7. Risks:
 
