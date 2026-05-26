@@ -60,11 +60,11 @@ OW MS means Optimisation Worker MS. OW MS emits outcome facts only; OC MS owns R
 
 Operator access to the experience layer is governed by the ACG approval process and Microsoft Entra ID SSO. OGW invokes OSB MS using mTLS and User Context JWT. OSB MS invokes NGW using mTLS and OAuth2 system-to-system. User context stops before NGW; downstream OD MS and OC MS calls use service identity only.
 
-OC MS validates the request structure and referenced ACTIVE OD MS request contract, persists the runtime `Optimisation` resource, returns `201 Created`, writes `OptimisationRequestedEvent` to its outbox, and drives execution asynchronously through Kafka.
+OC MS validates the request structure and referenced ACTIVE OD MS request contract, persists the runtime `Optimisation` resource, returns `201 Created`, writes `OptimisationRequestedEvent` to its outbox, and drives execution asynchronously through Kafka. OC MS also owns external optimisation webhook subscriptions through `/optimisation/hub` and emits `OptimisationStatusChangeEvent` notifications after lifecycle or result projection is durably persisted.
 
 Kafka carries worker instructions and outcomes, with a dedicated DLQ for unprocessable events. OW MS consumes `EXECUTE` or `CANCEL` instructions and emits execution outcomes and cancellation-command outcomes through `OptimisationCompletedEvent`.
 
-NGW-exposed backend APIs use TMF-style API conventions where appropriate. `OptimisationSpecification` and `Optimisation` are optimiser-domain platform resources, not native TMF Open API resources. OGW-exposed experience APIs, private MS-to-MS APIs, and internal Kafka events do not need to be TMF-compliant.
+NGW-exposed backend APIs use TMF-style API conventions where appropriate. `OptimisationSpecification` and `Optimisation` are optimiser-domain platform resources, not native TMF Open API resources. OC MS external webhook subscription and delivery payloads follow the Intent-style `/hub` callback pattern. OGW-exposed experience APIs, private MS-to-MS APIs, and internal Kafka events do not need to be TMF-compliant.
 
 Platform resource model extensions are deliberate and documented in the owning service specifications. OD MS owns `specKey`, `draftId`, DRAFT candidate operations, and ACTIVE retirement semantics. OC MS owns runtime `creationContext`, cancellation and retrial commands, and the `CANCELLATIONFAILED` lifecycle value. OSB exposes experience-layer view models over these backend platform resources and must preserve their semantics.
 
@@ -152,6 +152,7 @@ The diagram is intentionally simplified and shows the main optimisation platform
 | **7** | Retry failed optimisation | User, OEX, or authorised platform service | Retry a `FAILED` optimisation. | New `ACKNOWLEDGED` optimisation is created with `retrialOf` attribute; original failed record stays failed. |
 | **8** | Execute optimisation | OW MS | Consume worker instruction and execute deterministic optimisation model through the Gurobi Python API, or process a cancellation command. | OW MS emits `OptimisationCompletedEvent` with execution outcomes `COMPLETED`, `INFEASIBLE`, or `FAILED`, and cancellation-command outcomes `CANCELLED` or `CANCELLATIONFAILED`. |
 | **9** | Retrieve optimisation outcome | User, OEX, or authorised platform service | Retrieve completed result, infeasible explanation, failure details, or cancellation state. | Caller receives final projected runtime state/result from OC MS. |
+| **10** | Subscribe to optimisation status changes | Authorised platform service or external subscriber | Register a callback through `/optimisation/hub` for `OptimisationStatusChangeEvent` delivery. | Subscriber receives webhook notifications after OC MS persists lifecycle or result projection, and can call `GET /optimisation/{id}` for the authoritative state. |
 
 ### 3.2. Logical view:
 
@@ -161,6 +162,7 @@ Logical integration model:
 
 ```text
 User -> OEX UI -> Microsoft Entra ID SSO -> OGW -> OSB MS -> NGW -> OD MS and OC MS -> Kafka -> OW MS -> Gurobi Optimiser
+OC MS -> /optimisation/hub subscription delivery -> subscriber callback URL
 ```
 
 Key logical relationships:
@@ -176,6 +178,7 @@ Key logical relationships:
 8. OC MS -> Kafka: emits OptimisationRequestedEvent with EXECUTE or CANCEL.
 9. OW MS -> Kafka: consumes requested events and emits OptimisationCompletedEvent.
 10. OC MS <- Kafka: consumes worker outcomes and projects result.
+11. OC MS -> subscriber callback: emits OptimisationStatusChangeEvent after projected lifecycle or result changes are persisted.
 ```
 
 User context terminates before NGW. Downstream OD MS and OC MS calls do not carry or expose end-user identity, claims, roles, or scopes. OSB performs user-context filtering and view/action shaping, while OD MS and OC MS enforce backend service, lifecycle, schema, ETag, and business rules.
@@ -264,7 +267,8 @@ Catalogue-management journeys are feature-gated and out of phase-one scope unles
 18. OW MS publishes OptimisationCompletedEvent with execution outcomes COMPLETED, INFEASIBLE, or FAILED, and cancellation-command outcomes CANCELLED or CANCELLATIONFAILED. COMPLETED, INFEASIBLE, and FAILED are terminal execution outcomes. CANCELLED is a terminal cancellation-command outcome. CANCELLATIONFAILED is a non-terminal cancellation-command outcome.
 19. OC MS Inbox Consumer applies idempotency and stale and late event checks.
 20. OC MS updates lifecycle and result projection.
-21. Caller polls through User -> OEX -> OGW -> OSB MS -> NGW -> OC MS to retrieve status and result.
+21. If a matching `/optimisation/hub` subscription exists, OC MS emits an external `OptimisationStatusChangeEvent` after the projection is persisted.
+22. Caller polls through User -> OEX -> OGW -> OSB MS -> NGW -> OC MS, or receives webhook notification and then calls `GET /optimisation/{id}`, to retrieve authoritative status and result.
 ```
 
 #### 3.3.5. Monitor optimisation:
@@ -283,7 +287,7 @@ Catalogue-management journeys are feature-gated and out of phase-one scope unles
 9. Caller receives current state.
 ```
 
-Phase-one OEX and OSB status refresh is REST polling against OC MS through NGW. OSB must not infer terminal status locally; terminal state and any later terminal outcome after CANCELLATIONFAILED must come from OC MS.
+Phase-one OEX and OSB status refresh is REST polling against OC MS through NGW. OC-owned webhook notifications through `/optimisation/hub` may also notify subscribed consumers of lifecycle and result changes. Polling remains the fallback and `GET /optimisation/{id}` remains the authoritative read model. OSB must not infer terminal status locally; terminal state and any later terminal outcome after CANCELLATIONFAILED must come from OC MS.
 
 #### 3.3.6. Cancel optimisation:
 
@@ -364,6 +368,7 @@ Detailed OW MS execution eligibility, cancellation handling, solver timeout, ide
 | **OC MS** | Owns runtime `Optimisation` resources, lifecycle, accepted expression values, immutable resolved specification pointer, outbox and inbox, cancellation, retrial, and result projection. |
 | **OC MS Database** | Stores runtime records, lifecycle state, statusChangeDate, sourceContext, expression, resolved specification pointer, terminal result or cancellation-command outcome details where present, relationships, outbox, and inbox records. |
 | **OC MS Outbox Relay** | Publishes `OptimisationRequestedEvent` to Kafka after DB commit; successful publish drives ACKNOWLEDGED -> QUEUED. |
+| **OC MS external notification outbox or delivery component** | Delivers `OptimisationStatusChangeEvent` webhook notifications after OC MS persists lifecycle or result projection. Delivery retry or DLQ does not roll back the runtime projection. |
 | **Kafka topic** | Internal event stream for worker instructions and outcomes. |
 | **Kafka DLQ** | Holds events that cannot be safely processed after retry handling. |
 | **OW MS** | Optimisation Worker MS. Python worker service that consumes requested events, executes or cancels work through the Gurobi Python API, and emits `OptimisationCompletedEvent` outcome facts. |
@@ -493,6 +498,8 @@ eventId or ce-id
 
 `OptimisationCompletedEvent` processing must be idempotent. OC MS projection must safely handle duplicate, stale, and late worker outcome events.
 
+External `OptimisationStatusChangeEvent` webhook delivery is OC-owned and uses the Intent-style subscription model. Delivery must use platform-approved callback security such as mTLS, signed requests, shared secret, OAuth client credentials, or another governed mechanism. External event delivery is at-least-once; subscribers must deduplicate using `eventId` and must treat `GET /optimisation/{id}` as the source of truth.
+
 ### 5.9. Sensitive information boundary:
 
 Public APIs, OSB views, and Kafka events must not expose:
@@ -537,7 +544,7 @@ Synchronous API latency targets are to be confirmed through NFR baselining. Solv
 
 `POST /optimisation` returns `201 Created` after syntactic and OD-MS-contract validation, runtime resource persistence, and outbox write. Solver execution remains asynchronous and decoupled from REST request latency. 
 
-`GET /optimisation/{id}` provides polling of lifecycle and result state. Runtime `result` is absent during active processing states, may be present for CANCELLATIONFAILED, and may be present for terminal states according to OC MS result rules. OSB and OEX status refresh is REST polling against OC MS through NGW in phase one. Polling cadence is owned by OSB MS in coordination with OEX UI/platform UX.
+`GET /optimisation/{id}` provides polling of lifecycle and result state. Runtime `result` is absent during active processing states, may be present for CANCELLATIONFAILED, and may be present for terminal states according to OC MS result rules. OSB and OEX status refresh is REST polling against OC MS through NGW in phase one. OC MS may also notify subscribed consumers through `/optimisation/hub` using `OptimisationStatusChangeEvent`. Webhook notification reduces polling pressure but does not replace the authoritative `GET /optimisation/{id}` read model. Polling cadence is owned by OSB MS in coordination with OEX UI/platform UX.
 
 ### 6.4. Circuit breaker and dependency fallback baseline:
 
@@ -599,6 +606,7 @@ For OC MS runtime creation and cancellation, Kafka broker unavailability does no
 - User context stops before or at NGW; downstream OD MS and OC MS calls use service identity only.
 - NGW exposes OD MS and OC MS APIs to authorised backend consumers.
 - Kafka is available as the event backbone.
+- OC MS external webhook notification delivery uses an Intent-style `/optimisation/hub` subscription model where enabled.
 - OW MS has authorised access to required analytics data sources and required Gurobi runtime dependencies.
 - Runtime `Optimisation` is asynchronous by design.
 - `sourceContext` is optional and may be omitted for generic optimisation requests.
@@ -624,6 +632,7 @@ For OC MS runtime creation and cancellation, Kafka broker unavailability does no
 - Only one `ACTIVE` official `OptimisationSpecification` version is allowed per `OptimisationSpecification.id`, and OD MS also enforces at most one current ACTIVE lineage per `specKey`.
 - ETag and If-Match are required for unsafe runtime operations such as cancellation and retrial.
 - Internal Kafka events do not use TMF REST `@type`, `@baseType`, or `@schemaLocation`.
+- OW MS internal events must not be exposed directly to external subscribers; OC MS external webhook events are emitted only after OC MS projection is persisted.
 
 ## 10. Appendix:
 
@@ -654,7 +663,12 @@ POST /optimisation
 GET /optimisation/{id}
 POST /optimisation/{id}/cancellation
 POST /optimisation/{id}/retrial
+POST /optimisation/hub
+GET /optimisation/hub/{id}
+DELETE /optimisation/hub/{id}
 ```
+
+`/optimisation/hub` manages external webhook subscriptions for OC-owned optimisation status notifications. The unsupported runtime operation list below applies to runtime `Optimisation` resources only.
 
 Unsupported:
 
@@ -734,21 +748,79 @@ t7.optimisation.events.dlq
 
 ### 10.6. Event types:
 
+Internal Kafka event types:
+
 ```text
 OptimisationRequestedEvent
 OptimisationCompletedEvent
 ```
 
+External webhook event type:
+
+```text
+OptimisationStatusChangeEvent
+```
+
 A separate `OptimisationFailedEvent` is not used by default. Failed, infeasible, cancelled, and cancellation-failed outcomes are represented inside `OptimisationCompletedEvent.status`.
 
-### 10.7. Worker instructions:
+### 10.7. External webhook subscription baseline:
+
+OC MS supports an Intent-style webhook subscription model for external status notifications.
+
+```http
+POST /optimisation/hub
+GET /optimisation/hub/{id}
+DELETE /optimisation/hub/{id}
+```
+
+Subscription request baseline:
+
+```json
+{
+  "callback": "https://consumer.example.com/optimisation/events",
+  "query": "eventType=OptimisationStatusChangeEvent",
+  "@type": "EventSubscription"
+}
+```
+
+`OptimisationStatusChangeEvent` is emitted only after OC MS has durably persisted the corresponding lifecycle or result projection. The webhook event is a notification, not the source of truth. Callback delivery failure must not roll back OC MS lifecycle or result projection. Delivery is at-least-once; subscribers must handle duplicate and out-of-order notifications idempotently and use `GET /optimisation/{id}` when they need the authoritative current state. Baseline subscription filtering supports `eventType`; lifecycle, source-context, and specification filters may be added later where governed by OC MS.
+
+Safe event payload shape:
+
+```json
+{
+  "eventId": "evt-opt-12345-completed-001",
+  "eventType": "OptimisationStatusChangeEvent",
+  "eventTime": "2026-05-26T13:40:00Z",
+  "correlationId": "corr-12345",
+  "traceId": "trace-12345",
+  "event": {
+    "optimisation": {
+      "id": "opt-12345",
+      "href": "/optimisation/opt-12345",
+      "previousLifecycleStatus": "PROCESSING",
+      "newLifecycleStatus": "COMPLETED",
+      "statusChangeDate": "2026-05-26T13:40:00Z",
+      "resultSummary": {
+        "outcome": "COMPLETED",
+        "summary": "Optimisation completed successfully."
+      },
+      "@type": "Optimisation"
+    }
+  }
+}
+```
+
+OW MS does not publish external webhook events. `OptimisationRequestedEvent` and `OptimisationCompletedEvent` remain internal OC-to-OW events.
+
+### 10.8. Worker instructions:
 
 ```text
 EXECUTE
 CANCEL
 ```
 
-### 10.8. Worker outcome and cancellation-command status values:
+### 10.9. Worker outcome and cancellation-command status values:
 
 ```text
 COMPLETED
@@ -760,7 +832,7 @@ CANCELLATIONFAILED
 
 `COMPLETED`, `INFEASIBLE`, and `FAILED` are execution outcomes. `CANCELLED` and `CANCELLATIONFAILED` are cancellation-command outcomes.
 
-### 10.9. Outcome mapping:
+### 10.10. Outcome mapping:
 
 Worker emits `OptimisationCompletedEvent.status` using one of the following execution outcome or cancellation-command status values:
 
@@ -786,7 +858,7 @@ CANCELLATIONFAILED -> lifecycleStatus CANCELLATIONFAILED
 
 `CANCELLATIONFAILED` is not a terminal optimisation outcome. It represents cancellation-command failure and may later be followed by COMPLETED, INFEASIBLE, or FAILED. Do not introduce an alternate success status unless the OW MS contract is explicitly changed to emit one.
 
-### 10.10. Canonical runtime expression shape:
+### 10.11. Canonical runtime expression shape:
 
 Runtime optimisation requests carry actual runtime values under `expression.expressionValue.context`:
 
@@ -819,7 +891,7 @@ Runtime creation requires both `optimisationSpecification.id` and `expression.ir
 
 OD MS defines the allowed structure using `OptimisationSpecification.targetEntitySchema`. The example ontology IRI and JSON-LD aliases are illustrative unless fixed by the concrete active schema. OC MS carries the accepted runtime values and validates them against the referenced ACTIVE schema.
 
-### 10.11. Result presence rules:
+### 10.12. Result presence rules:
 
 ```text
 result MUST be absent while lifecycleStatus is ACKNOWLEDGED, QUEUED, PROCESSING, or CANCELLING.
@@ -829,7 +901,7 @@ CANCELLATIONFAILED result details may include safe cancellation command outcome 
 FAILED result details may include safe error codes and messages only.
 ```
 
-### 10.12. Validation and outcome responsibility:
+### 10.13. Validation and outcome responsibility:
 
 OC MS validates:
 
@@ -857,7 +929,7 @@ OW MS returns terminal execution outcomes and cancellation-command outcomes:
 
 Use `400 Bad Request` for malformed requests, missing required top-level request fields, unsupported priority values, or forbidden server-controlled fields. Use `422 OPTIMISATION_CONTRACT_VIOLATION` for OD contract, expression IRI compatibility, targetEntitySchema, and cardinality failures. Use `INFEASIBLE` only when the request is valid and the worker or model determines no feasible solution exists.
 
-### 10.13. Key artifacts:
+### 10.14. Key artifacts:
 
 PUML and DrawIO files are editable source artifacts. Rendered SVG and PNG exports are the preferred review and consumption artifacts where available.
 
