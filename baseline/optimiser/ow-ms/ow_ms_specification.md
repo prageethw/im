@@ -30,20 +30,24 @@
 - [15. Idempotency, ordering, and duplicate handling](#15-idempotency-ordering-and-duplicate-handling)
 - [16. Failure handling and DLQ posture](#16-failure-handling-and-dlq-posture)
 - [17. Timeouts and execution limits](#17-timeouts-and-execution-limits)
-- [18. Security and secrets](#18-security-and-secrets)
-- [19. Observability](#19-observability)
-- [20. Non-goals](#20-non-goals)
-- [21. Open items](#21-open-items)
+- [18. Backpressure and capacity handling](#18-backpressure-and-capacity-handling)
+- [19. Result size and artifact handling](#19-result-size-and-artifact-handling)
+- [20. Model artifact integrity](#20-model-artifact-integrity)
+- [21. Resource cleanup and graceful shutdown](#21-resource-cleanup-and-graceful-shutdown)
+- [22. Security and secrets](#22-security-and-secrets)
+- [23. Observability](#23-observability)
+- [24. Non-goals](#24-non-goals)
+- [25. Open items](#25-open-items)
 
 ## 1. Service purpose:
 
-OW MS means Optimisation Controller Worker Microservice.
+OW MS means Optimisation Worker MS.
 
 OW MS is the Python runtime worker responsible for consuming optimisation worker instructions from Kafka, invoking the Gurobi Python API through internal model bindings, monitoring running optimisation jobs, attempting safe cancellation where requested, and publishing worker outcome events back to Kafka.
 
 OW MS is part of the internal optimisation execution plane. It is not a public REST API, not a TMF-facing resource service, and not the source of truth for runtime `Optimisation` lifecycle state.
 
-OC MS remains the runtime `Optimisation` lifecycle owner. OW MS reports outcomes through `OptimisationCompletedEvent`; OC MS consumes those outcomes and projects lifecycle and result state onto the runtime `Optimisation` resource.
+OC MS remains the runtime `Optimisation` lifecycle owner. OW MS reports outcomes through `OptimisationCompletedEvent`; OC MS consumes those outcomes and projects lifecycle and result state onto the runtime `Optimisation` resource. OW MS emits outcome facts only; it must not treat its internal execution state as REST-visible lifecycle state.
 
 ## 2. Ownership boundary:
 
@@ -116,11 +120,13 @@ t7.optimisation.events
 t7.optimisation.events.dlq
 ```
 
-OW MS consumes `OptimisationRequestedEvent` from `t7.optimisation.events`.
+OW MS consumes `OptimisationRequestedEvent` from `t7.optimisation.events` using a dedicated OW MS Kafka consumer group. This consumer group must not be shared with OC MS, OC MS inbox consumers, operational replay consumers, or other services.
+
+Kafka delivery is treated as at-least-once. OW MS must be idempotent for duplicate `OptimisationRequestedEvent` messages and must not rely on exactly-once delivery for safe execution.
 
 OW MS publishes `OptimisationCompletedEvent` to `t7.optimisation.events`.
 
-The DLQ is used for events that cannot be safely processed after retry handling. DLQ behaviour is operationally governed and must preserve enough failure metadata for diagnosis and controlled replay decisions.
+The DLQ is used for events that cannot be safely processed after retry handling. DLQ behaviour is operationally governed and must preserve enough failure metadata for diagnosis and controlled replay decisions. OW MS may route unprocessable worker-side events to the DLQ according to retry policy, but DLQ replay is operationally controlled and must preserve idempotency.
 
 OW MS must treat the Kafka event contract as the platform boundary. Internal Gurobi model formulation, solver parameters, model files, candidate scoring logic, and solver-specific diagnostics are implementation details and must not be exposed in platform event payloads unless explicitly governed later.
 
@@ -213,10 +219,10 @@ Cancellation is best-effort. If the worker receives `CANCEL` but the optimisatio
 Baseline race and cancellation rules:
 
 ```text
-If CANCEL arrives before execution starts and OW MS can suppress execution safely, OW MS emits CANCELLED.
+If CANCEL arrives before a matching EXECUTE is observed, OW MS may record cancellation intent in the job registry or route the event to retry according to ordering policy. If CANCEL arrives before execution starts and OW MS can suppress execution safely, OW MS emits CANCELLED.
 If CANCEL arrives while execution is running and Gurobi can be stopped safely, OW MS emits CANCELLED.
 If CANCEL arrives but cancellation cannot be honoured, applied, or confirmed safely, OW MS emits CANCELLATIONFAILED.
-If CANCEL arrives but the worker completes first, OW MS emits the actual terminal optimisation outcome rather than CANCELLED.
+If CANCEL arrives but execution completes before cancellation is applied, OW MS emits the actual terminal optimisation outcome rather than `CANCELLED`.
 If CANCEL arrives for unknown work and no safe local job record exists, OW MS emits CANCELLATIONFAILED or routes to retry or DLQ according to operational policy.
 ```
 
@@ -272,6 +278,8 @@ priority
 creationContext.reason
 ```
 
+Model binding may maintain internal traceability metadata such as `modelBindingId`, `modelBindingVersion`, model artifact version, or configuration version. This metadata is internal unless OC MS result projection explicitly allows a safe reference.
+
 Model binding must not change the accepted runtime request semantics. If the worker cannot resolve a valid model binding for an accepted request, it must emit `OptimisationCompletedEvent.status = FAILED` with safe failure details.
 
 Model binding errors are worker execution failures, not OD MS contract validation failures. OC MS has already accepted the runtime request before emitting `OptimisationRequestedEvent`.
@@ -308,7 +316,7 @@ Internal worker state must not be confused with OC MS runtime lifecycle. OC MS r
 
 OW MS should maintain a worker job registry so `CANCEL` instructions can locate in-flight work by `optimisationId`.
 
-The job registry may be implemented using in-memory state, a persistent store, or another platform-approved coordination mechanism depending on deployment reliability requirements.
+The job registry may be implemented using in-memory state, a persistent store, or another platform-approved coordination mechanism depending on deployment reliability requirements. Registry durability is deployment-governed. If cancellation must work across worker restarts or worker-instance failover, the registry or equivalent coordination state must survive worker restart.
 
 Minimum job registry fields:
 
@@ -335,7 +343,7 @@ The registry must not expose Gurobi model internals, credentials, raw logs, or s
 If the registry is persistent, access must use least-privilege service identity and encrypted connectivity.
 ```
 
-For horizontally scaled workers, the registry or consumer-group strategy must prevent unsafe duplicate solver execution for the same `optimisationId` and instruction.
+For horizontally scaled workers, the registry or consumer-group strategy must prevent unsafe duplicate solver execution for the same `optimisationId` and instruction. Horizontal scaling must preserve per-`optimisationId` idempotency, cancellation lookup correctness, and job-registry ownership semantics.
 
 ## 12. Result mapping:
 
@@ -382,6 +390,8 @@ Required event body fields:
 | `status` | Required. Allowed values are `COMPLETED`, `INFEASIBLE`, `FAILED`, `CANCELLED`, and `CANCELLATIONFAILED`. |
 | `result` | Optional platform-safe result or command-outcome details. Required where a useful safe result can be produced. |
 | `diagnostics` | Optional safe diagnostic references or operational hints. Must not expose sensitive internals. |
+
+Worker event timestamps are informational. OC MS remains responsible for final lifecycle projection using inbox idempotency, lifecycle monotonicity, and status-change rules.
 
 Example:
 
@@ -452,11 +462,11 @@ Outcome-specific guidance:
 | `CANCELLED` | May include safe cancellation summary metadata. |
 | `CANCELLATIONFAILED` | May include safe cancellation-attempt outcome details. It must be clear that this is a cancellation-command outcome, not a terminal optimisation outcome. |
 
-The result payload must not include raw Gurobi model formulation, objective internals, constraint internals, candidate scoring logic, credentials, infrastructure internals, raw solver logs, or raw stack traces.
+The result payload must not include raw Gurobi model formulation, objective formulas, objective internals, constraint implementation details, constraint internals, candidate scoring logic, solver parameter values, model files, credentials, infrastructure internals, raw Gurobi exceptions, raw solver logs, or raw stack traces.
 
 ## 15. Idempotency, ordering, and duplicate handling:
 
-OW MS must handle duplicate `OptimisationRequestedEvent` messages safely.
+OW MS must handle duplicate `OptimisationRequestedEvent` messages safely because Kafka delivery is treated as at-least-once in the platform baseline.
 
 Baseline idempotency inputs:
 
@@ -493,7 +503,11 @@ Transient Kafka publication failure
 Transient dependency failure
 Temporary Gurobi environment acquisition failure
 Temporary model-binding metadata lookup failure where retry is safe
+Temporary artifact-store or model-registry access failure where retry is safe
+Temporary capacity exhaustion where backpressure or retry is safer than failure
 ```
+
+Retryable failures are infrastructure, dependency, or capacity failures where retry can safely produce the same intended execution without changing the accepted runtime problem.
 
 Examples of non-retryable or DLQ-eligible conditions:
 
@@ -502,13 +516,18 @@ Malformed event payload
 Missing required event fields
 Unsupported instruction value
 Unresolvable model binding after retry policy
+Model artifact integrity failure where platform policy requires verified artifacts
 Invalid event contract version where compatibility cannot be established
 Poison event that repeatedly fails processing
 ```
 
+Non-retryable failures are contract, compatibility, integrity, or model-binding failures where retry is not expected to succeed without a governed correction.
+
+Schema-invalid, unsupported, or non-processable poison events are routed to DLQ only after the configured retry policy is exhausted, unless the failure is classified as non-retryable by platform policy.
+
 DLQ entries must include safe failure metadata needed for diagnosis and controlled replay decisions. DLQ entries must not include secrets, raw stack traces, solver credentials, or sensitive Gurobi internals.
 
-No automatic DLQ replay is performed by default. Replay requires operational approval and controlled procedure.
+No automatic DLQ replay is performed by default. Replay requires operational approval and controlled procedure. Replayed DLQ events must retain original identity where required for idempotency and must not create duplicate unsafe Gurobi execution.
 
 ## 17. Timeouts and execution limits:
 
@@ -536,7 +555,80 @@ Timeouts must not expose raw solver internals in result payloads.
 Timeout and concurrency policies must be configurable per deployment or capability where required.
 ```
 
-## 18. Security and secrets:
+## 18. Backpressure and capacity handling:
+
+OW MS must protect worker capacity, Gurobi license capacity, Kafka stability, and downstream dependencies.
+
+Backpressure rules:
+
+```text
+OW MS should pause, slow, or limit Kafka consumption when worker capacity is exhausted.
+OW MS should pause, slow, or limit Kafka consumption when Gurobi license capacity is exhausted or unavailable.
+OW MS must not claim more work than it can safely execute, monitor, cancel, and publish outcomes for.
+Backpressure decisions must be observable through metrics and alerts.
+Backpressure must not cause unsafe duplicate execution for the same optimisationId.
+```
+
+Capacity controls are deployment-governed, but must align with worker concurrency limits, maximum in-flight Gurobi jobs per worker instance, retry policy, and job-registry ownership semantics.
+
+## 19. Result size and artifact handling:
+
+OW MS must keep `OptimisationCompletedEvent.result` within Kafka and platform message-size policy.
+
+Result size rules:
+
+```text
+Result payloads must be bounded and platform-safe.
+Large solver artifacts, debug files, model exports, detailed logs, or bulky outputs must not be embedded in Kafka events.
+If large artifacts are needed for operational support, they must be stored in an approved internal artifact store and referenced through safe diagnostic references only.
+Artifact references must be access-controlled and must not expose solver internals to unauthorised consumers.
+```
+
+The platform-safe result payload should contain only summaries, safe output values, safe error codes, safe diagnostic references, and retry guidance where applicable.
+
+## 20. Model artifact integrity:
+
+OW MS must verify model artifact integrity before execution when model artifacts or model-binding configuration are loaded from an external registry, file store, container image, or configuration source.
+
+Integrity rules:
+
+```text
+Model artifacts must come from approved sources.
+Model artifact versions must be traceable through internal metadata such as modelBindingId, modelBindingVersion, artifact version, checksum, or signature reference.
+OW MS should validate checksum, signature, or equivalent integrity metadata before execution where supported by the deployment.
+If model artifact integrity cannot be verified when required, OW MS must fail safely and emit FAILED with safe failure details.
+Integrity failure details must not expose model internals, credentials, or raw stack traces.
+```
+
+Model artifact integrity metadata is internal unless OC MS result projection explicitly allows a safe reference.
+
+## 21. Resource cleanup and graceful shutdown:
+
+OW MS must clean up worker-owned runtime resources after terminal outcome, cancellation outcome, failed execution, timeout, or DLQ routing.
+
+Cleanup rules:
+
+```text
+Release Gurobi model handles, environments, and execution resources where applicable.
+Remove or expire temporary files and scratch data.
+Clear sensitive in-memory material where practical.
+Update job registry state to OUTCOME_PUBLISHED or DLQ_PENDING as appropriate.
+Avoid retaining raw solver logs, model files, credentials, or stack traces outside approved operational stores.
+```
+
+Graceful shutdown rules:
+
+```text
+OW MS should stop claiming new work when shutdown begins.
+OW MS should preserve enough job-registry state to avoid unsafe duplicate execution after restart.
+OW MS should publish a safe outcome, checkpoint safe internal state, or allow controlled retry according to deployment policy for in-flight jobs.
+OW MS must avoid losing cancellation intent or in-flight job ownership where cross-restart cancellation is required.
+OW MS must not acknowledge Kafka work as safely complete until outcome publication, durable handoff, or DLQ routing has reached the platform-defined safe point.
+```
+
+Shutdown and cleanup behaviour must be observable and covered by operational runbooks.
+
+## 22. Security and secrets:
 
 OW MS must use platform-approved service identity for Kafka access and any required internal dependencies.
 
@@ -549,14 +641,14 @@ Topic-level ACLs.
 Least-privilege access to any worker job registry or model-binding store.
 Encrypted connectivity to internal dependencies.
 Secrets supplied through approved secret-management mechanism.
-Gurobi credentials and license details must not be logged or published in events.
+Gurobi credentials and license details must be supplied through approved secret management, rotated according to platform policy, and must not be logged, written to job registry records, or published in events or result payloads.
 Model artifacts and model-binding configuration must be access controlled.
 Sensitive solver internals must not be exposed outside the worker boundary.
 ```
 
 OW MS must not forward end-user identity to Gurobi or internal model execution unless explicitly approved by security governance. User context terminates at the experience and backend service layers; worker execution is service-owned.
 
-## 19. Observability:
+## 23. Observability:
 
 OW MS must produce operational telemetry sufficient to operate the optimisation execution plane.
 
@@ -584,7 +676,7 @@ Logs and metrics must include `optimisationId`, `correlationId`, and `traceId` w
 
 Logs must not include sensitive solver internals, credentials, raw model files, raw stack traces in public channels, or personal data unless explicitly approved.
 
-## 20. Non-goals:
+## 24. Non-goals:
 
 OW MS is not:
 
@@ -595,6 +687,7 @@ The runtime Optimisation lifecycle source of truth
 The OD MS specification owner
 The OSB experience owner
 A replacement for OC MS result projection
+A writer to OC MS runtime database tables
 A catalogue management service
 A general-purpose solver marketplace
 The owner of OC MS lifecycle projection
@@ -602,7 +695,7 @@ The owner of OC MS lifecycle projection
 
 OW MS does not define the public `OptimisationSpecification` contract. It consumes already-accepted runtime work from OC MS.
 
-## 21. Open items:
+## 25. Open items:
 
 The following remain open unless decided by platform or product implementation teams:
 
@@ -617,6 +710,10 @@ Retry limits and backoff values.
 DLQ replay procedure.
 Safe result detail schema per optimisation capability.
 Operational dashboards and alert thresholds.
+Result size limits and large-artifact storage policy.
+Model artifact checksum or signature validation mechanism.
+Graceful shutdown policy for in-flight jobs.
+Backpressure thresholds for worker and Gurobi license capacity.
 ```
 
 These open items do not change the OC MS platform event boundary or OC MS ownership of runtime lifecycle projection.
