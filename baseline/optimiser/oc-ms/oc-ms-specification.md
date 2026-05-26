@@ -104,6 +104,8 @@ PATCH /optimisation/{id}
 DELETE /optimisation/{id}
 ```
 
+The runtime unsupported-operation list applies to runtime `Optimisation` resources only; subscription resources are governed separately by `/optimisation/hub`.
+
 Runtime `Optimisation` is an execution and audit record, not an editable draft definition. Runtime changes occur only through internal event projection and explicit runtime commands such as cancellation and retrial. Clients must not use `PATCH` to edit runtime `Optimisation` resources.
 
 ## 4. Runtime Optimisation canonical fields:
@@ -1242,6 +1244,8 @@ DELETE /optimisation/hub/{id}
 
 `POST /optimisation/hub` creates a webhook subscription for authorised consumers. The subscriber provides a callback URL and optional query filter.
 
+Baseline subscription query filtering supports `eventType`. Future governed extensions may add filters such as `lifecycleStatus`, `sourceContext.domain`, `sourceContext.resource.id`, and `optimisationSpecification.id`. Unsupported query filters return `400 Bad Request`.
+
 Example subscription request:
 
 ```json
@@ -1257,6 +1261,7 @@ Example subscription response:
 ```http
 HTTP/1.1 201 Created
 Location: /optimisation/hub/sub-12345
+ETag: "sub-12345-rev1"
 Content-Type: application/json
 x-platform-extension: true
 x-tmf-native: false
@@ -1272,7 +1277,7 @@ x-tmf-native: false
 }
 ```
 
-`GET /optimisation/hub/{id}` retrieves the subscription where authorised. `DELETE /optimisation/hub/{id}` removes the subscription where authorised.
+`GET /optimisation/hub/{id}` retrieves the subscription where authorised and may return an `ETag`. `DELETE /optimisation/hub/{id}` removes the subscription where authorised and requires `If-Match` where the platform applies optimistic concurrency to subscription resources.
 
 ### 20.2. OptimisationStatusChangeEvent baseline:
 
@@ -1308,6 +1313,7 @@ Example callback payload:
 
 ```json
 {
+  "eventId": "evt-opt-12345-status-001",
   "eventType": "OptimisationStatusChangeEvent",
   "eventTime": "2026-05-26T13:40:00Z",
   "correlationId": "corr-12345",
@@ -1332,6 +1338,7 @@ For `CANCELLATIONFAILED`, the event must preserve the non-terminal semantics:
 
 ```json
 {
+  "eventId": "evt-opt-12345-status-002",
   "eventType": "OptimisationStatusChangeEvent",
   "eventTime": "2026-05-26T13:41:00Z",
   "correlationId": "corr-12345",
@@ -1360,9 +1367,12 @@ OW MS events remain internal and must not be exposed to external subscribers.
 External events are emitted only after OC MS has persisted the lifecycle or result projection.
 External event payloads are notifications, not the source of truth.
 GET /optimisation/{id} remains the authoritative current-state read.
+External event payloads must include an `eventId` so subscribers can deduplicate deliveries.
 External event delivery is at-least-once.
 Subscribers must handle duplicate events idempotently.
+Callback delivery must use governed outbound security, such as mTLS, signed request, shared secret, OAuth client credentials, or another platform-approved callback authentication mechanism.
 Callback delivery failure must not roll back OC MS lifecycle or result projection.
+A callback `2xx` response means delivered. Non-`2xx` response, timeout, DNS failure, TLS failure, or callback authentication failure is a delivery failure and follows retry, DLQ, or subscription-suspension policy.
 Callback delivery must use durable outbox, retry, DLQ, or equivalent governed delivery handling.
 Webhook payloads must not expose Gurobi model formulation, solver configuration, raw worker diagnostics, credentials, internal Kafka details, or raw stack traces.
 ```
