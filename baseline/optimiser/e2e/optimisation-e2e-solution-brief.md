@@ -150,7 +150,7 @@ The diagram is intentionally simplified and shows the main optimisation platform
 | **5** | Monitor optimisation | User, OEX, or authorised platform service | Read current lifecycle state and result when available. | Caller sees acknowledged, queued, processing, completed, infeasible, failed, cancelling, cancellation-failed, or cancelled state. |
 | **6** | Cancel optimisation | User, OEX, or authorised platform service | Request cancellation for eligible non-terminal optimisation using `If-Match`. | OC MS accepts the asynchronous cancellation command, moves to `CANCELLING`, and sends a best-effort cancel instruction. |
 | **7** | Retry failed optimisation | User, OEX, or authorised platform service | Retry a `FAILED` optimisation. | New `ACKNOWLEDGED` optimisation is created with `retrialOf` attribute; original failed record stays failed. |
-| **8** | Execute optimisation | OW MS | Consume worker instruction and execute deterministic optimisation model through the Gurobi Python API, or process a cancellation command. | OW MS emits `OptimisationCompletedEvent` with optimisation outcomes `COMPLETED`, `INFEASIBLE`, `FAILED`, or `CANCELLED`, and may emit cancellation-command outcome `CANCELLATIONFAILED`. |
+| **8** | Execute optimisation | OW MS | Consume worker instruction and execute deterministic optimisation model through the Gurobi Python API, or process a cancellation command. | OW MS emits `OptimisationCompletedEvent` with execution outcomes `COMPLETED`, `INFEASIBLE`, or `FAILED`, and cancellation-command outcomes `CANCELLED` or `CANCELLATIONFAILED`. |
 | **9** | Retrieve optimisation outcome | User, OEX, or authorised platform service | Retrieve completed result, infeasible explanation, failure details, or cancellation state. | Caller receives final projected runtime state/result from OC MS. |
 
 ### 3.2. Logical view:
@@ -261,7 +261,7 @@ Catalogue-management journeys are feature-gated and out of phase-one scope unles
 15. OC MS advances ACKNOWLEDGED -> QUEUED after successful Kafka publish. QUEUED is projected later and is not the initial creation response state.
 16. OW MS consumes OptimisationRequestedEvent.
 17. OW MS resolves deterministic model binding and invokes Gurobi Optimiser.
-18. OW MS publishes OptimisationCompletedEvent with COMPLETED, INFEASIBLE, FAILED, CANCELLED, or CANCELLATIONFAILED. COMPLETED, INFEASIBLE, FAILED, and CANCELLED are terminal lifecycle outcomes. CANCELLATIONFAILED is a non-terminal cancellation-command outcome.
+18. OW MS publishes OptimisationCompletedEvent with execution outcomes COMPLETED, INFEASIBLE, or FAILED, and cancellation-command outcomes CANCELLED or CANCELLATIONFAILED. COMPLETED, INFEASIBLE, FAILED, and CANCELLED are terminal lifecycle outcomes. CANCELLATIONFAILED is a non-terminal cancellation-command outcome.
 19. OC MS Inbox Consumer applies idempotency and stale and late event checks.
 20. OC MS updates lifecycle and result projection.
 21. Caller polls through User -> OEX -> OGW -> OSB MS -> NGW -> OC MS to retrieve status and result.
@@ -337,7 +337,7 @@ Retrial is available only from `FAILED` in the baseline. Retrial is not availabl
 3. OW MS resolves runtime context and internal deterministic model binding.
 4. OW MS invokes Gurobi Optimiser.
 5. Gurobi Optimiser returns solver output, infeasibility information, failure information, or cancellation confirmation.
-6. OW MS maps optimisation outcomes to COMPLETED, INFEASIBLE, FAILED, or CANCELLED, and maps cancellation-command failure to CANCELLATIONFAILED.
+6. OW MS maps execution outcomes to COMPLETED, INFEASIBLE, or FAILED, and maps cancellation-command outcomes to CANCELLED or CANCELLATIONFAILED.
 7. OW MS publishes OptimisationCompletedEvent.
 8. OC MS Inbox Consumer applies idempotency and stale and late event checks.
 9. OC MS updates runtime lifecycle and result projection.
@@ -345,6 +345,7 @@ Retrial is available only from `FAILED` in the baseline. Retrial is not availabl
 ```
 
 OW MS idempotency in this E2E brief means duplicate event detection using `eventId` or `ce-id`, `optimisationId`, and instruction context before executing work. Detailed OW MS eligibility and deduplication rules belong in `ow-ms/ow_ms_specification.md`.
+Detailed OW MS execution eligibility, cancellation handling, solver timeout, idempotency, and DLQ rules are owned by the OW MS specification.
 
 ## 4. Capability matrix:
 
@@ -563,6 +564,8 @@ Circuit-breaker fallback must not silently alter source-of-truth semantics. Defa
 
 For command and state-changing operations, the service may return a normal success status only when the operation has genuinely completed its required validation, persistence, concurrency, and durability obligations.
 
+For OC MS runtime creation and cancellation, Kafka broker unavailability does not necessarily fail the REST command if OC MS can durably persist the runtime state and outbox record; the outbox relay handles later Kafka publication according to retry and DLQ policy.
+
 ## 7. Risks:
 
 | **Risk** | **Impact** | **Mitigation** |
@@ -604,6 +607,7 @@ For command and state-changing operations, the service may return a normal succe
 - Optimiser resources are platform resource models aligned to TMF conventions; approved optimiser-specific fields, operations, headers, link relations, and lifecycle values are documented in the owning service specifications.
 - OGW-exposed experience APIs, private MS-to-MS APIs, private MS-to-MS events, and internal Kafka events do not need to be TMF REST compliant.
 - `x-platform-extension: true` and `x-tmf-native: false` are governance documentation response headers on external NGW-facing optimiser resources.
+- `x-cb-triggered: true` is a diagnostic response header used only when a remote dependency circuit breaker changes the externally meaningful response path. It is not a business-logic switch and is not used on internal Kafka events.
 - Do not expose Gurobi model formulation, solver configuration, objective internals, candidate-resource rules, or model binding through public APIs or OSB views.
 - OD MS exposes only the caller-facing `OptimisationSpecification` request contract.
 - OC MS performs syntactic and OD-MS-contract validation only.
@@ -747,9 +751,11 @@ CANCELLED
 CANCELLATIONFAILED
 ```
 
+`COMPLETED`, `INFEASIBLE`, and `FAILED` are execution outcomes. `CANCELLED` and `CANCELLATIONFAILED` are cancellation-command outcomes.
+
 ### 10.9. Outcome mapping:
 
-Worker emits `OptimisationCompletedEvent.status` using one of the following optimisation outcome or cancellation-command status values:
+Worker emits `OptimisationCompletedEvent.status` using one of the following execution outcome or cancellation-command status values:
 
 ```text
 COMPLETED
@@ -759,7 +765,7 @@ CANCELLED
 CANCELLATIONFAILED
 ```
 
-OC MS maps worker optimisation outcome and cancellation-command status values to runtime lifecycle status as follows:
+OC MS maps worker execution outcome and cancellation-command status values to runtime lifecycle status as follows:
 
 ```text
 COMPLETED -> lifecycleStatus COMPLETED
@@ -830,7 +836,7 @@ OC MS does not evaluate:
 - metric-vs-constraint fit
 - objective trade-offs
 
-OW MS returns terminal optimisation outcomes and cancellation-command outcomes:
+OW MS returns terminal execution outcomes and cancellation-command outcomes:
 
 - `COMPLETED`
 - `INFEASIBLE`
