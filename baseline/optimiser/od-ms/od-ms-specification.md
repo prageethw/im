@@ -733,7 +733,7 @@ The `private, max-age=300` posture is suitable for initial synchronous discovery
 
 OD MS must apply circuit breakers, timeouts, bounded retries, and isolation to remote dependencies such as its database, cache store where used, platform infrastructure, and any approved external dependency.
 
-If a non-critical cache dependency is unavailable but OD MS can still serve the source-of-truth response from the database, OD MS should bypass the cache and return the normal response without `x-cb-triggered`.
+If a non-critical cache dependency is unavailable but OD MS can still serve the source-of-truth response from the database, OD MS should bypass the cache and return the normal response. The circuit-breaker header is N/A for that response.
 
 If a remote dependency circuit breaker affects the externally meaningful response path, OD MS must include:
 

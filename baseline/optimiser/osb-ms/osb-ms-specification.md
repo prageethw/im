@@ -372,7 +372,7 @@ support and diagnostic correlation metadata where applicable
 
 OSB may aggregate from OD MS and OC MS through NGW to build this view. `HomeView` is not a source-of-truth resource and must not be used as the authoritative lifecycle, contract, or result record.
 
-If one backend dependency is unavailable while another is healthy, OSB may return a partial `HomeView` rather than failing the whole request, provided degraded sections are clearly marked and no missing backend data is represented as authoritative. Degraded sections should be represented as empty or null with an explicit service-health indicator rather than omitted silently. If the unavailable dependency is required for the requested user journey, OSB should preserve the backend failure semantics and return an appropriate error response.
+If one backend dependency is unavailable while another is healthy, OSB may return a partial `HomeView` rather than failing the whole request, provided the returned view remains semantically safe and no missing backend data is represented as authoritative. OSB does not add circuit-breaker degradation markers into response payloads in the baseline; if a remote dependency circuit breaker affects the externally meaningful response path, OSB marks the REST response with `x-cb-triggered: true`. If the unavailable dependency is required for the requested user journey and no safe fallback is available, OSB should preserve the backend failure semantics and return an appropriate error response.
 
 ## 12. Capabilities filtering behaviour:
 
@@ -557,7 +557,7 @@ OSB must not use cached runtime state alone to determine action eligibility.
 
 OSB MS must apply circuit breakers, timeouts, bounded retries, and isolation to remote dependencies such as NGW, OD MS and OC MS paths through NGW, cache stores where used, and other approved platform dependencies.
 
-If a non-critical cache dependency is unavailable but OSB MS can still serve the source-of-truth response through the backend path, OSB MS should bypass the cache and return the normal response without `x-cb-triggered`.
+If a non-critical cache dependency is unavailable but OSB MS can still serve the source-of-truth response through the backend path, OSB MS should bypass the cache and return the normal response. The circuit-breaker header is N/A for that response.
 
 If a remote dependency circuit breaker affects the externally meaningful response path, OSB MS must include:
 

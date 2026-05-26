@@ -1029,7 +1029,7 @@ Unsupported request content type returns 415 Unsupported Media Type.
 
 OC MS must apply circuit breakers, timeouts, bounded retries, and isolation to remote dependencies such as OD MS, its database, Kafka, cache stores where used, and other approved platform dependencies.
 
-If a non-critical cache dependency is unavailable but OC MS can still serve the source-of-truth response from its database or required upstream dependency, OC MS should bypass the cache and return the normal response without `x-cb-triggered`.
+If a non-critical cache dependency is unavailable but OC MS can still serve the source-of-truth response from its database or required upstream dependency, OC MS should bypass the cache and return the normal response. The circuit-breaker header is N/A for that response.
 
 If a remote dependency circuit breaker affects the externally meaningful response path, OC MS must include:
 
