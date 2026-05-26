@@ -62,7 +62,7 @@ Operator access to the experience layer is governed by the ACG approval process 
 
 OC MS validates the request structure and referenced ACTIVE OD MS request contract, persists the runtime `Optimisation` resource, returns `201 Created`, writes `OptimisationRequestedEvent` to its outbox, and drives execution asynchronously through Kafka.
 
-Kafka carries worker instructions and outcomes, with a dedicated DLQ for unprocessable events. OW MS consumes `EXECUTE` or `CANCEL` instructions and returns execution outcomes and cancellation-command outcomes through `OptimisationCompletedEvent`.
+Kafka carries worker instructions and outcomes, with a dedicated DLQ for unprocessable events. OW MS consumes `EXECUTE` or `CANCEL` instructions and emits execution outcomes and cancellation-command outcomes through `OptimisationCompletedEvent`.
 
 NGW-exposed backend APIs use TMF-style API conventions where appropriate. `OptimisationSpecification` and `Optimisation` are optimiser-domain platform resources, not native TMF Open API resources. However OGW-exposed experience APIs, private MS-to-MS APIs, and internal Kafka events do not need to be TMF-compliant.
 
@@ -547,6 +547,8 @@ When a circuit breaker is triggered, the service chooses the safest valid behavi
 
 HTTP status and response body remain authoritative for success or failure. `x-cb-triggered: true` only indicates that a remote dependency circuit breaker affected the externally meaningful response path.
 
+`x-cb-triggered` is diagnostic only and must not be used by clients to infer lifecycle, validation, authorisation, or optimisation outcome state.
+
 Use `x-cb-triggered: true` only when a remote dependency circuit breaker changes the externally meaningful response path. Do not use `x-cb-triggered` for local validation errors, malformed requests, lifecycle conflicts, stale ETags, local application errors, or normal cache bypass where the service still returns a source-of-truth response.
 
 | **Dependency / situation** | **Safe behaviour when CB is triggered** | **HTTP status / outcome** | **Header** |
@@ -571,6 +573,7 @@ For OC MS runtime creation and cancellation, Kafka broker unavailability does no
 | **Risk** | **Impact** | **Mitigation** |
 |---|---|---|
 | **Long-running Gurobi executions** | Delayed optimisation outcomes and worker capacity pressure. | Asynchronous execution, worker scaling, queue monitoring, timeout controls, and alerting. |
+| **OW MS solver/runtime dependency exhaustion** | Optimisation execution may be delayed or fail when Gurobi runtime, licence, model registry, or worker compute capacity is exhausted. | Worker autoscaling, queue-depth monitoring, licence/runtime capacity monitoring, backpressure, timeout controls, and DLQ or FAILED outcome handling. |
 | **Best-effort cancellation** | Running optimisation may not stop immediately, may produce a late outcome, or may report that cancellation could not be honoured or confirmed. | CANCELLING state, CANCELLATIONFAILED state, worker cancellation handling, and late outcome idempotency rules. |
 | **Kafka consumer lag** | Execution/result projection delay. | Monitor lag, scale consumers/workers, alert on thresholds. |
 | **OD MS unavailable during runtime creation** | New runtime optimisation creation may fail when OC MS cannot resolve the current ACTIVE specification and has no valid cached immutable ACTIVE contract. | OC MS may use a valid cached immutable ACTIVE contract according to cache policy; otherwise return 503 Service Unavailable and alert on OD dependency health. |
