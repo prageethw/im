@@ -498,7 +498,7 @@ eventId or ce-id
 
 `OptimisationCompletedEvent` processing must be idempotent. OC MS projection must safely handle duplicate, stale, and late worker outcome events.
 
-External `OptimisationStatusChangeEvent` webhook delivery is OC-owned and uses the Intent-style subscription model. Delivery must use platform-approved callback security such as mTLS, signed requests, shared secret, OAuth client credentials, or another governed mechanism. External event delivery is at-least-once; subscribers must deduplicate using `eventId` and must treat `GET /optimisation/{id}` as the source of truth.
+External `OptimisationStatusChangeEvent` webhook delivery is OC-owned and uses the Intent-style subscription model. Delivery must use platform-approved callback security such as mTLS, signed requests, shared secret, OAuth client credentials, or another governed mechanism. Callback URLs must use HTTPS and must pass SSRF and outbound-callback security validation before subscription acceptance. External event delivery is at-least-once; subscribers must deduplicate using `eventId`, tolerate out-of-order delivery using `statusChangeDate`, and treat `GET /optimisation/{id}` as the source of truth.
 
 ### 5.9. Sensitive information boundary:
 
@@ -595,6 +595,7 @@ For OC MS runtime creation and cancellation, Kafka broker unavailability does no
 | **Complex access path through gateways** | User context or backend identity misconfiguration. | Contract tests across OGW, OSB, NGW, OD, and OC. |
 | **Misconfigured circuit-breaker fallback** | Service may return stale/default data where source-of-truth semantics are required, or fail too aggressively. | Use endpoint-specific fallback policies, do not fake command acceptance, contract validation, lifecycle projection, cancellation confirmation, retrial creation, optimisation result, security visibility, or audit state. |
 | **Cached UI/action state misuse** | User sees stale or invalid actions. | Backend `_links` plus user-context rule; backend decision wins. |
+| **Webhook callback misconfiguration or delivery failure** | Subscribers may miss notifications, receive duplicates, or receive events out of order. | Intent-style `/optimisation/hub` validation, callback security, durable delivery, retry/DLQ policy, observable subscription suspension, subscriber idempotency using `eventId`, and fallback polling through `GET /optimisation/{id}`. |
 
 ## 8. Assumptions:
 
@@ -633,6 +634,7 @@ For OC MS runtime creation and cancellation, Kafka broker unavailability does no
 - ETag and If-Match are required for unsafe runtime operations such as cancellation and retrial.
 - Internal Kafka events do not use TMF REST `@type`, `@baseType`, or `@schemaLocation`.
 - OW MS internal events must not be exposed directly to external subscribers; OC MS external webhook events are emitted only after OC MS projection is persisted.
+- `/optimisation/hub` baseline subscriptions support `OptimisationStatusChangeEvent` only; internal `OptimisationRequestedEvent` and `OptimisationCompletedEvent` are not exposed through webhook subscriptions.
 
 ## 10. Appendix:
 
@@ -761,17 +763,33 @@ External webhook event type:
 OptimisationStatusChangeEvent
 ```
 
-A separate `OptimisationFailedEvent` is not used by default. Failed, infeasible, cancelled, and cancellation-failed outcomes are represented inside `OptimisationCompletedEvent.status`.
+A separate internal `OptimisationFailedEvent` is not used by default. Failed, infeasible, cancelled, and cancellation-failed worker outcomes are represented inside `OptimisationCompletedEvent.status`.
 
 ### 10.7. External webhook subscription baseline:
 
-OC MS supports an Intent-style webhook subscription model for external status notifications.
+OC MS supports an Intent-style webhook subscription model for external runtime status notifications. The model avoids forcing consumers to poll indefinitely while preserving OC MS as the source of truth for runtime lifecycle and result projection.
 
 ```http
 POST /optimisation/hub
 GET /optimisation/hub/{id}
 DELETE /optimisation/hub/{id}
 ```
+
+Baseline `EventSubscription` fields are:
+
+```text
+id
+href
+callback
+query
+subscriptionStatus
+creationDate
+lastUpdate
+@type
+_links
+```
+
+`id` and `href` are server-assigned. `callback` is the subscriber-owned HTTPS endpoint. `query` is the subscription filter. `subscriptionStatus` is `ACTIVE` for an accepted subscription unless the subscription is later suspended or removed by governed delivery policy. `@type` is `EventSubscription`.
 
 Subscription request baseline:
 
@@ -783,17 +801,25 @@ Subscription request baseline:
 }
 ```
 
-`OptimisationStatusChangeEvent` is emitted only after OC MS has durably persisted the corresponding lifecycle or result projection. The webhook event is a notification, not the source of truth. Callback delivery failure must not roll back OC MS lifecycle or result projection. Delivery is at-least-once; subscribers must handle duplicate and out-of-order notifications idempotently and use `GET /optimisation/{id}` when they need the authoritative current state. Baseline subscription filtering supports `eventType`; lifecycle, source-context, and specification filters may be added later where governed by OC MS.
+Baseline subscription filtering supports `eventType`. The only supported baseline `eventType` is `OptimisationStatusChangeEvent`. Future governed extensions may add filters such as `lifecycleStatus`, `sourceContext.domain`, `sourceContext.resource.id`, and `optimisationSpecification.id`. Unsupported query filters or unsupported event types return `400 Bad Request`.
+
+Callback URLs must use HTTPS and must pass platform callback security validation before the subscription is accepted. OC MS must reject loopback, private administrative, malformed, or otherwise disallowed callback targets according to platform SSRF and outbound-callback security policy.
+
+`GET /optimisation/hub/{id}` retrieves the subscription where authorised and returns the current subscription `ETag`. `DELETE /optimisation/hub/{id}` removes the subscription where authorised and requires `If-Match`. The `If-Match` value must match the current subscription `ETag`.
+
+`OptimisationStatusChangeEvent` is emitted only after OC MS has durably persisted the corresponding lifecycle or result projection. The webhook event is a notification, not the source of truth. Callback delivery failure must not roll back OC MS lifecycle or result projection. Delivery is at-least-once; subscribers must handle duplicate and out-of-order notifications idempotently and use `GET /optimisation/{id}` when they need the authoritative current state.
 
 Safe event payload shape:
 
 ```json
 {
-  "eventId": "evt-opt-12345-completed-001",
+  "eventId": "evt-opt-12345-status-001",
   "eventType": "OptimisationStatusChangeEvent",
+  "eventVersion": "1.0",
   "eventTime": "2026-05-26T13:40:00Z",
   "correlationId": "corr-12345",
   "traceId": "trace-12345",
+  "subscriptionId": "sub-12345",
   "event": {
     "optimisation": {
       "id": "opt-12345",
@@ -811,7 +837,39 @@ Safe event payload shape:
 }
 ```
 
-OW MS does not publish external webhook events. `OptimisationRequestedEvent` and `OptimisationCompletedEvent` remain internal OC-to-OW events.
+For `CANCELLATIONFAILED`, the event must preserve non-terminal cancellation-command semantics:
+
+```json
+{
+  "eventId": "evt-opt-12345-status-002",
+  "eventType": "OptimisationStatusChangeEvent",
+  "eventVersion": "1.0",
+  "eventTime": "2026-05-26T13:41:00Z",
+  "correlationId": "corr-12345",
+  "traceId": "trace-12345",
+  "subscriptionId": "sub-12345",
+  "event": {
+    "optimisation": {
+      "id": "opt-12345",
+      "href": "/optimisation/opt-12345",
+      "previousLifecycleStatus": "CANCELLING",
+      "newLifecycleStatus": "CANCELLATIONFAILED",
+      "statusChangeDate": "2026-05-26T13:41:00Z",
+      "resultSummary": {
+        "outcome": "CANCELLATIONFAILED",
+        "summary": "Cancellation could not be honoured or confirmed. The optimisation may still later reach COMPLETED, INFEASIBLE, or FAILED."
+      },
+      "@type": "Optimisation"
+    }
+  }
+}
+```
+
+OW MS does not publish external webhook events. `OptimisationRequestedEvent` and `OptimisationCompletedEvent` remain internal OC-to-OW events and must not be exposed through `/optimisation/hub`.
+
+Webhook payloads are summary notifications by default. They must not include full `expression`, full `result.outputs[]`, internal Kafka details, raw worker diagnostics, Gurobi model formulation, solver configuration, credentials, or raw stack traces. If the event payload and a later `GET /optimisation/{id}` representation disagree, the GET representation wins.
+
+A callback `2xx` response means delivered. A non-`2xx` response, timeout, DNS failure, TLS failure, or callback authentication failure is a delivery failure and follows retry, DLQ, or subscription-suspension policy. Subscription suspension must not silently delete the subscription; it must be observable and recoverable through governed operational procedure or an explicit subscription update capability introduced later.
 
 ### 10.8. Worker instructions:
 
