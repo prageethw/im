@@ -97,10 +97,8 @@ OSB MS may transform backend OD and OC responses into UI-friendly models, but it
 
 Avoid using backend resource namespaces directly from OSB:
 
-```http
-/optimisation
-/optimisationSpecification
-```
+- `/optimisation`
+- `/optimisationSpecification`
 
 Those backend namespaces belong to OC MS and OD MS behind NGW.
 
@@ -553,6 +551,8 @@ OSB should avoid long-lived caching for runtime status and detail views.
 OSB must not use cached runtime state alone to determine action eligibility.
 ```
 
+OSB must not treat an OC request-result cache hit as an OSB-owned result or lifecycle shortcut. Any cached optimisation outcome remains governed by OC MS and must be surfaced only through OC MS runtime resource semantics.
+
 ### 19.1. Circuit breaker and remote dependency behaviour:
 
 OSB MS must apply circuit breakers, timeouts, bounded retries, and isolation to remote dependencies such as NGW, OD MS and OC MS paths through NGW, cache stores where used, and other approved platform dependencies.
@@ -651,6 +651,8 @@ OSB integration defects, including sending forbidden OC create fields such as `o
 
 OSB MS may map backend error bodies to OEX-friendly messages, but it must preserve the backend status and correlation information for support and troubleshooting.
 
+If a remote dependency circuit breaker affects the externally meaningful response path, OSB may include `x-cb-triggered: true` while preserving the authoritative HTTP status and backend error semantics. The header is diagnostic only and must not be represented as lifecycle, validation, authorisation, or outcome state.
+
 OSB must preserve `correlationId` and `traceId` from backend headers and backend error bodies where present, and pass them through to OEX-layer error responses or logging following platform trace-header conventions. OSB may add its own correlation identifier, but it must not discard backend diagnostic identifiers.
 
 ## 23. Event posture:
@@ -659,10 +661,8 @@ OSB MS does not publish or consume the optimiser Kafka worker events.
 
 Internal optimiser eventing remains owned by OC MS and OW MS:
 
-```text
-OptimisationRequestedEvent
-OptimisationCompletedEvent
-```
+- `OptimisationRequestedEvent`
+- `OptimisationCompletedEvent`
 
 OSB MS observes runtime progress only through OC MS REST APIs exposed through NGW.
 
