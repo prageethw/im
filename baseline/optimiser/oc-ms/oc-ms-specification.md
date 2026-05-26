@@ -550,7 +550,7 @@ resource-selection correctness
 
 After acceptance, OC MS persists the runtime resource and writes `OptimisationRequestedEvent` with `instruction = EXECUTE` to its outbox in the same transaction.
 
-Cancellation uses the same event type with `instruction = CANCEL`. OW MS execution outcomes and cancellation-command outcomes are returned through `OptimisationCompletedEvent`. Execution outcomes are `COMPLETED`, `INFEASIBLE`, or `FAILED`. Cancellation-command outcomes are `CANCELLED` or `CANCELLATIONFAILED`. `COMPLETED`, `INFEASIBLE`, and `FAILED` are terminal execution outcomes. `CANCELLED` is a terminal cancellation-command outcome. `CANCELLATIONFAILED` is a non-terminal cancellation-command outcome and may later be followed by a normal terminal execution outcome.
+Cancellation uses the same event type with `instruction = CANCEL`. OW MS execution outcomes and cancellation-command outcomes are carried through `OptimisationCompletedEvent`. Execution outcomes are `COMPLETED`, `INFEASIBLE`, or `FAILED`. Cancellation-command outcomes are `CANCELLED` or `CANCELLATIONFAILED`. `COMPLETED`, `INFEASIBLE`, and `FAILED` are terminal execution outcomes. `CANCELLED` is a terminal cancellation-command outcome. `CANCELLATIONFAILED` is a non-terminal cancellation-command outcome and may later be followed by a normal terminal execution outcome.
 
 ## 13. Internal event baseline:
 
@@ -1068,10 +1068,10 @@ GET /optimisation: no per-item ETag by default; includes X-Total-Count and X-Res
 POST /optimisation/{id}/cancellation: requires If-Match
 POST /optimisation/{id}/retrial: requires If-Match
 POST /optimisation/hub: returns Location and ETag
-GET /optimisation/hub/{id}: returns ETag where subscription ETags are enabled
-DELETE /optimisation/hub/{id}: requires If-Match where subscription ETags are enabled
-missing If-Match -> 428
-stale or wrong If-Match -> 412
+GET /optimisation/hub/{id}: returns ETag
+DELETE /optimisation/hub/{id}: requires If-Match
+missing If-Match on an unsafe ETag-governed operation -> 428
+stale or wrong If-Match on an unsafe ETag-governed operation -> 412
 ```
 
 NGW-facing OC MS resource responses include:
@@ -1088,7 +1088,8 @@ POST /optimisation requires Content-Type: application/json.
 POST /optimisation/{id}/cancellation has no required body; if a body is sent it requires Content-Type: application/json.
 POST /optimisation/{id}/retrial has no required body; if a body is sent it requires Content-Type: application/json.
 POST /optimisation/hub requires Content-Type: application/json.
-A body sent without Content-Type, or with an unsupported Content-Type, on cancellation or retrial returns 415 Unsupported Media Type.
+DELETE /optimisation/hub/{id} does not require a request body; if a body is sent it requires Content-Type: application/json.
+A body sent without Content-Type, or with an unsupported Content-Type, on cancellation, retrial, or subscription delete returns 415 Unsupported Media Type.
 Unsupported request content type returns 415 Unsupported Media Type.
 ```
 
@@ -1126,10 +1127,11 @@ While a circuit breaker is open, OC MS must monitor recovery through bounded hea
 | OD MS unavailable and OC MS has no valid cached immutable `ACTIVE` contract for the requested id | `503 Service Unavailable` |
 | Cancellation requested from a non-eligible lifecycle state, including `CANCELLING`, `CANCELLATIONFAILED`, or terminal states, or retrial requested from `ACKNOWLEDGED`, `QUEUED`, `PROCESSING`, `CANCELLING`, `CANCELLATIONFAILED`, `COMPLETED`, `INFEASIBLE`, or `CANCELLED` | `409 Conflict` |
 | Invalid `/optimisation/hub` callback URL, malformed subscription body, unsupported subscription query filter, or unsupported event type | `400 Bad Request` |
+| Authenticated caller is not authorised to create, retrieve, or delete a subscription | `403 Forbidden` |
 | Subscription resource not found or not visible | `404 Not Found` |
-| Missing `If-Match` on cancellation, retrial, or subscription delete where ETag governance applies | `428 Precondition Required` |
-| Stale or wrong `If-Match` on cancellation, retrial, or subscription delete where ETag governance applies | `412 Precondition Failed` |
-| Unsupported `Content-Type` | `415 Unsupported Media Type` |
+| Missing `If-Match` on cancellation, retrial, or subscription delete | `428 Precondition Required` |
+| Stale or wrong `If-Match` on cancellation, retrial, or subscription delete | `412 Precondition Failed` |
+| Unsupported `Content-Type`, including invalid body content type on cancellation, retrial, hub create, or hub delete where a body is supplied | `415 Unsupported Media Type` |
 
 Boundary rules:
 
@@ -1251,7 +1253,25 @@ DELETE /optimisation/hub/{id}
 
 `POST /optimisation/hub` creates a webhook subscription for authorised consumers. The subscriber provides a callback URL and optional query filter.
 
-Baseline subscription query filtering supports `eventType`. Future governed extensions may add filters such as `lifecycleStatus`, `sourceContext.domain`, `sourceContext.resource.id`, and `optimisationSpecification.id`. Unsupported query filters return `400 Bad Request`.
+Baseline subscription resource fields are:
+
+```text
+id
+href
+callback
+query
+subscriptionStatus
+creationDate
+lastUpdate
+@type
+_links
+```
+
+`id` and `href` are server-assigned. `callback` is the subscriber-owned HTTPS endpoint. `query` is the optional subscription filter string. `subscriptionStatus` is `ACTIVE` for an accepted subscription unless the subscription is later suspended or removed by governed delivery policy. `@type` is `EventSubscription`. `_links` exposes only valid subscription actions for the current caller.
+
+Baseline subscription query filtering supports `eventType`. The only supported baseline `eventType` is `OptimisationStatusChangeEvent`. Future governed extensions may add filters such as `lifecycleStatus`, `sourceContext.domain`, `sourceContext.resource.id`, and `optimisationSpecification.id`. Unsupported query filters or unsupported event types return `400 Bad Request`.
+
+Callback URLs must use HTTPS and must pass platform callback security validation before the subscription is accepted. OC MS must reject loopback, private administrative, malformed, or otherwise disallowed callback targets according to platform SSRF and outbound-callback security policy.
 
 Example subscription request:
 
@@ -1280,11 +1300,70 @@ x-tmf-native: false
   "href": "/optimisation/hub/sub-12345",
   "callback": "https://consumer.example.com/optimisation/events",
   "query": "eventType=OptimisationStatusChangeEvent",
-  "@type": "EventSubscription"
+  "subscriptionStatus": "ACTIVE",
+  "creationDate": "2026-05-26T13:35:00Z",
+  "lastUpdate": "2026-05-26T13:35:00Z",
+  "@type": "EventSubscription",
+  "_links": {
+    "self": {
+      "href": "/optimisation/hub/sub-12345",
+      "method": "GET"
+    },
+    "delete": {
+      "href": "/optimisation/hub/sub-12345",
+      "method": "DELETE"
+    }
+  }
 }
 ```
 
-`GET /optimisation/hub/{id}` retrieves the subscription where authorised and may return an `ETag`. `DELETE /optimisation/hub/{id}` removes the subscription where authorised and requires `If-Match` where the platform applies optimistic concurrency to subscription resources. If subscription ETags are enabled, the `If-Match` value must match the current subscription `ETag`.
+`GET /optimisation/hub/{id}` retrieves the subscription where authorised and returns the current subscription `ETag`. `DELETE /optimisation/hub/{id}` removes the subscription where authorised and requires `If-Match`. The `If-Match` value must match the current subscription `ETag`.
+
+Example subscription retrieve response:
+
+```http
+HTTP/1.1 200 OK
+ETag: "sub-12345-rev1"
+Content-Type: application/json
+x-platform-extension: true
+x-tmf-native: false
+```
+
+```json
+{
+  "id": "sub-12345",
+  "href": "/optimisation/hub/sub-12345",
+  "callback": "https://consumer.example.com/optimisation/events",
+  "query": "eventType=OptimisationStatusChangeEvent",
+  "subscriptionStatus": "ACTIVE",
+  "creationDate": "2026-05-26T13:35:00Z",
+  "lastUpdate": "2026-05-26T13:35:00Z",
+  "@type": "EventSubscription",
+  "_links": {
+    "self": {
+      "href": "/optimisation/hub/sub-12345",
+      "method": "GET"
+    },
+    "delete": {
+      "href": "/optimisation/hub/sub-12345",
+      "method": "DELETE"
+    }
+  }
+}
+```
+
+Example subscription delete request:
+
+```http
+DELETE /optimisation/hub/sub-12345
+If-Match: "sub-12345-rev1"
+```
+
+Successful deletion returns:
+
+```http
+HTTP/1.1 204 No Content
+```
 
 OC MS must not allow `/optimisation/hub` subscriptions to expose internal `OptimisationRequestedEvent` or `OptimisationCompletedEvent` payloads. The only external event type baselined for subscription is `OptimisationStatusChangeEvent`.
 
@@ -1316,7 +1395,9 @@ CANCELLATIONFAILED -> INFEASIBLE
 CANCELLATIONFAILED -> FAILED
 ```
 
-The event may include safe summary metadata but should not embed large result payloads by default. Consumers should use the `href` in the event to retrieve the authoritative current representation when needed. If the event and subsequent `GET /optimisation/{id}` disagree, the GET representation wins.
+Initial `201 Created` already returns the initial `ACKNOWLEDGED` representation to the caller. A separate `OptimisationStatusChangeEvent` for initial `ACKNOWLEDGED` creation is not required in the baseline unless a future event policy explicitly enables creation notifications.
+
+The event may include safe summary metadata but should not embed large result payloads by default. The baseline callback payload is intentionally a notification summary and must not include full `expression`, full `result.outputs[]`, or sensitive worker diagnostics by default. Consumers should use the `href` in the event to retrieve the authoritative current representation when needed. If the event and subsequent `GET /optimisation/{id}` disagree, the GET representation wins.
 
 Example callback payload:
 
@@ -1324,9 +1405,11 @@ Example callback payload:
 {
   "eventId": "evt-opt-12345-status-001",
   "eventType": "OptimisationStatusChangeEvent",
+  "eventVersion": "1.0",
   "eventTime": "2026-05-26T13:40:00Z",
   "correlationId": "corr-12345",
   "traceId": "trace-12345",
+  "subscriptionId": "sub-12345",
   "event": {
     "optimisation": {
       "id": "opt-12345",
@@ -1350,9 +1433,11 @@ For `CANCELLATIONFAILED`, the event must preserve the non-terminal semantics:
 {
   "eventId": "evt-opt-12345-status-002",
   "eventType": "OptimisationStatusChangeEvent",
+  "eventVersion": "1.0",
   "eventTime": "2026-05-26T13:41:00Z",
   "correlationId": "corr-12345",
   "traceId": "trace-12345",
+  "subscriptionId": "sub-12345",
   "event": {
     "optimisation": {
       "id": "opt-12345",
@@ -1379,12 +1464,13 @@ External events are emitted only after OC MS has persisted the lifecycle or resu
 External event payloads are notifications, not the source of truth.
 GET /optimisation/{id} remains the authoritative current-state read.
 External event payloads must include an `eventId` so subscribers can deduplicate deliveries.
-External event payloads should include `correlationId` and `traceId` where available for support and tracing.
+External event payloads must include `eventType`, `eventVersion`, and `eventTime`.
+External event payloads should include `correlationId` and `traceId` where available for support and tracing. Callback deliveries should include the target `subscriptionId` so subscribers and operators can correlate delivery audit records.
 External event delivery is at-least-once.
 Subscribers must handle duplicate events idempotently and must tolerate out-of-order delivery by using `statusChangeDate` and the authoritative `GET /optimisation/{id}` representation.
 Callback delivery must use governed outbound security, such as mTLS, signed request, shared secret, OAuth client credentials, or another platform-approved callback authentication mechanism.
 Callback delivery failure must not roll back OC MS lifecycle or result projection.
-A callback `2xx` response means delivered. Non-`2xx` response, timeout, DNS failure, TLS failure, or callback authentication failure is a delivery failure and follows retry, DLQ, or subscription-suspension policy.
+A callback `2xx` response means delivered. Non-`2xx` response, timeout, DNS failure, TLS failure, or callback authentication failure is a delivery failure and follows retry, DLQ, or subscription-suspension policy. Subscription suspension must not delete the subscription silently; it must be observable and recoverable through governed operational procedure or explicit subscription update capability introduced later.
 Callback delivery must use durable outbox, retry, DLQ, or equivalent governed delivery handling.
 Webhook payloads must not expose Gurobi model formulation, solver configuration, raw worker diagnostics, credentials, internal Kafka details, or raw stack traces.
 ```
