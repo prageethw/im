@@ -9,7 +9,7 @@
 | **Source path** | `baseline/optimiser/od-ms/od-ms-specification.md` |
 | **Source of truth** | GitHub `main` |
 | **Last aligned** | 2026-05-24 |
-| **Alignment scope** | Aligned with OD `specKey`, DRAFT `draftId`, ACTIVE retirement, and OC runtime contract-selection baseline. |
+| **Alignment scope** | Aligned with OD `specKey`, DRAFT `draftId`, ACTIVE retirement, OC runtime contract-selection baseline, and circuit-breaker response signalling. |
 
 ## Table of contents:
 
@@ -728,6 +728,24 @@ Cache-Control: no-cache
 ```
 
 The `private, max-age=300` posture is suitable for initial synchronous discovery/validation flows. OC MS may cache immutable `ACTIVE` specification contracts by `id` and `ETag`; because `ACTIVE` specifications are immutable, a cached contract for a specific `id` is safe. OC MS must not rely on a stale `specKey` lookup to infer the current active contract; runtime validation is against the referenced `OptimisationSpecification.id` resolved by OD MS.
+
+### 16.1. Circuit breaker and remote dependency behaviour:
+
+OD MS must apply circuit breakers, timeouts, bounded retries, and isolation to remote dependencies such as its database, cache store where used, platform infrastructure, and any approved external dependency.
+
+If a non-critical cache dependency is unavailable but OD MS can still serve the source-of-truth response from the database, OD MS should bypass the cache and return the normal response without `x-cb-triggered`.
+
+If a remote dependency circuit breaker affects the externally meaningful response path, OD MS must include:
+
+```http
+x-cb-triggered: true
+```
+
+This header may appear on successful fallback responses or hard-failure responses. HTTP status and response body remain authoritative for success or failure. `x-cb-triggered: true` only indicates that a remote dependency circuit breaker affected the response path.
+
+OD MS must not use cached or default fallback to fake specification creation, DRAFT update, activation, retirement, ETag validation, lifecycle governance, security visibility, or audit state. If OD MS cannot safely complete a source-of-truth operation because a required remote dependency is unavailable, it must fail fast with the appropriate error status.
+
+While a circuit breaker is open, OD MS must monitor recovery through bounded health probes or test calls according to platform circuit-breaker policy. Probe behaviour must be rate-limited and must not overload a recovering dependency.
 
 ## 17. HATEOAS baseline:
 
