@@ -537,8 +537,8 @@ OC MS uses exactly two internal Kafka event types with the Python and Gurobi wor
 
 | **Event** | **Emitter** | **Consumer** | **Purpose** | **Key values** |
 |---|---|---|---|---|
-| `OptimisationRequestedEvent` | OC MS, OC MS Outbox Relay | Python and Gurobi Worker | Worker instruction event for execution or cancellation. | `instruction = EXECUTE` or `instruction = CANCEL` |
-| `OptimisationCompletedEvent` | Python and Gurobi Worker | OC MS, OC MS Inbox Consumer | Worker outcome and cancellation-command outcome event for lifecycle and result projection. | `status = COMPLETED`, `FAILED`, `INFEASIBLE`, `CANCELLED`, or `CANCELLATIONFAILED` |
+| `OptimisationRequestedEvent` | OC MS, OC MS Outbox Relay | OW MS | OW MS instruction event for execution or cancellation. | `instruction = EXECUTE` or `instruction = CANCEL` |
+| `OptimisationCompletedEvent` | OW MS | OC MS, OC MS Inbox Consumer | OW MS outcome and cancellation-command outcome event for lifecycle and result projection. | `status = COMPLETED`, `FAILED`, `INFEASIBLE`, `CANCELLED`, or `CANCELLATIONFAILED` |
 
 `OptimisationFailedEvent` is not used in the current baseline. Failed, infeasible, cancelled, and cancellation-failed outcomes are carried by `OptimisationCompletedEvent.status`. The event name remains `OptimisationCompletedEvent` in the current baseline even when it carries `CANCELLATIONFAILED` as a cancellation-command outcome. No separate cancellation-failed or progress event type is introduced. `CANCELLATIONFAILED` is not necessarily terminal; OC MS may later project `COMPLETED`, `INFEASIBLE`, or `FAILED` for the same Optimisation when a normal worker outcome is received.
 

@@ -637,7 +637,7 @@ OSB must preserve `correlationId` and `traceId` from backend headers and backend
 
 OSB MS does not publish or consume the optimiser Kafka worker events.
 
-Internal optimiser eventing remains owned by OC MS and the Python and Gurobi Worker:
+Internal optimiser eventing remains owned by OC MS and OW MS:
 
 ```text
 OptimisationRequestedEvent
