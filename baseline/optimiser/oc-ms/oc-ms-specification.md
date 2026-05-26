@@ -196,7 +196,7 @@ Rules:
 ```text
 ACKNOWLEDGED: OC MS accepted the request, persisted the Optimisation resource, and wrote the outbox event.
 QUEUED: OptimisationRequestedEvent has been published or is waiting for worker processing.
-PROCESSING: Python and Gurobi worker has started processing.
+PROCESSING: OW MS has started processing the optimisation work.
 COMPLETED: Worker completed successfully and produced a usable result.
 INFEASIBLE: Worker completed correctly, but no valid solution exists.
 FAILED: Technical or runtime failure occurred.
@@ -533,7 +533,7 @@ Cancellation uses the same event type with `instruction = CANCEL`. Worker optimi
 
 ## 13. Internal event baseline:
 
-OC MS uses exactly two internal Kafka event types with the Python and Gurobi worker in the current baseline. These are platform-internal events, not TMF external notification events.
+OC MS uses exactly two internal Kafka event types with OW MS in the current baseline. These are platform-internal events, not TMF external notification events.
 
 | **Event** | **Emitter** | **Consumer** | **Purpose** | **Key values** |
 |---|---|---|---|---|
