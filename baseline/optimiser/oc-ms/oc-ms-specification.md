@@ -825,6 +825,46 @@ Completed-state example:
 }
 ```
 
+
+Cancellation-failed-state example:
+
+```json
+{
+  "id": "opt-12345",
+  "href": "/optimisation/opt-12345",
+  "@type": "Optimisation",
+  "@baseType": "Entity",
+  "@schemaLocation": "/schema/Optimisation.schema.json",
+  "name": "Hospital surgical slice path optimisation request",
+  "lifecycleStatus": "CANCELLATIONFAILED",
+  "creationDate": "2026-05-02T03:00:00Z",
+  "lastUpdate": "2026-05-02T03:04:00Z",
+  "statusChangeDate": "2026-05-02T03:04:00Z",
+  "creationContext": {
+    "reason": "NEW"
+  },
+  "optimisationSpecification": {
+    "id": "optimisation-spec-surgical-routing",
+    "version": "1.1.0",
+    "draftId": "od-draft-surgical-routing-b",
+    "href": "/optimisationManagement/v1/optimisationSpecification/optimisation-spec-surgical-routing?version=1.1.0",
+    "@type": "OptimisationSpecificationRef",
+    "@referredType": "OptimisationSpecification"
+  },
+  "result": {
+    "outcome": "CANCELLATIONFAILED",
+    "summary": "Cancellation could not be honoured or confirmed. The optimisation remains observable and may later reach COMPLETED, INFEASIBLE, or FAILED.",
+    "code": "CANCELLATION_NOT_CONFIRMED"
+  },
+  "_links": {
+    "self": {
+      "href": "/optimisation/opt-12345",
+      "method": "GET"
+    }
+  }
+}
+```
+
 ## 16. Cancellation and retrial:
 
 Cancellation:
