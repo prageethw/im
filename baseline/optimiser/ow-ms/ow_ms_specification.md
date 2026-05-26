@@ -9,7 +9,7 @@
 | **Source path** | `baseline/optimiser/ow-ms/ow_ms_specification.md` |
 | **Source of truth** | GitHub `main` |
 | **Last aligned** | 2026-05-26 |
-| **Alignment scope** | Aligned with OC MS `OptimisationRequestedEvent`, `OptimisationCompletedEvent`, `creationContext.reason`, `CANCELLATIONFAILED`, retrial, result projection, and ETag-header baseline. |
+| **Alignment scope** | Aligned with OC MS `OptimisationRequestedEvent`, `OptimisationCompletedEvent`, `creationContext.reason`, `CANCELLATIONFAILED`, retrial, result projection, ETag-header baseline, and circuit-breaker response signalling. |
 
 ## Table of contents:
 
@@ -570,6 +570,20 @@ Backpressure must not cause unsafe duplicate execution for the same optimisation
 ```
 
 Capacity controls are deployment-governed, but must align with worker concurrency limits, maximum in-flight Gurobi jobs per worker instance, retry policy, and job-registry ownership semantics.
+
+### 18.1. Circuit breaker and remote dependency behaviour:
+
+OW MS must apply circuit breakers, timeouts, bounded retries, and isolation to remote dependencies such as Kafka, model registries, external data sources, Gurobi runtime or solver dependencies, cache or job-registry stores where used, and other approved platform dependencies.
+
+If a non-critical cache or registry acceleration path is unavailable but OW MS can still use a safe source-of-truth path, OW MS should bypass the non-critical dependency without changing the worker outcome semantics.
+
+When a remote dependency circuit breaker is triggered during asynchronous execution, OW MS must choose the safest governed behaviour for the operation: backpressure, bounded retry, DLQ routing, use of an approved verified cached artifact, or emission of a safe `FAILED` or `CANCELLATIONFAILED` outcome where appropriate. OW MS must not fake `COMPLETED`, `CANCELLED`, or any other successful outcome when the required execution, cancellation, or verification did not actually complete safely.
+
+`x-cb-triggered` is a REST response header and is not used on OW MS Kafka outcome events. OW MS circuit-breaker state must instead be observable through metrics, logs, traces, and safe outcome or DLQ metadata.
+
+Circuit-breaker fallback must not silently alter optimisation result semantics, cancellation confirmation, model binding, artifact integrity, security visibility, or audit state.
+
+While a circuit breaker is open, OW MS must monitor recovery through bounded health probes or test calls according to platform circuit-breaker policy. Probe behaviour must be rate-limited and must not overload a recovering dependency.
 
 ## 19. Result size and artifact handling:
 

@@ -9,7 +9,7 @@
 | **Source path** | `baseline/optimiser/osb-ms/osb-ms-specification.md` |
 | **Source of truth** | GitHub `main` |
 | **Last aligned** | 2026-05-24 |
-| **Alignment scope** | Aligned with OD `specKey`, OC `creationContext`, `CANCELLATIONFAILED`, retrial, and ETag-header baseline. |
+| **Alignment scope** | Aligned with OD `specKey`, OC `creationContext`, `CANCELLATIONFAILED`, retrial, ETag-header baseline, and circuit-breaker response signalling. |
 
 ## Table of contents:
 
@@ -552,6 +552,26 @@ Runtime Optimisation state changes over time.
 OSB should avoid long-lived caching for runtime status and detail views.
 OSB must not use cached runtime state alone to determine action eligibility.
 ```
+
+### 19.1. Circuit breaker and remote dependency behaviour:
+
+OSB MS must apply circuit breakers, timeouts, bounded retries, and isolation to remote dependencies such as NGW, OD MS and OC MS paths through NGW, cache stores where used, and other approved platform dependencies.
+
+If a non-critical cache dependency is unavailable but OSB MS can still serve the source-of-truth response through the backend path, OSB MS should bypass the cache and return the normal response without `x-cb-triggered`.
+
+If a remote dependency circuit breaker affects the externally meaningful response path, OSB MS must include:
+
+```http
+x-cb-triggered: true
+```
+
+This header may appear on successful fallback responses or hard-failure responses. HTTP status and response body remain authoritative for success or failure. `x-cb-triggered: true` only indicates that a remote dependency circuit breaker affected the response path. OSB MS does not add circuit-breaker degradation markers into response payloads in the baseline.
+
+OSB MS may return a safe pre-cached object or instantly generated default payload only where the response is non-authoritative and does not change source-of-truth semantics. Examples include optional home-view sections, summary widgets, display hints, or empty non-authoritative lists where the user journey remains safe.
+
+OSB MS must not use cached or default fallback to fake backend command acceptance, backend lifecycle state, backend action eligibility, contract validation, cancellation confirmation, retrial creation, result projection, security visibility, or audit state. If no safe fallback exists, OSB MS must preserve the appropriate backend or dependency failure semantics.
+
+While a circuit breaker is open, OSB MS must monitor recovery through bounded health probes or test calls according to platform circuit-breaker policy. Probe behaviour must be rate-limited and must not overload a recovering dependency.
 
 ## 20. Runtime status refresh:
 

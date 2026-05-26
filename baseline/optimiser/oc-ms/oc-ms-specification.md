@@ -9,7 +9,7 @@
 | **Source path** | `baseline/optimiser/oc-ms/oc-ms-specification.md` |
 | **Source of truth** | GitHub `main` |
 | **Last aligned** | 2026-05-24 |
-| **Alignment scope** | Aligned with OD `specKey`, OC `creationContext`, `CANCELLATIONFAILED`, retrial, request-result cache, and ETag-header baseline. |
+| **Alignment scope** | Aligned with OD `specKey`, OC `creationContext`, `CANCELLATIONFAILED`, retrial, request-result cache, ETag-header baseline, and circuit-breaker response signalling. |
 
 ## Table of contents:
 
@@ -1024,6 +1024,26 @@ POST /optimisation/{id}/retrial has no required body; if a body is sent it requi
 A body sent without Content-Type, or with an unsupported Content-Type, on cancellation or retrial returns 415 Unsupported Media Type.
 Unsupported request content type returns 415 Unsupported Media Type.
 ```
+
+### 17.1. Circuit breaker and remote dependency behaviour:
+
+OC MS must apply circuit breakers, timeouts, bounded retries, and isolation to remote dependencies such as OD MS, its database, Kafka, cache stores where used, and other approved platform dependencies.
+
+If a non-critical cache dependency is unavailable but OC MS can still serve the source-of-truth response from its database or required upstream dependency, OC MS should bypass the cache and return the normal response without `x-cb-triggered`.
+
+If a remote dependency circuit breaker affects the externally meaningful response path, OC MS must include:
+
+```http
+x-cb-triggered: true
+```
+
+This header may appear on successful fallback responses or hard-failure responses. HTTP status and response body remain authoritative for success or failure. `x-cb-triggered: true` only indicates that a remote dependency circuit breaker affected the response path.
+
+OC MS may proceed with runtime creation using a valid cached immutable ACTIVE OD contract only where the cache policy allows it and the cached contract is semantically safe for the requested `OptimisationSpecification.id` and resolved version. If OD MS is unavailable and OC MS has no valid cached immutable ACTIVE contract, OC MS must fail fast with `503 Service Unavailable` and include `x-cb-triggered: true`.
+
+OC MS must not use cached or default fallback to fake runtime creation, contract validation, lifecycle projection, cancellation acceptance, retrial creation, ETag validation, result projection, security visibility, or audit state. For command and state-changing operations, OC MS may return a normal success status only when the operation has genuinely completed its required validation, persistence, concurrency, and durability obligations.
+
+While a circuit breaker is open, OC MS must monitor recovery through bounded health probes or test calls according to platform circuit-breaker policy. Probe behaviour must be rate-limited and must not overload a recovering dependency.
 
 ## 18. Error handling boundary:
 
