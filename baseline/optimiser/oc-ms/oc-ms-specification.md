@@ -64,7 +64,7 @@ OC MS does not own:
 OptimisationSpecification definitions
 OptimisationSpecification lifecycle and version governance
 Gurobi model formulation
-Python and Gurobi solver execution
+OW MS execution and Gurobi solver execution
 Analytics platform datasets
 Long-running intent control-loop assurance
 ```
@@ -561,7 +561,7 @@ CloudEvents header baseline:
 | `ce-specversion` | Required. Use the platform-supported CloudEvents version. |
 | `ce-id` | Required unique event id for idempotency. May also be carried as `eventId` in the event body where required by platform convention. |
 | `ce-type` | Required. `OptimisationRequestedEvent` or `OptimisationCompletedEvent`. |
-| `ce-source` | Required. Emitting component, such as `optimisation-controller-ms` or `python-gurobi-worker`. |
+| `ce-source` | Required. Emitting component, such as `optimisation-controller-ms` or `optimisation-worker-ms`. |
 | `ce-time` | Required event creation timestamp. |
 | `ce-subject` | Recommended. Runtime `Optimisation.id`. |
 | `correlationId` | Required platform correlation id. |
