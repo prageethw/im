@@ -1,4 +1,4 @@
-# intent_internal_events_specification.md
+# Intent Event Specification
 
 ## Intent internal events specification
 

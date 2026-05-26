@@ -1,4 +1,4 @@
-# ICB MS Specification:
+# ICB MS Specification
 
 ## Service identity:
 

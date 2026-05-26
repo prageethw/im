@@ -1,4 +1,4 @@
-# id_ms_design_brief.md:
+# ID MS Design Brief
 
 ## ID MS API contract — baseline:
 

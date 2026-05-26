@@ -1,4 +1,4 @@
-# ICB MS Design Brief:
+# ICB MS Design Brief
 
 ## Purpose:
 

@@ -1,4 +1,4 @@
-# ic_ms_design_brief.md:
+# IC MS Design Brief
 
 ## Service identity:
 

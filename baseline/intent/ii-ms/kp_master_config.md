@@ -1,4 +1,4 @@
-# kp_master_config.md
+# KP Master Config
 
 ## KP master config baseline
 
