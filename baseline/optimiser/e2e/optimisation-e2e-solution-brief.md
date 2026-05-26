@@ -325,7 +325,7 @@ OW MS cancellation handling is implementation-specific. The `CANCEL` instruction
 11. OW MS processes the new request asynchronously.
 ```
 
-Retrial is available only from `FAILED` in the baseline. Retrial is not available from `INFEASIBLE` by default because `INFEASIBLE` is a valid optimisation or model outcome, not a technical failure. Retrial has no required request body and does not allow overrides. OSB must not send an empty JSON object solely to force `Content-Type`. If no body is supplied by OEX, OSB should call OC MS without a request body. Retrial resubmits the original accepted expression and reuses the original persisted OC contract pointer, including `id`, `version`, `draftId`, and `href`. When OC MS creates the retrial resource, it returns `201 Created` with the new runtime Optimisation id, `Location`, `ETag`, and resource body.
+Retrial is available only from `FAILED` in the baseline. Retrial is not available from `INFEASIBLE` by default because `INFEASIBLE` is a valid optimisation or model outcome, not a technical failure. Retrial is not available from `CANCELLATIONFAILED`. If the optimisation later reaches `FAILED`, retrial may then be requested from `FAILED`. Retrial has no required request body and does not allow overrides. OSB must not send an empty JSON object solely to force `Content-Type`. If no body is supplied by OEX, OSB should call OC MS without a request body. Retrial resubmits the original accepted expression and reuses the original persisted OC contract pointer, including `id`, `version`, `draftId`, and `href`. When OC MS creates the retrial resource, it returns `201 Created` with the new runtime Optimisation id, `Location`, `ETag`, and resource body.
 
 #### 3.3.8. OW MS executes optimisation:
 
@@ -343,6 +343,8 @@ Retrial is available only from `FAILED` in the baseline. Retrial is not availabl
 9. OC MS updates runtime lifecycle and result projection.
 10. User observes outcome through OC MS REST status and detail exposed through OSB and NGW.
 ```
+
+OW MS does not set REST-visible `lifecycleStatus` directly; it emits outcome facts consumed and projected by OC MS.
 
 OW MS idempotency in this E2E brief means duplicate event detection using `eventId` or `ce-id`, `optimisationId`, and instruction context before executing work. Detailed OW MS eligibility and deduplication rules belong in `ow-ms/ow_ms_specification.md`.
 Detailed OW MS execution eligibility, cancellation handling, solver timeout, idempotency, and DLQ rules are owned by the OW MS specification.
@@ -428,7 +430,7 @@ resolved id, version, draftId, href are persisted on the runtime record
 
 The persisted resolved specification reference is the immutable contract pointer for the accepted runtime Optimisation. OC MS must not re-resolve or replace that pointer later, including during retrial.
 
-OC MS may cache immutable ACTIVE specification contracts by `id` and `version`, using OD MS ETag headers internally for cache validation, but must not infer the current active contract by stale `specKey` lookup. If OD MS is unavailable and OC MS has no valid cached immutable ACTIVE contract for the requested id, OC MS returns 503 Service Unavailable. If a valid cached immutable ACTIVE contract exists, OC MS may proceed according to cache policy. OC MS may separately maintain a request-result cache keyed by a deterministic hash of the canonical accepted runtime optimisation request body after the ACTIVE specification version is resolved. The request-result cache hash is internal metadata and does not replace runtime Optimisation identity, lifecycle, audit, or external representation. Request-result cache TTL and eviction policy are deployment-governed and outside this E2E baseline.
+OC MS may cache immutable ACTIVE specification contracts by `id` and `version`, using OD MS ETag headers internally for cache validation, but must not infer the current active contract by stale `specKey` lookup. If OD MS is unavailable and OC MS has no valid cached immutable ACTIVE contract for the requested id, OC MS returns 503 Service Unavailable. If a valid cached immutable ACTIVE contract exists, OC MS may proceed according to cache policy. OC MS may separately maintain a request-result cache keyed by a deterministic hash of the canonical accepted runtime optimisation request body after the ACTIVE specification version is resolved. The request-result cache hash is internal metadata and does not replace runtime Optimisation identity, lifecycle, audit, or external representation. A request-result cache hit must still create or return a governed OC runtime resource according to the OC MS contract and must not bypass audit, lifecycle, or source-of-truth persistence. Request-result cache TTL and eviction policy are deployment-governed and outside this E2E baseline.
 
 ### 5.6. Kafka security:
 
@@ -778,6 +780,8 @@ FAILED -> lifecycleStatus FAILED
 CANCELLED -> lifecycleStatus CANCELLED
 CANCELLATIONFAILED -> lifecycleStatus CANCELLATIONFAILED
 ```
+
+`COMPLETED`, `INFEASIBLE`, and `FAILED` are terminal execution outcomes. `CANCELLED` is a terminal cancellation-command outcome. `CANCELLATIONFAILED` is a non-terminal cancellation-command outcome.
 
 `CANCELLATIONFAILED` is not a terminal optimisation outcome. It represents cancellation-command failure and may later be followed by COMPLETED, INFEASIBLE, or FAILED. Do not introduce an alternate success status unless the OW MS contract is explicitly changed to emit one.
 
