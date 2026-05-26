@@ -8,8 +8,8 @@
 | **Scope** | Optimisation Controller MS API, lifecycle, command, event, and runtime resource specification |
 | **Source path** | `baseline/optimiser/oc-ms/oc-ms-specification.md` |
 | **Source of truth** | GitHub `main` |
-| **Last aligned** | 2026-05-24 |
-| **Alignment scope** | Aligned with OD `specKey`, OC `creationContext`, `CANCELLATIONFAILED`, retrial, request-result cache, ETag-header baseline, and circuit-breaker response signalling. |
+| **Last aligned** | 2026-05-26 |
+| **Alignment scope** | Aligned with OD `specKey`, OC `creationContext`, `CANCELLATIONFAILED`, retrial, request-result cache, ETag-header baseline, OW MS ownership wording, and circuit-breaker response signalling. |
 
 ## Table of contents:
 

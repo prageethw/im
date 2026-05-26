@@ -8,7 +8,7 @@
 | **Scope** | Optimisation Definition MS API and resource specification |
 | **Source path** | `baseline/optimiser/od-ms/od-ms-specification.md` |
 | **Source of truth** | GitHub `main` |
-| **Last aligned** | 2026-05-24 |
+| **Last aligned** | 2026-05-26 |
 | **Alignment scope** | Aligned with OD `specKey`, DRAFT `draftId`, ACTIVE retirement, OC runtime contract-selection baseline, and circuit-breaker response signalling. |
 
 ## Table of contents:

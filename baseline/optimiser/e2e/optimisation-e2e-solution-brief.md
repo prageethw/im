@@ -8,9 +8,9 @@
 | **Scope** | Optimisation platform end-to-end architecture |
 | **Source path** | `baseline/optimiser/e2e/optimisation-e2e-solution-brief.md` |
 | **Source of truth** | GitHub `main` |
-| **Last aligned** | 2026-05-24 |
-| **Last verified against OD/OC/OSB specs** | 2026-05-24 |
-| **Alignment scope** | Aligned with committed OD MS, OC MS, and OSB MS specifications, including OD `specKey`, DRAFT `draftId`, official version, OC resolved contract-pointer rules, OC `creationContext.reason`, non-terminal `CANCELLATIONFAILED`, header-only ETag handling, circuit-breaker response signalling, OD and OC lifecycle diagrams, and platform resource model extension posture. |
+| **Last aligned** | 2026-05-26 |
+| **Last verified against OD/OC/OSB/OW specs** | 2026-05-26 |
+| **Alignment scope** | Aligned with committed OD MS, OC MS, OSB MS, and OW MS specifications, including OD `specKey`, DRAFT `draftId`, official version, OC resolved contract-pointer rules, OC `creationContext.reason`, non-terminal `CANCELLATIONFAILED`, header-only ETag handling, circuit-breaker response signalling, OW MS execution ownership, OD and OC lifecycle diagrams, and platform resource model extension posture. |
 
 ## Table of contents:
 

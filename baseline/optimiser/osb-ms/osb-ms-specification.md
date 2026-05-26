@@ -8,8 +8,8 @@
 | **Scope** | Optimisation Screen Builder MS experience API and view-model specification |
 | **Source path** | `baseline/optimiser/osb-ms/osb-ms-specification.md` |
 | **Source of truth** | GitHub `main` |
-| **Last aligned** | 2026-05-24 |
-| **Alignment scope** | Aligned with OD `specKey`, OC `creationContext`, `CANCELLATIONFAILED`, retrial, ETag-header baseline, and circuit-breaker response signalling. |
+| **Last aligned** | 2026-05-26 |
+| **Alignment scope** | Aligned with OD `specKey`, OC `creationContext`, `CANCELLATIONFAILED`, retrial, ETag-header baseline, OW MS event posture, and circuit-breaker response signalling. |
 
 ## Table of contents:
 
