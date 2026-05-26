@@ -1,4 +1,4 @@
-# OC Worker MS Specification
+# Optimisation Worker MS Specification
 
 **Document status:**
 
