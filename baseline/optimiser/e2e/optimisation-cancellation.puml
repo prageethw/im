@@ -18,7 +18,7 @@ participant "OC MS" as OCMS
 database "OC MS DB" as OCDB
 queue "OC MS Outbox" as Outbox
 queue "Kafka\nt7.optimisation.events" as Kafka
-participant "Python/Gurobi\nWorker" as Worker
+participant "OW MS" as Worker
 queue "OC MS Inbox" as Inbox
 
 == Request Cancellation ==
@@ -82,22 +82,22 @@ end
 
 Outbox -> Kafka : 10. Publish OptimisationRequestedEvent\ninstruction = CANCEL
 
-Kafka -> Worker : 11. Consume cancellation instruction
+Kafka -> Worker : 11. OW MS consumes cancellation instruction
 
 note right of Worker
-Worker cancellation handling is implementation-specific.
+OW MS cancellation handling is implementation-specific.
 The cancel instruction is best-effort.
-A worker may complete a solve cycle before cancellation is honoured(safely)
+OW MS may complete a solve cycle before cancellation is honoured safely
 where immediate interruption is not safe or supported.
 end note
 
-Worker -> Worker : 12. Stop, cancel, or ignore safely\naccording to worker capability
+Worker -> Worker : 12. Stop, cancel, or ignore safely\naccording to OW MS capability
 
 Worker -> Kafka : 13. Publish OptimisationCompletedEvent\nstatus = CANCELLED, CANCELLATIONFAILED,\nCOMPLETED, INFEASIBLE, or FAILED
 
 == Project Outcome ==
 
-Kafka -> Inbox : 14. Consume worker outcome\nor cancellation-command outcome
+Kafka -> Inbox : 14. Consume OW MS outcome\nor cancellation-command outcome
 Inbox -> Inbox : 15. Apply idempotency\nand stale/late event checks
 Inbox -> OCDB : 16. Project lifecycle/result\nCANCELLED, CANCELLATIONFAILED,\nCOMPLETED, INFEASIBLE, or FAILED
 OCDB --> Inbox : Projection stored

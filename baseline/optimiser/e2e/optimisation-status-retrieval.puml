@@ -80,7 +80,7 @@ OGW --> Caller : 12. Current lifecycle/result state
 
 note over OCMS
 No OC MS Outbox record is written.
-No worker instruction is emitted.
+No OW MS instruction is emitted.
 This is a read-only monitoring operation.
 end note
 

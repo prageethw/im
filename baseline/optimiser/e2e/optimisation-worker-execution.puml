@@ -11,7 +11,7 @@ skinparam noteBorderColor #A5B4FC
 skinparam noteBackgroundColor #EEF2FF
 
 queue "Kafka\nt7.optimisation.events" as Kafka
-participant "Python/Gurobi\nWorker" as Worker
+participant "OW MS" as Worker
 participant "Gurobi\nOptimiser" as Gurobi
 queue "OC MS Inbox" as Inbox
 participant "OC MS" as OCMS
@@ -21,10 +21,10 @@ participant "OGW" as OGW
 participant "OSB MS" as OSB
 participant "NGW" as NGW
 
-== Worker Consumption ==
+== OW MS Consumption ==
 
-Kafka -> Worker : 1. Consume OptimisationRequestedEvent\ninstruction = EXECUTE\neventId + optimisationId\ncorrelationId + traceId
-Worker -> Worker : 2. Apply worker-side idempotency\nand execution eligibility checks
+Kafka -> Worker : 1. OW MS consumes OptimisationRequestedEvent\ninstruction = EXECUTE\neventId + optimisationId\ncorrelationId + traceId
+Worker -> Worker : 2. Apply OW MS idempotency\nand execution eligibility checks
 
 == Model Resolution and Solving ==
 
@@ -38,7 +38,7 @@ Gurobi --> Worker : 6. Return solver output,\ninfeasibility information,\nor fai
 Worker -> Worker : 7. Map outcome to\nCOMPLETED, INFEASIBLE, FAILED, CANCELLED,\nor CANCELLATIONFAILED
 
 note right of Worker
-Worker emits OptimisationCompletedEvent.status as:
+OW MS emits OptimisationCompletedEvent.status as:
 COMPLETED, INFEASIBLE, FAILED, CANCELLED,
 or CANCELLATIONFAILED.
 

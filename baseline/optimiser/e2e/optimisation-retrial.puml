@@ -18,7 +18,7 @@ participant "OC MS" as OCMS
 database "OC MS DB" as OCDB
 queue "OC MS Outbox" as Outbox
 queue "Kafka\nt7.optimisation.events" as Kafka
-participant "Python/Gurobi\nWorker" as Worker
+participant "OW MS" as Worker
 
 == Request Retrial ==
 
@@ -82,14 +82,14 @@ else Original lifecycleStatus = FAILED
   OGW --> Caller : Retrial created\nnot completed yet
 end
 
-== Publish New Worker Instruction ==
+== Publish New OW MS Instruction ==
 
 Outbox -> Kafka : 9. Publish OptimisationRequestedEvent\ninstruction = EXECUTE
 OCMS -> OCDB : 10. Advance new Optimisation\nACKNOWLEDGED -> QUEUED\nafter successful Kafka publish
 
 == Execute Retried Optimisation ==
 
-Kafka -> Worker : 11. Consume OptimisationRequestedEvent\nfor new Optimisation
+Kafka -> Worker : 11. OW MS consumes OptimisationRequestedEvent\nfor new Optimisation
 Worker -> Worker : 12. Execute deterministic\noptimisation work
 Worker -> Kafka : 13. Publish OptimisationCompletedEvent\nstatus = COMPLETED, INFEASIBLE,\nFAILED, CANCELLED, or CANCELLATIONFAILED
 

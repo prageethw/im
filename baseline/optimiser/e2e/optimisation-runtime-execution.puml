@@ -19,7 +19,7 @@ participant "OD MS" as ODMS
 database "OC MS DB" as OCDB
 queue "OC MS Outbox" as Outbox
 queue "Kafka\nt7.optimisation.events" as Kafka
-participant "Python/Gurobi\nWorker" as Worker
+participant "OW MS" as Worker
 queue "OC MS Inbox" as Inbox
 
 == Submit Runtime Optimisation ==
@@ -64,14 +64,14 @@ NGW --> OSB : 201 Created
 OSB --> OGW : CreationResultView\nexecution remains asynchronous
 OGW --> Caller : Optimisation created\nnot completed yet
 
-== Publish Worker Instruction ==
+== Publish OW MS Instruction ==
 
 Outbox -> Kafka : 12. Publish OptimisationRequestedEvent\neventId + optimisationId\ncorrelationId + traceId
 OCMS -> OCDB : 13. Advance ACKNOWLEDGED -> QUEUED\nafter successful Kafka publish
 
 == Execute Optimisation Work ==
 
-Kafka -> Worker : 14. Consume OptimisationRequestedEvent\ninstruction = EXECUTE
+Kafka -> Worker : 14. OW MS consumes OptimisationRequestedEvent\ninstruction = EXECUTE
 Worker -> Worker : 15. Resolve internal deterministic\nmodel binding
 Worker -> Worker : 16. Invoke Gurobi Optimiser
 
