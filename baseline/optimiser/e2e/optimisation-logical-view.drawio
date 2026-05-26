@@ -1,6 +1,6 @@
 <mxfile host="65bd71144e">
     <diagram id="optimisation-logical-view" name="Optimisation Logical View">
-        <mxGraphModel dx="839" dy="1538" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1500" pageHeight="900" math="0" shadow="0" adaptiveColors="none">
+        <mxGraphModel dx="670" dy="1538" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1500" pageHeight="900" math="0" shadow="0" adaptiveColors="none">
             <root>
                 <mxCell id="0"/>
                 <mxCell id="1" parent="0"/>
@@ -37,7 +37,7 @@
                 <mxCell id="dlq" value="Kafka DLQ&lt;br/&gt;&lt;b&gt;t7.optimisation.events.dlq&lt;/b&gt;" style="shape=hexagon;perimeter=hexagonPerimeter2;whiteSpace=wrap;html=1;fixedSize=1;fillColor=#d5e8d4;strokeColor=default;fontStyle=1;container=0;" parent="1g_pKyIUPg_Uf4EWA1Bv-1" vertex="1">
                     <mxGeometry x="1097.6223776223774" y="542.6190476190478" width="241.67832167832168" height="81.90476190476193" as="geometry"/>
                 </mxCell>
-                <mxCell id="worker" value="Gurobi Modeler&lt;br/&gt;Python Worker" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=default;fontStyle=1;container=0;" parent="1g_pKyIUPg_Uf4EWA1Bv-1" vertex="1">
+                <mxCell id="worker" value="Gurobi Modeler&lt;br&gt;Optimisation Worker MS&lt;br&gt;(OW MS)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=default;fontStyle=1;container=0;" parent="1g_pKyIUPg_Uf4EWA1Bv-1" vertex="1">
                     <mxGeometry x="332.3076923076923" y="542.6190476190478" width="231.6083916083916" height="81.90476190476193" as="geometry"/>
                 </mxCell>
                 <mxCell id="gurobi" value="Gurobi Optimizer" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=default;fontStyle=1;container=0;" parent="1g_pKyIUPg_Uf4EWA1Bv-1" vertex="1">
