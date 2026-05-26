@@ -9,7 +9,7 @@
 | **Source path** | `baseline/optimiser/oc-ms/oc-ms-specification.md` |
 | **Source of truth** | GitHub `main` |
 | **Last aligned** | 2026-05-26 |
-| **Alignment scope** | Aligned with OD `specKey`, OC `creationContext`, `CANCELLATIONFAILED`, retrial, request-result cache, ETag-header baseline, OW MS ownership wording, and circuit-breaker response signalling. |
+| **Alignment scope** | Aligned with OD `specKey`, OC `creationContext`, `CANCELLATIONFAILED`, retrial, request-result cache, ETag-header baseline, OW MS ownership wording, circuit-breaker response signalling, and OC-owned webhook status notifications. |
 
 ## Table of contents:
 
@@ -32,12 +32,15 @@
 - [17. Header/concurrency rules](#17-header-concurrency-rules)
 - [18. Error handling boundary](#18-error-handling-boundary)
 - [19. Outcome mapping](#19-outcome-mapping)
+- [20. External event and webhook subscription posture](#20-external-event-and-webhook-subscription-posture)
 
 ## 1. OC MS summary:
 
 Optimisation-Controller-MS (OC MS) owns the runtime `Optimisation` resource. It is a generic optimisation controller, not an intent-only controller.
 
 OC MS accepts runtime optimisation requests, validates the generic wrapper and the referenced OD MS request contract, persists the request, emits `OptimisationRequestedEvent`, and later projects `OptimisationCompletedEvent` outcomes back into the runtime resource.
+
+OC MS also owns external runtime status notification after projection. `OptimisationStatusChangeEvent` is emitted only after OC MS has persisted the lifecycle or result projection. `GET /optimisation/{id}` remains the authoritative source-of-truth read, and polling remains the fallback access pattern.
 
 OC MS validates runtime requests only against the current `ACTIVE` version of the referenced `OptimisationSpecification.id`. OD MS guarantees that `ACTIVE` and `RETIRED` specification versions are immutable, so OC MS can treat the resolved `ACTIVE` specification version as stable for the lifetime of the accepted runtime `Optimisation`.
 
@@ -56,6 +59,8 @@ Publishing worker instruction events to t7.optimisation.events
 Inbox consumption of OptimisationCompletedEvent worker outcomes
 Runtime result projection
 Cancellation and retrial controls
+External webhook subscription records for OptimisationStatusChangeEvent
+OC-owned OptimisationStatusChangeEvent notification publication after runtime projection
 ```
 
 OC MS does not own:
@@ -71,7 +76,7 @@ Long-running intent control-loop assurance
 
 ## 3. Endpoint set:
 
-Supported:
+Supported runtime resource endpoints:
 
 ```http
 GET /optimisation
@@ -80,6 +85,16 @@ GET /optimisation/{id}
 POST /optimisation/{id}/cancellation
 POST /optimisation/{id}/retrial
 ```
+
+Supported webhook subscription endpoints:
+
+```http
+POST /optimisation/hub
+GET /optimisation/hub/{id}
+DELETE /optimisation/hub/{id}
+```
+
+The `/optimisation/hub` endpoints follow the Intent-style webhook subscription model. They allow authorised consumers to register callback URLs for OC-owned runtime status notifications. They do not expose OW MS Kafka events or direct broker access.
 
 Not supported:
 
@@ -538,6 +553,8 @@ Cancellation uses the same event type with `instruction = CANCEL`. OW MS executi
 ## 13. Internal event baseline:
 
 OC MS uses exactly two internal Kafka event types with OW MS in the current baseline. These are platform-internal events, not TMF external notification events.
+
+External optimisation notification is a separate OC-owned webhook model described in Section 20. OW MS does not publish external notification events, and external consumers must not subscribe directly to `OptimisationRequestedEvent` or `OptimisationCompletedEvent`.
 
 | **Event** | **Emitter** | **Consumer** | **Purpose** | **Key values** |
 |---|---|---|---|---|
@@ -1201,3 +1218,153 @@ CANCELLATIONFAILED -> lifecycleStatus CANCELLATIONFAILED
 ```
 
 `INFEASIBLE` is an optimisation outcome produced by the worker or model. It is not a request contract validation error. `CANCELLATIONFAILED` is a cancellation-command outcome, not necessarily a terminal optimisation outcome. It may be followed by a normal terminal optimisation outcome if the worker later reports `COMPLETED`, `INFEASIBLE`, or `FAILED`.
+
+
+## 20. External event and webhook subscription posture:
+
+OC MS supports an Intent-style webhook subscription model for runtime optimisation status notification. This avoids forcing consumers to poll forever while preserving OC MS as the source of truth for runtime lifecycle and result projection.
+
+Polling remains supported and remains the fallback access pattern:
+
+```http
+GET /optimisation/{id}
+```
+
+`GET /optimisation/{id}` remains the authoritative source-of-truth read model. Webhook events are notifications only and must not be treated as the complete or authoritative resource representation.
+
+### 20.1. Subscription endpoint baseline:
+
+```http
+POST /optimisation/hub
+GET /optimisation/hub/{id}
+DELETE /optimisation/hub/{id}
+```
+
+`POST /optimisation/hub` creates a webhook subscription for authorised consumers. The subscriber provides a callback URL and optional query filter.
+
+Example subscription request:
+
+```json
+{
+  "callback": "https://consumer.example.com/optimisation/events",
+  "query": "eventType=OptimisationStatusChangeEvent",
+  "@type": "EventSubscription"
+}
+```
+
+Example subscription response:
+
+```http
+HTTP/1.1 201 Created
+Location: /optimisation/hub/sub-12345
+Content-Type: application/json
+x-platform-extension: true
+x-tmf-native: false
+```
+
+```json
+{
+  "id": "sub-12345",
+  "href": "/optimisation/hub/sub-12345",
+  "callback": "https://consumer.example.com/optimisation/events",
+  "query": "eventType=OptimisationStatusChangeEvent",
+  "@type": "EventSubscription"
+}
+```
+
+`GET /optimisation/hub/{id}` retrieves the subscription where authorised. `DELETE /optimisation/hub/{id}` removes the subscription where authorised.
+
+### 20.2. OptimisationStatusChangeEvent baseline:
+
+`OptimisationStatusChangeEvent` is owned by OC MS. It is emitted only after OC MS has durably persisted the lifecycle or result projection for the runtime `Optimisation` resource.
+
+External event delivery flow:
+
+```text
+OW MS -> OptimisationCompletedEvent -> OC MS projection -> OptimisationStatusChangeEvent -> subscriber callback
+```
+
+`OptimisationStatusChangeEvent` is emitted for meaningful runtime lifecycle transitions, including:
+
+```text
+ACKNOWLEDGED -> QUEUED
+QUEUED -> PROCESSING
+PROCESSING -> COMPLETED
+PROCESSING -> INFEASIBLE
+PROCESSING -> FAILED
+ACKNOWLEDGED -> CANCELLING
+QUEUED -> CANCELLING
+PROCESSING -> CANCELLING
+CANCELLING -> CANCELLED
+CANCELLING -> CANCELLATIONFAILED
+CANCELLATIONFAILED -> COMPLETED
+CANCELLATIONFAILED -> INFEASIBLE
+CANCELLATIONFAILED -> FAILED
+```
+
+The event may include safe summary metadata but should not embed large result payloads by default. Consumers should use the `href` in the event to retrieve the authoritative current representation when needed.
+
+Example callback payload:
+
+```json
+{
+  "eventType": "OptimisationStatusChangeEvent",
+  "eventTime": "2026-05-26T13:40:00Z",
+  "correlationId": "corr-12345",
+  "event": {
+    "optimisation": {
+      "id": "opt-12345",
+      "href": "/optimisation/opt-12345",
+      "previousLifecycleStatus": "PROCESSING",
+      "newLifecycleStatus": "COMPLETED",
+      "statusChangeDate": "2026-05-26T13:40:00Z",
+      "resultSummary": {
+        "outcome": "COMPLETED",
+        "summary": "Optimisation completed successfully."
+      },
+      "@type": "Optimisation"
+    }
+  }
+}
+```
+
+For `CANCELLATIONFAILED`, the event must preserve the non-terminal semantics:
+
+```json
+{
+  "eventType": "OptimisationStatusChangeEvent",
+  "eventTime": "2026-05-26T13:41:00Z",
+  "correlationId": "corr-12345",
+  "event": {
+    "optimisation": {
+      "id": "opt-12345",
+      "href": "/optimisation/opt-12345",
+      "previousLifecycleStatus": "CANCELLING",
+      "newLifecycleStatus": "CANCELLATIONFAILED",
+      "statusChangeDate": "2026-05-26T13:41:00Z",
+      "resultSummary": {
+        "outcome": "CANCELLATIONFAILED",
+        "summary": "Cancellation could not be honoured or confirmed. The optimisation may still later reach COMPLETED, INFEASIBLE, or FAILED."
+      },
+      "@type": "Optimisation"
+    }
+  }
+}
+```
+
+### 20.3. Delivery and ownership guardrails:
+
+```text
+OC MS owns external OptimisationStatusChangeEvent production.
+OW MS events remain internal and must not be exposed to external subscribers.
+External events are emitted only after OC MS has persisted the lifecycle or result projection.
+External event payloads are notifications, not the source of truth.
+GET /optimisation/{id} remains the authoritative current-state read.
+External event delivery is at-least-once.
+Subscribers must handle duplicate events idempotently.
+Callback delivery failure must not roll back OC MS lifecycle or result projection.
+Callback delivery must use durable outbox, retry, DLQ, or equivalent governed delivery handling.
+Webhook payloads must not expose Gurobi model formulation, solver configuration, raw worker diagnostics, credentials, internal Kafka details, or raw stack traces.
+```
+
+The webhook model may be backed by an internal topic or delivery gateway, but direct Kafka topic access is not the default external consumer model. External delivery is mediated through `/optimisation/hub` subscriptions and subscriber-owned callback URLs.
