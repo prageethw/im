@@ -51,9 +51,9 @@ Core services:
 
 | **Service** | **Responsibility** |
 |---|---|
-| **OD MS(Optimisation Definition MS)** | Owns the governed `OptimisationSpecification` catalogue, lifecycle, draft candidate identity, official versioning, and caller-facing request contracts. |
-| **OC MS(Optimisation Controller MS)** | Owns runtime `Optimisation` resources, lifecycle, cancellation, retrial, persistence, event integration, result projection, and resolved specification contract pointers. |
-| **OSB MS(Optimisation Screen Builder MS)** | Provides the OEX backend-for-frontend experience, shapes UI views and actions using user context, and calls backend optimisation APIs through NGW. |
+| **OD MS (Optimisation Definition MS)** | Owns the governed `OptimisationSpecification` catalogue, lifecycle, draft candidate identity, official versioning, and caller-facing request contracts. |
+| **OC MS (Optimisation Controller MS)** | Owns runtime `Optimisation` resources, lifecycle, cancellation, retrial, persistence, event integration, result projection, and resolved specification contract pointers. |
+| **OSB MS (Optimisation Screen Builder MS)** | Provides the OEX backend-for-frontend experience, shapes UI views and actions using user context, and calls backend optimisation APIs through NGW. |
 | **OW MS (Optimisation Worker MS)** | Python worker service that consumes Kafka worker instructions, integrates with the Gurobi Python API, executes or cancels optimisation work, and emits outcome facts. |
 
 OW MS means Optimisation Worker MS. OW MS emits outcome facts only; OC MS owns REST-visible lifecycle and result projection.
@@ -350,8 +350,7 @@ Retrial is available only from `FAILED` in the baseline. Retrial is not availabl
 
 OW MS does not set REST-visible `lifecycleStatus` directly; it emits outcome facts consumed and projected by OC MS.
 
-OW MS idempotency in this E2E brief means duplicate event detection using `eventId` or `ce-id`, `optimisationId`, and instruction context before executing work. Detailed OW MS eligibility and deduplication rules belong in `ow-ms/ow_ms_specification.md`.
-Detailed OW MS execution eligibility, cancellation handling, solver timeout, idempotency, and DLQ rules are owned by the OW MS specification.
+OW MS idempotency in this E2E brief means duplicate event detection using `eventId` or `ce-id`, `optimisationId`, and instruction context before executing work. Detailed OW MS execution eligibility, cancellation handling, solver timeout, idempotency, deduplication, and DLQ rules are owned by `ow-ms/ow_ms_specification.md`.
 
 ## 4. Capability matrix:
 
@@ -422,7 +421,7 @@ NGW-to-downstream OD MS and OC MS calls do not carry or expose end-user identity
 
 ### 5.5. OC MS to OD MS service-to-service security:
 
-OC MS calls OD MS directly using service-to-service mTLS for specification validation. This is an internal service path and does not route through NGW.
+OC MS resolves and validates the referenced OD MS contract through the approved internal service-to-service path. The baseline internal path uses service-to-service mTLS and does not route through NGW unless platform routing policy changes later.
 
 OC MS resolves and validates the referenced specification contract:
 
