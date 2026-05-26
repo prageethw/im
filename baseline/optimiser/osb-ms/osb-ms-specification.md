@@ -9,7 +9,7 @@
 | **Source path** | `baseline/optimiser/osb-ms/osb-ms-specification.md` |
 | **Source of truth** | GitHub `main` |
 | **Last aligned** | 2026-05-26 |
-| **Alignment scope** | Aligned with OD `specKey`, OC `creationContext`, `CANCELLATIONFAILED`, retrial, ETag-header baseline, OW MS event posture, and circuit-breaker response signalling. |
+| **Alignment scope** | Aligned with OD `specKey`, OC `creationContext`, `CANCELLATIONFAILED`, retrial, ETag-header baseline, OC-owned `/optimisation/hub` webhook notification posture, OW MS event posture, and circuit-breaker response signalling. |
 
 ## Table of contents:
 
@@ -116,6 +116,8 @@ GET /optimisationExperience/v1/optimisations/{id}
 POST /optimisationExperience/v1/optimisations/{id}/cancellation
 POST /optimisationExperience/v1/optimisations/{id}/retrial
 ```
+
+OC MS `/optimisation/hub` subscription endpoints are not part of the OSB phase-one endpoint set. If a future OEX journey surfaces notification preferences or subscription status, that journey must be baselined explicitly and must treat OC MS as the subscription source of truth.
 
 Path identity rules:
 
@@ -575,14 +577,18 @@ While a circuit breaker is open, OSB MS must monitor recovery through bounded he
 
 ## 20. Runtime status refresh:
 
-Phase-one OEX and OSB status refresh is REST polling against OC MS through NGW. OC MS may also expose `/optimisation/hub` webhook subscriptions for external status-change notification, but that subscription capability is OC-owned and is not part of the OSB phase-one endpoint set.
+Phase-one OEX and OSB status refresh is REST polling against OC MS through NGW. OC MS owns `/optimisation/hub` webhook subscriptions for external status-change notification where the notification capability is enabled. That subscription capability is OC-owned and is not part of the OSB phase-one endpoint set.
+
+If OSB later exposes notification preferences, callback registration, or subscription-status screens, OSB must preserve OC MS hub validation, ETag, `If-Match`, callback-security, and error semantics. OSB must not create an OSB-local subscription identity that hides or replaces the OC MS `EventSubscription` resource.
 
 Rules:
 
 ```text
-OSB observes runtime progress through OC MS REST APIs.
+OSB observes runtime progress through OC MS REST APIs in the phase-one baseline.
+OC-owned webhook notifications may reduce polling where a subscribed journey exists, but `GET /optimisation/{id}` remains the authoritative status and detail read.
 OSB must not infer terminal status locally.
 Terminal state must come from OC MS.
+Polling remains the fallback when webhook delivery is unavailable, not configured, delayed, duplicated, or out of order.
 Polling cadence is owned by OSB MS in coordination with the OEX UI and platform UX. It is not owned by OD MS or OC MS.
 OSB must implement backoff, timeout handling, and a reasonable maximum poll rate to avoid runaway polling against OC MS. Specific cadence values are implementation-defined unless set by platform operational policy.
 ```
@@ -651,6 +657,8 @@ OSB integration defects, including sending forbidden OC create fields such as `o
 
 OSB MS may map backend error bodies to OEX-friendly messages, but it must preserve the backend status and correlation information for support and troubleshooting.
 
+If a future OSB notification UX proxies OC MS `/optimisation/hub`, OSB must preserve OC hub errors such as unsupported subscription query, invalid callback URL, callback-security validation failure, missing `If-Match`, stale `If-Match`, and unauthorised subscription management. These must not be hidden as generic optimisation runtime failures.
+
 If a remote dependency circuit breaker affects the externally meaningful response path, OSB may include `x-cb-triggered: true` while preserving the authoritative HTTP status and backend error semantics. The header is diagnostic only and must not be represented as lifecycle, validation, authorisation, or outcome state.
 
 OSB must preserve `correlationId` and `traceId` from backend headers and backend error bodies where present, and pass them through to OEX-layer error responses or logging following platform trace-header conventions. OSB may add its own correlation identifier, but it must not discard backend diagnostic identifiers.
@@ -664,7 +672,9 @@ Internal optimiser eventing remains owned by OC MS and OW MS:
 - `OptimisationRequestedEvent`
 - `OptimisationCompletedEvent`
 
-OSB MS observes runtime progress only through OC MS REST APIs exposed through NGW.
+OSB MS observes runtime progress through OC MS REST APIs exposed through NGW in the phase-one baseline. OC MS owns `/optimisation/hub` and delivers `OptimisationStatusChangeEvent` notifications to subscribed consumers where the notification capability is enabled. OSB MS does not own the subscription resource, callback delivery, delivery retry, delivery DLQ, or webhook event source-of-truth semantics.
+
+If a later OEX journey surfaces notification preferences or subscription status, OSB MS must treat OC MS `/optimisation/hub` as the backend source of truth and must not reinterpret webhook notifications as OSB-owned lifecycle or result state. OSB may pre-validate OEX input for usability, but OC MS remains authoritative for callback URL validation, subscription acceptance, suspension, deletion, and delivery audit semantics.
 
 ## 24. OSB MS non-goals:
 
@@ -691,5 +701,6 @@ OSB MS must not:
 - Forward end-user context to OD MS or OC MS.
 - Invent lifecycle transitions not present in OC MS.
 - Reinterpret OC-owned `OptimisationStatusChangeEvent` notifications as OSB-owned lifecycle or result state.
+- Expose OC MS `/optimisation/hub` as an OSB-owned phase-one endpoint without an explicit future OSB notification UX baseline.
 - Invent specification version semantics not present in OD MS.
 - Force stale request-form submissions through OC MS validation.
