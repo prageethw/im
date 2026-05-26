@@ -134,6 +134,8 @@ optimisationSpecification.version
 optimisationSpecification.draftId
 optimisationSpecification.href
 optimisationSpecification.specKey
+optimisationSpecification.etag
+etag or any ETag-like payload field
 ```
 
 OC MS resolves and assigns those fields at creation time or during runtime projection. If a client supplies a forbidden server-controlled field, OC MS returns `400 Bad Request`.
@@ -268,7 +270,7 @@ Outcome-specific result rules:
 COMPLETED: result.outcome = COMPLETED and result.outputs[] may contain safe optimisation outputs.
 INFEASIBLE: result.outcome = INFEASIBLE and result.summary or diagnostics explain why no feasible solution exists at a safe level.
 FAILED: result.outcome = FAILED and result.code, summary, diagnostics, or retryGuidance may describe the technical or runtime failure safely.
-CANCELLED: result.outcome = CANCELLED and result.summary may confirm cancellation was honoured(safely).
+CANCELLED: result.outcome = CANCELLED and result.summary may confirm cancellation was honoured safely.
 CANCELLATIONFAILED: result.outcome = CANCELLATIONFAILED and result.summary or diagnostics may describe the failed cancellation command. This result is non-terminal and must be replaced, not merged, if a later terminal optimisation outcome is projected.
 ```
 
@@ -296,6 +298,8 @@ x-tmf-native: false
 ```
 
 These headers are governance and documentation indicators only. Clients must not use them as runtime business-logic switches.
+
+`x-cb-triggered: true` may also be returned when a remote dependency circuit breaker changes the externally meaningful response path. It is diagnostic only and must not be used as a business-logic switch or lifecycle/outcome indicator.
 
 ## 10. POST /optimisation:
 
@@ -492,7 +496,7 @@ Runtime requests must supply only `optimisationSpecification.id` for contract se
 
 If OD MS is unavailable and OC MS has no valid cached immutable `ACTIVE` contract for the requested `OptimisationSpecification.id`, OC MS returns `503 Service Unavailable`. If OC MS has a valid cached immutable `ACTIVE` contract for the requested id and resolved version, it may proceed according to the configured OD contract cache policy.
 
-OC MS may maintain a request-result cache for optimisation outcomes. The cache key is a deterministic hash of the canonical accepted runtime optimisation request body after OC MS has resolved the referenced ACTIVE `OptimisationSpecification` version. Each distinct canonical accepted request has its own cache entry. The cache stores the reusable optimisation response or outcome reference according to cache policy. The canonical request hash must be based only on fields that are part of the accepted optimisation problem and must not include transport headers or operational trace metadata. Cache TTL and eviction policy are deployment-governed and outside the current baseline specification. The cache hash is internal metadata and must not replace the runtime `Optimisation.id`, lifecycle, persisted audit record, or external resource representation.
+OC MS may maintain a request-result cache for optimisation outcomes. The cache key is a deterministic hash of the canonical accepted runtime optimisation request body after OC MS has resolved the referenced ACTIVE `OptimisationSpecification` version. Each distinct canonical accepted request has its own cache entry. The cache stores the reusable optimisation response or outcome reference according to cache policy. The canonical request hash must be based only on fields that are part of the accepted optimisation problem and must not include transport headers or operational trace metadata. Cache TTL and eviction policy are deployment-governed and outside the current baseline specification. The cache hash is internal metadata and must not replace the runtime `Optimisation.id`, lifecycle, persisted audit record, or external resource representation. A request-result cache hit must still create or return a governed OC runtime `Optimisation` resource according to the OC MS contract and must not bypass lifecycle, audit, source-of-truth persistence, ETag handling, or external resource identity.
 
 ## 12. OC MS validation boundary:
 
@@ -529,7 +533,7 @@ resource-selection correctness
 
 After acceptance, OC MS persists the runtime resource and writes `OptimisationRequestedEvent` with `instruction = EXECUTE` to its outbox in the same transaction.
 
-Cancellation uses the same event type with `instruction = CANCEL`. Worker optimisation outcomes and cancellation-command outcomes are returned through `OptimisationCompletedEvent` with `status = COMPLETED`, `INFEASIBLE`, `FAILED`, `CANCELLED`, or `CANCELLATIONFAILED`. `COMPLETED`, `INFEASIBLE`, `FAILED`, and `CANCELLED` are terminal lifecycle outcomes. `CANCELLATIONFAILED` is a non-terminal cancellation-command outcome and may later be followed by a normal terminal optimisation outcome.
+Cancellation uses the same event type with `instruction = CANCEL`. OW MS execution outcomes and cancellation-command outcomes are returned through `OptimisationCompletedEvent`. Execution outcomes are `COMPLETED`, `INFEASIBLE`, or `FAILED`. Cancellation-command outcomes are `CANCELLED` or `CANCELLATIONFAILED`. `COMPLETED`, `INFEASIBLE`, and `FAILED` are terminal execution outcomes. `CANCELLED` is a terminal cancellation-command outcome. `CANCELLATIONFAILED` is a non-terminal cancellation-command outcome and may later be followed by a normal terminal execution outcome.
 
 ## 13. Internal event baseline:
 
@@ -1043,6 +1047,8 @@ OC MS may proceed with runtime creation using a valid cached immutable ACTIVE OD
 
 OC MS must not use cached or default fallback to fake runtime creation, contract validation, lifecycle projection, cancellation acceptance, retrial creation, ETag validation, result projection, security visibility, or audit state. For command and state-changing operations, OC MS may return a normal success status only when the operation has genuinely completed its required validation, persistence, concurrency, and durability obligations.
 
+For OC MS runtime creation and cancellation, Kafka broker unavailability does not necessarily fail the REST command if OC MS can durably persist the runtime state and outbox record; the outbox relay handles later Kafka publication according to retry and DLQ policy.
+
 While a circuit breaker is open, OC MS must monitor recovery through bounded health probes or test calls according to platform circuit-breaker policy. Probe behaviour must be rate-limited and must not overload a recovering dependency.
 
 ## 18. Error handling boundary:
@@ -1142,7 +1148,7 @@ Content-Type: application/json
 
 ## 19. Outcome mapping:
 
-Worker terminal outcomes and cancellation-command outcomes are carried by `OptimisationCompletedEvent.status` using the same status names that OC MS projects to runtime lifecycle states.
+OW MS execution outcomes and cancellation-command outcomes are carried by `OptimisationCompletedEvent.status` using the same status names that OC MS projects to runtime lifecycle states.
 
 The current baseline keeps this single outcome event type; no separate progress, cancellation-failed, or retrial event type is introduced.
 
