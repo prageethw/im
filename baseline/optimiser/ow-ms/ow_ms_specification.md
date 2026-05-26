@@ -9,7 +9,7 @@
 | **Source path** | `baseline/optimiser/ow-ms/ow_ms_specification.md` |
 | **Source of truth** | GitHub `main` |
 | **Last aligned** | 2026-05-26 |
-| **Alignment scope** | Aligned with OC MS `OptimisationRequestedEvent`, `OptimisationCompletedEvent`, `creationContext.reason`, `CANCELLATIONFAILED`, retrial, result projection, ETag-header baseline, and circuit-breaker/backpressure behaviour. |
+| **Alignment scope** | Aligned with OC MS `OptimisationRequestedEvent`, `OptimisationCompletedEvent`, `creationContext.reason`, `CANCELLATIONFAILED`, retrial, result projection, ETag-header baseline, circuit-breaker/backpressure behaviour, and OC-owned external notification boundary. |
 
 ## Table of contents:
 
@@ -49,6 +49,8 @@ OW MS is part of the internal optimisation execution plane. It is not a public R
 
 OC MS remains the runtime `Optimisation` lifecycle owner. OW MS reports outcomes through `OptimisationCompletedEvent`; OC MS consumes those outcomes and projects lifecycle and result state onto the runtime `Optimisation` resource. OW MS emits outcome facts only; it must not treat its internal execution state as REST-visible lifecycle state.
 
+External runtime notification is OC-owned. OW MS publishes only internal `OptimisationCompletedEvent` outcome facts and does not create, manage, or deliver `OptimisationStatusChangeEvent`.
+
 ## 2. Ownership boundary:
 
 OW MS owns:
@@ -77,6 +79,8 @@ Specification activation or retirement
 Runtime Optimisation persistence in OC MS database
 OC MS outbox or inbox persistence
 External result presentation
+External runtime notification management
+OptimisationStatusChangeEvent creation or delivery
 Business approval of optimisation capabilities
 ```
 
@@ -133,6 +137,8 @@ Kafka delivery is treated as at-least-once. OW MS must be idempotent for duplica
 
 OW MS publishes `OptimisationCompletedEvent` to `t7.optimisation.events`.
 
+`OptimisationRequestedEvent` and `OptimisationCompletedEvent` are internal worker-plane events. They are not external subscriber-facing contracts.
+
 The DLQ is used for events that cannot be safely processed after retry handling. DLQ behaviour is operationally governed and must preserve enough failure metadata for diagnosis and controlled replay decisions. OW MS may route unprocessable worker-side events to the DLQ according to retry policy, but DLQ replay is operationally controlled and must preserve idempotency.
 
 OW MS must treat the Kafka event contract as the platform boundary. Internal Gurobi model formulation, solver parameters, model files, candidate scoring logic, and solver-specific diagnostics are implementation details and must not be exposed in platform event payloads unless explicitly governed later.
@@ -168,11 +174,13 @@ Required event body fields:
 | `traceId` | Required where platform tracing is enabled. |
 | `optimisationId` | Required OC runtime Optimisation id. |
 | `instruction` | Required. Allowed values are `EXECUTE` and `CANCEL`. |
-| `creationContext` | Present for `EXECUTE`; includes `reason = NEW` or `RETRIAL` where provided by OC MS. |
-| `optimisationSpecification` | Resolved immutable specification pointer with `id`, `version`, `draftId`, and `href`. |
-| `expression` | Accepted runtime expression, including `expression.iri` and `expression.expressionValue`. |
+| `creationContext` | Present for `EXECUTE`; includes `reason = NEW` or `RETRIAL` where provided by OC MS. Not required for `CANCEL`. |
+| `optimisationSpecification` | Required for `EXECUTE`. Resolved immutable specification pointer with `id`, `version`, `draftId`, and `href`. Not required for `CANCEL` unless the event contract version explicitly includes it. |
+| `expression` | Required for `EXECUTE`. Accepted runtime expression, including `expression.iri` and `expression.expressionValue`. Not required for `CANCEL`. |
 | `sourceContext` | Optional accepted runtime source context. |
 | `priority` | Optional accepted runtime priority. |
+
+Instruction-specific validation applies before processing: `EXECUTE` requires the accepted runtime contract pointer and expression payload; `CANCEL` requires the `optimisationId` and instruction identity and may include safe cancellation metadata. OW MS must not reject a valid `CANCEL` solely because it does not include the `EXECUTE` expression payload.
 
 OW MS must reject or dead-letter events that are structurally invalid, missing required fields, or use an unsupported `instruction` value after retry policy is exhausted.
 
@@ -438,6 +446,25 @@ Example:
 }
 ```
 
+Cancellation-command failure example:
+
+```json
+{
+  "eventType": "OptimisationCompletedEvent",
+  "eventVersion": "1.0",
+  "eventTime": "2026-05-26T04:02:00Z",
+  "correlationId": "corr-12345",
+  "traceId": "trace-12345",
+  "optimisationId": "opt-12345",
+  "status": "CANCELLATIONFAILED",
+  "result": {
+    "outcome": "CANCELLATIONFAILED",
+    "summary": "Cancellation could not be confirmed safely. The optimisation may still produce a later execution outcome.",
+    "code": "CANCELLATION_NOT_CONFIRMED"
+  }
+}
+```
+
 The event must not include raw Gurobi model formulation, solver configuration, objective internals, credential material, infrastructure internals, or raw stack traces.
 
 OW MS must not mark local work as safely complete or remove required job-registry ownership until `OptimisationCompletedEvent` publication has succeeded, been durably handed off for retry, or been routed to DLQ according to platform policy.
@@ -507,6 +534,7 @@ If the worker cannot determine whether a duplicate event has already been execut
 If CANCEL arrives before EXECUTE has been claimed, OW MS may record the cancellation intent and suppress execution if the matching EXECUTE is later received, or route to retry and DLQ according to operational policy.
 If CANCEL arrives while EXECUTE is running on another worker instance, OW MS must use the job registry or platform coordination mechanism to locate the owning execution where possible.
 If EXECUTE is received after an outcome has already been published for the same optimisationId and instruction context, OW MS must not start a new solver execution unless the event identity and OC MS instruction context prove it is a distinct accepted request.
+If a late `EXECUTE` arrives after a pre-execution `CANCELLATIONFAILED` for the same `optimisationId`, OW MS must process the `EXECUTE` according to the cancellation-intent retention rule in Section 7 and publish the actual execution outcome unless policy proves the work has been safely suppressed.
 ```
 
 OC MS remains the final projection idempotency owner. Even if OW MS republishes an outcome, OC MS Inbox Consumer must apply inbox deduplication and lifecycle monotonicity rules.
@@ -547,6 +575,8 @@ OW MS must reject unsupported `eventVersion` values unless backward-compatible h
 Schema-invalid, unsupported, or non-processable poison events are routed to DLQ only after the configured retry policy is exhausted, unless the failure is classified as non-retryable by platform policy.
 
 DLQ entries must include safe failure metadata needed for diagnosis and controlled replay decisions. DLQ entries must not include secrets, raw stack traces, solver credentials, or sensitive Gurobi internals.
+
+DLQ handling is internal to the worker and platform operations. External runtime notification remains OC-owned after OC MS projection.
 
 No automatic DLQ replay is performed by default. Replay requires operational approval and controlled procedure. Replayed DLQ events must retain original identity where required for idempotency and must not create duplicate unsafe Gurobi execution.
 
@@ -659,6 +689,7 @@ OW MS should preserve enough job-registry state to avoid unsafe duplicate execut
 OW MS should publish a safe outcome, checkpoint safe internal state, or allow controlled retry according to deployment policy for in-flight jobs.
 OW MS must avoid losing cancellation intent or in-flight job ownership where cross-restart cancellation is required.
 OW MS must not acknowledge Kafka work as safely complete until outcome publication, durable handoff, or DLQ routing has reached the platform-defined safe point.
+OW MS shutdown must preserve internal outcome safety. External runtime notification remains an OC-owned responsibility after outcome projection.
 ```
 
 Shutdown and cleanup behaviour must be observable and covered by operational runbooks.
@@ -726,6 +757,7 @@ A writer to OC MS runtime database tables
 A catalogue management service
 A general-purpose solver marketplace
 The owner of OC MS lifecycle projection
+The owner of external runtime notification or OptimisationStatusChangeEvent delivery
 ```
 
 OW MS does not define the public `OptimisationSpecification` contract. It consumes already-accepted runtime work from OC MS.

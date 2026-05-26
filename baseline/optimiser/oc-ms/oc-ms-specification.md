@@ -1465,13 +1465,12 @@ External event payloads are notifications, not the source of truth.
 GET /optimisation/{id} remains the authoritative current-state read.
 External event payloads must include an `eventId` so subscribers can deduplicate deliveries.
 External event payloads must include `eventType`, `eventVersion`, and `eventTime`.
-External event payloads should include `correlationId` and `traceId` where available for support and tracing. Callback deliveries should include the target `subscriptionId` so subscribers and operators can correlate delivery audit records.
+External event payloads should include `correlationId`, `traceId`, and `subscriptionId` where available for support, tracing, and delivery correlation.
 External event delivery is at-least-once.
 Subscribers must handle duplicate events idempotently and must tolerate out-of-order delivery by using `statusChangeDate` and the authoritative `GET /optimisation/{id}` representation.
 Callback delivery must use governed outbound security, such as mTLS, signed request, shared secret, OAuth client credentials, or another platform-approved callback authentication mechanism.
 Callback delivery failure must not roll back OC MS lifecycle or result projection.
-A callback `2xx` response means delivered. Non-`2xx` response, timeout, DNS failure, TLS failure, or callback authentication failure is a delivery failure and follows retry, DLQ, or subscription-suspension policy. Subscription suspension must not delete the subscription silently; it must be observable and recoverable through governed operational procedure or explicit subscription update capability introduced later.
-Callback delivery must use durable outbox, retry, DLQ, or equivalent governed delivery handling.
+A callback `2xx` response means delivered. Non-`2xx` response, timeout, DNS failure, TLS failure, or callback authentication failure is a delivery failure and follows platform-governed durable delivery, retry, DLQ, or suspension policy.
 Webhook payloads must not expose Gurobi model formulation, solver configuration, raw worker diagnostics, credentials, internal Kafka details, or raw stack traces.
 ```
 
