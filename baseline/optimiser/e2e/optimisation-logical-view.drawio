@@ -1,6 +1,6 @@
 <mxfile host="65bd71144e">
     <diagram id="optimisation-logical-view" name="Optimisation Logical View">
-        <mxGraphModel dx="1087" dy="1609" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1500" pageHeight="900" math="0" shadow="0" adaptiveColors="none">
+        <mxGraphModel dx="567" dy="1538" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1500" pageHeight="900" math="0" shadow="0" adaptiveColors="none">
             <root>
                 <mxCell id="0"/>
                 <mxCell id="1" parent="0"/>
@@ -141,8 +141,16 @@
                 <mxCell id="e12" value="Consume OW MS instructions" style="endArrow=block;html=1;rounded=0;strokeWidth=2;strokeColor=default;" parent="1" source="kafka" target="worker" edge="1">
                     <mxGeometry relative="1" as="geometry"/>
                 </mxCell>
-                <mxCell id="e13" value="Execute optimisation model" style="endArrow=block;html=1;rounded=0;strokeWidth=2;strokeColor=default;" parent="1" source="worker" target="gurobi" edge="1">
-                    <mxGeometry relative="1" as="geometry"/>
+                <mxCell id="e13" value="" style="endArrow=block;html=1;rounded=0;strokeWidth=2;strokeColor=default;" parent="1" edge="1">
+                    <mxGeometry relative="1" as="geometry">
+                        <mxPoint x="372.3076923076924" y="303.57142857142867" as="sourcePoint"/>
+                        <mxPoint x="281.6783216783217" y="303.57142857142867" as="targetPoint"/>
+                    </mxGeometry>
+                </mxCell>
+                <mxCell id="3" value="execute" style="edgeLabel;html=1;align=center;verticalAlign=middle;resizable=0;points=[];" vertex="1" connectable="0" parent="e13">
+                    <mxGeometry x="-0.0002" y="-1" relative="1" as="geometry">
+                        <mxPoint as="offset"/>
+                    </mxGeometry>
                 </mxCell>
                 <mxCell id="e14" value="Emit outcomes" style="endArrow=block;html=1;rounded=0;strokeWidth=2;entryX=0.051;entryY=0.857;entryDx=0;entryDy=0;entryPerimeter=0;strokeColor=default;" parent="1" target="kafka" edge="1">
                     <mxGeometry relative="1" as="geometry">
@@ -204,7 +212,7 @@
                         <mxPoint as="offset"/>
                     </mxGeometry>
                 </mxCell>
-                <mxCell id="2" value="webhook events" style="edgeLabel;html=1;align=center;verticalAlign=middle;resizable=0;points=[];" vertex="1" connectable="0" parent="e_notify_subscriber">
+                <mxCell id="2" value="webhook events" style="edgeLabel;html=1;align=center;verticalAlign=middle;resizable=0;points=[];" parent="e_notify_subscriber" vertex="1" connectable="0">
                     <mxGeometry x="0.6258" y="-1" relative="1" as="geometry">
                         <mxPoint y="1" as="offset"/>
                     </mxGeometry>
