@@ -23,7 +23,7 @@ The preferred option is **Claude Code via Claude Team Premium seats for the firs
 
 ## 2. Context: why we need more than Copilot
 
-The optimisation platform team is a small platform team relative to the scope: multi‑service event‑driven architecture, optimisation modelling, TMF‑aligned APIs, and extensive technical documentation. Existing AI tooling already includes GitHub Copilot Enterprise, which accelerates line‑by‑line coding, but most of our bottlenecks occur at **project level**: understanding large repos, planning cross‑cutting changes, and implementing multi‑file features from detailed specs.
+The optimisation platform team is a small platform team relative to the scope: multi‑service event‑driven architecture, optimisation modelling, TMF‑aligned APIs, and extensive technical documentation. Existing AI tooling already includes GitHub Copilot Enterprise, which accelerates line‑by‑line coding, but most of our bottlenecks occur at **project level**: planning cross‑cutting changes, and implementing multi‑file features from detailed specs.
 
 GitHub Copilot Enterprise works best as an **inline IDE assistant**. It is not designed to: read a whole repository, create a change plan, execute edits across many files, and run commands as an autonomous agent. Claude Code and OpenAI Codex CLI are designed for exactly that style of work.
 
