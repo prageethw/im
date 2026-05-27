@@ -15,7 +15,7 @@ participant "OW MS" as Worker
 participant "Gurobi\nOptimiser" as Gurobi
 queue "OC MS Inbox" as Inbox
 participant "OC MS" as OCMS
-database "OC MS DB" as OCDB
+database "OC MS DB\nPostgreSQL" as OCDB
 actor "User & OEX" as Caller
 participant "OGW" as OGW
 participant "OSB MS" as OSB
@@ -45,6 +45,9 @@ or CANCELLATIONFAILED.
 CANCELLATIONFAILED is a cancellation-command outcome,
 not an optimisation execution outcome.
 INFEASIBLE is a valid optimisation or model outcome.
+
+OW MS does not publish external webhook notifications;
+OC MS owns OptimisationStatusChangeEvent after projection.
 It is not a contract validation error.
 end note
 

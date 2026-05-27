@@ -14,6 +14,7 @@ skinparam rectangleBackgroundColor #F8FAFC
 
 actor "User & OEX" as UserOEX
 actor "Authorised Platform Service" as PlatformService
+actor "Webhook Subscriber" as Subscriber
 actor "Optimisation Domain Engineer" as DomainEngineer
 actor "OW MS" as Worker
 
@@ -38,6 +39,8 @@ PlatformService --> UC_Submit
 PlatformService --> UC_Monitor
 PlatformService --> UC_Cancel
 PlatformService --> UC_Retry
+PlatformService --> UC_Subscribe
+Subscriber --> UC_Subscribe
 
 DomainEngineer --> UC_ManageSpecs
 
@@ -45,5 +48,6 @@ Worker --> UC_Execute
 
 UC_Submit ..> UC_Execute : async execution
 UC_Monitor ..> UC_Execute : reads projected outcome
+UC_Subscribe ..> UC_Monitor : notification triggers authoritative GET
 
 @enduml

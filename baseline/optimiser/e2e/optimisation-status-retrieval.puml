@@ -10,12 +10,13 @@ skinparam sequenceActorBorderColor #4F46E5
 skinparam noteBorderColor #A5B4FC
 skinparam noteBackgroundColor #EEF2FF
 
-actor "User & OEX" as Caller
+actor "User, OEX,
+or Subscriber" as Caller
 participant "OGW" as OGW
 participant "OSB MS" as OSB
 participant "NGW" as NGW
 participant "OC MS" as OCMS
-database "OC MS DB" as OCDB
+database "OC MS DB\nPostgreSQL" as OCDB
 
 == Status and Result Request ==
 
@@ -82,6 +83,8 @@ note over OCMS
 No OC MS Outbox record is written.
 No OW MS instruction is emitted.
 This is a read-only monitoring operation.
+GET /optimisation/{id} remains authoritative,
+even when the read was triggered by webhook notification.
 end note
 
 @enduml

@@ -16,11 +16,13 @@ participant "OSB MS" as OSB
 participant "NGW" as NGW
 participant "OC MS" as OCMS
 participant "OD MS" as ODMS
-database "OC MS DB" as OCDB
+database "OC MS DB\nPostgreSQL" as OCDB
 queue "OC MS Outbox" as Outbox
 queue "Kafka\nt7.optimisation.events" as Kafka
 participant "OW MS" as Worker
 queue "OC MS Inbox" as Inbox
+participant "OC Notification\nDelivery" as Notify
+actor "Subscribed\nConsumer" as Subscriber
 
 == Submit Runtime Optimisation ==
 
@@ -41,10 +43,10 @@ NGW -> OCMS : 6. POST /optimisation\nmTLS + service identity
 
 == Validate Contract ==
 
-OCMS -> ODMS : 7. Direct service-to-service mTLS\nvalidate referenced ACTIVE\nOptimisationSpecification.id\nand expression.iri match
+OCMS -> ODMS : 7. Approved internal service-to-service path\nvalidate referenced ACTIVE\nOptimisationSpecification.id\nand expression.iri match
 note right of ODMS
-OC MS -> OD MS is a direct internal service path.
-It does not route through NGW.
+OC MS resolves and validates the referenced OD MS contract
+through the approved internal service-to-service path.
 end note
 
 ODMS --> OCMS : ACTIVE specification\nexpressionSpecification.iri + targetEntitySchema
@@ -75,7 +77,7 @@ Kafka -> Worker : 14. OW MS consumes OptimisationRequestedEvent\ninstruction = E
 Worker -> Worker : 15. Resolve internal deterministic\nmodel binding
 Worker -> Worker : 16. Invoke Gurobi Optimiser
 
-Worker -> Kafka : 17. Publish OptimisationCompletedEvent\nstatus = COMPLETED, INFEASIBLE, FAILED,\nCANCELLED, or CANCELLATIONFAILED
+Worker -> Kafka : 17. Publish OptimisationCompletedEvent\nstatus = COMPLETED, INFEASIBLE, or FAILED\nfor EXECUTE outcomes
 
 == Project Outcome ==
 
@@ -84,14 +86,24 @@ Inbox -> Inbox : 19. Apply idempotency\nand stale/late event checks
 Inbox -> OCDB : 20. Update lifecycle/result projection\nCOMPLETED, INFEASIBLE, FAILED,\nCANCELLED, or CANCELLATIONFAILED
 OCDB --> Inbox : Projection stored
 
-== Poll Runtime Status ==
+alt Matching /optimisation/hub subscription exists
+  Inbox -> Notify : 21. Durable handoff for\nOptimisationStatusChangeEvent
+  Notify -> Subscriber : 22. POST webhook notification\nsummary-only payload
+  note right of Subscriber
+  Webhook is notification only.
+  Subscriber calls GET /optimisation/{id}
+  for authoritative state/result.
+  end note
+end
 
-Caller -> OGW : 21. Poll optimisation status and result
-OGW -> OSB : 22. Invoke OSB MS\nmTLS + User Context JWT
-OSB -> OSB : 23. Authorise visibility\nusing user context
-OSB -> NGW : 24. GET /optimisation/{id}\nmTLS + OAuth2 system identity\n(no user context downstream)
-NGW -> OCMS : 25. Route GET /optimisation/{id}
-OCMS -> OCDB : 26. Read lifecycle/result
+== Poll or Fetch Authoritative Runtime Status ==
+
+Caller -> OGW : 23. Poll or fetch optimisation status and result
+OGW -> OSB : 24. Invoke OSB MS\nmTLS + User Context JWT
+OSB -> OSB : 25. Authorise visibility\nusing user context
+OSB -> NGW : 26. GET /optimisation/{id}\nmTLS + OAuth2 system identity\n(no user context downstream)
+NGW -> OCMS : 27. Route GET /optimisation/{id}
+OCMS -> OCDB : 28. Read lifecycle/result
 OCDB --> OCMS : Current status and result
 OCMS --> NGW : Return runtime Optimisation
 NGW --> OSB : Return response

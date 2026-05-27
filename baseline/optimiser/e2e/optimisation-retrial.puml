@@ -15,10 +15,13 @@ participant "OGW" as OGW
 participant "OSB MS" as OSB
 participant "NGW" as NGW
 participant "OC MS" as OCMS
-database "OC MS DB" as OCDB
+database "OC MS DB\nPostgreSQL" as OCDB
 queue "OC MS Outbox" as Outbox
 queue "Kafka\nt7.optimisation.events" as Kafka
 participant "OW MS" as Worker
+queue "OC MS Inbox" as Inbox
+participant "OC Notification\nDelivery" as Notify
+actor "Subscribed\nConsumer" as Subscriber
 
 == Request Retrial ==
 
@@ -91,6 +94,15 @@ OCMS -> OCDB : 10. Advance new Optimisation\nACKNOWLEDGED -> QUEUED\nafter succe
 
 Kafka -> Worker : 11. OW MS consumes OptimisationRequestedEvent\nfor new Optimisation
 Worker -> Worker : 12. Execute deterministic\noptimisation work
-Worker -> Kafka : 13. Publish OptimisationCompletedEvent\nstatus = COMPLETED, INFEASIBLE,\nFAILED, CANCELLED, or CANCELLATIONFAILED
+Worker -> Kafka : 13. Publish OptimisationCompletedEvent\nstatus = COMPLETED, INFEASIBLE, or FAILED
+
+Kafka -> Inbox : 14. Consume OptimisationCompletedEvent
+Inbox -> OCDB : 15. Project new Optimisation lifecycle/result
+OCDB --> Inbox : Projection stored
+
+alt Matching /optimisation/hub subscription exists
+  Inbox -> Notify : Durable handoff for\nOptimisationStatusChangeEvent
+  Notify -> Subscriber : POST webhook notification\nsummary-only payload
+end
 
 @enduml
