@@ -58,7 +58,7 @@ Core services:
 
 OW MS means Optimisation Worker MS. OW MS emits outcome facts only; OC MS owns REST-visible lifecycle and result projection.
 
-Operator access to the experience layer is governed by the ACG approval process and Microsoft Entra ID SSO. OGW invokes OSB MS using mTLS and User Context JWT. OSB MS invokes NGW using mTLS and OAuth2 system-to-system. User context stops before NGW; downstream OD MS and OC MS calls use service identity only.
+Operator access to the experience layer is governed by the ASG approval process and Microsoft Entra ID SSO. OGW invokes OSB MS using mTLS and User Context JWT. OSB MS invokes NGW using mTLS and OAuth2 system-to-system. User context stops before NGW; downstream OD MS and OC MS calls use service identity only.
 
 OC MS validates the request structure and referenced ACTIVE OD MS request contract, persists the runtime `Optimisation` resource, returns `201 Created`, writes `OptimisationRequestedEvent` to its outbox, and drives execution asynchronously through Kafka. OC MS also owns external optimisation webhook subscriptions through `/optimisation/hub` and emits `OptimisationStatusChangeEvent` notifications after lifecycle or result projection is durably persisted.
 
@@ -168,7 +168,7 @@ OC MS -> /optimisation/hub subscription delivery -> subscriber callback URL
 Key logical relationships:
 
 ```text
-1. User -> Microsoft Entra ID: user authenticates using SSO after ACG approval.
+1. User -> Microsoft Entra ID: user authenticates using SSO after ASG approval.
 2. UI -> OGW: OGW is the user-context-aware gateway.
 3. OGW -> OSB MS: mTLS and User Context JWT.
 4. OSB MS -> NGW: mTLS and OAuth2 system-to-system.
@@ -357,7 +357,7 @@ OW MS idempotency in this E2E brief means duplicate event detection using `event
 | **Component** | **Responsibility** |
 |---|---|
 | **Microsoft Entra ID** | Provides SSO authentication for users before they access OEX/experience layer. |
-| **ACG approval process** | Governs operator access to the OEX optimisation experience. |
+| **ASG approval process** | Governs operator access to the OEX optimisation experience. |
 | **OGW** | User-context-aware gateway for OEX APIs. Invokes OSB MS using mTLS and User Context JWT. |
 | **OEX UI and experience layer** | Provides user/operator-facing experience for discovery, request submission, monitoring, cancellation, retrial, and result viewing. |
 | **OSB MS** | Builds OEX view models, applies user-context filtering, uses backend `_links` plus user context for actions, forwards ETags, and calls backend APIs through NGW. |
@@ -382,10 +382,10 @@ OW MS idempotency in this E2E brief means duplicate event detection using `event
 
 ### 5.1. User authentication and access governance:
 
-Users access OEX through ACG approval and Microsoft Entra ID SSO.
+Users access OEX through ASG approval and Microsoft Entra ID SSO.
 
 ```text
-User -> ACG approval process -> Microsoft Entra ID SSO -> OGW -> OEX APIs and UI
+User -> ASG approval process -> Microsoft Entra ID SSO -> OGW -> OEX APIs and UI
 ```
 
 ### 5.2. Experience layer internal access path:
@@ -601,7 +601,7 @@ For OC MS runtime creation and cancellation, Kafka broker unavailability does no
 
 ## 8. Assumptions:
 
-- Operators access OEX only after ACG approval.
+- Operators access OEX only after ASG approval.
 - User and operator authentication uses Microsoft Entra ID SSO.
 - OGW is the user-context-aware gateway for OEX APIs.
 - OGW integrates with OSB MS using mTLS and User Context JWT.
