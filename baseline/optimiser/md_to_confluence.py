@@ -43,6 +43,7 @@ import mimetypes
 import os
 import re
 import shutil
+import subprocess
 import sys
 import time
 from dataclasses import dataclass, field
@@ -435,6 +436,192 @@ _MD_MACRO_RE = re.compile(
 _EMPTY_P_RE = re.compile(r"<p\b[^>]*>\s*</p>", re.IGNORECASE)
 
 
+# ---------------------------------------------------------------------------
+# Title / Git / Pretty-format helpers
+# ---------------------------------------------------------------------------
+# First ATX H1 (`# Title text`) in the source. Used to default --title from
+# the document's own top-level heading when the caller omits --title.
+_FIRST_H1_RE = re.compile(
+    r"^[ \t]*\#[ \t]+(?P<title>[^\n]+?)[ \t]*$",
+    re.MULTILINE,
+)
+
+
+def _strip_inline_markdown(text: str) -> str:
+    """
+    Render a piece of inline-Markdown to plain text so it can be used as a
+    Confluence page title. Strips backticks, bold/italic markers, and link
+    syntax (keeps the link label, drops the URL).
+    """
+    # [label](url) -> label
+    text = re.sub(r"\[([^\]]+)\]\([^)]+\)", r"\1", text)
+    # `code` -> code
+    text = re.sub(r"`+([^`]+)`+", r"\1", text)
+    # **bold** / __bold__ -> bold
+    text = re.sub(r"\*\*([^*]+)\*\*", r"\1", text)
+    text = re.sub(r"__([^_]+)__", r"\1", text)
+    # *italic* / _italic_ -> italic
+    text = re.sub(r"(?<!\*)\*([^*\n]+)\*(?!\*)", r"\1", text)
+    text = re.sub(r"(?<!_)_([^_\n]+)_(?!_)", r"\1", text)
+    return text.strip()
+
+
+def extract_h1_title(md_text: str) -> Optional[str]:
+    """
+    Return the cleaned text of the first ATX `# H1` heading in the source
+    Markdown, ignoring H1s inside fenced code blocks. Returns None when no
+    H1 is present.
+    """
+    # Mask fenced code blocks so we don't pick up `# comments` in code.
+    masked_parts: List[str] = []
+    in_fence = False
+    for line in md_text.splitlines(keepends=True):
+        stripped = line.lstrip()
+        if stripped.startswith("```") or stripped.startswith("~~~"):
+            in_fence = not in_fence
+            masked_parts.append("\n")
+            continue
+        masked_parts.append("\n" if in_fence else line)
+    masked = "".join(masked_parts)
+
+    m = _FIRST_H1_RE.search(masked)
+    if not m:
+        return None
+    raw = m.group("title")
+    cleaned = _strip_inline_markdown(raw)
+    return cleaned or None
+
+
+def _run_git(args: List[str], cwd: Path) -> Tuple[int, str, str]:
+    """Run `git <args>` in cwd and return (returncode, stdout, stderr)."""
+    try:
+        proc = subprocess.run(
+            ["git", *args],
+            cwd=str(cwd),
+            capture_output=True,
+            text=True,
+            check=False,
+        )
+        return proc.returncode, proc.stdout, proc.stderr
+    except FileNotFoundError as exc:
+        raise RuntimeError(
+            "git executable not found on PATH; install git or rerun with "
+            "--no-git-check to bypass the dirty-tree guard"
+        ) from exc
+
+
+def assert_committed_to_local_git(md_path: Path) -> None:
+    """
+    Verify that md_path lives inside a Git repository AND is fully committed
+    locally (no uncommitted edits, no untracked status). Raises RuntimeError
+    with a clear, actionable message otherwise.
+
+    NOTE: This checks the *local* working tree only — there is no requirement
+    to push. "Commit to local git first" is exactly what is enforced.
+    """
+    md_path = md_path.resolve()
+    if not md_path.is_file():
+        raise FileNotFoundError(f"Markdown file not found: {md_path}")
+
+    # 1. Are we inside a Git work tree?
+    rc, out, _ = _run_git(
+        ["rev-parse", "--is-inside-work-tree"], cwd=md_path.parent
+    )
+    if rc != 0 or out.strip() != "true":
+        raise RuntimeError(
+            f"{md_path} is not inside a Git repository. "
+            "Initialise one (`git init`) and commit the file before publishing, "
+            "or rerun with --no-git-check to bypass this guard."
+        )
+
+    # 2. Resolve repo root so we can ask for the file's status via a path that
+    #    Git will recognise regardless of where the script was invoked from.
+    rc, root_out, _ = _run_git(["rev-parse", "--show-toplevel"], cwd=md_path.parent)
+    if rc != 0:
+        raise RuntimeError("Could not determine Git repository root.")
+    repo_root = Path(root_out.strip())
+    rel_path = md_path.relative_to(repo_root)
+
+    # 3. Status of THIS file specifically (porcelain v1 is stable + parseable).
+    rc, status_out, status_err = _run_git(
+        ["status", "--porcelain", "--", str(rel_path)],
+        cwd=repo_root,
+    )
+    if rc != 0:
+        raise RuntimeError(
+            f"git status failed for {rel_path}: {status_err.strip()}"
+        )
+
+    status_out = status_out.rstrip("\n")
+    if not status_out:
+        # Empty -> file is tracked AND clean.
+        return
+
+    # Non-empty: parse the first 2 chars per line for diagnostics.
+    problems: List[str] = []
+    for line in status_out.splitlines():
+        code = line[:2]
+        path = line[3:]
+        if code == "??":
+            problems.append(f"untracked: {path}")
+        elif code.strip() == "":
+            continue
+        else:
+            problems.append(f"{code.strip()}: {path}")
+
+    raise RuntimeError(
+        "Refusing to publish: the Markdown file has uncommitted changes "
+        "in your local Git repository. Commit (or stash) the file first.\n"
+        f"  File: {rel_path}\n"
+        f"  Status: {', '.join(problems) or status_out}\n"
+        "  Fix:    git add " + str(rel_path) + " && git commit -m '...'\n"
+        "  Bypass: rerun with --no-git-check (not recommended)"
+    )
+
+
+def prettify_markdown(md_text: str) -> str:
+    """
+    Return a pretty-formatted copy of `md_text` for upload to Confluence.
+    Never writes to disk; the local file is untouched.
+
+    Strategy:
+      1. Prefer `mdformat` if installed in the active environment — it's the
+         de-facto Python Markdown formatter and is conservative (CommonMark
+         compliant, doesn't reflow paragraphs).
+      2. Otherwise fall back to a built-in normaliser that:
+           - normalises line endings to LF
+           - strips trailing whitespace on every line
+           - collapses 3+ blank lines down to 2
+           - ensures exactly one trailing newline at EOF
+         Safe for the most common author-introduced inconsistencies.
+    """
+    try:
+        import mdformat  # type: ignore  # pip install mdformat
+    except Exception:  # noqa: BLE001
+        mdformat = None
+
+    if mdformat is not None:
+        try:
+            formatted = mdformat.text(md_text)
+            LOG.info("Pretty-formatted Markdown via mdformat (in-memory only)")
+            return formatted
+        except Exception as exc:  # noqa: BLE001
+            LOG.warning(
+                "mdformat available but failed (%s); using built-in normaliser",
+                exc,
+            )
+
+    # Built-in fallback — purely whitespace/newline cleanup, no structural
+    # changes. Won't break code blocks, tables, or any Markdown construct.
+    text = md_text.replace("\r\n", "\n").replace("\r", "\n")
+    text = "\n".join(line.rstrip() for line in text.split("\n"))
+    text = re.sub(r"\n{3,}", "\n\n", text)
+    if not text.endswith("\n"):
+        text += "\n"
+    LOG.info("Pretty-formatted Markdown via built-in normaliser (in-memory only)")
+    return text
+
+
 def _strip_manual_status_blocks(md_text: str) -> Tuple[str, int]:
     """
     Remove hand-written "## Document status" (or "## Status") sections,
@@ -681,7 +868,8 @@ OFFLINE_END_MARKER = "\n<!-- ===== END STORAGE FORMAT ===== -->\n"
 
 def export_offline(md_path: Path, output_dir: Path,
                    status_text: str = "draft",
-                   status_colour: str = "Green") -> Dict[str, Any]:
+                   status_colour: str = "Green",
+                   prettify: bool = True) -> Dict[str, Any]:
     """
     Render Markdown to a single self-contained storage-format file plus a
     sibling `images/` folder. No network calls.
@@ -693,8 +881,13 @@ def export_offline(md_path: Path, output_dir: Path,
                 diagram-ab12cd34.png  <-- drag-attach these to the page
                 ...
             MANIFEST.txt              <-- human-readable summary
+
+    The on-disk Markdown file is never modified, even when `prettify=True`;
+    the formatter runs purely in memory against the loaded text.
     """
     md_text = md_path.read_text(encoding="utf-8")
+    if prettify:
+        md_text = prettify_markdown(md_text)
     storage_body, image_refs = render_markdown(
         md_text, md_path.parent,
         status_text=status_text, status_colour=status_colour,
@@ -1135,11 +1328,19 @@ class PublishConfig:
     verify_ssl: bool = True
     status_text: str = "draft"
     status_colour: str = "Green"
+    prettify: bool = True
 
 
 def publish(cfg: PublishConfig) -> Dict[str, Any]:
     LOG.info("Reading %s", cfg.md_path)
     md_text = cfg.md_path.read_text(encoding="utf-8")
+
+    # Pretty-format the Markdown in memory before rendering. The on-disk
+    # file is NEVER modified; only the upload pipeline sees the formatted
+    # version. The guard above already enforced a clean Git working tree
+    # so the local copy stays authoritative.
+    if cfg.prettify:
+        md_text = prettify_markdown(md_text)
 
     storage_body, image_refs = render_markdown(
         md_text, cfg.md_path.parent,
@@ -1230,7 +1431,18 @@ def parse_args(argv: Optional[List[str]] = None) -> argparse.Namespace:
                    help="Path to .md file (omit when using --check)")
     p.add_argument("--space", help="Confluence space key (e.g. ENG). "
                                     "Required for publish; optional for --check.")
-    p.add_argument("--title", help="Page title (required for publish)")
+    p.add_argument("--title", help="Page title. If omitted, the first "
+                                    "`# H1` heading in the Markdown file is "
+                                    "used as the title.")
+    p.add_argument("--no-git-check", action="store_true",
+                   help="Bypass the local-Git committed-state check. By "
+                        "default the script refuses to publish when the "
+                        "Markdown file has uncommitted edits or is untracked.")
+    p.add_argument("--no-prettify", action="store_true",
+                   help="Skip the in-memory Markdown pretty-format pass "
+                        "that runs before rendering. The local file is "
+                        "never modified either way; this flag only turns "
+                        "the normalisation off.")
     p.add_argument("--parent-id", help="Parent page ID (optional)")
     p.add_argument("--base-url", default=os.environ.get("CONFLUENCE_BASE_URL"),
                    help="Confluence base URL incl. /wiki for Cloud "
@@ -1291,10 +1503,38 @@ def main(argv: Optional[List[str]] = None) -> int:
         if not args.markdown_file:
             LOG.error("--export requires a markdown_file argument")
             return 2
+
+        # Git-clean guard (same policy as publish mode).
+        if not args.no_git_check:
+            try:
+                assert_committed_to_local_git(args.markdown_file)
+            except (RuntimeError, FileNotFoundError) as exc:
+                LOG.error("%s", exc)
+                return 2
+
+        # Default the page title from the first H1 if the caller didn't pass
+        # one. Export still needs a title because the auto-injected status
+        # pill block prefers a known page title for log output.
+        if not args.title:
+            try:
+                src = args.markdown_file.read_text(encoding="utf-8")
+            except Exception as exc:  # noqa: BLE001
+                LOG.error("Could not read %s: %s", args.markdown_file, exc)
+                return 2
+            inferred = extract_h1_title(src)
+            if inferred:
+                LOG.info("--title not supplied; using first H1 as title: %r",
+                         inferred)
+                args.title = inferred
+            else:
+                LOG.warning("No --title and no `# H1` heading found; export "
+                            "will proceed without a title.")
+
         try:
             result = export_offline(
                 args.markdown_file, args.export,
                 status_text=args.status, status_colour=args.status_colour,
+                prettify=not args.no_prettify,
             )
         except Exception as exc:  # noqa: BLE001
             LOG.exception("Export failed: %s", exc)
@@ -1302,13 +1542,41 @@ def main(argv: Optional[List[str]] = None) -> int:
         print(json.dumps(result, indent=2))
         return 0
 
-    # Publish mode: markdown_file, --space, and --title are all required
+    # Publish mode: markdown_file and --space are required; --title is
+    # inferred from the first H1 when omitted.
     if not args.markdown_file:
         LOG.error("markdown_file argument is required for publish mode")
         return 2
-    if not args.space or not args.title:
-        LOG.error("--space and --title are required for publish mode")
+    if not args.space:
+        LOG.error("--space is required for publish mode")
         return 2
+
+    # Default --title from the first H1 in the source.
+    if not args.title:
+        try:
+            src = args.markdown_file.read_text(encoding="utf-8")
+        except Exception as exc:  # noqa: BLE001
+            LOG.error("Could not read %s: %s", args.markdown_file, exc)
+            return 2
+        inferred = extract_h1_title(src)
+        if not inferred:
+            LOG.error(
+                "--title not supplied and no `# H1` heading found in %s. "
+                "Either add a top-level heading or pass --title explicitly.",
+                args.markdown_file,
+            )
+            return 2
+        LOG.info("--title not supplied; using first H1 as title: %r", inferred)
+        args.title = inferred
+
+    # Refuse to publish a file that has uncommitted local edits. This guard
+    # runs BEFORE any rendering or network call so the user fails fast.
+    if not args.no_git_check:
+        try:
+            assert_committed_to_local_git(args.markdown_file)
+        except (RuntimeError, FileNotFoundError) as exc:
+            LOG.error("%s", exc)
+            return 2
 
     if not args.dry_run:
         missing = [n for n, v in [
@@ -1333,6 +1601,7 @@ def main(argv: Optional[List[str]] = None) -> int:
         verify_ssl=not args.insecure,
         status_text=args.status,
         status_colour=args.status_colour,
+        prettify=not args.no_prettify,
     )
     try:
         result = publish(cfg)
