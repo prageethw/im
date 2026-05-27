@@ -579,26 +579,93 @@ def assert_committed_to_local_git(md_path: Path) -> None:
     )
 
 
-def prettify_markdown(md_text: str) -> str:
+# Packages auto-installed by _ensure_mdformat() on first prettify pass.
+# Kept here so the policy is in one obvious place and so the GFM plugin can
+# evolve without touching call sites.
+_MDFORMAT_REQUIREMENTS = ("mdformat", "mdformat-gfm", "mdformat-tables")
+
+
+def _pip_install(packages: Tuple[str, ...]) -> bool:
+    """
+    Install `packages` into the currently active Python environment using
+    `python -m pip install --quiet`. Returns True on success, False otherwise.
+
+    We deliberately use the same interpreter that's running the script
+    (`sys.executable`) so a venv-installed Python still installs into its
+    own site-packages, not the system Python.
+    """
+    cmd = [sys.executable, "-m", "pip", "install", "--quiet",
+           "--disable-pip-version-check", *packages]
+    LOG.info("Installing %s via pip ...", " ".join(packages))
+    try:
+        proc = subprocess.run(
+            cmd, capture_output=True, text=True, check=False,
+            timeout=180,
+        )
+    except (FileNotFoundError, subprocess.TimeoutExpired) as exc:
+        LOG.warning("pip install failed (%s); falling back to built-in "
+                    "normaliser", exc)
+        return False
+    if proc.returncode != 0:
+        # Common cause behind corporate proxies: pip cannot reach PyPI.
+        # Surface the last bit of stderr so the user knows why.
+        tail = (proc.stderr or proc.stdout or "").strip().splitlines()[-3:]
+        LOG.warning("pip install failed (exit %d). Last output:\n  %s\n"
+                    "Falling back to built-in normaliser. To skip this "
+                    "step entirely, pass --no-prettify.",
+                    proc.returncode, "\n  ".join(tail))
+        return False
+    LOG.info("pip install succeeded for %s", ", ".join(packages))
+    return True
+
+
+def _ensure_mdformat(auto_install: bool = True):  # noqa: ANN202
+    """
+    Return an imported `mdformat` module, installing it (and the GFM +
+    tables plugins) on first call if necessary. Returns None if the import
+    cannot be satisfied (e.g. offline behind a corp proxy).
+    """
+    try:
+        import mdformat  # type: ignore
+        return mdformat
+    except ImportError:
+        pass
+
+    if not auto_install:
+        return None
+
+    # Try to install. If pip can't reach PyPI we just return None and the
+    # caller falls back to the built-in normaliser.
+    if not _pip_install(_MDFORMAT_REQUIREMENTS):
+        return None
+
+    try:
+        import mdformat  # type: ignore
+        return mdformat
+    except ImportError as exc:
+        LOG.warning("mdformat installed but cannot be imported: %s", exc)
+        return None
+
+
+def prettify_markdown(md_text: str, auto_install: bool = True) -> str:
     """
     Return a pretty-formatted copy of `md_text` for upload to Confluence.
     Never writes to disk; the local file is untouched.
 
     Strategy:
-      1. Prefer `mdformat` if installed in the active environment — it's the
-         de-facto Python Markdown formatter and is conservative (CommonMark
-         compliant, doesn't reflow paragraphs).
-      2. Otherwise fall back to a built-in normaliser that:
+      1. Prefer `mdformat` (auto-installed on first run via pip if missing).
+         It's the de-facto Python Markdown formatter and is conservative
+         (CommonMark compliant, doesn't reflow paragraphs). We also pull in
+         `mdformat-gfm` and `mdformat-tables` so GitHub-flavoured tables and
+         admonitions are preserved.
+      2. If pip cannot install (no internet, corp proxy block, offline),
+         fall back to a built-in normaliser that:
            - normalises line endings to LF
            - strips trailing whitespace on every line
            - collapses 3+ blank lines down to 2
            - ensures exactly one trailing newline at EOF
-         Safe for the most common author-introduced inconsistencies.
     """
-    try:
-        import mdformat  # type: ignore  # pip install mdformat
-    except Exception:  # noqa: BLE001
-        mdformat = None
+    mdformat = _ensure_mdformat(auto_install=auto_install)
 
     if mdformat is not None:
         try:
@@ -869,7 +936,8 @@ OFFLINE_END_MARKER = "\n<!-- ===== END STORAGE FORMAT ===== -->\n"
 def export_offline(md_path: Path, output_dir: Path,
                    status_text: str = "draft",
                    status_colour: str = "Green",
-                   prettify: bool = True) -> Dict[str, Any]:
+                   prettify: bool = True,
+                   auto_install_mdformat: bool = True) -> Dict[str, Any]:
     """
     Render Markdown to a single self-contained storage-format file plus a
     sibling `images/` folder. No network calls.
@@ -887,7 +955,7 @@ def export_offline(md_path: Path, output_dir: Path,
     """
     md_text = md_path.read_text(encoding="utf-8")
     if prettify:
-        md_text = prettify_markdown(md_text)
+        md_text = prettify_markdown(md_text, auto_install=auto_install_mdformat)
     storage_body, image_refs = render_markdown(
         md_text, md_path.parent,
         status_text=status_text, status_colour=status_colour,
@@ -945,6 +1013,148 @@ def export_offline(md_path: Path, output_dir: Path,
         "image_count": len(copied),
         "manifest": str(manifest),
     }
+
+
+# ---------------------------------------------------------------------------
+# Pre-publish integrity check
+# ---------------------------------------------------------------------------
+# Sentinels that StorageRenderer injects around centred images while it's
+# stitching paragraphs together. They MUST be stripped by paragraph() before
+# the body leaves the renderer; if any survive into the final body the
+# rendering pipeline is broken and the page would render as garbage in
+# Confluence. We treat their presence as a hard fail.
+_RENDER_SENTINELS = ("\x00CENTERED_IMG\x00", "\x00END_IMG\x00")
+
+# Unresolved Markdown link/image syntax that should have been consumed by
+# mistune. If any of these survive, the parser likely choked on the source.
+_UNRESOLVED_MD_PATTERNS = (
+    re.compile(r"^!\[[^\]]*\]\([^)]+\)\s*$", re.MULTILINE),  # raw image
+)
+
+
+def validate_publish_payload(
+    storage_body: str,
+    image_refs: List[ImageRef],
+    md_path: Path,
+) -> None:
+    """
+    Pre-flight integrity check run BEFORE any Confluence API call.
+
+    Aborts with RuntimeError when any of the following are detected:
+      * A local image referenced in the Markdown is missing on disk.
+      * A local image exists but isn't readable (perm error / dangling
+        symlink). Catching this here means we never half-create a page
+        and then fail mid-upload.
+      * The rendered storage body still contains internal renderer
+        sentinels — that's a hard sign the renderer broke and the output
+        would look corrupt in Confluence.
+      * The rendered body is empty or below a sanity-check size.
+      * Confluence storage-macro tags appear unbalanced (open without
+        matching close).
+
+    Returns None on success. The caller continues to the network step.
+    """
+    problems: List[str] = []
+
+    # --- 1. Image existence + readability ----------------------------------
+    missing: List[ImageRef] = []
+    unreadable: List[Tuple[ImageRef, str]] = []
+    for ref in image_refs:
+        if not ref.abs_path.is_file():
+            missing.append(ref)
+            continue
+        try:
+            # Open + read 1 byte to catch permission errors and dangling
+            # symlinks. Cheap and short-circuits early.
+            with open(ref.abs_path, "rb") as fh:
+                _ = fh.read(1)
+        except OSError as exc:
+            unreadable.append((ref, str(exc)))
+
+    if missing:
+        for m in missing:
+            LOG.error("Image not found: %s (referenced as %s)", m.abs_path, m.src)
+        problems.append(
+            f"{len(missing)} image(s) referenced by the Markdown do not "
+            f"exist on disk: " + ", ".join(m.src for m in missing)
+        )
+    if unreadable:
+        for ref, err in unreadable:
+            LOG.error("Image unreadable: %s (%s)", ref.abs_path, err)
+        problems.append(
+            f"{len(unreadable)} image file(s) exist but cannot be read: "
+            + ", ".join(f"{r.src} ({e})" for r, e in unreadable)
+        )
+
+    # --- 2. Renderer sentinel leakage --------------------------------------
+    for sentinel in _RENDER_SENTINELS:
+        if sentinel in storage_body:
+            problems.append(
+                f"Internal renderer sentinel {sentinel!r} leaked into the "
+                "final storage body — this is a script bug and the page "
+                "would render as garbage in Confluence."
+            )
+            break  # one is enough; don't spam the same diagnosis twice
+
+    # --- 3. Sanity check on body size --------------------------------------
+    stripped = storage_body.strip()
+    if not stripped:
+        problems.append(
+            "Rendered Confluence storage body is empty. The Markdown "
+            "source produced no content after stripping headers/TOC blocks."
+        )
+    elif len(stripped) < 32:
+        # 32 bytes is well below any plausible real page — even an empty
+        # status pill + TOC macro is ~200 bytes. This catches degenerate
+        # renders where every paragraph was eaten by an over-broad stripper.
+        problems.append(
+            f"Rendered storage body is suspiciously small ({len(stripped)} "
+            f"bytes). Source: {md_path.name}. Likely cause: an over-broad "
+            "strip rule consumed real content."
+        )
+
+    # --- 4. Unresolved Markdown leakage ------------------------------------
+    # The renderer should consume all `![alt](src)` image syntax. If raw
+    # Markdown image syntax survives at start-of-line in the storage body,
+    # mistune likely couldn't parse it (e.g. malformed alt-text with stray
+    # backticks). Confluence would display it as literal text.
+    for pat in _UNRESOLVED_MD_PATTERNS:
+        match = pat.search(storage_body)
+        if match:
+            problems.append(
+                f"Unresolved Markdown syntax in rendered body: "
+                f"{match.group(0)!r}. The Markdown parser could not "
+                "consume this construct — fix the source and re-run."
+            )
+            break
+
+    # --- 5. Confluence macro tag balance -----------------------------------
+    # Self-closing forms (<ac:foo .../>) are fine, but for the open/close
+    # paired form the counts must match.
+    open_macros = len(re.findall(
+        r"<ac:structured-macro\b(?![^>]*\/>)", storage_body
+    ))
+    close_macros = storage_body.count("</ac:structured-macro>")
+    if open_macros != close_macros:
+        problems.append(
+            f"Unbalanced Confluence storage macros: {open_macros} open vs "
+            f"{close_macros} close. The page body would be malformed."
+        )
+
+    if problems:
+        formatted = "\n  - ".join(problems)
+        raise RuntimeError(
+            "Pre-publish integrity check FAILED — refusing to write to "
+            "Confluence:\n  - " + formatted + "\n"
+            "\nNo API calls were made; your Confluence space is untouched. "
+            "Fix the issues above and re-run, or pass --dry-run / --export "
+            "to inspect the output without publishing."
+        )
+
+    LOG.info(
+        "Pre-publish integrity check passed (%d image(s), %d byte body)",
+        len(image_refs), len(stripped),
+    )
 
 
 # ---------------------------------------------------------------------------
@@ -1329,6 +1539,7 @@ class PublishConfig:
     status_text: str = "draft"
     status_colour: str = "Green"
     prettify: bool = True
+    auto_install_mdformat: bool = True
 
 
 def publish(cfg: PublishConfig) -> Dict[str, Any]:
@@ -1340,21 +1551,30 @@ def publish(cfg: PublishConfig) -> Dict[str, Any]:
     # version. The guard above already enforced a clean Git working tree
     # so the local copy stays authoritative.
     if cfg.prettify:
-        md_text = prettify_markdown(md_text)
+        md_text = prettify_markdown(
+            md_text, auto_install=cfg.auto_install_mdformat
+        )
 
-    storage_body, image_refs = render_markdown(
-        md_text, cfg.md_path.parent,
-        status_text=cfg.status_text, status_colour=cfg.status_colour,
-    )
-    # Footer intentionally omitted — keep the page clean.
+    # Render Markdown. If rendering itself throws (mistune parser bombs out,
+    # unbalanced fences, broken plugin, etc.) we abort BEFORE any network
+    # call so a half-baked page is never created on Confluence.
+    try:
+        storage_body, image_refs = render_markdown(
+            md_text, cfg.md_path.parent,
+            status_text=cfg.status_text, status_colour=cfg.status_colour,
+        )
+    except Exception as exc:  # noqa: BLE001 — render is third-party
+        raise RuntimeError(
+            f"Markdown rendering failed for {cfg.md_path.name}: {exc}. "
+            "Refusing to publish a partial page to Confluence. "
+            "Fix the Markdown source and re-run."
+        ) from exc
     LOG.info("Discovered %d local image reference(s)", len(image_refs))
 
-    # Validate every local image actually exists on disk before we touch the API
-    missing = [r for r in image_refs if not r.abs_path.is_file()]
-    if missing:
-        for m in missing:
-            LOG.error("Image not found: %s (referenced as %s)", m.abs_path, m.src)
-        raise FileNotFoundError(f"{len(missing)} image(s) missing on disk")
+    # Run the full pre-flight integrity check (images, payload sanity).
+    # Any failure here raises RuntimeError BEFORE the API client is
+    # constructed, so Confluence never sees a partial publish.
+    validate_publish_payload(storage_body, image_refs, cfg.md_path)
 
     final_body = storage_body
 
@@ -1443,6 +1663,11 @@ def parse_args(argv: Optional[List[str]] = None) -> argparse.Namespace:
                         "that runs before rendering. The local file is "
                         "never modified either way; this flag only turns "
                         "the normalisation off.")
+    p.add_argument("--no-auto-install", action="store_true",
+                   help="Do NOT auto-pip-install mdformat on first run. "
+                        "If mdformat is missing the script will use its "
+                        "built-in whitespace normaliser instead. Useful "
+                        "behind corporate proxies that block PyPI.")
     p.add_argument("--parent-id", help="Parent page ID (optional)")
     p.add_argument("--base-url", default=os.environ.get("CONFLUENCE_BASE_URL"),
                    help="Confluence base URL incl. /wiki for Cloud "
@@ -1535,6 +1760,7 @@ def main(argv: Optional[List[str]] = None) -> int:
                 args.markdown_file, args.export,
                 status_text=args.status, status_colour=args.status_colour,
                 prettify=not args.no_prettify,
+                auto_install_mdformat=not args.no_auto_install,
             )
         except Exception as exc:  # noqa: BLE001
             LOG.exception("Export failed: %s", exc)
@@ -1602,6 +1828,7 @@ def main(argv: Optional[List[str]] = None) -> int:
         status_text=args.status,
         status_colour=args.status_colour,
         prettify=not args.no_prettify,
+        auto_install_mdformat=not args.no_auto_install,
     )
     try:
         result = publish(cfg)
