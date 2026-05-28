@@ -439,5 +439,5 @@ For building an API-driven optimization platform serving multiple business units
 
 **Document Version**: 1.0  
 **Date**: May 28, 2026  
-**Author**: Enterprise Architecture Team  
+**Author**: Optimiser Team  
 **Classification**: Internal Use
