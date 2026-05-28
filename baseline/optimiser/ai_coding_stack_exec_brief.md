@@ -14,16 +14,20 @@
   - [4.2 Quantitative ROI framing](#42-quantitative-roi-framing)
 - [5. Comparison: Copilot vs Claude Code vs Codex CLI](#5-comparison-copilot-vs-claude-code-vs-codex-cli)
 - [6. Recommendation](#6-recommendation)
+- [7. Recommended viewing](#7-recommended-viewing)
+- [8. Sources](#8-sources)
 
 ## 1. Purpose and recommendation
 
 This paper recommends that the optimisation platform team standardise on **GitHub Copilot Enterprise plus a single repo‑aware coding agent**: **Claude Code (preferred)** or **OpenAI Codex CLI**. GitHub Copilot is already funded and in use; the incremental decision is which higher‑order coding agent to add so that a small team of engineers can deliver a strategic optimisation platform at acceptable speed and quality.
 
-The preferred option is **Claude Code via Claude Team Premium seats for the first 6 months**, then downgrading to Standard once architecture and patterns stabilise. Codex CLI is included as a credible alternative and benchmark, but not as a primary funding request in this phase.
+The preferred option is to run a **6‑seat Claude Max 20x burst for the first 6 months**, giving the team very high Claude capacity during platform bootstrapping, and then deliberately scale down to cheaper Claude plans (Team/Standard or a smaller number of Max seats) once architecture and patterns stabilise.
+
+Codex CLI is included as a credible alternative and benchmark, but not as a primary funding request in this phase.
 
 ## 2. Context: why we need more than Copilot
 
-The optimisation platform team is a small platform team relative to the scope: multi‑service event‑driven architecture, optimisation modelling, TMF‑aligned APIs, and extensive technical documentation. Existing AI tooling already includes GitHub Copilot Enterprise, which accelerates line‑by‑line coding, but most of our bottlenecks occur at **project level**: planning cross‑cutting changes, and implementing multi‑file features from detailed specs.
+The optimisation platform team is a small platform team relative to the scope: multi‑service event‑driven architecture, optimisation modelling, TMF‑aligned APIs, and extensive technical documentation. Existing AI tooling already includes GitHub Copilot Enterprise, which accelerates line‑by‑line coding, but most of our bottlenecks occur at **project level**: understanding large repos, planning cross‑cutting changes, and implementing multi‑file features from detailed specs.
 
 GitHub Copilot Enterprise works best as an **inline IDE assistant**. It is not designed to: read a whole repository, create a change plan, execute edits across many files, and run commands as an autonomous agent. Claude Code and OpenAI Codex CLI are designed for exactly that style of work.
 
@@ -39,30 +43,41 @@ This paper assumes Copilot remains as our default in‑IDE assistant and does **
 
 ### 3.2 Option A (preferred): GitHub Copilot + Claude Code
 
-Claude Code is Anthropic’s repo‑ and shell‑aware coding agent, available on **Claude Team** and newer Enterprise plans. It can inspect repositories, propose plans, edit files, and run commands, with strong long‑context reasoning.
+Claude Code is Anthropic’s repo‑ and shell‑aware coding agent, available on Claude Max and business plans. It can inspect repositories, propose plans, edit files, and run commands, with strong long‑context reasoning.
 
-**Seat and pricing model (Team, public 2026 pricing)**
+For the initial build‑out, we propose using **individual Claude Max 20x plans** to give the team very high usage headroom, then stepping down to cheaper plans once architecture and patterns stabilise.
 
-- Team Standard: 20 USD/user/month (annual) or 25 USD (monthly).  
-- Team Premium: 100 USD/user/month (annual) or 125 USD (monthly).  
-- Premium includes roughly **5×** the usage of Standard and significantly more than individual Pro.  
-- Minimum 5 seats per Team workspace.
+**Seat and pricing model (Max, public 2026 pricing)**
+
+- Max 20x: 200 USD/user/month (monthly billing), approximately 20× Pro‑level usage per session.
+- Plans can be started and stopped monthly, so a 6‑month “burst” is straightforward.
 
 **Proposed configuration**
 
-- 5 × Claude Team **Premium** seats for the first 6 months (build‑out phase).  
-- After 6 months, downgrade all seats to **Standard**, or keep 1–2 Premium for heavy users if usage justifies it.
+- 6 × Claude **Max 20x individual seats** for the first 6 months (build‑out phase).
+- After 6 months, cancel some or all Max 20x seats and move to cheaper business/Team tiers (for example, Team Standard or a smaller number of high‑capacity seats for power users).
 
-**Incremental cost (example, 5 seats, USD)**
+**Incremental cost (example, 6 seats, USD)**
 
-- Phase 1 (0–6 months) – 5 × Premium: 5 × 100 = **500 USD/month** (annual pricing).  
-- Phase 2 (7–18 months) – 5 × Standard: 5 × 20 = **100 USD/month**.
+- Phase 1 (0–6 months) – 6 × Max 20x: 6 × 200 = **1,200 USD/month** (monthly pricing).
+- Over 6 months, Phase 1 Max spend is **≈7,200 USD**.
 
-Over an 18‑month horizon:
+After month 6, a typical steady‑state configuration might be:
 
-- Claude Team spend ≈ 6 × 500 + 12 × 100 = **4,200 USD** total.
+- Either:
+  - 1–2 Max 20x seats retained for heavy users (200–400 USD/month), and the rest cancelled.
+- Or:
+  - All Max 20x seats cancelled, and
+  - 5–6 Team Standard seats at ~20 USD/user/month (≈100–120 USD/month total) for ongoing access to Claude and Claude Code at lower capacity.
 
-This is significantly less than the cost of one additional senior engineer for even a small number of weeks and can be time‑boxed and revisited at month 6.
+This keeps the “high‑power” phase explicitly time‑boxed while giving us a clear path to a much lower steady‑state spend.
+
+Over an 18‑month horizon (example):
+
+- Max 20x Phase 1 spend ≈ 6 × 1,200 = **7,200 USD** total for the first 6 months.
+- Phase 2 could then move to cheaper Team/Standard seats (for example, 5 × Standard at ~20 USD/month ≈ 100 USD/month), keeping total 18‑month spend in the **low tens‑of‑thousands USD range** depending on how many high‑capacity seats we retain.
+
+This is still materially less than hiring additional senior headcount, while giving us a very aggressive 6‑month window of “20x‑class” Claude capacity to bootstrap the optimisation platform.
 
 ### 3.3 Option B: GitHub Copilot + OpenAI Codex CLI
 
@@ -72,7 +87,7 @@ OpenAI’s Codex CLI (their current coding agent) offers a similar repo‑ and s
 - **Pricing**: Sold as part of OpenAI’s business/enterprise offerings; typical guidance is on the order of ~50–60 USD/user/month for Enterprise‑grade ChatGPT access, with additional cost for higher‑usage coding agents depending on tokens and features.  
 - **Licensing**: Often requires broader OpenAI business agreements; less transparent, more variable with usage than Claude Team’s simple seat‑based structure.
 
-For simplicity, we can assume a similar envelope to Claude Team Premium (order‑of‑magnitude 100–150 USD/user/month for a heavy‑usage agent seat), leading to **similar or slightly higher cost** than Option A for equivalent capacity.
+For simplicity, we can assume a similar envelope to Claude Max 20x (order‑of‑magnitude 100–150 USD/user/month for a heavy‑usage agent seat), leading to **similar or slightly higher cost** than Option A for equivalent capacity.
 
 **Note**: This paper recommends we prioritise Claude Code because our heaviest work is repo‑ and architecture‑centric, and published comparisons generally find Claude Code ahead on large refactors and explanation quality, while Codex CLI is competitive but more attractive when an organisation is standardising on OpenAI across the board.
 
@@ -105,7 +120,7 @@ Using conservative assumptions:
 
 - Assume a fully‑loaded senior engineer cost of **≈1,000–1,500 AUD per day** (≈650–1,000 USD).  
 - If Claude Code reduces multi‑file and migration work by just **0.5 day per week**, that’s ~250–500 USD of labour value per week, or ~1,000–2,000 USD/month.  
-- In Phase 1, Claude Team Premium costs ~500 USD/month; in Phase 2, ~100 USD/month.
+- In Phase 1, six Max 20x seats cost ~1,200 USD/month; in Phase 2, a typical Team/Standard configuration could be ~100–400 USD/month depending on how many high‑capacity seats we keep.
 
 Even with modest productivity gains, the **value generated significantly exceeds the licence cost**, especially during the build‑out phase where we are designing, implementing, and documenting the entire optimisation platform.
 
@@ -113,7 +128,7 @@ In addition, avoiding a single month of delay in delivering the platform, or pre
 
 ## 5. Comparison: Copilot vs Claude Code vs Codex CLI
 
-| Aspect | GitHub Copilot Enterprise | Claude Code (Claude Team) | OpenAI Codex CLI |
+| Aspect | GitHub Copilot Enterprise | Claude Code (Claude/Max) | OpenAI Codex CLI |
 | --- | --- | --- | --- |
 | Primary role | Inline IDE completions, refactors, PR assistance. | Repo‑ and shell‑aware coding agent; multi‑file plans and edits. | Repo‑ and shell‑aware coding agent using GPT‑class models. |
 | Typical usage | “Help me write the next function,” “refactor this file,” quick fixes in editor. | “Implement this feature across these services,” “migrate this pattern across the repo,” “run tests and iterate.” | Similar agentic tasks: implement features, patch multiple files, run commands, but with OpenAI tooling. |
@@ -124,12 +139,27 @@ In addition, avoiding a single month of delay in delivering the platform, or pre
 
 ## 6. Recommendation
 
-Given that GitHub Copilot Enterprise is already in place and working well as an inline coding assistant, the incremental decision should be about **which repo‑aware coding agent to add, not whether to add one**. For a small optimisation platform team with heavy architecture and multi‑service work, Claude Code via Claude Team Premium offers the best alignment of capabilities, pricing clarity, and long‑context reasoning.
+Given that GitHub Copilot Enterprise is already in place and working well as an inline coding assistant, the incremental decision should be about **which repo‑aware coding agent to add, not whether to add one**. For a small optimisation platform team with heavy architecture and multi‑service work, Claude Code delivered via Claude Max 20x for an initial 6‑month burst offers the best alignment of capabilities, pricing clarity, and long‑context reasoning.
 
 **Recommended action**
 
-- Approve funding for **5 Claude Team Premium seats for 6 months**, then downgrade to Standard unless a review at month 6 shows that 1–2 Premium seats remain justified.  
+- Approve funding for **6 Claude Max 20x seats for 6 months**, then deliberately scale down to cheaper Claude plans (Team/Standard, or a smaller number of Max seats) based on observed usage and value.  
 - Continue using GitHub Copilot Enterprise as the primary inline IDE assistant.  
 - Treat OpenAI Codex CLI as a secondary option for future evaluation if the organisation pursues a broader OpenAI enterprise strategy.
 
-This configuration keeps incremental spend modest (≈500 USD/month for 6 months, then ≈100 USD/month), while materially increasing the team’s ability to deliver a complex optimisation platform with limited headcount.
+This configuration keeps incremental spend modest relative to headcount (≈1,200 USD/month for 6 months, then potentially ≈100–400 USD/month), while materially increasing the team’s ability to deliver a complex optimisation platform with limited headcount.
+
+## 7. Recommended viewing
+
+For a concrete feel of what modern coding agents can do in practice, this short video is a good reference:
+
+- [How AI coding agents actually work in real projects](https://www.youtube.com/watch?v=6eBSHbLKuN0)
+
+## 8. Sources
+
+- Anthropic – Claude Max and Team pricing and plan descriptions  
+- Anthropic – Claude Code and business plans overview  
+- GitHub – Copilot Enterprise pricing and billing docs  
+- OpenAI – ChatGPT / Codex business and enterprise pricing  
+- Independent 2026 guides comparing Claude Code, Codex CLI and Copilot for coding agents  
+- Industry and academic studies on AI coding tools and agentic workflows (developer productivity and ROI)
