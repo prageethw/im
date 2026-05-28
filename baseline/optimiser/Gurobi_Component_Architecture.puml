@@ -1,0 +1,153 @@
+@startuml Gurobi_Component_Architecture
+!define RECTANGLE class
+
+skinparam componentStyle rectangle
+skinparam defaultTextAlignment center
+skinparam wrapWidth 200
+skinparam maxMessageSize 150
+
+' Color scheme
+skinparam component {
+    BackgroundColor<<application>> LightBlue
+    BorderColor<<application>> DarkBlue
+    BackgroundColor<<gateway>> LightGreen
+    BorderColor<<gateway>> DarkGreen
+    BackgroundColor<<gurobi>> LightYellow
+    BorderColor<<gurobi>> DarkOrange
+    BackgroundColor<<k8s>> WhiteSmoke
+    BorderColor<<k8s>> Gray
+    BackgroundColor<<external>> LightCoral
+    BorderColor<<external>> DarkRed
+}
+
+' Business Applications Layer
+package "Business Applications Layer" {
+    component [Finance Optimization API] as finance <<application>>
+    component [Supply Chain API] as supply <<application>>
+    component [Logistics API] as logistics <<application>>
+    component [Workforce Planning API] as workforce <<application>>
+}
+
+' API Gateway Layer
+package "API Gateway / Service Mesh" {
+    component [Authentication & Authorization] as auth <<gateway>>
+    component [Rate Limiting & Quotas] as ratelimit <<gateway>>
+    component [API Router] as router <<gateway>>
+}
+
+' Kubernetes Cluster
+package "Kubernetes Cluster (On-Prem/Cloud)" {
+
+    ' Gurobi Compute Server Deployment
+    package "Gurobi Compute Server Deployment" <<k8s>> {
+        component [Cluster Manager] as manager <<gurobi>>
+
+        package "Compute Server Nodes" {
+            component [Node 1\n(Container)\nThread Limit: 32] as node1 <<gurobi>>
+            component [Node 2\n(Container)\nThread Limit: 32] as node2 <<gurobi>>
+            component [Node 3\n(Container)\nThread Limit: 32] as node3 <<gurobi>>
+            component [Node N\n(Container)\nThread Limit: 32] as nodeN <<gurobi>>
+        }
+
+        database "Shared Job Queue\n(Auto Load Balancing)" as queue
+    }
+
+    ' Kubernetes Services
+    component [Horizontal Pod Autoscaler\n(HPA)] as hpa <<k8s>>
+    component [Service Discovery\n& Load Balancer] as k8slb <<k8s>>
+
+    ' Model Services
+    package "Optimization Model Services" <<k8s>> {
+        component [Model Service 1\n(Python/Java)] as model1 <<application>>
+        component [Model Service 2\n(Python/Java)] as model2 <<application>>
+        component [Model Service N\n(Python/Java)] as modelN <<application>>
+    }
+}
+
+' External Services
+cloud "Gurobi Web License Service" {
+    component [https://token.gurobi.com:443\nJWT Token Generation] as wls <<external>>
+}
+
+' Monitoring (optional, shown for completeness)
+package "Observability Stack" <<k8s>> {
+    component [Prometheus Metrics] as prometheus <<k8s>>
+    component [Grafana Dashboards] as grafana <<k8s>>
+}
+
+' Relationships - Business Apps to Gateway
+finance --> auth : REST/gRPC
+supply --> auth : REST/gRPC
+logistics --> auth : REST/gRPC
+workforce --> auth : REST/gRPC
+
+' Gateway Internal Flow
+auth --> ratelimit
+ratelimit --> router
+
+' Gateway to Model Services
+router --> model1 : Route requests
+router --> model2 : Route requests
+router --> modelN : Route requests
+
+' Model Services to Cluster Manager
+model1 --> k8slb : Submit optimization jobs
+model2 --> k8slb : Submit optimization jobs
+modelN --> k8slb : Submit optimization jobs
+
+k8slb --> manager : Load balanced connection
+
+' Cluster Manager to Queue
+manager --> queue : Job scheduling
+
+' Queue to Nodes
+queue --> node1 : Distribute jobs\n(thread-based)
+queue --> node2 : Distribute jobs\n(thread-based)
+queue --> node3 : Distribute jobs\n(thread-based)
+queue --> nodeN : Distribute jobs\n(thread-based)
+
+' Nodes to WLS
+node1 ..> wls : HTTPS\nRequest license tokens
+node2 ..> wls : HTTPS\nRequest license tokens
+node3 ..> wls : HTTPS\nRequest license tokens
+nodeN ..> wls : HTTPS\nRequest license tokens
+
+' HPA monitors and scales
+hpa ..> node1 : Monitor & scale
+hpa ..> node2 : Monitor & scale
+hpa ..> node3 : Monitor & scale
+hpa ..> nodeN : Monitor & scale
+
+' Monitoring
+manager --> prometheus : Metrics export
+queue --> prometheus : Queue depth
+node1 --> prometheus : Thread utilization
+prometheus --> grafana : Data source
+
+' Notes
+note right of wls
+  Cryptographic JWT tokens
+  Auto-renewal by containers
+  No machine binding
+end note
+
+note bottom of queue
+  Thread-based load balancing (Gurobi v12+)
+  Greedy allocation to nodes with
+  most available threads
+end note
+
+note right of hpa
+  Auto-scaling triggers:
+  - CPU utilization > 70%
+  - Queue depth > 5 jobs/pod
+  - Custom metrics
+end note
+
+note bottom of model1
+  Models built with Gurobi APIs:
+  Python (gurobipy), Java, C++, .NET
+  Wrapped as microservices
+end note
+
+@enduml
