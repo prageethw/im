@@ -80,7 +80,7 @@ For simplicity, we can assume a similar envelope to Claude Team Premium (order�
 
 ### 4.0 Agents vs headcount (conservative view)
 
-We assume a benchmark fully loaded cost of approximately 100k per year for a senior engineer and a realistic 1,600–1,800 productive hours per year once meetings, context switching, and leave are taken into account. Modern studies on AI coding tools and agentic workflows suggest that, for suitable tasks, developers can see throughput improvements on the order of 20–50%, particularly for boilerplate and well‑scoped changes, but gains are smaller or even negative on complex, ambiguous work.
+We assume a benchmark fully loaded cost of approximately 100k-150k per year for a senior engineer and a realistic 1,600–1,800 productive hours per year once meetings, context switching, and leave are taken into account. Modern studies on AI coding tools and agentic workflows suggest that, for suitable tasks, developers can see throughput improvements on the order of 20–50%, particularly for boilerplate and well‑scoped changes, but gains are smaller or even negative on complex, ambiguous work.
 
 For this proposal, we therefore treat coding agents as providing a **fractional productivity lift**, not as replacements for human engineers:
 
