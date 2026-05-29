@@ -62,7 +62,7 @@ Strict TMF-compatible operations remain:
 | Create specification | `POST /intentManagement/v5/intentSpecification` |
 | List specifications | `GET /intentManagement/v5/intentSpecification` |
 | Retrieve specification | `GET /intentManagement/v5/intentSpecification/{id}` |
-| Partial update specification | `PATCH /intentManagement/v5/intentSpecification/{id}` |
+| Partial update specification | `PATCH /intentManagement/v5/intentSpecification/draft/{draftId}` |
 | Delete specification | `DELETE /intentManagement/v5/intentSpecification/{id}` |
 | Generic hub create/delete | `/hub` exposure where strict TMF gateway routing is required |
 
@@ -70,7 +70,7 @@ Approved platform extensions are:
 
 | **Extension** | **Reason** |
 |---|---|
-| `PUT /intentManagement/v5/intentSpecification/{id}` | Deterministic full replacement of editable `DRAFT` specifications |
+| `PUT /intentManagement/v5/intentSpecification/draft/{draftId}` | Deterministic full replacement of editable `DRAFT` specifications |
 | Domain-scoped `/intentSpecification/hub` routes | Keeps ID MS subscriptions scoped to `IntentSpecification` event notifications |
 | `GET /intentSpecification/hub/{id}` | Operational convenience for retrieving a domain-scoped subscription |
 | `specKey` | Spec-key version governance across related specification versions |
@@ -95,8 +95,8 @@ External `IntentSpecificationCreateEvent`, `IntentSpecificationAttributeValueCha
 | Partial update specification | `PATCH` | `/intentSpecification/{id}` |
 | Delete / remove specification | `DELETE` | `/intentSpecification/{id}` |
 
-`PUT /intentSpecification/{id}` is an intentional platform extension for deterministic full replacement.
-`PATCH /intentSpecification/{id}` remains supported for TMF compatibility, but is discouraged as a general update method.
+`PUT /intentSpecification/draft/{draftId}` is an intentional platform extension for deterministic full replacement.
+`PATCH /intentSpecification/draft/{draftId}` remains supported for TMF compatibility, but is discouraged as a general update method.
 
 ## Hub subscription APIs:
 
@@ -165,7 +165,7 @@ Important:
 - Meaningful change after activation requires a new versioned `IntentSpecification`.
 - `PATCH` is supported for TMF compatibility but discouraged as a general update method.
 - `PUT` is preferred for deterministic full replacement of editable `DRAFT` specifications.
-- Activation is a lifecycle update on `/intentSpecification/{id}`, not a custom `/activate` endpoint.
+- Activation is a lifecycle update on `/intentSpecification/draft/{draftId}`, not a custom `/activate` endpoint.
 - When a new version becomes `ACTIVE`, the previous `ACTIVE` version in the same `specKey` becomes `RETIRED`.
 
 ## ETag / If-Match rules:
@@ -175,8 +175,8 @@ Important:
 | `POST /intentSpecification` | Response must include `ETag` |
 | `GET /intentSpecification/{id}` | Response must include `ETag` |
 | `GET /intentSpecification` | Response should include list-level `ETag` |
-| `PUT /intentSpecification/{id}` | Request must include `If-Match` |
-| `PATCH /intentSpecification/{id}` | Request must include `If-Match` |
+| `PUT /intentSpecification/draft/{draftId}` | Request must include `If-Match` |
+| `PATCH /intentSpecification/draft/{draftId}` | Request must include `If-Match` |
 | `DELETE /intentSpecification/{id}` | Request must include `If-Match` |
 | `POST /intentSpecification/hub` | Response must include `ETag` |
 | `DELETE /intentSpecification/hub/{id}` | Request must include `If-Match` |
@@ -345,7 +345,7 @@ Content-Type: application/json
 {
   "code": "RESOURCE_IMMUTABLE",
   "reason": "ACTIVE_OR_RETIRED_SPECIFICATION_IMMUTABLE",
-  "message": "ACTIVE and RETIRED IntentSpecification resources cannot be materially updated. Create a new versioned DRAFT specification for material contract changes.",
+  "message": "ACTIVE and RETIRED IntentSpecification resources cannot be materially updated. Create a new mutable DRAFT candidate for material contract changes.",
   "status": 409,
   "referenceError": "https://mycsp.com.au/errors/RESOURCE_IMMUTABLE",
   "@type": "Error"
@@ -404,10 +404,10 @@ Activation is a lifecycle update, not a custom action endpoint.
 Do not expose:
 
 ```http
-POST /intentManagement/v5/intentSpecification/{id}/activate
+POST /intentManagement/v5/intentSpecification/{id}/activate  (not exposed)
 ```
 
-Use `PATCH /intentManagement/v5/intentSpecification/{id}` for strict TMF-compatible lifecycle update, or `PUT /intentManagement/v5/intentSpecification/{id}` as the preferred platform extension when the caller sends the full resource.
+Use `PATCH /intentManagement/v5/intentSpecification/draft/{draftId}` for strict TMF-compatible lifecycle update, or `PUT /intentManagement/v5/intentSpecification/draft/{draftId}` as the preferred platform extension when the caller sends the full resource.
 Although `PATCH` is discouraged as a general update method, it is acceptable for this tightly controlled TMF-compatible lifecycle transition.
 
 Rules:
@@ -575,7 +575,7 @@ Delete is an operation/outcome, not a normal lifecycle state.
 | **Transition** | **Allowed** | **Rule** |
 |---|---:|---|
 | Create -> `DRAFT` | Yes | New specifications are created as drafts by default |
-| `DRAFT` -> `ACTIVE` | Yes | Activation makes this version available for new runtime `Intent` creation |
+| `DRAFT` -> `ACTIVE` | Yes | Activation assigns the official version and makes the selected candidate available for new runtime `Intent` creation |
 | `ACTIVE` -> `RETIRED` | Yes | Usually occurs when a newer version becomes active |
 | `DRAFT` -> deleted | Yes, conditional | Allowed only if unused and not referenced |
 | `ACTIVE` -> deleted | No by default | Active specifications are immutable and protected |
@@ -585,7 +585,7 @@ Delete is an operation/outcome, not a normal lifecycle state.
 ### Versioning rules:
 
 - Each meaningful change after activation requires a new versioned `IntentSpecification`.
-- A new version starts as `DRAFT`.
+- A new mutable DRAFT candidate starts as `DRAFT`; official `version` is assigned only on activation.
 - The `specKey` groups related versions of the same specification.
 - Only one version in the same `specKey` should be `ACTIVE` for new runtime intent creation.
 - When a new version becomes `ACTIVE`, the previous active version moves to `RETIRED`.
@@ -766,8 +766,8 @@ If-Match
 Applies to:
 
 ```http
-PUT /intentManagement/v5/intentSpecification/{id}
-PATCH /intentManagement/v5/intentSpecification/{id}
+PUT /intentManagement/v5/intentSpecification/draft/{draftId}
+PATCH /intentManagement/v5/intentSpecification/draft/{draftId}
 DELETE /intentManagement/v5/intentSpecification/{id}
 DELETE /intentManagement/v5/intentSpecification/hub/{id}
 ```
@@ -1481,3 +1481,19 @@ Baseline:
 - Use array-based `targets`, `constraints`, and `preferences` for scalability.
 - Keep simplified object-map examples only where they are deliberately explanatory.
 
+
+
+## Definition-candidate identity model:
+
+ID MS follows the optimiser-definition candidate model:
+
+```text
+specKey -> resolves the stable server-assigned IntentSpecification.id
+draftId -> selects the mutable DRAFT candidate
+id -> selects the official ACTIVE/RETIRED lineage
+version -> official version assigned only on activation
+```
+
+`POST /intentSpecification` creates a mutable DRAFT candidate. The caller must provide `specKey` and must not provide `id`, `draftId`, official `version`, or `lifecycleStatus`. ID MS resolves `id` from `specKey`, assigns a new `draftId`, and returns an ETag for DRAFT revision/concurrency.
+
+DRAFT candidate mutation and activation use `/intentSpecification/draft/{draftId}`. ACTIVE and RETIRED official retrieval uses `/intentSpecification/{id}` and optional `version`. Runtime Intent admission uses concrete ACTIVE `intentSpecification.id`, not `specKey` or `draftId`.

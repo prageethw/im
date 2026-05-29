@@ -52,7 +52,7 @@ The primary ID MS process flows are:
 7. Create, retrieve, and delete external event subscriptions.
 8. Deliver external `IntentSpecification` event notifications by REST webhook callback after successful resource changes.
 
-Activation is a lifecycle update on the resource, not a custom action endpoint. The service must not expose `POST /intentManagement/v5/intentSpecification/{id}/activate`. Strict TMF-compatible clients may use `PATCH`; the preferred platform extension is `PUT` when the caller submits the full resource representation.
+Activation is a lifecycle update on the selected mutable DRAFT candidate, not a custom action endpoint. The service must not expose `POST /intentManagement/v5/intentSpecification/{id}/activate`. Strict TMF-compatible clients may use `PATCH /intentSpecification/draft/{draftId}`; the preferred platform extension is `PUT /intentSpecification/draft/{draftId}` when the caller submits the full DRAFT representation.
 
 ## Solution Elaboration:
 
@@ -167,7 +167,7 @@ The gateway may map the strict deployment prefix to the platform-owned service p
 | List specifications | `GET` | `/intentManagement/v5/intentSpecification` |
 | Retrieve specification by ID | `GET` | `/intentManagement/v5/intentSpecification/{id}` |
 | Full replace specification | `PUT` | `/intentManagement/v5/intentSpecification/{id}` |
-| Partial update specification | `PATCH` | `/intentManagement/v5/intentSpecification/{id}` |
+| Partial update DRAFT candidate specification | `PATCH` | `/intentManagement/v5/intentSpecification/{id}` |
 | Delete specification | `DELETE` | `/intentManagement/v5/intentSpecification/{id}` |
 
 ### Hub subscription API:
@@ -469,7 +469,7 @@ Delete events are emitted only after successful delete and show the last known l
 - Retrieve GET may use private caching.
 - Clients may request a fresh response with `Cache-Control: no-cache`.
 
-### Full update behaviour:
+### Full replace DRAFT candidate behaviour:
 
 - `PUT` is the preferred platform extension for deterministic full replacement of an editable `DRAFT` specification.
 - `PUT` requires `If-Match`.
@@ -477,7 +477,7 @@ Delete events are emitted only after successful delete and show the last known l
 - Missing `If-Match` returns `428 Precondition Required`.
 - Stale or mismatched `If-Match` returns `412 Precondition Failed`.
 
-### Partial update behaviour:
+### Partial update DRAFT candidate behaviour:
 
 - `PATCH` remains available for TMF compatibility.
 - `PATCH` is discouraged as a general update method.
@@ -557,7 +557,7 @@ Consumers of ID MS should rely on these behaviours:
 | No `DELETED` lifecycle state | Closed. Delete is operation/outcome only. |
 | `PUT` support | Closed. `PUT` is an approved platform extension for deterministic full replacement of editable drafts. |
 | `PATCH` position | Closed. Supported for TMF compatibility but discouraged generally. |
-| Activation endpoint | Closed. No custom `/activate`; use lifecycle update through `PUT` or `PATCH`. |
+| Activation endpoint | Closed. No custom `/activate`; activate the selected DRAFT candidate through `PATCH /intentSpecification/draft/{draftId}` or finalising `PUT /intentSpecification/draft/{draftId}`. |
 | Spec key | Closed. Use `specKey`; only one active version per specKey for new runtime creation. |
 | Hub delivery model | Closed. `/intentSpecification/hub` uses REST webhook subscriber listener callback delivery backed by an ID MS-owned local delivery outbox; Kafka is not used for external hub notification delivery. |
 | Event family | Closed. `IntentSpecificationCreateEvent`, `IntentSpecificationAttributeValueChangeEvent`, `IntentSpecificationStatusChangeEvent`, and `IntentSpecificationDeleteEvent`. |
@@ -576,3 +576,12 @@ Consumers of ID MS should rely on these behaviours:
 | Base path | `/intentManagement/v5` |
 | Primary resource | `IntentSpecification` |
 | Primary responsibility | Definition-time `IntentSpecification` catalogue, lifecycle/version governance, syntax contract, and external REST webhook specification-event notifications. |
+
+
+## Definition-candidate baseline:
+
+ID MS follows the optimiser-definition candidate model. `POST /intentSpecification` creates a mutable DRAFT candidate only. The caller supplies `specKey`; ID MS resolves the server-assigned `IntentSpecification.id` from that `specKey` and assigns a new `draftId`. DRAFT candidates do not expose an official public `version`; draft revision is represented by `ETag`.
+
+DRAFT candidate retrieve, replace, patch, activation, and delete operations use `/intentSpecification/draft/{draftId}`. Official ACTIVE/RETIRED retrieval and ACTIVE retirement use `/intentSpecification/{id}`.
+
+Activating a selected DRAFT candidate assigns the official `version`, carries forward `draftId` as provenance, and transactionally retires the previous ACTIVE version for the same resolved `id`. Runtime IC MS admission still requires a concrete ACTIVE `intentSpecification.id` and must not use `specKey` or `draftId` as the contract-selection key.

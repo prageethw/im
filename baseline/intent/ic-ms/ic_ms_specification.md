@@ -2306,3 +2306,8 @@ IC MS accepts and projects runtime Intent resources using the external runtime e
 - `IntentValidatedEvent.body.expression` carries the same canonical semantic buckets internally without the external TMF expression wrapper.
 - IC MS validates syntactic shape against the active ID MS `expressionSpecification` and `targetEntitySchema`.
 - IC MS does not perform semantic/KP validation, optimisation, change execution, or assurance.
+
+
+## IntentSpecification draft-candidate guardrail:
+
+IC MS runtime admission must use a concrete ACTIVE `intentSpecification.id`. It must not use `specKey`, `draftId`, name, IRI-only lookup, or inferred payload shape as the runtime contract-selection key. DRAFT IntentSpecification candidates are not valid runtime contracts and must not be used for new runtime Intent admission.

@@ -71,7 +71,7 @@ note over Client, IDMS
   Specification must be DRAFT.
   If-Match is required.
 end note
-Client -> GW : PUT /intentManagement/v5/intentSpecification/{id}\nIf-Match: "<etag>"\n{ complete IntentSpecification resource }
+Client -> GW : PUT /intentManagement/v5/intentSpecification/draft/{draftId}\nIf-Match: "<etag>"\n{ complete IntentSpecification resource }
 GW -> IDMS : Forward request using system/service identity
 alt Missing If-Match:
   IDMS --> GW : 428 Precondition Required\n{ code: PRECONDITION_REQUIRED, reason: IF_MATCH_REQUIRED }
@@ -103,7 +103,7 @@ note over Client, IDMS
   Specification must be DRAFT.
   If-Match is required.
 end note
-Client -> GW : PATCH /intentManagement/v5/intentSpecification/{id}\nIf-Match: "<etag>"\n{ partial fields }
+Client -> GW : PATCH /intentManagement/v5/intentSpecification/draft/{draftId}\nIf-Match: "<etag>"\n{ partial fields }
 GW -> IDMS : Forward request using system/service identity
 alt Missing If-Match:
   IDMS --> GW : 428 Precondition Required\n{ code: PRECONDITION_REQUIRED, reason: IF_MATCH_REQUIRED }
@@ -127,7 +127,7 @@ note over Client, IDMS
   Active lifecycle values are DRAFT, ACTIVE, and RETIRED.
   DELETED is not an IntentSpecification lifecycleStatus.
 end note
-Client -> GW : PUT or PATCH /intentManagement/v5/intentSpecification/{id}\nIf-Match: "<etag>"\n{ lifecycleStatus: "ACTIVE" }
+Client -> GW : PUT or PATCH /intentManagement/v5/intentSpecification/draft/{draftId}\nIf-Match: "<etag>"\n{ lifecycleStatus: "ACTIVE" }
 GW -> IDMS : Forward request using system/service identity
 alt Missing If-Match:
   IDMS --> GW : 428 Precondition Required
@@ -232,3 +232,8 @@ else If-Match valid:
 end
 
 @enduml
+
+
+/
+Note: ID MS uses specKey -> id, draftId selects mutable DRAFT candidate, and official version is assigned only on activation. Runtime IC MS uses concrete ACTIVE intentSpecification.id, not specKey or draftId.
+/

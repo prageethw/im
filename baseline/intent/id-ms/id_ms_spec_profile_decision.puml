@@ -1,5 +1,5 @@
 @startuml
-title IntentSpecification mandatory profile proposal
+title IntentSpecification draft-candidate profile decision
 
 skinparam shadowing false
 skinparam defaultTextAlignment center
@@ -8,66 +8,36 @@ skinparam ArrowColor #424242
 skinparam RectangleBorderColor #424242
 
 rectangle "TMF921 IntentSpecification\nbase resource model" as TMF #EEF2FF
+rectangle "ID MS governed\ndefinition-candidate model\n\nTMF-aligned, platform-governed" as PROFILE #E8F5E9
 
-rectangle "Intent management entity\nmandatory profile\n\nTMF-aligned, not TMF-minimal" as PROFILE #E8F5E9
+TMF --> PROFILE : ID MS profile defines\nidentity, lifecycle, and mutation rules
 
-TMF --> PROFILE : intent management entity conformance\ndefines minimum mandatory attributes
-
-rectangle "Minimal DRAFT profile" as DRAFT #FFF8E1 {
-  rectangle "Create request minimum\n\n- name\n- version\n- lifecycleStatus = DRAFT\n- isBundle\n- @type\n- @baseType" as DRAFT_REQ
-  rectangle "Persisted response minimum\n\nRequest fields plus:\n- id\n- href" as DRAFT_RESP
-  rectangle "May omit until activation\n\n- validFor.startDateTime\n- expressionSpecification\n- expressionSpecification.iri\n- expressionSpecification.expressionLanguage\n- targetEntitySchema\n- specCharacteristic" as DRAFT_OMIT
+rectangle "Create mutable DRAFT candidate" as DRAFT #FFF8E1 {
+  rectangle "POST /intentSpecification\n\nRequired request fields:\n- specKey\n- name\n- expressionSpecification\n- targetEntitySchema\n- @type\n\nNot accepted:\n- id\n- href\n- draftId\n- version\n- lifecycleStatus" as DRAFT_REQ
+  rectangle "Server assigns\n\n- id resolved from specKey\n- draftId\n- lifecycleStatus = DRAFT\n- ETag for draft revision\n\nDRAFT has no official public version" as DRAFT_RESP
 }
 
-rectangle "Activation gate" as GATE #FFE0B2 {
-  rectangle "Validate ACTIVE minimum profile\n\nReject activation if required\nACTIVE fields are missing\n\nPreferred error:\n422 Unprocessable Entity" as VALIDATE
+rectangle "Mutable DRAFT operations" as DRAFT_OPS #FFE0B2 {
+  rectangle "GET /intentSpecification/draft/{draftId}\nPUT /intentSpecification/draft/{draftId}\nPATCH /intentSpecification/draft/{draftId}\nDELETE /intentSpecification/draft/{draftId}" as DRAFT_ROUTES
+  rectangle "draftId selects the candidate\nIf-Match protects unsafe operations\nPATCH may set lifecycleStatus = ACTIVE" as DRAFT_RULES
 }
 
-rectangle "Minimal ACTIVE profile" as ACTIVE #E0F2F1 {
-  rectangle "Active request / response minimum\n\n- id\n- href\n- name\n- version\n- lifecycleStatus = ACTIVE\n- isBundle\n- validFor.startDateTime\n- expressionSpecification\n- expressionSpecification.iri\n- expressionSpecification.expressionLanguage\n- targetEntitySchema\n- specCharacteristic\n- @type\n- @baseType" as ACTIVE_FIELDS
-  rectangle "Published runtime contract\n\nUsable for discovery, governance,\nvalidation, and runtime resolution" as ACTIVE_CONTRACT
+rectangle "Activation gate" as GATE #FCE4EC {
+  rectangle "Validate full ACTIVE profile\nAssign official version\nCarry draftId as provenance\nRetire previous ACTIVE for same resolved id" as ACTIVATE
 }
 
-rectangle "Recommended but not\nminimum mandatory" as OPTIONAL #F3E5F5 {
-  rectangle "Implementation-specific enrichments\n\n- specKey\n- description\n- relatedParty\n- @schemaLocation\n- validFor.endDateTime\n- schemaVersion / schemaHash\n- _links" as OPTIONAL_FIELDS
+rectangle "Official ACTIVE / RETIRED record" as ACTIVE #E0F2F1 {
+  rectangle "GET /intentSpecification/{id}\nGET /intentSpecification/{id}?version={version}\nDELETE /intentSpecification/{id}" as ACTIVE_ROUTES
+  rectangle "id selects official lineage\nversion selects official historical version\nACTIVE and RETIRED are immutable" as ACTIVE_RULES
 }
 
-rectangle "Runtime intent API\nseparate decision" as RUNTIME #ECEFF1 {
-  rectangle "Runtime request admission rules\nare owned by the runtime Intent profile\n\nSubmitted runtime admission requires\nboth intentSpecification.id\nand expression.iri.\n\nDraft creation can remain lighter." as RUNTIME_RULE
+rectangle "Runtime IC MS guardrail" as RUNTIME #ECEFF1 {
+  rectangle "Runtime admission uses concrete\nACTIVE intentSpecification.id\n\nNot specKey\nNot draftId\nNot IRI-only lookup" as RUNTIME_RULE
 }
 
-PROFILE --> DRAFT : create / edit as DRAFT
-DRAFT --> GATE : request activation
-GATE --> ACTIVE : full ACTIVE profile satisfied
-GATE -[#red,dashed]-> DRAFT : required ACTIVE fields missing
-ACTIVE --> RUNTIME : provides active semantic\nand validation contract
-PROFILE --> OPTIONAL : may add richer\nimplementation profile fields
-
-note right of ACTIVE
-expressionSpecification is mandatory
-for ACTIVE when expressionSpecification.iri
-is mandatory.
-
-targetEntitySchema is the
-machine-readable validation contract.
-
-specCharacteristic is the
-catalogue / governance view.
-end note
-
-note bottom of OPTIONAL
-specKey is useful for grouping related specification versions
-governance, but it is not part of the
-generic minimum mandatory profile.
-end note
-
-note bottom of RUNTIME
-This diagram captures the
-IntentSpecification profile proposal only.
-Runtime Intent mandatory-profile rules
-are aligned to the separate runtime proposal:
-submitted admission requires both
-intentSpecification.id and expression.iri.
-end note
-
+PROFILE --> DRAFT : create candidate
+DRAFT --> DRAFT_OPS : edit candidate
+DRAFT_OPS --> GATE : activate selected draftId
+GATE --> ACTIVE : official version
+ACTIVE --> RUNTIME : runtime contract reference by id
 @enduml
