@@ -320,8 +320,9 @@ Example active/degraded style payload:
         "href": "/intentManagement/v5/intent/INT-HOSP-2026-001"
       },
       "intentSpecification": {
-        "id": "hospital-surgical-slice-spec-v1.20",
-        "href": "/intentManagement/v5/intentSpecification/hospital-surgical-slice-spec-v1.20"
+        "id": "hospital-surgical-slice-spec",
+        "version": "1.20",
+        "href": "/intentManagement/v5/intentSpecification/hospital-surgical-slice-spec?version=1.20"
       }
     }
   }

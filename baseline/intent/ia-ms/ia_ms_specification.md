@@ -185,8 +185,9 @@ content-type: application/json
         "href": "/intentManagement/v5/intent/INT-HOSP-2026-001"
       },
       "intentSpecification": {
-        "id": "hospital-surgical-slice-spec-v1.20",
-        "href": "/intentManagement/v5/intentSpecification/hospital-surgical-slice-spec-v1.20"
+        "id": "hospital-surgical-slice-spec",
+        "version": "1.20",
+        "href": "/intentManagement/v5/intentSpecification/hospital-surgical-slice-spec?version=1.20"
       }
     }
   }
@@ -525,8 +526,9 @@ Do not include `current.evaluations` or `body.evaluations` by default.
         "href": "/intentManagement/v5/intent/INT-HOSP-2026-001"
       },
       "intentSpecification": {
-        "id": "hospital-surgical-slice-spec-v1.20",
-        "href": "/intentManagement/v5/intentSpecification/hospital-surgical-slice-spec-v1.20"
+        "id": "hospital-surgical-slice-spec",
+        "version": "1.20",
+        "href": "/intentManagement/v5/intentSpecification/hospital-surgical-slice-spec?version=1.20"
       }
     }
   }
@@ -666,8 +668,9 @@ This shape lets II MS or another authorised decision component inspect the affec
         "href": "/intentManagement/v5/intent/INT-HOSP-2026-001"
       },
       "intentSpecification": {
-        "id": "hospital-surgical-slice-spec-v1.20",
-        "href": "/intentManagement/v5/intentSpecification/hospital-surgical-slice-spec-v1.20"
+        "id": "hospital-surgical-slice-spec",
+        "version": "1.20",
+        "href": "/intentManagement/v5/intentSpecification/hospital-surgical-slice-spec?version=1.20"
       }
     }
   }
