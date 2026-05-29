@@ -109,7 +109,3 @@ note bottom of UC_Degrade
 end note
 
 @enduml
-
-/
-Note: ID MS uses specKey -> id, draftId selects mutable DRAFT candidate, and official version is assigned only on activation. Runtime IC MS uses concrete ACTIVE intentSpecification.id, not specKey or draftId.
-/

@@ -1,43 +1,33 @@
 @startuml
-title IntentSpecification draft-candidate profile decision
+title IntentSpecification profile decision - specKey, draftId, and official version
 
 skinparam shadowing false
+skinparam roundcorner 12
 skinparam defaultTextAlignment center
-skinparam packageStyle rectangle
-skinparam ArrowColor #424242
-skinparam RectangleBorderColor #424242
 
-rectangle "TMF921 IntentSpecification\nbase resource model" as TMF #EEF2FF
-rectangle "ID MS governed\ndefinition-candidate model\n\nTMF-aligned, platform-governed" as PROFILE #E8F5E9
+rectangle "IntentSpecification Definition Profile" as PROFILE #E3F2FD {
+  rectangle "Create DRAFT candidate request\n\nRequired:\n- specKey\n- name\n- expressionSpecification\n- targetEntitySchema\n- @type\n\nMust not provide:\n- id\n- draftId\n- official version\n- lifecycleStatus\n- server timestamps\n- _links" as CREATE #FFF8E1
 
-TMF --> PROFILE : ID MS profile defines\nidentity, lifecycle, and mutation rules
+  rectangle "Persisted DRAFT candidate\n\n- id resolved from specKey\n- draftId assigned by ID MS\n- lifecycleStatus = DRAFT\n- no official public version\n- ETag is draft revision\n- DRAFT operations use /draft/{draftId}" as DRAFT #FFF8E1
 
-rectangle "Create mutable DRAFT candidate" as DRAFT #FFF8E1 {
-  rectangle "POST /intentSpecification\n\nRequired request fields:\n- specKey\n- name\n- expressionSpecification\n- targetEntitySchema\n- @type\n\nNot accepted:\n- id\n- href\n- draftId\n- version\n- lifecycleStatus" as DRAFT_REQ
-  rectangle "Server assigns\n\n- id resolved from specKey\n- draftId\n- lifecycleStatus = DRAFT\n- ETag for draft revision\n\nDRAFT has no official public version" as DRAFT_RESP
+  rectangle "Activation gate\n\nValidate full candidate\nAssign official version\nCarry draftId as provenance\nRetire previous ACTIVE for same id\nEnforce specKey active-lineage uniqueness" as GATE #FCE4EC
+
+  rectangle "Official ACTIVE/RETIRED record\n\n- selected by /intentSpecification/{id}\n- historical version by ?version=...\n- version present only after activation\n- immutable for material changes" as OFFICIAL #E8F5E9
+
+  rectangle "Runtime admission guardrail\n\nIC MS uses concrete ACTIVE intentSpecification.id\nIC MS must not use specKey or draftId\nDRAFT candidates are not runtime contracts" as RUNTIME #EDE7F6
 }
 
-rectangle "Mutable DRAFT operations" as DRAFT_OPS #FFE0B2 {
-  rectangle "GET /intentSpecification/draft/{draftId}\nPUT /intentSpecification/draft/{draftId}\nPATCH /intentSpecification/draft/{draftId}\nDELETE /intentSpecification/draft/{draftId}" as DRAFT_ROUTES
-  rectangle "draftId selects the candidate\nIf-Match protects unsafe operations\nPATCH may set lifecycleStatus = ACTIVE" as DRAFT_RULES
-}
+CREATE --> DRAFT : POST /intentSpecification
+DRAFT --> GATE : PATCH or PUT /draft/{draftId}
+GATE --> OFFICIAL : activation succeeds
+GATE -[#red,dashed]-> DRAFT : validation fails
+OFFICIAL --> CREATE : material change creates new DRAFT candidate
+OFFICIAL --> RUNTIME : ACTIVE id usable by IC MS
 
-rectangle "Activation gate" as GATE #FCE4EC {
-  rectangle "Validate full ACTIVE profile\nAssign official version\nCarry draftId as provenance\nRetire previous ACTIVE for same resolved id" as ACTIVATE
-}
+note bottom
+specKey resolves the stable server-assigned IntentSpecification.id.
+draftId selects the mutable DRAFT candidate.
+version is official only after activation.
+end note
 
-rectangle "Official ACTIVE / RETIRED record" as ACTIVE #E0F2F1 {
-  rectangle "GET /intentSpecification/{id}\nGET /intentSpecification/{id}?version={version}\nDELETE /intentSpecification/{id}" as ACTIVE_ROUTES
-  rectangle "id selects official lineage\nversion selects official historical version\nACTIVE and RETIRED are immutable" as ACTIVE_RULES
-}
-
-rectangle "Runtime IC MS guardrail" as RUNTIME #ECEFF1 {
-  rectangle "Runtime admission uses concrete\nACTIVE intentSpecification.id\n\nNot specKey\nNot draftId\nNot IRI-only lookup" as RUNTIME_RULE
-}
-
-PROFILE --> DRAFT : create candidate
-DRAFT --> DRAFT_OPS : edit candidate
-DRAFT_OPS --> GATE : activate selected draftId
-GATE --> ACTIVE : official version
-ACTIVE --> RUNTIME : runtime contract reference by id
 @enduml
