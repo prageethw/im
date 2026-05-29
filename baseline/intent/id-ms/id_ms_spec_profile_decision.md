@@ -1,4 +1,4 @@
-# TAF - Decision Proposal IntentSpecification, Minimum data requirements
+# IntentSpecification mandatory profile proposal
 
 | **Document status** | **Value** |
 | --- | --- |
@@ -119,8 +119,8 @@ An `ACTIVE` specification must have enough information to act as a published run
 | `href` | Mandatory on persisted resource | Mandatory | Canonical resource URL for TMF-style navigation and references. |
 | `name` | Mandatory | Mandatory | Human-readable catalogue name. |
 | `version` | Mandatory | Mandatory | Version identity. |
-| `lifecycleStatus` | Mandatory | Mandatory | Identifies whether the specification is draft, active, or retired. |
-| `isBundle` | Mandatory | Mandatory | Clarifies whether the specification is a bundle. |
+| `lifecycleStatus` | Server-managed on create; mandatory on persisted resource | Mandatory | ID MS creates new specifications as `DRAFT`; lifecycle changes are governed after creation. |
+| `isBundle` | Optional on request; mandatory on persisted resource | Mandatory on persisted resource | Defaults to `false` when omitted on create; persisted resources always expose the resolved value. |
 | `validFor.startDateTime` | Optional | Mandatory | Defines when the active contract becomes valid. |
 | `expressionSpecification` | Optional | Mandatory | Defines the expression contract metadata. |
 | `expressionSpecification.iri` | Optional | Mandatory | Authoritative semantic/expression contract identifier. |
@@ -175,12 +175,19 @@ Mandatory fields for a persisted `DRAFT` `IntentSpecification`:
 | `href` | Yes, on persisted resource | Canonical resource URL. |
 | `name` | Yes | Human-readable catalogue name. |
 | `version` | Yes | Version identity. |
-| `lifecycleStatus` | Yes | Must be `DRAFT` for draft specifications. |
-| `isBundle` | Yes | Clarifies whether the specification is a bundle. |
+| `lifecycleStatus` | Yes, on persisted resource | Server-managed on create and set to `DRAFT`. Create requests must not supply it. |
+| `isBundle` | Yes, on persisted resource | Optional in create/update request bodies. If omitted on create, ID MS defaults it to `false`. |
 | `@type` | Yes | TMF polymorphic resource type. |
 | `@baseType` | Yes | TMF base type alignment. |
 
 A `DRAFT` may omit fields that are required later for activation, such as `targetEntitySchema`, complete `specCharacteristic`, or complete `expressionSpecification`, provided the resource is not activated until the ACTIVE profile is satisfied.
+
+Create request rules for `DRAFT`:
+
+- create requests must not supply `lifecycleStatus`; ID MS sets it to `DRAFT`;
+- create requests do not have to supply `isBundle`; ID MS defaults it to `false` when omitted;
+- if `isBundle` is supplied, it must be a boolean;
+- all persisted responses include both `lifecycleStatus` and `isBundle` with the server-resolved values.
 
 ### 5.6 ACTIVE profile:
 
@@ -282,7 +289,7 @@ The examples use a hospital surgical-connectivity scenario only to make the prof
 
 ### 6.1 Minimal DRAFT create request and response:
 
-This example proves the minimum draft-manageability profile. The request does not include `id` or `href` because the intent management entity may generate them during create.
+This example proves the minimum draft-create request profile and the persisted draft-manageability profile. The request does not include `id` or `href` because the intent management entity may generate them during create. The request also does not include `lifecycleStatus` because ID MS creates new specifications as `DRAFT`. The request does not have to include `isBundle`; ID MS defaults it to `false` when omitted.
 
 ```http
 POST /intentManagement/v5/intentSpecification
@@ -294,14 +301,12 @@ Accept: application/json
 {
   "name": "Hospital Surgical Slice Intent Specification",
   "version": "1.19",
-  "lifecycleStatus": "DRAFT",
-  "isBundle": false,
   "@type": "IntentSpecification",
   "@baseType": "EntitySpecification"
 }
 ```
 
-The persisted response includes the generated resource identity and canonical URL.
+The persisted response includes the generated resource identity, canonical URL, server-managed `lifecycleStatus: DRAFT`, and server-resolved `isBundle: false`.
 
 ```http
 HTTP/1.1 201 Created
@@ -575,7 +580,7 @@ This proposal recommends adopting an intent management entity `IntentSpecificati
 
 If accepted, the intent management entity will document and enforce a lifecycle-aware `IntentSpecification` mandatory profile:
 
-- `DRAFT` requires identity and lifecycle-management fields.
+- `DRAFT` persisted resources require identity and lifecycle-management fields; create requests do not supply `lifecycleStatus` and may omit `isBundle`.
 - `ACTIVE` requires the full intent management entity runtime contract profile.
 - `id` is mandatory and immutable on persisted resources.
 - `expressionSpecification` is mandatory for active resources.
@@ -599,7 +604,7 @@ If accepted, the intent management entity will document and enforce a lifecycle-
 After this proposal is reviewed and baselined, update the affected architecture and specification artifacts surgically:
 
 - document the platform mandatory profile
-- clarify DRAFT versus ACTIVE validation
+- clarify DRAFT request versus persisted DRAFT validation
 - clarify `id`, `expressionSpecification`, `expressionSpecification.iri`, and `expressionSpecification.expressionLanguage`
 - clarify activation failure behaviour
 - reference this decision where the mandatory profile is discussed

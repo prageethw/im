@@ -231,8 +231,8 @@ Create request baseline includes:
 - `name`
 - `description`
 - `version`
-- `lifecycleStatus: DRAFT`
-- `isBundle`
+- no caller-supplied `lifecycleStatus`; ID MS creates the resource as `DRAFT`
+- optional `isBundle`; defaults to `false` when omitted
 - `validFor`
 - `relatedParty`
 - `specCharacteristic`
@@ -241,7 +241,7 @@ Create request baseline includes:
 - `@type: IntentSpecification`
 - `@baseType: EntitySpecification`
 
-Create clients must not supply server-generated `_links`.
+Create clients must not supply `lifecycleStatus` or server-generated `_links`.
 
 Success:
 
@@ -256,7 +256,7 @@ Last-Modified: Sat, 18 Apr 2026 02:00:00 GMT
 
 Notes:
 
-- Create normally creates a `DRAFT` specification.
+- Create always creates a `DRAFT` specification in the active baseline.
 - Response returns the full created `IntentSpecification`.
 - Response includes server-assigned `id`, `href`, `Location`, `ETag`, and `_links`.
 - `Location` points to the new resource.

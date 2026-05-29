@@ -253,8 +253,8 @@ Baseline:
 | `name` | Human-readable specification name. |
 | `description` | Definition-time description of the specification purpose. |
 | `version` | Specification version within the family. |
-| `lifecycleStatus` | One of `DRAFT`, `ACTIVE`, or `RETIRED`. |
-| `isBundle` | Indicates whether the specification is a bundle. |
+| `lifecycleStatus` | Server-managed lifecycle value. Create sets this to `DRAFT`; later governed updates may move it to `ACTIVE` or `RETIRED`. |
+| `isBundle` | Indicates whether the specification is a bundle. Optional in request bodies; defaults to `false` on create when omitted; always present in persisted responses. |
 | `validFor` | Validity period metadata. |
 | `relatedParty` | Provider or other related-party metadata. |
 | `specCharacteristic` | High-level characteristic catalogue for discovery/governance. |

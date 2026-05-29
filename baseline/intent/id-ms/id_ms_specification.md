@@ -296,8 +296,6 @@ Accept: application/json
   "name": "Hospital Surgical Slice Intent Specification",
   "description": "Definition-time specification for hospital surgical slice intents. This specification defines the allowed request shape for surgical connectivity intents. It is syntax-first: ID MS validates structure and allowed fields, while II MS and the knowledge plane validate semantic meaning, policy, and fulfilment feasibility.",
   "version": "1.19",
-  "lifecycleStatus": "DRAFT",
-  "isBundle": false,
   "validFor": {
     "startDateTime": "2026-04-18T12:00:00+10:00"
   },
@@ -374,7 +372,7 @@ Accept: application/json
 }
 ```
 
-The client does not send `id`, `href`, `Location`, `ETag`, or `_links`. ID MS generates these values.
+The client does not send `id`, `href`, `lifecycleStatus`, `Location`, `ETag`, or `_links`. ID MS generates these values and creates the resource as `DRAFT`. The client may omit `isBundle`; when omitted on create, ID MS defaults it to `false`.
 
 ### Success response
 
