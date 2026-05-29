@@ -162,6 +162,57 @@ Hub notification delivery is REST webhook delivery to subscriber listener callba
 
 ## 2. Common conventions:
 
+### Expression schema alignment:
+
+The long-term canonical expression-value schema pattern for the Intent domain should align with the TMF Intent Ontology direction and use a scalable JSON-LD-style structure.
+
+For governed `targetEntitySchema` definitions, prefer this top-level shape:
+
+```json
+{
+  "@context": {
+    "intent": "https://example.com/tio/hospital-surgical-slice/v1.0#",
+    "context": "intent:context",
+    "targets": "intent:targets",
+    "constraints": "intent:constraints",
+    "preferences": "intent:preferences"
+  },
+  "@type": "HospitalSurgicalSliceIntentExpressionValue",
+  "context": {
+    "targets": [],
+    "constraints": [],
+    "preferences": []
+  }
+}
+```
+
+Canonical schema direction:
+
+- use `@context` for JSON-LD vocabulary and term mapping
+- use `@type` for the expression-value type
+- use `context.targets[]` for measurable goals or target outcomes
+- use `context.constraints[]` for hard requirements
+- use `context.preferences[]` for soft selection guidance
+- allow the active `IntentSpecification.targetEntitySchema` to specialise permitted target, constraint, and preference entry types
+
+Simplified object-map payloads may still appear in minimum-data explanation examples where readability matters, but they are not the preferred long-term canonical schema shape for governed `targetEntitySchema` definitions.
+
+
+
+### PATCH semantics:
+
+`PATCH` uses JSON Merge Patch semantics.
+
+All external `PATCH` request examples must use:
+
+```http
+Content-Type: application/merge-patch+json
+```
+
+`PATCH` is intended for small targeted updates. For deterministic full replacement of editable Draft resources, use `PUT` where the platform extension is available.
+
+
+
 ### Runtime IntentSpecification and expression IRI resolution rule:
 
 Runtime `Intent` create/update requests must carry `expression.iri`.
@@ -1027,7 +1078,7 @@ Once an Intent leaves `Draft`, full replacement on that submitted version is not
 
 ```http
 PATCH /intentManagement/v5/intent/INT-HOSP-2026-001?fields=id,href,name,submit,intentSpecification,expression,validFor,isBundle,priority,@type,@baseType
-Content-Type: application/json
+Content-Type: application/merge-patch+json
 Accept: application/json
 If-Match: "intent-INT-HOSP-2026-001-v4"
 ```

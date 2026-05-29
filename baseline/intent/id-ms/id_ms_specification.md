@@ -53,6 +53,74 @@ A strict TMF deployment may expose the same API through `/tmf-api/intentManageme
 
 ## 2. Common conventions
 
+### Expression schema alignment:
+
+The long-term canonical expression-value schema pattern for the Intent domain should align with the TMF Intent Ontology direction and use a scalable JSON-LD-style structure.
+
+For governed `targetEntitySchema` definitions, prefer this top-level shape:
+
+```json
+{
+  "@context": {
+    "intent": "https://example.com/tio/hospital-surgical-slice/v1.0#",
+    "context": "intent:context",
+    "targets": "intent:targets",
+    "constraints": "intent:constraints",
+    "preferences": "intent:preferences"
+  },
+  "@type": "HospitalSurgicalSliceIntentExpressionValue",
+  "context": {
+    "targets": [],
+    "constraints": [],
+    "preferences": []
+  }
+}
+```
+
+Canonical schema direction:
+
+- use `@context` for JSON-LD vocabulary and term mapping
+- use `@type` for the expression-value type
+- use `context.targets[]` for measurable goals or target outcomes
+- use `context.constraints[]` for hard requirements
+- use `context.preferences[]` for soft selection guidance
+- allow the active `IntentSpecification.targetEntitySchema` to specialise permitted target, constraint, and preference entry types
+
+Simplified object-map payloads may still appear in minimum-data explanation examples where readability matters, but they are not the preferred long-term canonical schema shape for governed `targetEntitySchema` definitions.
+
+
+
+### IntentSpecification versioning clarification:
+
+`IntentSpecification.version` is a design-time contract version. It is separate from runtime `Intent.version`.
+
+A Draft `IntentSpecification` may carry its intended specification `version` while it is being authored. This is different from Draft runtime `Intent`, which is not assigned a permanent runtime `version` until admission is accepted.
+
+Baseline rules:
+
+- `IntentSpecification.version` identifies the design-time contract version.
+- Draft `IntentSpecification` resources may carry `version` before activation.
+- `ACTIVE` and `RETIRED` `IntentSpecification` resources are immutable for material contract changes.
+- Material change after activation requires a new Draft `IntentSpecification` version.
+- `familyId` is optional/governed. Where used, it groups related specification versions and supports active-version governance.
+- Runtime `Intent.version` identifies the admitted runtime request/projection version and must not be confused with `IntentSpecification.version`.
+
+
+
+### PATCH semantics:
+
+`PATCH` uses JSON Merge Patch semantics.
+
+All external `PATCH` request examples must use:
+
+```http
+Content-Type: application/merge-patch+json
+```
+
+`PATCH` is intended for small targeted updates. For deterministic full replacement of editable Draft resources, use `PUT` where the platform extension is available.
+
+
+
 
 ### Response classification headers:
 
@@ -912,7 +980,7 @@ Use `PATCH` only where a TMF-compatible client cannot use `PUT` or where a tight
 
 ```http
 PATCH /intentManagement/v5/intentSpecification/hospital-surgical-slice-spec-v1.19?fields=id,href,familyId,name,description,version,lifecycleStatus,isBundle,validFor,relatedParty,@type,@baseType
-Content-Type: application/json
+Content-Type: application/merge-patch+json
 Accept: application/json
 If-Match: "intent-spec-hospital-surgical-slice-spec-v1.19-v1"
 ```
@@ -1114,7 +1182,7 @@ Although `PATCH` is discouraged as a general update method, this is an acceptabl
 
 ```http
 PATCH /intentManagement/v5/intentSpecification/hospital-surgical-slice-spec-v1.20?fields=id,href,familyId,name,version,lifecycleStatus,previousActiveSpecification,@type,@baseType
-Content-Type: application/json
+Content-Type: application/merge-patch+json
 Accept: application/json
 If-Match: "intent-spec-hospital-surgical-slice-spec-v1.20-v1"
 ```

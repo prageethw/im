@@ -1421,3 +1421,51 @@ IC MS supports the optional TMF-aligned `fields` query parameter on create/list/
 Unsafe operations requiring optimistic concurrency use `If-Match`. Missing required `If-Match` returns `428 Precondition Required`. Stale or mismatched `If-Match` returns `412 Precondition Failed`.
 
 `DELETE /intent/{id}` remains termination, not physical deletion. The preferred TMF-aligned response for accepted termination is `202 Accepted`; callers can retrieve the retained terminated projection using `GET /intent/{id}`.
+
+
+## PATCH semantics:
+
+`PATCH` uses JSON Merge Patch semantics across the service's external REST API.
+
+All `PATCH` requests must use:
+
+```http
+Content-Type: application/merge-patch+json
+```
+
+`PATCH` is intended for small targeted updates. For deterministic full replacement of editable Draft resources, use `PUT` where the platform extension is available.
+
+
+
+## Expression schema alignment:
+
+Intent domain expression schemas should align with the TMF Intent Ontology direction and use a scalable JSON-LD-style structure.
+
+Preferred governed `expression.expressionValue` shape:
+
+```json
+{
+  "@context": {
+    "intent": "https://example.com/tio/hospital-surgical-slice/v1.0#",
+    "context": "intent:context",
+    "targets": "intent:targets",
+    "constraints": "intent:constraints",
+    "preferences": "intent:preferences"
+  },
+  "@type": "HospitalSurgicalSliceIntentExpressionValue",
+  "context": {
+    "targets": [],
+    "constraints": [],
+    "preferences": []
+  }
+}
+```
+
+Baseline:
+
+- `targetEntitySchema` owns the detailed validation contract.
+- `expressionSpecification.iri` identifies the semantic/expression contract.
+- `specCharacteristic` gives catalogue/discovery summary only.
+- Use array-based `targets`, `constraints`, and `preferences` for scalability.
+- Keep simplified object-map examples only where they are deliberately explanatory.
+

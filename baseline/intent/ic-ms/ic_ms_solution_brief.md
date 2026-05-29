@@ -249,6 +249,52 @@ Accepted domain-scoped platform extension:
 
 The hub routes register REST webhook subscribers. They are not Kafka subscription APIs.
 
+## PATCH semantics:
+
+`PATCH` uses JSON Merge Patch semantics across the service's external REST API.
+
+All `PATCH` requests must use:
+
+```http
+Content-Type: application/merge-patch+json
+```
+
+`PATCH` is intended for small targeted updates. For deterministic full replacement of editable Draft resources, use `PUT` where the platform extension is available.
+
+
+## Expression schema alignment:
+
+Intent domain expression schemas should align with the TMF Intent Ontology direction and use a scalable JSON-LD-style structure.
+
+Preferred governed `expression.expressionValue` shape:
+
+```json
+{
+  "@context": {
+    "intent": "https://example.com/tio/hospital-surgical-slice/v1.0#",
+    "context": "intent:context",
+    "targets": "intent:targets",
+    "constraints": "intent:constraints",
+    "preferences": "intent:preferences"
+  },
+  "@type": "HospitalSurgicalSliceIntentExpressionValue",
+  "context": {
+    "targets": [],
+    "constraints": [],
+    "preferences": []
+  }
+}
+```
+
+Baseline:
+
+- `targetEntitySchema` owns the detailed validation contract.
+- `expressionSpecification.iri` identifies the semantic/expression contract.
+- `specCharacteristic` gives catalogue/discovery summary only.
+- Use array-based `targets`, `constraints`, and `preferences` for scalability.
+- Keep simplified object-map examples only where they are deliberately explanatory.
+
+
 ## Request shape:
 
 A runtime intent create/update request uses the following baseline:

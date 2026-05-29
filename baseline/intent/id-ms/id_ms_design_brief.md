@@ -356,7 +356,7 @@ Content-Type: application/json
 
 ```http
 PATCH /intentManagement/v5/intentSpecification/hospital-surgical-slice-spec-v1.19
-Content-Type: application/json
+Content-Type: application/merge-patch+json
 Accept: application/json
 If-Match: "intent-spec-hospital-surgical-slice-spec-v1.19-v1"
 ```
@@ -1417,3 +1417,67 @@ Use neutral listener paths such as:
 ```text
 https://consumer.example.com/listener/intentSpecification/events
 ```
+
+
+## PATCH semantics:
+
+`PATCH` uses JSON Merge Patch semantics across the service's external REST API.
+
+All `PATCH` requests must use:
+
+```http
+Content-Type: application/merge-patch+json
+```
+
+`PATCH` is intended for small targeted updates. For deterministic full replacement of editable Draft resources, use `PUT` where the platform extension is available.
+
+
+
+## IntentSpecification versioning clarification:
+
+`IntentSpecification.version` is a design-time contract version and is separate from runtime `Intent.version`.
+
+A Draft `IntentSpecification` may carry its intended specification `version` while being authored. This is different from a Draft runtime `Intent`, which is not assigned a permanent runtime `version` until admission is accepted.
+
+Baseline:
+
+- Draft `IntentSpecification` resources may carry `version`.
+- Material change after activation requires a new Draft `IntentSpecification` version.
+- `ACTIVE` and `RETIRED` specifications are immutable for material contract changes.
+- `familyId` is optional/governed; where used, it groups related specification versions.
+- Runtime `Intent.version` and `IntentSpecification.version` are separate concepts.
+
+
+
+## Expression schema alignment:
+
+Intent domain expression schemas should align with the TMF Intent Ontology direction and use a scalable JSON-LD-style structure.
+
+Preferred governed `expression.expressionValue` shape:
+
+```json
+{
+  "@context": {
+    "intent": "https://example.com/tio/hospital-surgical-slice/v1.0#",
+    "context": "intent:context",
+    "targets": "intent:targets",
+    "constraints": "intent:constraints",
+    "preferences": "intent:preferences"
+  },
+  "@type": "HospitalSurgicalSliceIntentExpressionValue",
+  "context": {
+    "targets": [],
+    "constraints": [],
+    "preferences": []
+  }
+}
+```
+
+Baseline:
+
+- `targetEntitySchema` owns the detailed validation contract.
+- `expressionSpecification.iri` identifies the semantic/expression contract.
+- `specCharacteristic` gives catalogue/discovery summary only.
+- Use array-based `targets`, `constraints`, and `preferences` for scalability.
+- Keep simplified object-map examples only where they are deliberately explanatory.
+
