@@ -74,7 +74,7 @@ The intent management entity must be able to answer questions such as:
 - Which semantic contract does the expression follow?
 - Which schema validates the runtime expression body?
 - Is the specification active and within its validity period?
-- Can a runtime intent be resolved by expression IRI when an explicit specification reference is not supplied?
+- Can runtime admission safely validate the supplied `intentSpecification.id` and `expression.iri` against each other?
 - Can event subscribers interpret specification events without an authoritative resource identity?
 
 Therefore, the intent management entity needs a mandatory profile that is stricter than the minimum generic TMF shape.
@@ -86,7 +86,7 @@ The proposal is driven by the following architecture needs:
 | **Driver** | **Need** |
 | --- | --- |
 | TMF alignment | Use the TMF921 resource model and API/event patterns without inventing an incompatible resource shape. |
-| Runtime safety | Prevent activation of specifications that cannot be used for runtime validation or resolution. |
+| Runtime safety | Prevent activation of specifications that cannot be used for runtime validation, semantic contract consistency checks, or downstream resolution. |
 | Governance | Ensure every persisted specification has stable identity, lifecycle status, and version identity. |
 | Discoverability | Ensure active specifications can be discovered and understood by users, portals, and integration consumers. |
 | Validation | Ensure active specifications have a machine-readable validation contract. |
@@ -563,9 +563,11 @@ A child field cannot be mandatory for intent management entity behaviour while t
 
 ### 8.4 Make runtime intentSpecification.id mandatory everywhere:
 
-This is deferred to a separate runtime intent API decision.
+This was previously deferred to the runtime intent API decision.
 
-This proposal mandates `id` on every persisted `IntentSpecification`, but runtime submission rules belong to the runtime intent API. A runtime API may still support resolution by runtime `expression.iri` where it is unambiguous.
+That runtime decision is now baselined: submitted runtime `Intent` admission requires both `intentSpecification.id` and `expression.iri`. Draft creation may remain lighter and may omit both fields until admission is requested.
+
+This proposal still remains focused on the `IntentSpecification` mandatory profile. It mandates `id` on every persisted `IntentSpecification`, while the runtime intent API decision mandates `intentSpecification.id` and `expression.iri` for submitted runtime admission.
 
 ## 9. Proposal outcome:
 
@@ -601,4 +603,4 @@ After this proposal is reviewed and baselined, update the affected architecture 
 - clarify `id`, `expressionSpecification`, `expressionSpecification.iri`, and `expressionSpecification.expressionLanguage`
 - clarify activation failure behaviour
 - reference this decision where the mandatory profile is discussed
-- keep runtime request resolution rules separate from this decision unless explicitly baselined in the runtime intent API
+- keep runtime request admission rules aligned with the runtime intent API baseline: submitted runtime admission requires both `intentSpecification.id` and `expression.iri`, while Draft creation may remain lighter

@@ -10,10 +10,10 @@ skinparam RectangleBorderColor #424242
 rectangle "Runtime Intent\nadmission request" as INTENT #EEF2FF
 
 rectangle "Decision question" as QUESTION #FFF3E0 {
-  rectangle "Should admission require:\n\n1. expression.iri only\n2. intentSpecification.id only\n3. both fields" as Q
+  rectangle "Should admission require:\n\n1. rejected expression.iri-only admission\n2. intentSpecification.id only\n3. both fields" as Q
 }
 
-rectangle "Option 1:\nexpression.iri only" as IRI_ONLY #FFEBEE {
+rectangle "Rejected option 1:\nexpression.iri-only admission" as IRI_ONLY #FFEBEE {
   rectangle "Meaning\n\nExpression declares semantic /\nexpression contract." as IRI_MEANING
   rectangle "Problem\n\nSame IRI can be referenced by\nmultiple ACTIVE IntentSpecifications.\n\nAdmission becomes ambiguous." as IRI_PROBLEM
   rectangle "Decision\n\nRejected" as IRI_REJECTED
@@ -44,7 +44,7 @@ rectangle "Draft handling" as DRAFT #FFF8E1 {
 }
 
 rectangle "Outcome" as OUTCOME #E0F2F1 {
-  rectangle "Runtime admission requires both:\n\n- intentSpecification.id\n- expression.iri\n\nNo admission by IRI alone." as OUTCOME_RULE
+  rectangle "Runtime admission requires both:\n\n- intentSpecification.id\n- expression.iri\n\nNo admission by expression IRI alone." as OUTCOME_RULE
 }
 
 INTENT --> QUESTION

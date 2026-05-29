@@ -33,7 +33,7 @@ rectangle "Recommended but not\nminimum mandatory" as OPTIONAL #F3E5F5 {
 }
 
 rectangle "Runtime intent API\nseparate decision" as RUNTIME #ECEFF1 {
-  rectangle "Runtime request rules are not\ndecided by this profile\n\nA runtime API may require\nintentSpecification.id, or may resolve\nby expression.iri when unambiguous." as RUNTIME_RULE
+  rectangle "Runtime request admission rules\nare owned by the runtime Intent profile\n\nSubmitted runtime admission requires\nboth intentSpecification.id\nand expression.iri.\n\nDraft creation can remain lighter." as RUNTIME_RULE
 }
 
 PROFILE --> DRAFT : create / edit as DRAFT
@@ -65,7 +65,9 @@ note bottom of RUNTIME
 This diagram captures the
 IntentSpecification profile proposal only.
 Runtime Intent mandatory-profile rules
-belong in a separate proposal.
+are aligned to the separate runtime proposal:
+submitted admission requires both
+intentSpecification.id and expression.iri.
 end note
 
 @enduml
