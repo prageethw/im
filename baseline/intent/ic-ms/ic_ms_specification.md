@@ -88,7 +88,7 @@ IC MS therefore has two separate event-delivery paths:
 
 ---
 
-## 1A. TMF compliance and platform extension baseline:
+### 1A. TMF compliance and platform extension baseline:
 
 
 ### Response classification headers:
