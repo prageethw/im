@@ -35,18 +35,26 @@ end note
 
 == 1. Runtime Intent Creation ==
 
-Consumer -> GW : POST /intentManagement/v5/intent\n{ intentSpecification.id, expression, ... }
+note over Consumer, ICMS
+Draft creation remains light.
+When submit: false, intentSpecification.id and expression.iri may be omitted until admission is requested.
+When submit is true or omitted on initial create, submitted admission requires both intentSpecification.id and expression.iri.
+end note
+
+Consumer -> GW : POST /intentManagement/v5/intent\n{ submit: true, intentSpecification.id, expression.iri, expression, ... }
 GW -> ICMS : mTLS forward request\n(system/service context)
 
 group TMF-compliant resource and syntax validation
+  ICMS -> ICMS : require intentSpecification.id and expression.iri\nfor submitted admission
   ICMS -> IDMS : GET /intentManagement/v5/intentSpecification/{id}\nverify referenced specification is ACTIVE
-  IDMS --> ICMS : IntentSpecification { lifecycleStatus: ACTIVE, schema/definition }
+  IDMS --> ICMS : IntentSpecification { lifecycleStatus: ACTIVE, expressionSpecification.iri, schema/definition }
   ICMS -> ICMS : validate TMF-compliant Intent resource shape
+  ICMS -> ICMS : confirm request expression.iri matches\nIntentSpecification.expressionSpecification.iri
   ICMS -> ICMS : validate expression syntax against active IntentSpecification
 end
 
 alt Validation fails
-  ICMS --> GW : 422 Unprocessable Entity\n{ code: VALIDATION_FAILED, errors: [...] }
+  ICMS --> GW : 422 Unprocessable Entity\n{ code: VALIDATION_FAILED, reason: INTENT_SPECIFICATION_ID_REQUIRED / EXPRESSION_IRI_REQUIRED / INTENT_EXPRESSION_IRI_MISMATCH / ... }
   GW --> Consumer : 422 VALIDATION_FAILED
 else Validation succeeds
   group Atomic DB transaction
@@ -82,7 +90,7 @@ Unsafe operations require If-Match header.
 A newer version must not be created if an existing newer candidate version is already Acknowledged or InProgress.
 end note
 
-Consumer -> GW : PUT /intentManagement/v5/intent/{id}\nor PATCH /intentManagement/v5/intent/{id}\nHeaders: If-Match: "{currentETag}"
+Consumer -> GW : PUT /intentManagement/v5/intent/{id}\nor PATCH /intentManagement/v5/intent/{id}\nHeaders: If-Match: "{currentETag}"\nPATCH Content-Type: application/merge-patch+json
 GW -> ICMS : mTLS forward request\n(system/service context)
 ICMS -> STORE : fetch current Intent record, version history, ETag
 STORE --> ICMS : { intent, versions, etag }
@@ -98,8 +106,11 @@ else Existing newer candidate is Acknowledged or InProgress
   GW --> Consumer : 409 Conflict
 else ETag matches and no newer candidate is in flight
   group TMF-compliant validation
-    ICMS -> IDMS : validate updated expression against active IntentSpecification
-    IDMS --> ICMS : validation result
+    ICMS -> ICMS : if submitting Draft, require\nintentSpecification.id and expression.iri
+    ICMS -> IDMS : GET /intentManagement/v5/intentSpecification/{id}\nverify ACTIVE and load schema
+    IDMS --> ICMS : IntentSpecification { lifecycleStatus: ACTIVE, expressionSpecification.iri, schema/definition }
+    ICMS -> ICMS : confirm request expression.iri matches\nIntentSpecification.expressionSpecification.iri
+    ICMS -> ICMS : validate updated expression against active IntentSpecification
   end
 
   alt Meaningful runtime content change
