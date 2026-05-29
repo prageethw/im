@@ -325,8 +325,7 @@ Example explicit specification reference:
 ```json
 {
   "intentSpecification": {
-    "id": "hospital-surgical-slice-spec",
-    "version": "1.20"
+    "id": "hospital-surgical-slice-spec"
   },
   "expression": {
     "iri": "https://mycsp.com.au/tio/hospital-surgical-slice/v1.0"
@@ -639,8 +638,7 @@ Canonical message intent:
     "intentVersion": "v1",
     "lifecycleStatus": "Acknowledged",
     "intentSpecification": {
-      "id": "hospital-surgical-slice-spec",
-      "version": "1.20"
+      "id": "hospital-surgical-slice-spec"
     },
     "expression": {
       "@type": "JsonLdExpression",
@@ -868,3 +866,8 @@ Internal consumers can rely on `IntentValidatedEvent` as the admitted runtime in
 | Primary resource | `Intent` |
 | Secondary resource | `IntentReport` |
 | Primary responsibility | TMF-compliant runtime `Intent` controller, syntactic admission, lifecycle/status projection, and external runtime intent events |
+
+
+## IntentSpecification draft-candidate guardrail:
+
+IC MS runtime admission must use a concrete ACTIVE `intentSpecification.id`. It must not use `specKey`, `draftId`, name, IRI-only lookup, or inferred payload shape as the runtime contract-selection key. DRAFT IntentSpecification candidates are not valid runtime contracts and must not be used for new runtime Intent admission.

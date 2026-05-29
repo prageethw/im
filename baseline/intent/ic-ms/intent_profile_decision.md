@@ -158,6 +158,10 @@ Draft creation does not require:
 - `expression.expressionValue`
 - `intentSpecification.id`
 
+`isBundle` is optional in Draft creation requests. If omitted, IC MS defaults it to `false`.
+
+External consumers must not supply `lifecycleStatus` in Draft creation requests. IC MS assigns `lifecycleStatus: Draft` in the persisted response.
+
 Minimal Draft creation request payload:
 
 ```json
@@ -200,6 +204,7 @@ Minimum Draft creation response attributes:
 | `lifecycleStatus` | Mandatory with value `Draft` | Entity-assigned Draft state. |
 | `statusReason` | Mandatory | Human-readable reason for Draft state. |
 | `statusChangeDate` | Mandatory | Timestamp of Draft state assignment/update. |
+| `isBundle` | Mandatory with server-resolved value | Defaults to `false` when omitted from the request. |
 | `@type` | Mandatory | TMF polymorphic resource type. |
 | `@baseType` | Mandatory | TMF base type alignment. |
 
@@ -214,6 +219,7 @@ Minimum Draft creation response payload:
   "lifecycleStatus": "Draft",
   "statusReason": "Intent saved as draft and not submitted for admission.",
   "statusChangeDate": "2026-04-18T12:00:00+10:00",
+  "isBundle": false,
   "@type": "Intent",
   "@baseType": "Entity"
 }
@@ -231,6 +237,7 @@ Recommended Draft creation response payload with `humanExpression` when supplied
   "lifecycleStatus": "Draft",
   "statusReason": "Intent saved as draft and not submitted for admission.",
   "statusChangeDate": "2026-04-18T12:00:00+10:00",
+  "isBundle": false,
   "@type": "Intent",
   "@baseType": "Entity"
 }
@@ -263,6 +270,7 @@ A persisted `Intent` response after admission is accepted must include:
 - `lifecycleStatus`
 - `statusReason`
 - `statusChangeDate`
+- `isBundle`
 - `intentSpecification.id`
 - `expression`
 - `expression.@type`
@@ -285,7 +293,7 @@ Optional enrichment fields are useful, but they are not part of the generic mini
 | `intentSpecification.id` in admission request | **Mandatory for submitted admission** | Selects the exact active platform-managed `IntentSpecification` used for validation, governance, and audit. |
 | `description` | Optional | Useful for extra human-readable context. |
 | `validFor.startDateTime` | Optional | Useful when the runtime intent should be valid from a specific time. |
-| `isBundle` | Optional | Useful where bundled intent behaviour is supported. |
+| `isBundle` | Optional on request; defaults to `false` when omitted | Useful where bundled intent behaviour is supported. Persisted responses include the server-resolved value. |
 | `priority` | Optional | Useful where priority is handled as policy or operational guidance. |
 | `relatedParty` | Optional | Useful for requester, customer, or provider attribution. |
 | `_links` | Optional | Useful for discoverable operation affordances. |
@@ -300,6 +308,8 @@ External consumers must not supply `lifecycleStatus` in any external write reque
 
 `lifecycleStatus` is assigned, transitioned, and projected by the intent management entity.
 
+`isBundle` is not mandatory in external write requests. If omitted on create, IC MS defaults it to `false`; persisted responses include the server-resolved value.
+
 ## 6. Examples:
 
 The examples use a hospital surgical-connectivity scenario only to make the profile concrete. Draft request/response payloads are shown in sections 5.3 and 5.4. This section focuses on admission and the persisted response after admission.
@@ -313,8 +323,7 @@ This example supplies both `intentSpecification.id` and `expression.iri`, becaus
   "name": "Sydney Hospital Surgical Connection Intent",
   "humanExpression": "I need a surgical connection in Sydney Hospital with latency less than or equal to 10 ms and availability at least 99.99%.",
   "intentSpecification": {
-    "id": "hospital-surgical-slice-spec",
-    "version": "1.20"
+    "id": "hospital-surgical-slice-spec"
   },
   "expression": {
     "@type": "JsonLdExpression",
@@ -354,9 +363,9 @@ This example supplies both `intentSpecification.id` and `expression.iri`, becaus
   "lifecycleStatus": "Acknowledged",
   "statusReason": "Intent accepted for admission processing.",
   "statusChangeDate": "2026-04-18T12:10:00+10:00",
+  "isBundle": false,
   "intentSpecification": {
-    "id": "hospital-surgical-slice-spec",
-    "version": "1.20"
+    "id": "hospital-surgical-slice-spec"
   },
   "expression": {
     "@type": "JsonLdExpression",
@@ -435,13 +444,14 @@ This proposal recommends adopting a runtime `Intent` mandatory profile baseline.
 If accepted, the intent management entity will document and enforce:
 
 - runtime Intent admission requires `name`, `intentSpecification.id`, `expression`, `expression.@type`, `expression.iri`, `expression.expressionValue`, `@type`, and `@baseType`
-- persisted Intent response after admission requires identity, lifecycle projection, resolved `intentSpecification.id`, expression, `@type`, and `@baseType`
+- persisted Intent response after admission requires identity, lifecycle projection, server-resolved `isBundle`, resolved `intentSpecification.id`, expression, `@type`, and `@baseType`
 - Draft creation requires only `name`, `submit: false`, `@type`, and `@baseType`
-- Draft creation response requires identity, Draft lifecycle projection, `submit: false`, `@type`, and `@baseType`; it does not require a permanent runtime `version`
+- Draft creation response requires identity, Draft lifecycle projection, server-resolved `isBundle`, `submit: false`, `@type`, and `@baseType`; it does not require a permanent runtime `version`
 - `humanExpression` is strongly recommended for admission, but not generically mandatory
 - `intentSpecification.id` is mandatory in both the admission request and the persisted response after admission is accepted
 - optional enrichment fields remain separate from the generic minimum mandatory profile
 - `lifecycleStatus` must not be supplied in any external write request
+- `isBundle` is optional in request bodies and defaults to `false` when omitted
 
 ## 10. References:
 
