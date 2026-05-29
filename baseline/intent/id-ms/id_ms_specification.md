@@ -1,6 +1,4 @@
-# ID MS Specfication
-
-## ID MS Specification
+# ID MS Specification:
 
 ### Service identity
 
@@ -106,7 +104,7 @@ Baseline rules:
 - `ACTIVE` and `RETIRED` `IntentSpecification` resources are immutable for material contract changes.
 - Runtime `Intent.version` identifies the admitted runtime request/projection version and must not be confused with `IntentSpecification.version`.
 
-### PATCH semantics:### PATCH semantics:
+### PATCH semantics:
 
 `PATCH` uses JSON Merge Patch semantics.
 
