@@ -876,8 +876,9 @@ Accept: application/json
   "statusReason": "Intent version v2 is active and assurance is healthy.",
   "statusChangeDate": "2026-04-18T12:20:00+10:00",
   "intentSpecification": {
-    "id": "hospital-surgical-slice-spec-v1.20",
-    "href": "/intentManagement/v5/intentSpecification/hospital-surgical-slice-spec-v1.20"
+    "id": "hospital-surgical-slice-spec",
+    "version": "1.20",
+    "href": "/intentManagement/v5/intentSpecification/hospital-surgical-slice-spec?version=1.20"
   },
   "@type": "Intent",
   "@baseType": "Entity"
@@ -1361,8 +1362,3 @@ Baseline:
 - Use array-based `targets`, `constraints`, and `preferences` for scalability.
 - Keep simplified object-map examples only where they are deliberately explanatory.
 
-
-
-## IntentSpecification draft-candidate guardrail:
-
-IC MS runtime admission must use a concrete ACTIVE `intentSpecification.id`. It must not use `specKey`, `draftId`, name, IRI-only lookup, or inferred payload shape as the runtime contract-selection key. DRAFT IntentSpecification candidates are not valid runtime contracts and must not be used for new runtime Intent admission.

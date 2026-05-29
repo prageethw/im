@@ -160,7 +160,8 @@ content-type: application/json
     "lifecycleStatus": "Acknowledged",
     "statusReason": "Intent request passed IC MS admission validation and was admitted for downstream processing.",
     "intentSpecification": {
-      "id": "hospital-surgical-slice-spec"
+      "id": "hospital-surgical-slice-spec",
+      "version": "1.20"
     },
     "expression": {
       "iri": "https://mycsp.com.au/tio/hospital-surgical-slice/v1.0",
@@ -195,7 +196,8 @@ content-type: application/json
       },
       "intentSpecification": {
         "id": "hospital-surgical-slice-spec",
-        "href": "/intentManagement/v5/intentSpecification/hospital-surgical-slice-spec"
+        "version": "1.20",
+        "href": "/intentManagement/v5/intentSpecification/hospital-surgical-slice-spec?version=1.20"
       }
     }
   }
@@ -266,7 +268,8 @@ content-type: application/json
       },
       "intentSpecification": {
         "id": "hospital-surgical-slice-spec",
-        "href": "/intentManagement/v5/intentSpecification/hospital-surgical-slice-spec"
+        "version": "1.20",
+        "href": "/intentManagement/v5/intentSpecification/hospital-surgical-slice-spec?version=1.20"
       },
       "knowledgePlane": {
         "configId": "hospital-surgical-slice-kp-v1",
@@ -351,7 +354,8 @@ content-type: application/json
       },
       "intentSpecification": {
         "id": "hospital-surgical-slice-spec",
-        "href": "/intentManagement/v5/intentSpecification/hospital-surgical-slice-spec"
+        "version": "1.20",
+        "href": "/intentManagement/v5/intentSpecification/hospital-surgical-slice-spec?version=1.20"
       },
       "knowledgePlane": {
         "configId": "hospital-surgical-slice-kp-v1",
@@ -584,7 +588,8 @@ content-type: application/json
       },
       "intentSpecification": {
         "id": "hospital-surgical-slice-spec",
-        "href": "/intentManagement/v5/intentSpecification/hospital-surgical-slice-spec"
+        "version": "1.20",
+        "href": "/intentManagement/v5/intentSpecification/hospital-surgical-slice-spec?version=1.20"
       },
       "knowledgePlane": {
         "configId": "hospital-surgical-slice-kp-v1",
@@ -656,7 +661,8 @@ content-type: application/json
       },
       "intentSpecification": {
         "id": "hospital-surgical-slice-spec",
-        "href": "/intentManagement/v5/intentSpecification/hospital-surgical-slice-spec"
+        "version": "1.20",
+        "href": "/intentManagement/v5/intentSpecification/hospital-surgical-slice-spec?version=1.20"
       },
       "knowledgePlane": {
         "configId": "hospital-surgical-slice-kp-v1",
@@ -783,7 +789,8 @@ content-type: application/json
       },
       "intentSpecification": {
         "id": "hospital-surgical-slice-spec",
-        "href": "/intentManagement/v5/intentSpecification/hospital-surgical-slice-spec"
+        "version": "1.20",
+        "href": "/intentManagement/v5/intentSpecification/hospital-surgical-slice-spec?version=1.20"
       },
       "knowledgePlane": {
         "configId": "hospital-surgical-slice-kp-v1",
@@ -909,7 +916,8 @@ IA MS reports curated assurance/apply/runtime outcome truth. IC MS consumes this
       },
       "intentSpecification": {
         "id": "hospital-surgical-slice-spec",
-        "href": "/intentManagement/v5/intentSpecification/hospital-surgical-slice-spec"
+        "version": "1.20",
+        "href": "/intentManagement/v5/intentSpecification/hospital-surgical-slice-spec?version=1.20"
       }
     }
   }
@@ -997,7 +1005,8 @@ IA MS reports curated assurance/apply/runtime outcome truth. IC MS consumes this
       },
       "intentSpecification": {
         "id": "hospital-surgical-slice-spec",
-        "href": "/intentManagement/v5/intentSpecification/hospital-surgical-slice-spec"
+        "version": "1.20",
+        "href": "/intentManagement/v5/intentSpecification/hospital-surgical-slice-spec?version=1.20"
       }
     }
   }

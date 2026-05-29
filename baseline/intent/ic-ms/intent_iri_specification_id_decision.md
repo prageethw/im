@@ -177,7 +177,8 @@ This means the intent management entity does not infer the governing runtime con
 {
   "name": "Sydney Hospital Surgical Connection Intent",
   "intentSpecification": {
-    "id": "hospital-surgical-slice-spec-v1.20"
+    "id": "hospital-surgical-slice-spec",
+    "version": "1.20"
   },
   "expression": {
     "@type": "JsonLdExpression",
@@ -206,7 +207,7 @@ This means the intent management entity does not infer the governing runtime con
 }
 ```
 
-This request is valid only if `hospital-surgical-slice-spec-v1.20` is active and its `expressionSpecification.iri` equals:
+This request is valid only if `hospital-surgical-slice-spec` version `1.20` is active and its `expressionSpecification.iri` equals:
 
 ```text
 https://example.com/tio/hospital-surgical-slice/v1.0
@@ -243,7 +244,8 @@ MISSING_INTENT_SPECIFICATION_ID
 {
   "name": "Sydney Hospital Surgical Connection Intent",
   "intentSpecification": {
-    "id": "hospital-surgical-slice-spec-v1.20"
+    "id": "hospital-surgical-slice-spec",
+    "version": "1.20"
   },
   "expression": {
     "@type": "JsonLdExpression",

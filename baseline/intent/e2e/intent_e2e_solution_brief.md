@@ -68,7 +68,7 @@ The canonical runtime semantic model uses the same buckets through the pipeline:
 
 ### Define intent capability:
 
-An authorised specification owner creates a new `IntentSpecification` as a `DRAFT` resource in ID MS. The specification defines the governed expression contract, schema references, lifecycle metadata, related parties, and version identity.
+An authorised specification owner creates a new mutable `IntentSpecification` DRAFT candidate in ID MS. `specKey` resolves the stable server-assigned `IntentSpecification.id`; `draftId` selects the mutable DRAFT candidate; official `version` is assigned only on activation. The specification defines the governed expression contract, schema references, lifecycle metadata, related parties, and version identity.
 
 ### Activate intent capability:
 
@@ -76,7 +76,7 @@ An authorised governance actor promotes a draft specification version to `ACTIVE
 
 ### Create runtime intent:
 
-An external consumer or OEX submits a runtime `Intent` to IC MS. IC MS validates syntax, confirms the request carries both an active `IntentSpecification.id` and mandatory `expression.iri`, persists the admitted intent, projects `Acknowledged`, and emits `IntentValidatedEvent`.
+An external consumer or OEX submits a runtime `Intent` to IC MS. External consumers use `submit`, not `lifecycleStatus`, to request Draft save versus admission. IC MS validates syntax, confirms the submitted request carries both an active `IntentSpecification.id` and mandatory `expression.iri`, defaults omitted `isBundle` to `false`, persists the admitted intent, projects `Acknowledged`, and emits `IntentValidatedEvent`.
 
 ### Interpret and resolve intent:
 
@@ -180,14 +180,14 @@ ID MS and IC MS hub notifications are REST webhook callbacks with TMF-aligned ev
 ### Definition-time process:
 
 ```text
-1. Authorised actor creates DRAFT IntentSpecification in ID MS.
-2. ID MS validates definition-time resource shape and schema references.
-3. ID MS persists the specification and emits IntentSpecificationCreateEvent.
-4. Authorised actor updates the draft using PUT or controlled PATCH.
-5. Authorised actor promotes the draft to ACTIVE through lifecycle update.
-6. ID MS retires the previous active version in the same specKey.
-7. ID MS emits IntentSpecificationStatusChangeEvent for activation and retirement.
-8. IC MS and other authorised consumers use the active specification for runtime validation.
+1. Authorised actor creates a mutable DRAFT IntentSpecification candidate in ID MS using `POST /intentSpecification` with mandatory `specKey`.
+2. ID MS resolves the server-assigned `IntentSpecification.id` from `specKey`, assigns a new `draftId`, validates definition-time resource shape and schema references, and persists the DRAFT candidate.
+3. ID MS emits `IntentSpecificationCreateEvent` for the created DRAFT candidate where external notification is enabled.
+4. Authorised actor updates the selected DRAFT candidate using `PUT /intentSpecification/draft/{draftId}` or controlled `PATCH /intentSpecification/draft/{draftId}`.
+5. Authorised actor promotes the selected DRAFT candidate to ACTIVE through `PATCH /intentSpecification/draft/{draftId}` or finalising `PUT /intentSpecification/draft/{draftId}`.
+6. ID MS assigns the official version during activation, carries forward `draftId` as provenance, and retires the previous ACTIVE version for the same resolved `id`.
+7. ID MS emits `IntentSpecificationStatusChangeEvent` for activation and retirement.
+8. IC MS and other authorised consumers use only the ACTIVE official specification selected by concrete `intentSpecification.id` for runtime validation.
 ```
 
 ### Runtime intent process:
@@ -213,7 +213,7 @@ ID MS and IC MS hub notifications are REST webhook callbacks with TMF-aligned ev
 
 External consumers and OEX discover supported intent capabilities by reading `IntentSpecification` resources from ID MS. The default list response should remain lightweight. Full specification details, including `specCharacteristic`, `expressionSpecification`, and `targetEntitySchema`, are retrieved from the single-resource endpoint or requested through `fields` where supported.
 
-Only `ACTIVE` specification versions are valid for creating new runtime intents. `DRAFT` versions are for governance and editing. `RETIRED` versions are retained for audit/history and existing references, but are not used for new runtime creation.
+Only `ACTIVE` official specification versions are valid for creating new runtime intents. `DRAFT` candidates are for governance and editing, selected by `draftId`, and have no official public version until activation. `RETIRED` official versions are retained for audit/history and existing references, but are not used for new runtime creation.
 
 ## Create intent specification:
 
@@ -223,17 +223,17 @@ ID MS exposes:
 POST /intentManagement/v5/intentSpecification
 ```
 
-Successful creation returns `201 Created`, a server-resolved `id`, server-assigned `draftId`, DRAFT `href`, `Location`, `ETag`, and lifecycle-aware links. Created specifications are mutable DRAFT candidates. ID MS does not accept caller-supplied `id`, `href`, `draftId`, official `version`, `lifecycleStatus`, `Location`, `ETag`, or `_links` on create.
+Successful creation normally returns `201 Created`, a server-generated `id`, `href`, `Location`, `ETag`, and lifecycle-aware links. Created specifications normally start in `DRAFT`. ID MS does not accept caller-supplied server-generated fields such as `id`, `href`, `Location`, `ETag`, or `_links` on create.
 
 ## Activate intent specification:
 
-Activation is a lifecycle update on the selected DRAFT candidate addressed by `draftId`. The platform must not expose a custom activation action, such as:
+Activation is a lifecycle update on the resource. The platform must not expose a custom activation action, such as:
 
 ```http
 POST /intentManagement/v5/intentSpecification/{id}/activate
 ```
 
-The preferred platform update path is deterministic full replacement through `PUT /intentSpecification/draft/{draftId}` for editable DRAFT candidates, with `PATCH /intentSpecification/draft/{draftId}` retained for TMF compatibility and controlled small updates or activation. Unsafe state-changing operations require `If-Match`.
+The preferred platform update path is deterministic full replacement through `PUT` for editable drafts, with `PATCH` retained for TMF compatibility and controlled small updates. Unsafe state-changing operations require `If-Match`.
 
 `PATCH` uses JSON Merge Patch semantics and full PATCH request examples must use `Content-Type: application/merge-patch+json`.
 
@@ -257,12 +257,14 @@ IC MS validates:
 
 - request resource shape;
 - required fields;
+- that external consumers have not supplied `lifecycleStatus`;
+- optional `isBundle`, defaulting it to `false` when omitted on create;
 - reference to a concrete active `IntentSpecification.id`;
 - mandatory `expression.iri` matching the selected specification's expression contract;
 - runtime expression shape against the active specification contract;
 - basic external authorisation context passed by the gateway/security layer.
 
-IC MS does not validate semantic feasibility, network topology, resource suitability, or assurance success. After successful admission, IC MS persists the intent, sets the projected lifecycle to `Acknowledged`, and emits `IntentValidatedEvent`. II MS then performs semantic interpretation and service-ready preparation.
+IC MS does not validate semantic feasibility, network topology, resource suitability, or assurance success. After successful admission, IC MS persists the intent with the server-resolved `isBundle` value, sets the projected lifecycle to `Acknowledged`, and emits `IntentValidatedEvent`. II MS then performs semantic interpretation and service-ready preparation.
 
 Where an optimiser component is used, `IntentResolvedEvent` can hand off a full candidate set to the optimiser, and II MS can consume the selected outcome before producing `IntentNetworkReadyEvent`.
 
@@ -558,12 +560,10 @@ Expected platform controls include:
 |---|---:|---|
 | Create specification | `POST` | `/intentManagement/v5/intentSpecification` |
 | List specifications | `GET` | `/intentManagement/v5/intentSpecification` |
-| Retrieve official specification | `GET` | `/intentManagement/v5/intentSpecification/{id}` |
-| Retrieve draft specification | `GET` | `/intentManagement/v5/intentSpecification/draft/{draftId}` |
-| Full replace draft specification | `PUT` | `/intentManagement/v5/intentSpecification/draft/{draftId}` |
-| Partial update or activate draft specification | `PATCH` | `/intentManagement/v5/intentSpecification/draft/{draftId}` |
-| Retire current active specification | `DELETE` | `/intentManagement/v5/intentSpecification/{id}` |
-| Delete unused draft specification | `DELETE` | `/intentManagement/v5/intentSpecification/draft/{draftId}` |
+| Retrieve specification | `GET` | `/intentManagement/v5/intentSpecification/{id}` |
+| Full replace specification | `PUT` | `/intentManagement/v5/intentSpecification/{id}` |
+| Partial update specification | `PATCH` | `/intentManagement/v5/intentSpecification/{id}` |
+| Delete draft specification | `DELETE` | `/intentManagement/v5/intentSpecification/{id}` |
 | Create specification event subscription | `POST` | `/intentManagement/v5/intentSpecification/hub` |
 | Retrieve specification subscription | `GET` | `/intentManagement/v5/intentSpecification/hub/{id}` |
 | Delete specification subscription | `DELETE` | `/intentManagement/v5/intentSpecification/hub/{id}` |
