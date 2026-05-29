@@ -43,7 +43,7 @@ Definition-time concern:
 Runtime concern:
 
 - IC MS exposes runtime `Intent` and `IntentReport` APIs.
-- Runtime intent creation is accepted only after basic TMF resource validation, active specification reference validation, and expression-shape validation.
+- Runtime intent creation is accepted only after basic TMF resource validation, active `IntentSpecification.id` reference validation, mandatory `expression.iri` validation, and expression-shape validation.
 - II MS performs semantic interpretation and Knowledge Plane-backed capability validation.
 - IA MS owns runtime assurance truth after service-ready configuration, callbacks, and observation metrics are available.
 - ICB MS is a narrow ingestion adapter for external source callbacks.
@@ -76,7 +76,7 @@ An authorised governance actor promotes a draft specification version to `ACTIVE
 
 ### Create runtime intent:
 
-An external consumer or OEX submits a runtime `Intent` to IC MS. IC MS validates syntax, confirms the request references an active `IntentSpecification.id`, persists the admitted intent, projects `Acknowledged`, and emits `IntentValidatedEvent`.
+An external consumer or OEX submits a runtime `Intent` to IC MS. IC MS validates syntax, confirms the request carries both an active `IntentSpecification.id` and mandatory `expression.iri`, persists the admitted intent, projects `Acknowledged`, and emits `IntentValidatedEvent`.
 
 ### Interpret and resolve intent:
 
@@ -235,6 +235,8 @@ POST /intentManagement/v5/intentSpecification/{id}/activate
 
 The preferred platform update path is deterministic full replacement through `PUT` for editable drafts, with `PATCH` retained for TMF compatibility and controlled small updates. Unsafe state-changing operations require `If-Match`.
 
+`PATCH` uses JSON Merge Patch semantics and full PATCH request examples must use `Content-Type: application/merge-patch+json`.
+
 Activation rules:
 
 - Only `DRAFT` can become `ACTIVE`.
@@ -256,6 +258,7 @@ IC MS validates:
 - request resource shape;
 - required fields;
 - reference to a concrete active `IntentSpecification.id`;
+- mandatory `expression.iri` matching the selected specification's expression contract;
 - runtime expression shape against the active specification contract;
 - basic external authorisation context passed by the gateway/security layer.
 
@@ -727,6 +730,7 @@ Internal runtime event expression should preserve the same semantic grouping, no
 {
   "body": {
     "expression": {
+      "iri": "https://example.com/ontology/intent/v1",
       "context": {
         "targets": [],
         "constraints": [],
@@ -764,6 +768,8 @@ Terminated
 ```
 
 ### Internal event baseline:
+
+`IntentValidatedEvent` carries both `intentSpecification.id` and `expression.iri` as admitted facts from IC MS. II MS must not re-resolve the governing specification by IRI alone.
 
 | Event | Producer | Primary consumer | Purpose |
 |---|---|---|---|

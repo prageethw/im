@@ -82,9 +82,20 @@ UC_Assure    ..> UC_Callback  : <<include>>
 UC_Project   ..> UC_Assure    : <<include>>
 UC_Degrade   ..> UC_Assure    : <<extend>>
 
+note bottom of UC_Create
+  Submitted admission requires both
+  intentSpecification.id and expression.iri.
+end note
+
 note bottom of UC_Prepare
   IntentNetworkReadyEvent signals config is ready.
   Does NOT confirm network apply succeeded.
+end note
+
+note bottom of UC_Callback
+  Callback submission uses callbackSource,
+  callbackTimestamp, and sourceState.state.
+  ICB relays raw facts only.
 end note
 
 note bottom of UC_Project

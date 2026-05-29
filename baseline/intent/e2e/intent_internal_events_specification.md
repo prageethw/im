@@ -29,7 +29,7 @@ Internal events are state/progress/outcome facts, not point-to-point commands fo
 
 ### Stable event ontology rule
 
-Internal events are not raw KP-schema projections. Internal events use stable shared intent-domain terms. Domain-specific KP structures may vary, and II MS maps domain KP knowledge into the stable internal event contract. Use direct `location`, `serviceType`, and `serviceClass` fields outside KP. Do not wrap them in generic `context`, `locationBasedService`, or service-context objects in internal event JSON examples.
+Internal events are not raw KP-schema projections. Internal events use stable shared intent-domain terms. Domain-specific KP structures may vary, and II MS maps domain KP knowledge into the stable internal event contract. Runtime intent semantics should preserve the canonical `expression.context.targets`, `expression.context.constraints`, and `expression.context.preferences` grouping unless a specific downstream event explicitly defines a different evaluated-output shape. Domain inputs such as `location`, `serviceType`, and `serviceClass` remain under `expression.context.constraints` for admitted and resolved runtime intent context.
 
 Use shared resource vocabulary in internal events:
 
@@ -43,6 +43,10 @@ Do not encode source/context into event-facing metric wrappers or field names su
 ### Common references shape
 
 Internal event `references` should use named resource reference objects with `id` and `href` where available. Use `correlationId` as a common scalar reference.
+
+### Admission context carry-through rule
+
+`IntentValidatedEvent` must carry both `intentSpecification.id` and `expression.iri` from IC MS admission. `intentSpecification.id` identifies the selected active specification. `expression.iri` identifies the admitted semantic/expression contract. II MS treats both as carried-forward admission facts and must not re-resolve the governing `IntentSpecification` by IRI alone.
 
 ### Optimiser status and evaluation rule
 
@@ -159,6 +163,7 @@ content-type: application/json
       "id": "hospital-surgical-slice-spec-v1.20"
     },
     "expression": {
+      "iri": "https://mycsp.com.au/tio/hospital-surgical-slice/v1.0",
       "context": {
         "targets": {
           "maxLatencyMs": 10,
@@ -200,7 +205,7 @@ content-type: application/json
 ### Event-specific rules
 
 - `IntentValidatedEvent` is the lean IC MS admission-focused event.
-- It carries the admitted runtime `expression.context`.
+- It carries the admitted runtime `expression.iri` and `expression.context`.
 - The admitted expression uses the shared semantic buckets: `expression.context.targets`, `expression.context.constraints`, and `expression.context.preferences`.
 - It includes `serviceType` under `expression.context.constraints`.
 - It keeps `redundancyRequired` under `expression.context.constraints` when it came from expression mapping/defaults.
@@ -438,12 +443,11 @@ content-type: application/json
 ### Event-specific rules
 
 - `IntentResolvedEvent` is the lean optimiser handoff.
-- Use direct `location`, `serviceType`, and `serviceClass` fields; do not wrap them in `context` or `serviceContext`.
-- Use `targets` for measurable SLA-style objectives.
-- Use `constraints` for hard non-target inputs such as `priority` and `redundancyRequired`.
-- Use `preferences` for soft selection guidance such as `preferredAccessTechnology`.
-- Do not include direct top-level `priority`, `preferredAccessTechnology`, or `redundancyRequired`; place them under `constraints` or `preferences`.
-- Do not include a generic `context` wrapper by default.
+- Preserve resolved runtime semantics under `expression.context` when carrying the resolved intent context.
+- Use `expression.context.targets` for measurable SLA-style objectives.
+- Use `expression.context.constraints` for hard inputs such as location, service type, service class, priority, and redundancy.
+- Use `expression.context.preferences` for soft selection guidance such as `preferredAccessTechnology`.
+- Do not include direct top-level `priority`, `preferredAccessTechnology`, or `redundancyRequired`; place them under `expression.context.constraints` or `expression.context.preferences`.
 - Do not include `capabilityStatus`; successful `IntentResolvedEvent` emission implies semantic/capability resolution succeeded.
 - `IntentResolvedEvent.resources[]` contains all applicable/applyable resources for the resolved location/service that the optimiser may consider, not a shortened selected list.
 - `IntentResolvedEvent.resources[].metrics` carries neutral metric values using names such as `latencyMs`, `availabilityPercent`, `jitterMs`, and `packetLossPercent`.
@@ -1096,7 +1100,7 @@ content-type: application/json
 - `IntentCallbackEvent` is a raw callback relay event.
 - ICB MS only accepts, persists, and publishes the callback.
 - IA MS owns intent correlation, source-state mapping, skip/dead-letter decisions, and downstream assurance outcome publication.
-- - Use `callbackSource` for the external system/component that submitted the callback.
+- Use `callbackSource` for the external system/component that submitted the callback.
 - Use `callbackTimestamp` for the timestamp supplied by that callback source.
 - Use `sourceState` for the raw state/payload supplied by the callback source.
 - Avoid retired source-specific callback state/source/timestamp fields; use `callbackSource`, `callbackTimestamp`, and `sourceState`.
