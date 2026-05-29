@@ -82,6 +82,18 @@ UC_Assure    ..> UC_Callback  : <<include>>
 UC_Project   ..> UC_Assure    : <<include>>
 UC_Degrade   ..> UC_Assure    : <<extend>>
 
+note bottom of UC_Define
+  Create request does not accept lifecycleStatus.
+  ID MS creates DRAFT and defaults
+  isBundle to false when omitted.
+end note
+
+note bottom of UC_Activate
+  Activation validates the resulting
+  persisted resource against the full
+  ACTIVE profile before publishing.
+end note
+
 note bottom of UC_Create
   Submitted admission requires both
   intentSpecification.id and expression.iri.
