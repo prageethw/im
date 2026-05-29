@@ -638,7 +638,6 @@ IntentStatusChangeEvent
 IntentDeleteEvent
 IntentReportCreateEvent
 IntentReportAttributeValueChangeEvent
-IntentReportStatusChangeEvent
 IntentReportDeleteEvent
 ```
 
