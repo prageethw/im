@@ -28,18 +28,17 @@ note over GW, IDMS
 end note
 
 == 1. Create New Draft IntentSpecification: ==
-Client -> GW : POST /intentManagement/v5/intentSpecification\nTMF-compliant IntentSpecification request\n{ name, version, familyId, @type, @baseType, ... }\nNo lifecycleStatus on create\nisBundle optional; defaults false
+Client -> GW : POST /intentManagement/v5/intentSpecification\nTMF-compliant IntentSpecification request\n{ name, version, specKey, ... }
+(no lifecycleStatus on create; isBundle optional/default false)
 GW -> IDMS : Forward request using system/service identity
 
 group Atomic DB transaction:
-  IDMS -> IDMS : Set lifecycleStatus = DRAFT
-Default isBundle = false if omitted
   IDMS -> CAT : Persist new DRAFT IntentSpecification
   IDMS -> OUTBOX : Write IntentSpecificationCreateEvent row\n{ status: PENDING }
 end
 
-IDMS --> GW : 201 Created\nETag + Location + TMF-compliant IntentSpecification\n{ lifecycleStatus: "DRAFT", isBundle: false, ... }
-GW --> Client : 201 Created\nETag + Location + TMF-compliant IntentSpecification\n{ lifecycleStatus: "DRAFT", isBundle: false, ... }
+IDMS --> GW : 201 Created\nETag + Location + TMF-compliant IntentSpecification
+GW --> Client : 201 Created\nETag + Location + TMF-compliant IntentSpecification
 
 |||
 DISPATCHER -> OUTBOX : Poll for PENDING event rows
@@ -139,7 +138,7 @@ else Stale / mismatched ETag:
 else If-Match valid:
   group Atomic DB transaction:
     IDMS -> CAT : Set target spec lifecycleStatus = ACTIVE
-    IDMS -> CAT : Find previous ACTIVE spec with same familyId and set RETIRED
+    IDMS -> CAT : Find previous ACTIVE spec with same specKey and set RETIRED
     IDMS -> OUTBOX : Write IntentSpecificationStatusChangeEvent\n{ lifecycleStatus: ACTIVE }
     IDMS -> OUTBOX : Write IntentSpecificationStatusChangeEvent\n{ lifecycleStatus: RETIRED, previousSpecId }
   end

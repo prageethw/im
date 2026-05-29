@@ -35,7 +35,7 @@ The solution is split into definition-time and runtime concerns.
 
 Definition-time concern:
 
-- ID MS owns the `IntentSpecification` catalogue, lifecycle, spec key, schema references, subscription model, and external specification events.
+- ID MS owns the `IntentSpecification` catalogue, lifecycle, version family, schema references, subscription model, and external specification events.
 - An `IntentSpecification` defines the syntax contract that a runtime intent must follow.
 - Only `ACTIVE` specifications may be used for new runtime intent creation.
 - `DRAFT` specifications are editable; `ACTIVE` and `RETIRED` specifications are immutable for material contract changes.
@@ -76,7 +76,7 @@ An authorised governance actor promotes a draft specification version to `ACTIVE
 
 ### Create runtime intent:
 
-An external consumer or OEX submits a runtime `Intent` to IC MS. External consumers use `submit`, not `lifecycleStatus`, to request Draft save versus admission. IC MS validates syntax, confirms the submitted request carries both an active `IntentSpecification.id` and mandatory `expression.iri`, defaults omitted `isBundle` to `false`, persists the admitted intent, projects `Acknowledged`, and emits `IntentValidatedEvent`.
+An external consumer or OEX submits a runtime `Intent` to IC MS. IC MS validates syntax, confirms the request carries both an active `IntentSpecification.id` and mandatory `expression.iri`, persists the admitted intent, projects `Acknowledged`, and emits `IntentValidatedEvent`.
 
 ### Interpret and resolve intent:
 
@@ -257,14 +257,12 @@ IC MS validates:
 
 - request resource shape;
 - required fields;
-- that external consumers have not supplied `lifecycleStatus`;
-- optional `isBundle`, defaulting it to `false` when omitted on create;
 - reference to a concrete active `IntentSpecification.id`;
 - mandatory `expression.iri` matching the selected specification's expression contract;
 - runtime expression shape against the active specification contract;
 - basic external authorisation context passed by the gateway/security layer.
 
-IC MS does not validate semantic feasibility, network topology, resource suitability, or assurance success. After successful admission, IC MS persists the intent with the server-resolved `isBundle` value, sets the projected lifecycle to `Acknowledged`, and emits `IntentValidatedEvent`. II MS then performs semantic interpretation and service-ready preparation.
+IC MS does not validate semantic feasibility, network topology, resource suitability, or assurance success. After successful admission, IC MS persists the intent, sets the projected lifecycle to `Acknowledged`, and emits `IntentValidatedEvent`. II MS then performs semantic interpretation and service-ready preparation.
 
 Where an optimiser component is used, `IntentResolvedEvent` can hand off a full candidate set to the optimiser, and II MS can consume the selected outcome before producing `IntentNetworkReadyEvent`.
 
@@ -348,7 +346,7 @@ Legacy callback state/source/timestamp fields and `callbackType` must not be use
 | Capability | ID MS | IC MS | II MS | IA MS | ICB MS |
 |---|---:|---:|---:|---:|---:|
 | Manage `IntentSpecification` | Yes | No | No | No | No |
-| Manage specification lifecycle/spec key | Yes | No | No | No | No |
+| Manage specification lifecycle/version family | Yes | No | No | No | No |
 | Expose runtime `Intent` API | No | Yes | No | No | No |
 | Expose runtime `IntentReport` API | No | Yes | No | No | No |
 | Admit syntactically valid runtime intents | No | Yes | No | No | No |
@@ -640,6 +638,7 @@ IntentStatusChangeEvent
 IntentDeleteEvent
 IntentReportCreateEvent
 IntentReportAttributeValueChangeEvent
+IntentReportStatusChangeEvent
 IntentReportDeleteEvent
 ```
 

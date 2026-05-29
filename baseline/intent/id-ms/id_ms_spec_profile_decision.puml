@@ -14,8 +14,8 @@ rectangle "Intent management entity\nmandatory profile\n\nTMF-aligned, not TMF-m
 TMF --> PROFILE : intent management entity conformance\ndefines minimum mandatory attributes
 
 rectangle "Minimal DRAFT profile" as DRAFT #FFF8E1 {
-  rectangle "Create request minimum\n\n- name\n- version\n- @type\n- @baseType\n\nNot accepted on create:\n- lifecycleStatus\n\nOptional:\n- isBundle\n  defaults false" as DRAFT_REQ
-  rectangle "Persisted response minimum\n\nRequest fields plus:\n- id\n- href\n- lifecycleStatus = DRAFT\n- isBundle\n  server-resolved" as DRAFT_RESP
+  rectangle "Create request minimum\n\n- name\n- version\n- lifecycleStatus = DRAFT\n- isBundle\n- @type\n- @baseType" as DRAFT_REQ
+  rectangle "Persisted response minimum\n\nRequest fields plus:\n- id\n- href" as DRAFT_RESP
   rectangle "May omit until activation\n\n- validFor.startDateTime\n- expressionSpecification\n- expressionSpecification.iri\n- expressionSpecification.expressionLanguage\n- targetEntitySchema\n- specCharacteristic" as DRAFT_OMIT
 }
 
@@ -24,32 +24,24 @@ rectangle "Activation gate" as GATE #FFE0B2 {
 }
 
 rectangle "Minimal ACTIVE profile" as ACTIVE #E0F2F1 {
-  rectangle "ACTIVE persisted resource minimum\n\n- id\n- href\n- name\n- version\n- lifecycleStatus = ACTIVE\n- isBundle\n- validFor.startDateTime\n- expressionSpecification\n- expressionSpecification.iri\n- expressionSpecification.expressionLanguage\n- targetEntitySchema\n- specCharacteristic\n- @type\n- @baseType" as ACTIVE_FIELDS
+  rectangle "Active request / response minimum\n\n- id\n- href\n- name\n- version\n- lifecycleStatus = ACTIVE\n- isBundle\n- validFor.startDateTime\n- expressionSpecification\n- expressionSpecification.iri\n- expressionSpecification.expressionLanguage\n- targetEntitySchema\n- specCharacteristic\n- @type\n- @baseType" as ACTIVE_FIELDS
   rectangle "Published runtime contract\n\nUsable for discovery, governance,\nvalidation, and runtime resolution" as ACTIVE_CONTRACT
 }
 
 rectangle "Recommended but not\nminimum mandatory" as OPTIONAL #F3E5F5 {
-  rectangle "Implementation-specific enrichments\n\n- familyId\n- description\n- relatedParty\n- @schemaLocation\n- validFor.endDateTime\n- schemaVersion / schemaHash\n- _links" as OPTIONAL_FIELDS
+  rectangle "Implementation-specific enrichments\n\n- specKey\n- description\n- relatedParty\n- @schemaLocation\n- validFor.endDateTime\n- schemaVersion / schemaHash\n- _links" as OPTIONAL_FIELDS
 }
 
 rectangle "Runtime intent API\nseparate decision" as RUNTIME #ECEFF1 {
   rectangle "Runtime request admission rules\nare owned by the runtime Intent profile\n\nSubmitted runtime admission requires\nboth intentSpecification.id\nand expression.iri.\n\nDraft creation can remain lighter." as RUNTIME_RULE
 }
 
-PROFILE --> DRAFT : create as server-managed DRAFT\nedit while DRAFT
+PROFILE --> DRAFT : create / edit as DRAFT
 DRAFT --> GATE : request activation
 GATE --> ACTIVE : full ACTIVE profile satisfied
 GATE -[#red,dashed]-> DRAFT : required ACTIVE fields missing
 ACTIVE --> RUNTIME : provides active semantic\nand validation contract
 PROFILE --> OPTIONAL : may add richer\nimplementation profile fields
-
-note right of DRAFT
-Create request does not accept
-lifecycleStatus. ID MS sets DRAFT.
-
-If isBundle is omitted,
-ID MS defaults it to false.
-end note
 
 note right of ACTIVE
 expressionSpecification is mandatory
@@ -64,7 +56,7 @@ catalogue / governance view.
 end note
 
 note bottom of OPTIONAL
-familyId is useful for version-family
+specKey is useful for grouping related specification versions
 governance, but it is not part of the
 generic minimum mandatory profile.
 end note
