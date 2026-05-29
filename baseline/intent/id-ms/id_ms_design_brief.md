@@ -1,6 +1,6 @@
 # ID MS Design Brief
 
-## ID MS API contract — baseline:
+## ID MS API contract:
 
 ID MS owns the definition-time `IntentSpecification` resource and related hub subscriptions.
 
@@ -16,7 +16,7 @@ ID MS owns definition-time `IntentSpecification` contracts and subscription mana
 It validates syntax and resource shape, enforces specification lifecycle/version governance, and delivers external specification lifecycle notifications to subscribed REST webhook listener callbacks.
 ID MS does not validate runtime semantic feasibility, policy fulfilment, network topology, optimisation, assurance, telemetry, change-execution callbacks, or runtime intent lifecycle truth.
 
-## TMF compliance and platform extension baseline:
+## TMF compliance and platform extension:
 
 
 ## Response classification headers:
