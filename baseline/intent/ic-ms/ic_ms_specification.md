@@ -1,6 +1,6 @@
 # IC MS Specification:
 
-### Service identity:
+**Service identity:**
 
 | **Item** | **Baseline** |
 |---|---|
@@ -13,11 +13,11 @@
 | Secondary resource | `IntentReport` |
 | Primary responsibility | TMF-compliant runtime `Intent` controller, syntactic admission, lifecycle/status projection, and external runtime intent events |
 
-### TMF deployment path note:
+**TMF deployment path note:**
 
 This specification uses `/intentManagement/v5` in examples as the platform base path. A strict TMF gateway exposure may publish the same API under `/tmf-api/intentManagement/v5`. The API gateway may map between the external TMF route prefix and the internal/platform route prefix without changing the resource contract.
 
-### Boundary statement:
+**Boundary statement:**
 
 IC MS owns the external runtime `Intent` and `IntentReport` resources.
 
