@@ -277,7 +277,7 @@ HTTP/1.1 200 OK
 Content-Type: application/json
 Content-Language: en-AU
 Content-Location: /intentManagement/v5/intentSpecification/hospital-surgical-slice-spec
-ETag: "intent-spec-hospital-surgical-slice-spec-v1.19-r1"
+ETag: "intent-spec-hospital-surgical-slice-spec-version-1.19-r1"
 Last-Modified: Sat, 18 Apr 2026 02:00:00 GMT
 Cache-Control: private, max-age=300
 ```
@@ -324,7 +324,7 @@ Success:
 HTTP/1.1 200 OK
 Content-Type: application/json
 Content-Location: /intentManagement/v5/intentSpecification/hospital-surgical-slice-spec
-ETag: "intent-spec-hospital-surgical-slice-spec-v1.19-v2"
+ETag: "intent-spec-hospital-surgical-slice-spec-version-1.19-v2"
 ```
 
 Rules:
@@ -684,7 +684,7 @@ ID MS may return:
 ```http
 HTTP/1.1 200 OK
 Content-Type: application/json
-ETag: "intent-spec-hospital-surgical-slice-spec-v1.19-r1"
+ETag: "intent-spec-hospital-surgical-slice-spec-version-1.19-r1"
 Cache-Control: private, max-age=300
 ```
 

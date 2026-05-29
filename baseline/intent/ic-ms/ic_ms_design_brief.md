@@ -876,8 +876,9 @@ Accept: application/json
   "statusReason": "Intent version v2 is active and assurance is healthy.",
   "statusChangeDate": "2026-04-18T12:20:00+10:00",
   "intentSpecification": {
-    "id": "hospital-surgical-slice-spec-v1.20",
-    "href": "/intentManagement/v5/intentSpecification/hospital-surgical-slice-spec-v1.20"
+    "id": "hospital-surgical-slice-spec",
+  "version": "1.20",
+    "href": "/intentManagement/v5/intentSpecification/hospital-surgical-slice-spec?version=1.20"
   },
   "@type": "Intent",
   "@baseType": "Entity"
@@ -923,7 +924,7 @@ For submitted admission:
 - IC MS validates that the supplied `expression.iri` is consistent with the resolved specification's `expressionSpecification.iri`
 - IC MS validates the runtime expression against the resolved active specification
 - if `intentSpecification.id` is omitted, IC MS rejects the request
-- `intentSpecification.familyId` and `intentSpecification.name` are optional hints only
+- `intentSpecification.specKey` and `intentSpecification.name` are optional hints only
 
 Draft creation remains light. A Draft Intent can be created with `submit: false` without `intentSpecification.id` or `expression.iri`; those fields become mandatory only when admission is requested. `isBundle` is optional and defaults to `false` when omitted on create.
 
@@ -1267,7 +1268,7 @@ The domain payload sits inside `expression.expressionValue.context`:
           },
           "serviceType": "surgical-connectivity",
           "serviceClass": "critical-gold",
-          "priority": "clinical-critical",
+          "priority": "critical",
           "redundancyRequired": true,
           "timeWindow": {
             "startDateTime": "2026-04-18T12:00:00+10:00"

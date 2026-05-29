@@ -564,7 +564,7 @@ Consumers of ID MS should rely on these behaviours:
 | Hub delivery model | Closed. `/intentSpecification/hub` uses REST webhook subscriber listener callback delivery backed by an ID MS-owned local delivery outbox; Kafka is not used for external hub notification delivery. |
 | Event family | Closed. `IntentSpecificationCreateEvent`, `IntentSpecificationAttributeValueChangeEvent`, `IntentSpecificationStatusChangeEvent`, and `IntentSpecificationDeleteEvent`. |
 | Event timestamp spelling | Closed. Use both `eventTime` and corrected `timeOccurred` with the same canonical occurrence timestamp. |
-| Priority vocabulary | Closed. Use `critical`, `high`, `standard`; do not use `clinical-critical`. |
+| Priority vocabulary | Closed. Use `critical`, `high`, `standard`. |
 | Base type | Closed. Use `@baseType: EntitySpecification`. |
 
 ## MS identity:

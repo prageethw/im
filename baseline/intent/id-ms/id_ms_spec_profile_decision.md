@@ -370,7 +370,7 @@ The response confirms the persisted official active contract and returns the off
 HTTP/1.1 200 OK
 Content-Type: application/json
 Content-Location: /intentManagement/v5/intentSpecification/hospital-surgical-slice-spec
-ETag: "intent-spec-hospital-surgical-slice-spec-v1.19-r1"
+ETag: "intent-spec-hospital-surgical-slice-spec-version-1.19-r1"
 ```
 
 ```json
@@ -415,8 +415,9 @@ These fields are useful, but they are not all part of the generic minimum mandat
 
 ```json
 {
-  "id": "hospital-surgical-slice-spec-v1.19",
-  "href": "/intentManagement/v5/intentSpecification/hospital-surgical-slice-spec-v1.19",
+  "id": "hospital-surgical-slice-spec",
+  "version": "1.19",
+  "href": "/intentManagement/v5/intentSpecification/hospital-surgical-slice-spec?version=1.19",
   "specKey": "hospital-surgical-slice-spec",
   "name": "Hospital Surgical Slice Intent Specification",
   "description": "Definition-time specification for hospital surgical slice intents.",
@@ -498,14 +499,14 @@ These fields are useful, but they are not all part of the generic minimum mandat
   "@schemaLocation": "https://example.com/schemas/intentManagement/v5/intentSpecification/hospital-surgical-slice-spec-v1.19.schema.json",
   "_links": {
     "self": {
-      "href": "/intentManagement/v5/intentSpecification/hospital-surgical-slice-spec-v1.19"
+      "href": "/intentManagement/v5/intentSpecification/hospital-surgical-slice-spec?version=1.19"
     },
     "fullUpdate": {
-      "href": "/intentManagement/v5/intentSpecification/hospital-surgical-slice-spec-v1.19",
+      "href": "/intentManagement/v5/intentSpecification/hospital-surgical-slice-spec?version=1.19",
       "method": "PUT"
     },
     "partialUpdate": {
-      "href": "/intentManagement/v5/intentSpecification/hospital-surgical-slice-spec-v1.19",
+      "href": "/intentManagement/v5/intentSpecification/hospital-surgical-slice-spec?version=1.19",
       "method": "PATCH"
     }
   }

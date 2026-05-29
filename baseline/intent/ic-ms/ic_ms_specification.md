@@ -235,7 +235,8 @@ Required submitted admission reference:
 ```json
 {
   "intentSpecification": {
-    "id": "hospital-surgical-slice-spec-v1.20"
+    "id": "hospital-surgical-slice-spec",
+  "version": "1.20"
   },
   "expression": {
     "iri": "https://mycsp.com.au/tio/hospital-surgical-slice/v1.0"
@@ -487,9 +488,10 @@ Accept: application/json
   "humanExpression": "I need a surgical connection in Sydney Hospital with latency less than or equal to 10 ms and availability at least 99.99%.",
   "submit": true,
   "intentSpecification": {
-    "id": "hospital-surgical-slice-spec-v1.20"
+    "id": "hospital-surgical-slice-spec",
+  "version": "1.20"
   },
-  "priority": "clinical-critical",
+  "priority": "critical",
   "relatedParty": [
     {
       "@type": "RelatedPartyRefOrPartyRoleRef",
@@ -522,7 +524,7 @@ Accept: application/json
           },
           "serviceType": "surgical-connectivity",
           "serviceClass": "critical-gold",
-          "priority": "clinical-critical",
+          "priority": "critical",
           "redundancyRequired": true,
           "timeWindow": {
             "startDateTime": "2026-04-18T12:00:00+10:00"
@@ -568,10 +570,11 @@ Last-Modified: Sat, 18 Apr 2026 02:00:00 GMT
   "statusReason": "Intent request accepted for semantic validation and fulfilment.",
   "statusChangeDate": "2026-04-18T12:00:00+10:00",
   "intentSpecification": {
-    "id": "hospital-surgical-slice-spec-v1.20",
-    "href": "/intentManagement/v5/intentSpecification/hospital-surgical-slice-spec-v1.20"
+    "id": "hospital-surgical-slice-spec",
+  "version": "1.20",
+    "href": "/intentManagement/v5/intentSpecification/hospital-surgical-slice-spec?version=1.20"
   },
-  "priority": "clinical-critical",
+  "priority": "critical",
   "relatedParty": [
     {
       "@type": "RelatedPartyRefOrPartyRoleRef",
@@ -604,7 +607,7 @@ Last-Modified: Sat, 18 Apr 2026 02:00:00 GMT
           },
           "serviceType": "surgical-connectivity",
           "serviceClass": "critical-gold",
-          "priority": "clinical-critical",
+          "priority": "critical",
           "redundancyRequired": true,
           "timeWindow": {
             "startDateTime": "2026-04-18T12:00:00+10:00"
@@ -740,7 +743,8 @@ Cache-Control: private, max-age=60
     "statusReason": "Intent version v2 is active and assurance is healthy.",
     "statusChangeDate": "2026-04-18T12:20:00+10:00",
     "intentSpecification": {
-      "id": "hospital-surgical-slice-spec-v1.20"
+      "id": "hospital-surgical-slice-spec",
+  "version": "1.20"
     },
     "@type": "Intent",
     "@baseType": "Entity"
@@ -804,11 +808,12 @@ Cache-Control: private, max-age=300
   "statusReason": "Intent version v2 is active and assurance is healthy.",
   "statusChangeDate": "2026-04-18T12:20:00+10:00",
   "intentSpecification": {
-    "id": "hospital-surgical-slice-spec-v1.20",
-    "href": "/intentManagement/v5/intentSpecification/hospital-surgical-slice-spec-v1.20"
+    "id": "hospital-surgical-slice-spec",
+  "version": "1.20",
+    "href": "/intentManagement/v5/intentSpecification/hospital-surgical-slice-spec?version=1.20"
   },
   "isBundle": false,
-  "priority": "clinical-critical",
+  "priority": "critical",
   "relatedParty": [
     {
       "@type": "RelatedPartyRefOrPartyRoleRef",
@@ -841,7 +846,7 @@ Cache-Control: private, max-age=300
           },
           "serviceType": "surgical-connectivity",
           "serviceClass": "critical-gold",
-          "priority": "clinical-critical",
+          "priority": "critical",
           "redundancyRequired": true,
           "timeWindow": {
             "startDateTime": "2026-04-18T12:00:00+10:00"
@@ -911,9 +916,10 @@ If-Match: "intent-INT-HOSP-2026-001-v3"
   "humanExpression": "I need a surgical connection in Sydney Hospital with latency less than or equal to 8 ms and availability at least 99.99%.",
   "submit": false,
   "intentSpecification": {
-    "id": "hospital-surgical-slice-spec-v1.20"
+    "id": "hospital-surgical-slice-spec",
+  "version": "1.20"
   },
-  "priority": "clinical-critical",
+  "priority": "critical",
   "relatedParty": [
     {
       "@type": "RelatedPartyRefOrPartyRoleRef",
@@ -946,7 +952,7 @@ If-Match: "intent-INT-HOSP-2026-001-v3"
           },
           "serviceType": "surgical-connectivity",
           "serviceClass": "critical-gold",
-          "priority": "clinical-critical",
+          "priority": "critical",
           "redundancyRequired": true,
           "timeWindow": {
             "startDateTime": "2026-04-18T12:00:00+10:00"
@@ -987,11 +993,12 @@ ETag: "intent-INT-HOSP-2026-001-v4"
   "statusReason": "Draft intent updated and not submitted for admission.",
   "statusChangeDate": "2026-04-18T12:00:00+10:00",
   "intentSpecification": {
-    "id": "hospital-surgical-slice-spec-v1.20",
-    "href": "/intentManagement/v5/intentSpecification/hospital-surgical-slice-spec-v1.20"
+    "id": "hospital-surgical-slice-spec",
+  "version": "1.20",
+    "href": "/intentManagement/v5/intentSpecification/hospital-surgical-slice-spec?version=1.20"
   },
   "isBundle": false,
-  "priority": "clinical-critical",
+  "priority": "critical",
   "expression": {
     "@type": "JsonLdExpression",
     "@baseType": "Expression",
@@ -1012,7 +1019,7 @@ ETag: "intent-INT-HOSP-2026-001-v4"
           },
           "serviceType": "surgical-connectivity",
           "serviceClass": "critical-gold",
-          "priority": "clinical-critical",
+          "priority": "critical",
           "redundancyRequired": true,
           "timeWindow": {
             "startDateTime": "2026-04-18T12:00:00+10:00"
@@ -1078,7 +1085,8 @@ If-Match: "intent-INT-HOSP-2026-001-v4"
 {
   "submit": false,
   "intentSpecification": {
-    "id": "hospital-surgical-slice-spec-v1.20"
+    "id": "hospital-surgical-slice-spec",
+  "version": "1.20"
   },
   "expression": {
     "@type": "JsonLdExpression",
@@ -1097,7 +1105,7 @@ If-Match: "intent-INT-HOSP-2026-001-v4"
           },
           "serviceType": "surgical-connectivity",
           "serviceClass": "critical-gold",
-          "priority": "clinical-critical",
+          "priority": "critical",
           "redundancyRequired": true,
           "timeWindow": {
             "startDateTime": "2026-04-18T12:00:00+10:00"
@@ -1136,11 +1144,12 @@ ETag: "intent-INT-HOSP-2026-001-v5"
   "statusReason": "Draft intent patched and not submitted for admission.",
   "statusChangeDate": "2026-04-18T12:00:00+10:00",
   "intentSpecification": {
-    "id": "hospital-surgical-slice-spec-v1.20",
-    "href": "/intentManagement/v5/intentSpecification/hospital-surgical-slice-spec-v1.20"
+    "id": "hospital-surgical-slice-spec",
+  "version": "1.20",
+    "href": "/intentManagement/v5/intentSpecification/hospital-surgical-slice-spec?version=1.20"
   },
   "isBundle": false,
-  "priority": "clinical-critical",
+  "priority": "critical",
   "expression": {
     "@type": "JsonLdExpression",
     "@baseType": "Expression",
@@ -1161,7 +1170,7 @@ ETag: "intent-INT-HOSP-2026-001-v5"
           },
           "serviceType": "surgical-connectivity",
           "serviceClass": "critical-gold",
-          "priority": "clinical-critical",
+          "priority": "critical",
           "redundancyRequired": true,
           "timeWindow": {
             "startDateTime": "2026-04-18T12:00:00+10:00"
@@ -1714,7 +1723,7 @@ X-Platform-Extension: false
 {
   "code": "VALIDATION_FAILED",
   "reason": "INTENT_SPECIFICATION_NOT_ACTIVE",
-  "message": "Referenced IntentSpecification hospital-surgical-slice-spec-v1.20 is not ACTIVE.",
+  "message": "Referenced IntentSpecification hospital-surgical-slice-spec version 1.20 is not ACTIVE.",
   "status": 422,
   "referenceError": "https://mycsp.com.au/errors/VALIDATION_FAILED",
   "@type": "Error"
@@ -1827,7 +1836,8 @@ They must not expose raw telemetry, raw optimiser decisions, raw `t7.knowledge p
       "version": "v1",
       "lifecycleStatus": "Acknowledged",
       "intentSpecification": {
-        "id": "hospital-surgical-slice-spec-v1.20"
+        "id": "hospital-surgical-slice-spec",
+  "version": "1.20"
       },
       "@type": "Intent",
       "@baseType": "Entity"
@@ -2205,7 +2215,8 @@ IC MS accepts and projects runtime Intent resources using the external runtime e
   "humanExpression": "I need a surgical connection in Sydney Hospital with latency less than or equal to 10 ms and availability at least 99.99%.",
   "submit": true,
   "intentSpecification": {
-    "id": "hospital-surgical-slice-spec-v1.20"
+    "id": "hospital-surgical-slice-spec",
+  "version": "1.20"
   },
   "expression": {
     "@type": "JsonLdExpression",
@@ -2227,7 +2238,7 @@ IC MS accepts and projects runtime Intent resources using the external runtime e
           },
           "serviceType": "surgical-connectivity",
           "serviceClass": "critical-gold",
-          "priority": "clinical-critical",
+          "priority": "critical",
           "redundancyRequired": true,
           "timeWindow": {
             "startDateTime": "2026-04-18T12:00:00+10:00"
@@ -2257,7 +2268,8 @@ IC MS accepts and projects runtime Intent resources using the external runtime e
     "lifecycleStatus": "Acknowledged",
     "statusReason": "Intent request passed IC MS admission validation and was admitted for downstream processing.",
     "intentSpecification": {
-      "id": "hospital-surgical-slice-spec-v1.20"
+      "id": "hospital-surgical-slice-spec",
+  "version": "1.20"
     },
     "expression": {
       "context": {
@@ -2275,7 +2287,7 @@ IC MS accepts and projects runtime Intent resources using the external runtime e
           },
           "serviceType": "surgical-connectivity",
           "serviceClass": "critical-gold",
-          "priority": "clinical-critical",
+          "priority": "critical",
           "redundancyRequired": true,
           "timeWindow": {
             "startDateTime": "2026-04-18T12:00:00+10:00"
@@ -2293,8 +2305,9 @@ IC MS accepts and projects runtime Intent resources using the external runtime e
         "href": "/intentManagement/v5/intent/INT-HOSP-2026-001"
       },
       "intentSpecification": {
-        "id": "hospital-surgical-slice-spec-v1.20",
-        "href": "/intentManagement/v5/intentSpecification/hospital-surgical-slice-spec-v1.20"
+        "id": "hospital-surgical-slice-spec",
+  "version": "1.20",
+        "href": "/intentManagement/v5/intentSpecification/hospital-surgical-slice-spec?version=1.20"
       }
     }
   }

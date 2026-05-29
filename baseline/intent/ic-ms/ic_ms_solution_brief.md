@@ -176,7 +176,7 @@ IC MS does not own:
 | Raw orchestrator callback interpretation | IA MS |
 | Raw candidate/resource scoring exposure | Internal optimiser/assurance pipeline only |
 
-IC MS also does not resolve an `IntentSpecification` by `expression.iri` alone, `familyId`, name, key, or inferred expression shape alone. Submitted runtime create/update admission requests must include both `intentSpecification.id` and `expression.iri`. `intentSpecification.id` selects the exact active platform-managed specification. `expression.iri` identifies the semantic/expression contract and must match the selected specification's `expressionSpecification.iri`. `intentSpecification.familyId` and `intentSpecification.name` are optional hints only.
+IC MS also does not resolve an `IntentSpecification` by `expression.iri` alone, `specKey`, name, key, or inferred expression shape alone. Submitted runtime create/update admission requests must include both `intentSpecification.id` and `expression.iri`. `intentSpecification.id` selects the exact active platform-managed specification. `expression.iri` identifies the semantic/expression contract and must match the selected specification's `expressionSpecification.iri`. `intentSpecification.specKey` and `intentSpecification.name` are optional hints only.
 
 IC MS does not allow external consumers to set or patch `lifecycleStatus`; lifecycle state is assigned and projected by the intent management entity.
 
@@ -307,7 +307,7 @@ A runtime intent create/update request uses the following baseline:
 | `submit` | Optional IC MS extension request-control field. `false` saves or keeps Draft; `true` submits for admission. If omitted on initial create, the request is treated as submitted. If omitted on an existing Draft, Draft handling is preserved. |
 | `intentSpecification.id` | Mandatory for submitted admission; selects the exact active platform-managed specification used for validation, governance, and audit. |
 | `expression.iri` | Mandatory for submitted admission; identifies the semantic/expression contract and must match the selected specification's `expressionSpecification.iri`. |
-| `intentSpecification.familyId` | Optional descriptive/discovery hint; not an authoritative validation key. |
+| `intentSpecification.specKey` | Optional descriptive/discovery hint; not an authoritative validation key. |
 | `intentSpecification.name` | Optional descriptive/discovery hint; not an authoritative validation key. |
 | `expression` | Required TMF-compliant `JsonLdExpression`. |
 | `expression.expressionValue.context.targets` | Required measurable outcome/SLA objectives where defined by the specification. |
@@ -325,7 +325,8 @@ Example explicit specification reference:
 ```json
 {
   "intentSpecification": {
-    "id": "hospital-surgical-slice-spec-v1.20"
+    "id": "hospital-surgical-slice-spec",
+  "version": "1.20"
   },
   "expression": {
     "iri": "https://mycsp.com.au/tio/hospital-surgical-slice/v1.0"
@@ -343,7 +344,7 @@ IRI-only admission is not supported. This request is rejected because `intentSpe
 }
 ```
 
-`intentSpecification.familyId` and `intentSpecification.name` may be supplied as optional descriptive/discovery hints, but they are not mandatory and are not authoritative validation keys.
+`intentSpecification.specKey` and `intentSpecification.name` may be supplied as optional descriptive/discovery hints, but they are not mandatory and are not authoritative validation keys.
 
 ## Field specification:
 
@@ -361,7 +362,7 @@ IRI-only admission is not supported. This request is rejected because `intentSpe
 | `lifecycleStatus` | Current projected external lifecycle status. |
 | `statusReason` | Human-readable reason for current projected status. |
 | `statusChangeDate` | Timestamp for the latest projected status change. |
-| `intentSpecification` | Specification reference. `id` is mandatory for submitted admission; `familyId` and `name` are hints only. |
+| `intentSpecification` | Specification reference. `id` is mandatory for submitted admission; `specKey` and `name` are hints only. |
 | `expression` | Runtime intent expression using `JsonLdExpression`. |
 | `validFor` | Runtime validity period. |
 | `isBundle` | Server-resolved bundle indicator. |
@@ -457,7 +458,7 @@ IC MS should reject or ignore unsupported external request fields according to t
 
 | Field / pattern | Reason |
 |---|---|
-| `intentSpecification.familyId` as the authoritative validation key | IC MS does not resolve runtime requests by family alone; it is only an optional hint. |
+| `intentSpecification.specKey` as the authoritative validation key | IC MS does not resolve runtime requests by specKey alone; it is only an optional hint. |
 | `intentSpecification.name` as the authoritative validation key | IC MS does not resolve runtime requests by display name alone; it is only an optional hint. |
 | Missing `expression.iri` | Submitted admission must include `expression.iri` so IC MS can validate the semantic/expression contract against the selected specification. |
 | Inferred specification from payload shape alone | IC MS must resolve the active validation contract by mandatory `intentSpecification.id`, with mandatory `expression.iri` checked against the selected specification. |
@@ -640,7 +641,8 @@ Canonical message intent:
     "intentVersion": "v1",
     "lifecycleStatus": "Acknowledged",
     "intentSpecification": {
-      "id": "hospital-surgical-slice-spec-v1.20"
+      "id": "hospital-surgical-slice-spec",
+  "version": "1.20"
     },
     "expression": {
       "@type": "JsonLdExpression",
@@ -662,7 +664,7 @@ Canonical message intent:
             },
             "serviceType": "surgical-connectivity",
             "serviceClass": "critical-gold",
-            "priority": "clinical-critical",
+            "priority": "critical",
             "redundancyRequired": true
           },
           "preferences": {
@@ -676,7 +678,7 @@ Canonical message intent:
         "href": "/intentManagement/v5/intent/INT-HOSP-2026-001"
       },
       "intentSpecification": {
-        "href": "/intentManagement/v5/intentSpecification/hospital-surgical-slice-spec-v1.20"
+        "href": "/intentManagement/v5/intentSpecification/hospital-surgical-slice-spec?version=1.20"
       }
     }
   }

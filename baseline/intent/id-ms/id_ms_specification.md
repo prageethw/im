@@ -789,7 +789,7 @@ Content-Language: en-AU
 X-TMF-Native: true
 X-Platform-Extension: false
 Content-Location: /intentManagement/v5/intentSpecification/hospital-surgical-slice-spec?version=1.19
-ETag: "intent-spec-hospital-surgical-slice-spec-v1.19-v2"
+ETag: "intent-spec-hospital-surgical-slice-spec-version-1.19-v2"
 Last-Modified: Sat, 18 Apr 2026 03:00:00 GMT
 ```
 
@@ -997,7 +997,7 @@ Content-Language: en-AU
 X-TMF-Native: true
 X-Platform-Extension: false
 Content-Location: /intentManagement/v5/intentSpecification/hospital-surgical-slice-spec?version=1.19
-ETag: "intent-spec-hospital-surgical-slice-spec-v1.19-v2"
+ETag: "intent-spec-hospital-surgical-slice-spec-version-1.19-v2"
 Last-Modified: Sat, 18 Apr 2026 03:00:00 GMT
 ```
 
@@ -1203,7 +1203,7 @@ Content-Language: en-AU
 X-TMF-Native: true
 X-Platform-Extension: false
 Content-Location: /intentManagement/v5/intentSpecification/hospital-surgical-slice-spec?version=1.20
-ETag: "intent-spec-hospital-surgical-slice-spec-v1.20-r1"
+ETag: "intent-spec-hospital-surgical-slice-spec-version-1.20-r1"
 Last-Modified: Sat, 18 Apr 2026 03:30:00 GMT
 ```
 
@@ -1894,7 +1894,7 @@ TMF921 examples contain the misspelled `timeOcurred`; this baseline intentionall
 - `timeWindow.startDateTime` is required when `timeWindow` is present.
 - `priority` values are `critical`, `high`, and `standard`.
 - Use `priority`, not `priority_level`.
-- Do not use `clinical-critical`; use `critical`.
+- Do not use `critical`; use `critical`.
 - Do not use `DELETED` as an `IntentSpecification.lifecycleStatus`.
 - ETag is used for unsafe-operation concurrency only.
 - Caching is GET-only.
