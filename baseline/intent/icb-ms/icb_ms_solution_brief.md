@@ -15,29 +15,7 @@ The current solution deliberately keeps ICB MS implementation-oriented and narro
 
 ## Logical View:
 
-```text
-External change-execution/apply system
-        |
-        | POST /intent-callback/v1/submissions
-        v
-API Gateway
-        |
-        | authenticated caller identity / trusted claims
-        v
-Intent Callback MS
-        |
-        | accepted callback submission + outbox record
-        v
-ICB PostgreSQL-compatible database
-        |
-        | outbox relay publishes raw callback fact
-        v
-Kafka topic: t7.intent.management.events.callbacks
-        |
-        | IntentCallbackEvent
-        v
-Intent Assurance MS
-```
+![View](icb_ms_logical_view.svg)
 
 ICB MS sits behind the API Gateway. External systems do not call it directly. The API Gateway authenticates the external caller and forwards the trusted caller identity or claims to ICB MS. ICB MS uses that trusted context for technical authorisation and then validates the callback payload structure.
 
