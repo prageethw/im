@@ -15,7 +15,7 @@
 - [3. Context](#3-context)
 - [4. Decision drivers](#4-decision-drivers)
 - [5. Options considered](#5-options-considered)
-  - [5.1 Use expression.iri only](#51-use-expressioniri-only)
+  - [5.1 Rejected option: expression.iri-only admission](#51-rejected-option-expressioniri-only-admission)
   - [5.2 Use intentSpecification.id only](#52-use-intentspecificationid-only)
   - [5.3 Require both intentSpecification.id and expression.iri](#53-require-both-intentspecificationid-and-expressioniri)
 - [6. Proposal](#6-proposal)
@@ -87,11 +87,11 @@ Therefore, allowing runtime admission by IRI alone can be ambiguous.
 
 ## 5. Options considered:
 
-### 5.1 Use expression.iri only:
+### 5.1 Rejected option: expression.iri-only admission:
 
 This option makes `expression.iri` the only mandatory contract reference in runtime admission.
 
-It was rejected, as it is alone not sufficent enough.
+It was rejected, as it is alone not sufficient.
 
 Although `expression.iri` identifies the semantic/expression contract, it does not uniquely select a platform-managed `IntentSpecification` resource.
 
@@ -107,7 +107,7 @@ Problems:
 
 This option makes `intentSpecification.id` mandatory but does not require `expression.iri`.
 
-It was rejected, as it is alone not sufficent enough.
+It was rejected, as it is alone not sufficient.
 
 `intentSpecification.id` selects the platform-managed specification, but the runtime expression still needs to state which semantic/expression contract it claims to follow.
 
