@@ -1,4 +1,4 @@
-## IC MS Specification:
+# IC MS Specification:
 
 ### Service identity:
 
