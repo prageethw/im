@@ -96,6 +96,7 @@ content-type: application/json
       "id": "hospital-surgical-slice-spec-v1.20"
     },
     "expression": {
+      "iri": "https://mycsp.com.au/tio/hospital-surgical-slice/v1.0",
       "context": {
         "targets": {
           "maxLatencyMs": 10,
@@ -147,6 +148,7 @@ II MS expects:
 | `body.intentId` | Required |
 | `body.version` | Required where versioned runtime intent is used |
 | `body.intentSpecification.id` | Required |
+| `body.expression.iri` | Required |
 | `body.expression.context` | Required |
 | `body.expression.context.constraints.location.locationId` | Required |
 | `body.expression.context.constraints.serviceType` | Required |
@@ -156,7 +158,7 @@ II MS expects:
 | `body.expression.context.preferences` | Optional |
 | `body.references.correlationId` | Required |
 
-II MS does not expect the external TMF `Intent.expression` wrapper in internal events. Internal events carry native JSON under `body.expression`, but that native expression must preserve the canonical `context.targets`, `context.constraints`, and `context.preferences` grouping established by ID MS and IC MS.
+II MS does not expect the external TMF `Intent.expression` wrapper in internal events. Internal events carry native JSON under `body.expression`, but that native expression must include the admitted `expression.iri` and preserve the canonical `context.targets`, `context.constraints`, and `context.preferences` grouping established by ID MS and IC MS. II MS must not re-resolve the governing `IntentSpecification` by IRI alone; `intentSpecification.id` remains the selected specification reference.
 
 ---
 

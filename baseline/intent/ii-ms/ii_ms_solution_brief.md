@@ -160,6 +160,7 @@ content-type: application/json
       "id": "hospital-surgical-slice-spec-v1.20"
     },
     "expression": {
+      "iri": "https://mycsp.com.au/tio/hospital-surgical-slice/v1.0",
       "context": {
         "targets": {
           "maxLatencyMs": 10,
@@ -210,6 +211,7 @@ content-type: application/json
 | `body.version` | Required where runtime intent versioning is used | Used to prevent stale event decisions overriding newer versions. |
 | `body.lifecycleStatus` | Required | Expected to reflect IC MS admission state, commonly `Acknowledged`. |
 | `body.intentSpecification.id` | Required | Active specification used by IC MS admission validation. |
+| `body.expression.iri` | Required | Semantic/expression contract admitted by IC MS and checked against the selected specification. |
 | `body.expression.context` | Required | Canonical runtime intent context. |
 | `body.expression.context.targets` | Required for downstream-capable intents | Measurable outcome objectives. |
 | `body.expression.context.constraints` | Required when hard requirements exist | Includes location, service type, service class, priority, redundancy, and time window where applicable. |
@@ -223,7 +225,7 @@ content-type: application/json
 
 ## Fields not accepted:
 
-II MS should reject or ignore unexpected fields according to its schema and compatibility policy. The following fields are not part of the II MS baseline contract:
+II MS should reject or ignore unexpected fields according to its schema and compatibility policy. It must not re-resolve the governing `IntentSpecification` by IRI alone; `intentSpecification.id` and `expression.iri` are carried-forward admission facts from IC MS. The following fields are not part of the II MS baseline contract:
 
 | Field or pattern | Reason |
 |---|---|

@@ -77,6 +77,15 @@ II MS consumes `IntentValidatedEvent` from the internal event backbone.
 
 `IntentValidatedEvent` contains the admitted runtime expression in native internal JSON form. IC MS has already translated the external TMF-compliant `Intent.expression.expressionValue` into internal event form.
 
+II MS expects the admitted event to carry the admission context selected by IC MS:
+
+| Field | II MS usage |
+|---|---|
+| `intentSpecification.id` | Active specification selected by IC MS for syntactic admission, governance, and traceability. |
+| `expression.iri` | Semantic/expression contract identifier admitted by IC MS and checked against the selected specification. |
+
+II MS must treat these as carried-forward admission facts. It must not re-resolve the governing `IntentSpecification` by IRI alone.
+
 II MS expects the admitted expression to preserve the canonical ID/IC semantic grouping:
 
 ```text
@@ -101,6 +110,7 @@ Domain inputs such as `location`, `serviceType`, and `serviceClass` are carried 
 |---|---|
 | Consume | Consume `IntentValidatedEvent` from the internal event backbone |
 | Idempotency | Deduplicate by CloudEvents `ce-id` / event id and `intentId` |
+| Admission context check | Confirm the event carries `intentSpecification.id` and `expression.iri` from IC MS admission context |
 | Semantic parse | Interpret `expression.context.targets`, `expression.context.constraints`, and `expression.context.preferences` |
 | KP lookup | Resolve location/service capability from Knowledge Plane |
 | Capability validation | Confirm requested service/service class is available for the requested location |
