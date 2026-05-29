@@ -108,7 +108,7 @@ On `POST /intentManagement/v5/intent`, IC MS:
 5. rejects syntactically invalid requests
 6. accepts syntactically valid requests
 7. creates/persists the external `Intent` projection
-8. sets initial `lifecycleStatus = Acknowledged`
+8. sets initial `lifecycleStatus = Acknowledged` and persists the server-resolved `isBundle` value, defaulting to `false` when omitted on create
 9. emits `IntentValidatedEvent` to the internal Kafka event backbone after syntactic validation succeeds
 
 IC MS validates syntax and contract shape only.
@@ -876,9 +876,8 @@ Accept: application/json
   "statusReason": "Intent version v2 is active and assurance is healthy.",
   "statusChangeDate": "2026-04-18T12:20:00+10:00",
   "intentSpecification": {
-    "id": "hospital-surgical-slice-spec",
-    "version": "1.20",
-    "href": "/intentManagement/v5/intentSpecification/hospital-surgical-slice-spec?version=1.20"
+    "id": "hospital-surgical-slice-spec-v1.20",
+    "href": "/intentManagement/v5/intentSpecification/hospital-surgical-slice-spec-v1.20"
   },
   "@type": "Intent",
   "@baseType": "Entity"
@@ -924,9 +923,9 @@ For submitted admission:
 - IC MS validates that the supplied `expression.iri` is consistent with the resolved specification's `expressionSpecification.iri`
 - IC MS validates the runtime expression against the resolved active specification
 - if `intentSpecification.id` is omitted, IC MS rejects the request
-- `intentSpecification.specKey` and `intentSpecification.name` are optional hints only
+- `intentSpecification.familyId` and `intentSpecification.name` are optional hints only
 
-Draft creation remains light. A Draft Intent can be created with `submit: false` without `intentSpecification.id` or `expression.iri`; those fields become mandatory only when admission is requested.
+Draft creation remains light. A Draft Intent can be created with `submit: false` without `intentSpecification.id` or `expression.iri`; those fields become mandatory only when admission is requested. `isBundle` is optional and defaults to `false` when omitted on create.
 
 ### Two separate version concepts:
 
@@ -951,7 +950,7 @@ Draft creation remains light. A Draft Intent can be created with `submit: false`
 
 **Submitted runtime `Intent` admission requires both `intentSpecification.id` and `expression.iri`. `intentSpecification.id` selects the exact active platform-managed specification. `expression.iri` identifies the semantic/expression contract and must match the selected specification's `expressionSpecification.iri`. IC MS does not admit by IRI-only resolution.**
 
-**Draft creation remains light. A Draft Intent can be created with `submit: false` without `intentSpecification.id` or `expression.iri`; those fields become mandatory only when admission is requested.**
+**Draft creation remains light. A Draft Intent can be created with `submit: false` without `intentSpecification.id` or `expression.iri`; those fields become mandatory only when admission is requested. `isBundle` is optional and defaults to `false` when omitted on create.**
 
 **`GET` operations return current projected Intent state, not internal version aggregates, and do not resolve or mutate specification versions.**
 
@@ -1139,6 +1138,7 @@ For `intent`:
 | `id` | Stable Intent ID, for example `INT-HOSP-2026-001` |
 | `projected_version` | Current externally projected runtime version |
 | `lifecycle_status` | Current external `Intent.lifecycleStatus` |
+| `is_bundle` | Server-resolved bundle flag; defaults to `false` when omitted on create |
 | `status_reason` | Current external status reason |
 | `status_change_date` | Last lifecycle/status projection change timestamp |
 | `intent_specification_id` | Concrete `IntentSpecification.id` used by the projected version |
@@ -1267,7 +1267,7 @@ The domain payload sits inside `expression.expressionValue.context`:
           },
           "serviceType": "surgical-connectivity",
           "serviceClass": "critical-gold",
-          "priority": "critical",
+          "priority": "clinical-critical",
           "redundancyRequired": true,
           "timeWindow": {
             "startDateTime": "2026-04-18T12:00:00+10:00"
@@ -1359,11 +1359,6 @@ Baseline:
 - `targetEntitySchema` owns the detailed validation contract.
 - `expressionSpecification.iri` identifies the semantic/expression contract.
 - `specCharacteristic` gives catalogue/discovery summary only.
-- Use array-based `targets`, `constraints`, and `preferences` for scalability.
+- Use the canonical `targets`, `constraints`, and `preferences` semantic buckets consistently; concrete schemas may specialise whether each bucket uses object-map entries or array entries.
 - Keep simplified object-map examples only where they are deliberately explanatory.
 
-
-
-## IntentSpecification draft-candidate guardrail:
-
-IC MS runtime admission must use a concrete ACTIVE `intentSpecification.id`. It must not use `specKey`, `draftId`, name, IRI-only lookup, or inferred payload shape as the runtime contract-selection key. DRAFT IntentSpecification candidates are not valid runtime contracts and must not be used for new runtime Intent admission.

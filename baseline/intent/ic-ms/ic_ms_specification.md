@@ -235,7 +235,7 @@ Required submitted admission reference:
 ```json
 {
   "intentSpecification": {
-    "id": "hospital-surgical-slice-spec"
+    "id": "hospital-surgical-slice-spec-v1.20"
   },
   "expression": {
     "iri": "https://mycsp.com.au/tio/hospital-surgical-slice/v1.0"
@@ -253,7 +253,7 @@ Unsupported admission request because `intentSpecification.id` is missing:
 }
 ```
 
-IC MS must not resolve `IntentSpecification` by IRI alone, family, key, name, or inferred payload shape alone for submitted runtime admission.
+IC MS must not resolve `IntentSpecification` by IRI alone, `specKey`, name, or inferred payload shape alone for submitted runtime admission.
 
 Baseline:
 - submitted admission requires `intentSpecification.id`
@@ -319,6 +319,8 @@ While `lifecycleStatus = Draft`, all attributes accepted by the `PUT` / `PATCH` 
 `id` is immutable. If `id` appears in a full-replacement `PUT` request, it must match the path `id` and is used only for consistency checking; it cannot be changed.
 
 Response/projection fields such as `href`, `version`, `lifecycleStatus`, `statusReason`, `statusChangeDate`, `activeVersion`, and `_links` are not writable request fields unless explicitly documented otherwise.
+
+`isBundle` is optional in create and update request bodies. If omitted on create, IC MS defaults `isBundle` to `false`. Persisted Intent responses include the server-resolved `isBundle` value.
 
 Once an Intent leaves `Draft`, general attribute update on that submitted version is not allowed. Material changes after submission require creating a new Draft version, editing that Draft version, and explicitly submitting it with `submit: true`.
 
@@ -485,10 +487,9 @@ Accept: application/json
   "humanExpression": "I need a surgical connection in Sydney Hospital with latency less than or equal to 10 ms and availability at least 99.99%.",
   "submit": true,
   "intentSpecification": {
-    "id": "hospital-surgical-slice-spec"
+    "id": "hospital-surgical-slice-spec-v1.20"
   },
-  "isBundle": false,
-  "priority": "critical",
+  "priority": "clinical-critical",
   "relatedParty": [
     {
       "@type": "RelatedPartyRefOrPartyRoleRef",
@@ -521,7 +522,7 @@ Accept: application/json
           },
           "serviceType": "surgical-connectivity",
           "serviceClass": "critical-gold",
-          "priority": "critical",
+          "priority": "clinical-critical",
           "redundancyRequired": true,
           "timeWindow": {
             "startDateTime": "2026-04-18T12:00:00+10:00"
@@ -548,8 +549,8 @@ HTTP/1.1 201 Created
 Location: /intentManagement/v5/intent/INT-HOSP-2026-001
 Content-Type: application/json
 Content-Language: en-AU
-X-TMF-Native: true
-X-Platform-Extension: false
+X-TMF-Native: false
+X-Platform-Extension: true
 ETag: "intent-INT-HOSP-2026-001-v1"
 Last-Modified: Sat, 18 Apr 2026 02:00:00 GMT
 ```
@@ -567,12 +568,10 @@ Last-Modified: Sat, 18 Apr 2026 02:00:00 GMT
   "statusReason": "Intent request accepted for semantic validation and fulfilment.",
   "statusChangeDate": "2026-04-18T12:00:00+10:00",
   "intentSpecification": {
-    "id": "hospital-surgical-slice-spec",
-    "version": "1.20",
-    "href": "/intentManagement/v5/intentSpecification/hospital-surgical-slice-spec?version=1.20"
+    "id": "hospital-surgical-slice-spec-v1.20",
+    "href": "/intentManagement/v5/intentSpecification/hospital-surgical-slice-spec-v1.20"
   },
-  "isBundle": false,
-  "priority": "critical",
+  "priority": "clinical-critical",
   "relatedParty": [
     {
       "@type": "RelatedPartyRefOrPartyRoleRef",
@@ -605,7 +604,7 @@ Last-Modified: Sat, 18 Apr 2026 02:00:00 GMT
           },
           "serviceType": "surgical-connectivity",
           "serviceClass": "critical-gold",
-          "priority": "critical",
+          "priority": "clinical-critical",
           "redundancyRequired": true,
           "timeWindow": {
             "startDateTime": "2026-04-18T12:00:00+10:00"
@@ -663,8 +662,8 @@ HTTP/1.1 201 Created
 Location: /intentManagement/v5/intent/INT-HOSP-2026-001
 Content-Type: application/json
 Content-Language: en-AU
-X-TMF-Native: true
-X-Platform-Extension: false
+X-TMF-Native: false
+X-Platform-Extension: true
 ETag: "intent-INT-HOSP-2026-001-v1"
 ```
 
@@ -679,6 +678,7 @@ ETag: "intent-INT-HOSP-2026-001-v1"
   "lifecycleStatus": "Draft",
   "statusReason": "Intent saved as draft and not submitted for admission.",
   "statusChangeDate": "2026-04-18T12:00:00+10:00",
+  "isBundle": false,
   "@type": "Intent",
   "@baseType": "Entity"
 }
@@ -691,6 +691,8 @@ If `submit` is omitted on create, IC MS treats the request as submitted for admi
 If `submit: false` is supplied, IC MS persists the Intent as `Draft` and does not emit `IntentValidatedEvent`, optimise, assure, or send the Intent to downstream change execution.
 
 If `submit: true` is supplied, IC MS applies the runtime admission profile. IC MS emits `IntentValidatedEvent` after syntactic validation succeeds and the external Intent projection is persisted.
+
+If `isBundle` is omitted on create, IC MS defaults it to `false`. If supplied, it must be boolean. Persisted responses include the server-resolved value.
 
 `IntentValidatedEvent` is a state/progress event, not a point-to-point command for a specific consumer.
 
@@ -738,7 +740,7 @@ Cache-Control: private, max-age=60
     "statusReason": "Intent version v2 is active and assurance is healthy.",
     "statusChangeDate": "2026-04-18T12:20:00+10:00",
     "intentSpecification": {
-      "id": "hospital-surgical-slice-spec"
+      "id": "hospital-surgical-slice-spec-v1.20"
     },
     "@type": "Intent",
     "@baseType": "Entity"
@@ -802,12 +804,11 @@ Cache-Control: private, max-age=300
   "statusReason": "Intent version v2 is active and assurance is healthy.",
   "statusChangeDate": "2026-04-18T12:20:00+10:00",
   "intentSpecification": {
-    "id": "hospital-surgical-slice-spec",
-    "version": "1.20",
-    "href": "/intentManagement/v5/intentSpecification/hospital-surgical-slice-spec?version=1.20"
+    "id": "hospital-surgical-slice-spec-v1.20",
+    "href": "/intentManagement/v5/intentSpecification/hospital-surgical-slice-spec-v1.20"
   },
   "isBundle": false,
-  "priority": "critical",
+  "priority": "clinical-critical",
   "relatedParty": [
     {
       "@type": "RelatedPartyRefOrPartyRoleRef",
@@ -840,7 +841,7 @@ Cache-Control: private, max-age=300
           },
           "serviceType": "surgical-connectivity",
           "serviceClass": "critical-gold",
-          "priority": "critical",
+          "priority": "clinical-critical",
           "redundancyRequired": true,
           "timeWindow": {
             "startDateTime": "2026-04-18T12:00:00+10:00"
@@ -910,10 +911,9 @@ If-Match: "intent-INT-HOSP-2026-001-v3"
   "humanExpression": "I need a surgical connection in Sydney Hospital with latency less than or equal to 8 ms and availability at least 99.99%.",
   "submit": false,
   "intentSpecification": {
-    "id": "hospital-surgical-slice-spec"
+    "id": "hospital-surgical-slice-spec-v1.20"
   },
-  "isBundle": false,
-  "priority": "critical",
+  "priority": "clinical-critical",
   "relatedParty": [
     {
       "@type": "RelatedPartyRefOrPartyRoleRef",
@@ -946,7 +946,7 @@ If-Match: "intent-INT-HOSP-2026-001-v3"
           },
           "serviceType": "surgical-connectivity",
           "serviceClass": "critical-gold",
-          "priority": "critical",
+          "priority": "clinical-critical",
           "redundancyRequired": true,
           "timeWindow": {
             "startDateTime": "2026-04-18T12:00:00+10:00"
@@ -968,8 +968,8 @@ If-Match: "intent-INT-HOSP-2026-001-v3"
 ```http
 HTTP/1.1 200 OK
 Content-Type: application/json
-X-TMF-Native: true
-X-Platform-Extension: false
+X-TMF-Native: false
+X-Platform-Extension: true
 Content-Location: /intentManagement/v5/intent/INT-HOSP-2026-001
 ETag: "intent-INT-HOSP-2026-001-v4"
 ```
@@ -987,12 +987,11 @@ ETag: "intent-INT-HOSP-2026-001-v4"
   "statusReason": "Draft intent updated and not submitted for admission.",
   "statusChangeDate": "2026-04-18T12:00:00+10:00",
   "intentSpecification": {
-    "id": "hospital-surgical-slice-spec",
-    "version": "1.20",
-    "href": "/intentManagement/v5/intentSpecification/hospital-surgical-slice-spec?version=1.20"
+    "id": "hospital-surgical-slice-spec-v1.20",
+    "href": "/intentManagement/v5/intentSpecification/hospital-surgical-slice-spec-v1.20"
   },
   "isBundle": false,
-  "priority": "critical",
+  "priority": "clinical-critical",
   "expression": {
     "@type": "JsonLdExpression",
     "@baseType": "Expression",
@@ -1013,7 +1012,7 @@ ETag: "intent-INT-HOSP-2026-001-v4"
           },
           "serviceType": "surgical-connectivity",
           "serviceClass": "critical-gold",
-          "priority": "critical",
+          "priority": "clinical-critical",
           "redundancyRequired": true,
           "timeWindow": {
             "startDateTime": "2026-04-18T12:00:00+10:00"
@@ -1079,7 +1078,7 @@ If-Match: "intent-INT-HOSP-2026-001-v4"
 {
   "submit": false,
   "intentSpecification": {
-    "id": "hospital-surgical-slice-spec"
+    "id": "hospital-surgical-slice-spec-v1.20"
   },
   "expression": {
     "@type": "JsonLdExpression",
@@ -1098,7 +1097,7 @@ If-Match: "intent-INT-HOSP-2026-001-v4"
           },
           "serviceType": "surgical-connectivity",
           "serviceClass": "critical-gold",
-          "priority": "critical",
+          "priority": "clinical-critical",
           "redundancyRequired": true,
           "timeWindow": {
             "startDateTime": "2026-04-18T12:00:00+10:00"
@@ -1118,8 +1117,8 @@ If-Match: "intent-INT-HOSP-2026-001-v4"
 ```http
 HTTP/1.1 200 OK
 Content-Type: application/json
-X-TMF-Native: true
-X-Platform-Extension: false
+X-TMF-Native: false
+X-Platform-Extension: true
 Content-Location: /intentManagement/v5/intent/INT-HOSP-2026-001
 ETag: "intent-INT-HOSP-2026-001-v5"
 ```
@@ -1137,12 +1136,11 @@ ETag: "intent-INT-HOSP-2026-001-v5"
   "statusReason": "Draft intent patched and not submitted for admission.",
   "statusChangeDate": "2026-04-18T12:00:00+10:00",
   "intentSpecification": {
-    "id": "hospital-surgical-slice-spec",
-    "version": "1.20",
-    "href": "/intentManagement/v5/intentSpecification/hospital-surgical-slice-spec?version=1.20"
+    "id": "hospital-surgical-slice-spec-v1.20",
+    "href": "/intentManagement/v5/intentSpecification/hospital-surgical-slice-spec-v1.20"
   },
   "isBundle": false,
-  "priority": "critical",
+  "priority": "clinical-critical",
   "expression": {
     "@type": "JsonLdExpression",
     "@baseType": "Expression",
@@ -1163,7 +1161,7 @@ ETag: "intent-INT-HOSP-2026-001-v5"
           },
           "serviceType": "surgical-connectivity",
           "serviceClass": "critical-gold",
-          "priority": "critical",
+          "priority": "clinical-critical",
           "redundancyRequired": true,
           "timeWindow": {
             "startDateTime": "2026-04-18T12:00:00+10:00"
@@ -1228,8 +1226,8 @@ If-Match: "intent-INT-HOSP-2026-001-v5"
 HTTP/1.1 202 Accepted
 Content-Type: application/json
 Content-Language: en-AU
-X-TMF-Native: true
-X-Platform-Extension: false
+X-TMF-Native: false
+X-Platform-Extension: true
 Location: /intentManagement/v5/intent/INT-HOSP-2026-001
 ETag: "intent-INT-HOSP-2026-001-v6"
 ```
@@ -1508,8 +1506,8 @@ Accept: application/json
 HTTP/1.1 201 Created
 Location: /intentManagement/v5/intent/hub/sub-intent-001
 Content-Type: application/json
-X-TMF-Native: true
-X-Platform-Extension: false
+X-TMF-Native: false
+X-Platform-Extension: true
 ETag: "subscription-sub-intent-001-v1"
 ```
 
@@ -1620,8 +1618,8 @@ Cache-Control: no-cache
 ```http
 HTTP/1.1 200 OK
 Content-Type: application/json
-X-TMF-Native: true
-X-Platform-Extension: false
+X-TMF-Native: false
+X-Platform-Extension: true
 ETag: "subscription-sub-intent-001-v1"
 Cache-Control: private, max-age=300
 ```
@@ -1654,8 +1652,8 @@ If-Match: "subscription-sub-intent-001-v1"
 ### Success response:
 
 ```http
-X-TMF-Native: true
-X-Platform-Extension: false
+X-TMF-Native: false
+X-Platform-Extension: true
 HTTP/1.1 204 No Content
 ```
 
@@ -1716,7 +1714,7 @@ X-Platform-Extension: false
 {
   "code": "VALIDATION_FAILED",
   "reason": "INTENT_SPECIFICATION_NOT_ACTIVE",
-  "message": "Referenced IntentSpecification hospital-surgical-slice-spec version 1.20 is not ACTIVE.",
+  "message": "Referenced IntentSpecification hospital-surgical-slice-spec-v1.20 is not ACTIVE.",
   "status": 422,
   "referenceError": "https://mycsp.com.au/errors/VALIDATION_FAILED",
   "@type": "Error"
@@ -1829,7 +1827,7 @@ They must not expose raw telemetry, raw optimiser decisions, raw `t7.knowledge p
       "version": "v1",
       "lifecycleStatus": "Acknowledged",
       "intentSpecification": {
-        "id": "hospital-surgical-slice-spec"
+        "id": "hospital-surgical-slice-spec-v1.20"
       },
       "@type": "Intent",
       "@baseType": "Entity"
@@ -2148,7 +2146,7 @@ External hub notifications do not use these Kafka headers. They are HTTP webhook
 - `expression.iri` identifies the semantic/expression contract and must match the selected specification's `expressionSpecification.iri`.
 - IC MS does not admit by IRI-only resolution.
 - `intentSpecification.specKey` and `intentSpecification.name` are optional hints only and are not authoritative runtime validation keys.
-- IC MS must not resolve `IntentSpecification` by family, key, name, or inferred payload shape alone.
+- IC MS must not resolve `IntentSpecification` by `specKey`, name, or inferred payload shape alone.
 
 Baseline:
 - `expression.iri` is mandatory.
@@ -2161,6 +2159,7 @@ Baseline:
 - If `submit` is omitted on initial create, IC MS treats the request as submitted for admission.
 - If an Intent is already persisted with `submit: false`, later omission of `submit` preserves Draft handling and must not automatically submit the Intent.
 - External consumers must not set or patch `lifecycleStatus`; lifecycle is assigned, transitioned, and projected by the intent management entity.
+- `isBundle` is optional in create/update requests; omitted create requests default to `false`, and persisted responses include the server-resolved value.
 - `PUT /intent/{id}` is a platform extension for deterministic full replacement and is allowed only while the current Intent version is in `Draft`.
 - `PATCH /intent/{id}` is supported for TMF compatibility and is allowed only while the current Intent version is in `Draft`.
 - Once an Intent leaves `Draft`, material changes require creating a new Draft version.
@@ -2206,7 +2205,7 @@ IC MS accepts and projects runtime Intent resources using the external runtime e
   "humanExpression": "I need a surgical connection in Sydney Hospital with latency less than or equal to 10 ms and availability at least 99.99%.",
   "submit": true,
   "intentSpecification": {
-    "id": "hospital-surgical-slice-spec"
+    "id": "hospital-surgical-slice-spec-v1.20"
   },
   "expression": {
     "@type": "JsonLdExpression",
@@ -2228,7 +2227,7 @@ IC MS accepts and projects runtime Intent resources using the external runtime e
           },
           "serviceType": "surgical-connectivity",
           "serviceClass": "critical-gold",
-          "priority": "critical",
+          "priority": "clinical-critical",
           "redundancyRequired": true,
           "timeWindow": {
             "startDateTime": "2026-04-18T12:00:00+10:00"
@@ -2258,7 +2257,7 @@ IC MS accepts and projects runtime Intent resources using the external runtime e
     "lifecycleStatus": "Acknowledged",
     "statusReason": "Intent request passed IC MS admission validation and was admitted for downstream processing.",
     "intentSpecification": {
-      "id": "hospital-surgical-slice-spec"
+      "id": "hospital-surgical-slice-spec-v1.20"
     },
     "expression": {
       "context": {
@@ -2276,7 +2275,7 @@ IC MS accepts and projects runtime Intent resources using the external runtime e
           },
           "serviceType": "surgical-connectivity",
           "serviceClass": "critical-gold",
-          "priority": "critical",
+          "priority": "clinical-critical",
           "redundancyRequired": true,
           "timeWindow": {
             "startDateTime": "2026-04-18T12:00:00+10:00"
@@ -2294,8 +2293,8 @@ IC MS accepts and projects runtime Intent resources using the external runtime e
         "href": "/intentManagement/v5/intent/INT-HOSP-2026-001"
       },
       "intentSpecification": {
-        "id": "hospital-surgical-slice-spec",
-        "href": "/intentManagement/v5/intentSpecification/hospital-surgical-slice-spec?version=1.20"
+        "id": "hospital-surgical-slice-spec-v1.20",
+        "href": "/intentManagement/v5/intentSpecification/hospital-surgical-slice-spec-v1.20"
       }
     }
   }
@@ -2310,8 +2309,3 @@ IC MS accepts and projects runtime Intent resources using the external runtime e
 - `IntentValidatedEvent.body.expression` carries the same canonical semantic buckets internally without the external TMF expression wrapper.
 - IC MS validates syntactic shape against the active ID MS `expressionSpecification` and `targetEntitySchema`.
 - IC MS does not perform semantic/KP validation, optimisation, change execution, or assurance.
-
-
-## IntentSpecification draft-candidate guardrail:
-
-IC MS runtime admission must use a concrete ACTIVE `intentSpecification.id`. It must not use `specKey`, `draftId`, name, IRI-only lookup, or inferred payload shape as the runtime contract-selection key. DRAFT IntentSpecification candidates are not valid runtime contracts and must not be used for new runtime Intent admission.

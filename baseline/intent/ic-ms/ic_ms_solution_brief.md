@@ -46,14 +46,14 @@ IC MS owns the externally visible runtime projection, not the full internal fulf
 
 1. A consumer sends `POST /intentManagement/v5/intent` with a runtime `Intent` request.
 2. IC MS validates the basic TMF resource shape.
-3. If `submit: false` is supplied, IC MS persists the Intent as `Draft`.
+3. If `submit: false` is supplied, IC MS persists the Intent as `Draft`. If `isBundle` is omitted, IC MS defaults it to `false`.
 4. A Draft Intent is an authoring record only; it is not admitted, optimised, assured, sent to downstream change execution, or used to drive `activeVersion`.
 5. If `submit` is omitted on initial create, IC MS treats the request as `submit: true`.
 6. If `submit: true` is supplied or defaulted, IC MS checks that the request carries both mandatory `intentSpecification.id` and mandatory `expression.iri`.
 7. IC MS resolves the exact active `IntentSpecification` using mandatory `intentSpecification.id`.
 8. IC MS confirms the request `expression.iri` matches the selected specification's `expressionSpecification.iri`, then validates the runtime expression/request shape against the resolved active definition owned by ID MS.
 9. If validation fails, IC MS returns a structured error such as `422 VALIDATION_FAILED`.
-10. If validation succeeds, IC MS persists the external `Intent` projection and sets the initial projected lifecycle state to `Acknowledged`.
+10. If validation succeeds, IC MS persists the external `Intent` projection, includes the server-resolved `isBundle` value, and sets the initial projected lifecycle state to `Acknowledged`.
 11. IC MS emits `IntentValidatedEvent` as an internal state/progress event.
 12. Downstream services continue semantic interpretation, optimisation where applicable, change preparation, apply, callback interpretation, and assurance.
 13. IC MS consumes downstream outcome/projection events and updates the external `Intent` and `IntentReport` views.
@@ -176,7 +176,7 @@ IC MS does not own:
 | Raw orchestrator callback interpretation | IA MS |
 | Raw candidate/resource scoring exposure | Internal optimiser/assurance pipeline only |
 
-IC MS also does not resolve an `IntentSpecification` by `expression.iri` alone, `specKey`, name, key, or inferred expression shape alone. Submitted runtime create/update admission requests must include both `intentSpecification.id` and `expression.iri`. `intentSpecification.id` selects the exact active platform-managed specification. `expression.iri` identifies the semantic/expression contract and must match the selected specification's `expressionSpecification.iri`. `intentSpecification.specKey` and `intentSpecification.name` are optional hints only.
+IC MS also does not resolve an `IntentSpecification` by `expression.iri` alone, `familyId`, name, key, or inferred expression shape alone. Submitted runtime create/update admission requests must include both `intentSpecification.id` and `expression.iri`. `intentSpecification.id` selects the exact active platform-managed specification. `expression.iri` identifies the semantic/expression contract and must match the selected specification's `expressionSpecification.iri`. `intentSpecification.familyId` and `intentSpecification.name` are optional hints only.
 
 IC MS does not allow external consumers to set or patch `lifecycleStatus`; lifecycle state is assigned and projected by the intent management entity.
 
@@ -291,7 +291,7 @@ Baseline:
 - `targetEntitySchema` owns the detailed validation contract.
 - `expressionSpecification.iri` identifies the semantic/expression contract.
 - `specCharacteristic` gives catalogue/discovery summary only.
-- Use array-based `targets`, `constraints`, and `preferences` for scalability.
+- Use the canonical `targets`, `constraints`, and `preferences` semantic buckets consistently; concrete schemas may specialise whether each bucket uses object-map entries or array entries.
 - Keep simplified object-map examples only where they are deliberately explanatory.
 
 
@@ -307,13 +307,13 @@ A runtime intent create/update request uses the following baseline:
 | `submit` | Optional IC MS extension request-control field. `false` saves or keeps Draft; `true` submits for admission. If omitted on initial create, the request is treated as submitted. If omitted on an existing Draft, Draft handling is preserved. |
 | `intentSpecification.id` | Mandatory for submitted admission; selects the exact active platform-managed specification used for validation, governance, and audit. |
 | `expression.iri` | Mandatory for submitted admission; identifies the semantic/expression contract and must match the selected specification's `expressionSpecification.iri`. |
-| `intentSpecification.specKey` | Optional descriptive/discovery hint; not an authoritative validation key. |
+| `intentSpecification.familyId` | Optional descriptive/discovery hint; not an authoritative validation key. |
 | `intentSpecification.name` | Optional descriptive/discovery hint; not an authoritative validation key. |
 | `expression` | Required TMF-compliant `JsonLdExpression`. |
 | `expression.expressionValue.context.targets` | Required measurable outcome/SLA objectives where defined by the specification. |
 | `expression.expressionValue.context.constraints` | Required or optional hard constraints as defined by the specification. |
 | `expression.expressionValue.context.preferences` | Optional soft selection guidance as defined by the specification. |
-| `isBundle` | Runtime bundle flag. |
+| `isBundle` | Optional runtime bundle flag. Defaults to `false` when omitted on create; persisted responses include the server-resolved value. |
 | `priority` | Runtime priority where applicable. |
 | `relatedParty` | Requester/customer/operator party references where applicable. |
 | `validFor` | Runtime validity window where applicable. |
@@ -325,7 +325,7 @@ Example explicit specification reference:
 ```json
 {
   "intentSpecification": {
-    "id": "hospital-surgical-slice-spec"
+    "id": "hospital-surgical-slice-spec-v1.20"
   },
   "expression": {
     "iri": "https://mycsp.com.au/tio/hospital-surgical-slice/v1.0"
@@ -343,7 +343,7 @@ IRI-only admission is not supported. This request is rejected because `intentSpe
 }
 ```
 
-`intentSpecification.specKey` and `intentSpecification.name` may be supplied as optional descriptive/discovery hints, but they are not mandatory and are not authoritative validation keys.
+`intentSpecification.familyId` and `intentSpecification.name` may be supplied as optional descriptive/discovery hints, but they are not mandatory and are not authoritative validation keys.
 
 ## Field specification:
 
@@ -361,10 +361,10 @@ IRI-only admission is not supported. This request is rejected because `intentSpe
 | `lifecycleStatus` | Current projected external lifecycle status. |
 | `statusReason` | Human-readable reason for current projected status. |
 | `statusChangeDate` | Timestamp for the latest projected status change. |
-| `intentSpecification` | Specification reference. `id` is mandatory for submitted admission; `specKey` and `name` are hints only. |
+| `intentSpecification` | Specification reference. `id` is mandatory for submitted admission; `familyId` and `name` are hints only. |
 | `expression` | Runtime intent expression using `JsonLdExpression`. |
 | `validFor` | Runtime validity period. |
-| `isBundle` | Bundle indicator. |
+| `isBundle` | Server-resolved bundle indicator. |
 | `priority` | Consumer/platform priority. |
 | `relatedParty` | Party references. |
 | `_links` | Hypermedia controls for valid next actions. |
@@ -422,6 +422,7 @@ External `GET /intent/{id}` returns the current projected `Intent` state. It doe
 | Draft editability | While `lifecycleStatus = Draft`, all attributes accepted by the `PUT` / `PATCH` request contract are mutable. |
 | Immutable identity | `id` is immutable; if included in `PUT`, it must match the path `id`. |
 | Lifecycle ownership | `lifecycleStatus` is not writable through create/update contracts; it is assigned and projected by the intent management entity. |
+| Bundle defaulting | `isBundle` is optional in request bodies and defaults to `false` when omitted on create; persisted responses include the server-resolved value. |
 | Submitted-version update | Once an Intent leaves Draft, general attribute update on that submitted version is not allowed. Material changes require a new Draft version. |
 
 ### Intent-version lifecycle rules:
@@ -456,7 +457,7 @@ IC MS should reject or ignore unsupported external request fields according to t
 
 | Field / pattern | Reason |
 |---|---|
-| `intentSpecification.specKey` as the authoritative validation key | IC MS does not resolve runtime requests by specKey alone; it is only an optional hint. |
+| `intentSpecification.familyId` as the authoritative validation key | IC MS does not resolve runtime requests by family alone; it is only an optional hint. |
 | `intentSpecification.name` as the authoritative validation key | IC MS does not resolve runtime requests by display name alone; it is only an optional hint. |
 | Missing `expression.iri` | Submitted admission must include `expression.iri` so IC MS can validate the semantic/expression contract against the selected specification. |
 | Inferred specification from payload shape alone | IC MS must resolve the active validation contract by mandatory `intentSpecification.id`, with mandatory `expression.iri` checked against the selected specification. |
@@ -466,6 +467,7 @@ IC MS should reject or ignore unsupported external request fields according to t
 | Raw orchestrator callback payloads | ICB MS ingests callbacks; IA MS interprets them. |
 | Consumer-supplied lifecycle/status projection authority | IC MS owns external lifecycle/status projection. |
 | Consumer-supplied `lifecycleStatus` in create/update | Lifecycle state is assigned and projected by the intent management entity; external consumers use `submit`, not `lifecycleStatus`, to request draft/save versus admission. |
+| Missing `isBundle` in create/update request | Not an error. IC MS defaults omitted `isBundle` to `false` on create and preserves the persisted/server-resolved value on Draft updates unless explicitly changed. |
 | Consumer-supplied `IntentReport` mutation fields | Reports are curated projection/audit resources. |
 | String placeholders for object/array fields in examples or payloads | Typed placeholder rule requires object placeholders for objects and array placeholders for arrays. |
 
@@ -638,7 +640,7 @@ Canonical message intent:
     "intentVersion": "v1",
     "lifecycleStatus": "Acknowledged",
     "intentSpecification": {
-      "id": "hospital-surgical-slice-spec"
+      "id": "hospital-surgical-slice-spec-v1.20"
     },
     "expression": {
       "@type": "JsonLdExpression",
@@ -660,7 +662,7 @@ Canonical message intent:
             },
             "serviceType": "surgical-connectivity",
             "serviceClass": "critical-gold",
-            "priority": "critical",
+            "priority": "clinical-critical",
             "redundancyRequired": true
           },
           "preferences": {
@@ -674,7 +676,7 @@ Canonical message intent:
         "href": "/intentManagement/v5/intent/INT-HOSP-2026-001"
       },
       "intentSpecification": {
-        "href": "/intentManagement/v5/intentSpecification/hospital-surgical-slice-spec?version=1.20"
+        "href": "/intentManagement/v5/intentSpecification/hospital-surgical-slice-spec-v1.20"
       }
     }
   }
@@ -866,8 +868,3 @@ Internal consumers can rely on `IntentValidatedEvent` as the admitted runtime in
 | Primary resource | `Intent` |
 | Secondary resource | `IntentReport` |
 | Primary responsibility | TMF-compliant runtime `Intent` controller, syntactic admission, lifecycle/status projection, and external runtime intent events |
-
-
-## IntentSpecification draft-candidate guardrail:
-
-IC MS runtime admission must use a concrete ACTIVE `intentSpecification.id`. It must not use `specKey`, `draftId`, name, IRI-only lookup, or inferred payload shape as the runtime contract-selection key. DRAFT IntentSpecification candidates are not valid runtime contracts and must not be used for new runtime Intent admission.
