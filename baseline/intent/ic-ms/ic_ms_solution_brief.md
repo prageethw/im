@@ -46,14 +46,14 @@ IC MS owns the externally visible runtime projection, not the full internal fulf
 
 1. A consumer sends `POST /intentManagement/v5/intent` with a runtime `Intent` request.
 2. IC MS validates the basic TMF resource shape.
-3. If `submit: false` is supplied, IC MS persists the Intent as `Draft`.
+3. If `submit: false` is supplied, IC MS persists the Intent as `Draft`. If `isBundle` is omitted, IC MS defaults it to `false`.
 4. A Draft Intent is an authoring record only; it is not admitted, optimised, assured, sent to downstream change execution, or used to drive `activeVersion`.
 5. If `submit` is omitted on initial create, IC MS treats the request as `submit: true`.
 6. If `submit: true` is supplied or defaulted, IC MS checks that the request carries both mandatory `intentSpecification.id` and mandatory `expression.iri`.
 7. IC MS resolves the exact active `IntentSpecification` using mandatory `intentSpecification.id`.
 8. IC MS confirms the request `expression.iri` matches the selected specification's `expressionSpecification.iri`, then validates the runtime expression/request shape against the resolved active definition owned by ID MS.
 9. If validation fails, IC MS returns a structured error such as `422 VALIDATION_FAILED`.
-10. If validation succeeds, IC MS persists the external `Intent` projection and sets the initial projected lifecycle state to `Acknowledged`.
+10. If validation succeeds, IC MS persists the external `Intent` projection, includes the server-resolved `isBundle` value, and sets the initial projected lifecycle state to `Acknowledged`.
 11. IC MS emits `IntentValidatedEvent` as an internal state/progress event.
 12. Downstream services continue semantic interpretation, optimisation where applicable, change preparation, apply, callback interpretation, and assurance.
 13. IC MS consumes downstream outcome/projection events and updates the external `Intent` and `IntentReport` views.
@@ -313,7 +313,7 @@ A runtime intent create/update request uses the following baseline:
 | `expression.expressionValue.context.targets` | Required measurable outcome/SLA objectives where defined by the specification. |
 | `expression.expressionValue.context.constraints` | Required or optional hard constraints as defined by the specification. |
 | `expression.expressionValue.context.preferences` | Optional soft selection guidance as defined by the specification. |
-| `isBundle` | Runtime bundle flag. |
+| `isBundle` | Optional runtime bundle flag. Defaults to `false` when omitted on create; persisted responses include the server-resolved value. |
 | `priority` | Runtime priority where applicable. |
 | `relatedParty` | Requester/customer/operator party references where applicable. |
 | `validFor` | Runtime validity window where applicable. |
@@ -364,7 +364,7 @@ IRI-only admission is not supported. This request is rejected because `intentSpe
 | `intentSpecification` | Specification reference. `id` is mandatory for submitted admission; `familyId` and `name` are hints only. |
 | `expression` | Runtime intent expression using `JsonLdExpression`. |
 | `validFor` | Runtime validity period. |
-| `isBundle` | Bundle indicator. |
+| `isBundle` | Server-resolved bundle indicator. |
 | `priority` | Consumer/platform priority. |
 | `relatedParty` | Party references. |
 | `_links` | Hypermedia controls for valid next actions. |
@@ -422,6 +422,7 @@ External `GET /intent/{id}` returns the current projected `Intent` state. It doe
 | Draft editability | While `lifecycleStatus = Draft`, all attributes accepted by the `PUT` / `PATCH` request contract are mutable. |
 | Immutable identity | `id` is immutable; if included in `PUT`, it must match the path `id`. |
 | Lifecycle ownership | `lifecycleStatus` is not writable through create/update contracts; it is assigned and projected by the intent management entity. |
+| Bundle defaulting | `isBundle` is optional in request bodies and defaults to `false` when omitted on create; persisted responses include the server-resolved value. |
 | Submitted-version update | Once an Intent leaves Draft, general attribute update on that submitted version is not allowed. Material changes require a new Draft version. |
 
 ### Intent-version lifecycle rules:
@@ -466,6 +467,7 @@ IC MS should reject or ignore unsupported external request fields according to t
 | Raw orchestrator callback payloads | ICB MS ingests callbacks; IA MS interprets them. |
 | Consumer-supplied lifecycle/status projection authority | IC MS owns external lifecycle/status projection. |
 | Consumer-supplied `lifecycleStatus` in create/update | Lifecycle state is assigned and projected by the intent management entity; external consumers use `submit`, not `lifecycleStatus`, to request draft/save versus admission. |
+| Missing `isBundle` in create/update request | Not an error. IC MS defaults omitted `isBundle` to `false` on create and preserves the persisted/server-resolved value on Draft updates unless explicitly changed. |
 | Consumer-supplied `IntentReport` mutation fields | Reports are curated projection/audit resources. |
 | String placeholders for object/array fields in examples or payloads | Typed placeholder rule requires object placeholders for objects and array placeholders for arrays. |
 

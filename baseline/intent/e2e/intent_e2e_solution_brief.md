@@ -76,7 +76,7 @@ An authorised governance actor promotes a draft specification version to `ACTIVE
 
 ### Create runtime intent:
 
-An external consumer or OEX submits a runtime `Intent` to IC MS. IC MS validates syntax, confirms the request carries both an active `IntentSpecification.id` and mandatory `expression.iri`, persists the admitted intent, projects `Acknowledged`, and emits `IntentValidatedEvent`.
+An external consumer or OEX submits a runtime `Intent` to IC MS. External consumers use `submit`, not `lifecycleStatus`, to request Draft save versus admission. IC MS validates syntax, confirms the submitted request carries both an active `IntentSpecification.id` and mandatory `expression.iri`, defaults omitted `isBundle` to `false`, persists the admitted intent, projects `Acknowledged`, and emits `IntentValidatedEvent`.
 
 ### Interpret and resolve intent:
 
@@ -257,12 +257,14 @@ IC MS validates:
 
 - request resource shape;
 - required fields;
+- that external consumers have not supplied `lifecycleStatus`;
+- optional `isBundle`, defaulting it to `false` when omitted on create;
 - reference to a concrete active `IntentSpecification.id`;
 - mandatory `expression.iri` matching the selected specification's expression contract;
 - runtime expression shape against the active specification contract;
 - basic external authorisation context passed by the gateway/security layer.
 
-IC MS does not validate semantic feasibility, network topology, resource suitability, or assurance success. After successful admission, IC MS persists the intent, sets the projected lifecycle to `Acknowledged`, and emits `IntentValidatedEvent`. II MS then performs semantic interpretation and service-ready preparation.
+IC MS does not validate semantic feasibility, network topology, resource suitability, or assurance success. After successful admission, IC MS persists the intent with the server-resolved `isBundle` value, sets the projected lifecycle to `Acknowledged`, and emits `IntentValidatedEvent`. II MS then performs semantic interpretation and service-ready preparation.
 
 Where an optimiser component is used, `IntentResolvedEvent` can hand off a full candidate set to the optimiser, and II MS can consume the selected outcome before producing `IntentNetworkReadyEvent`.
 

@@ -320,6 +320,8 @@ While `lifecycleStatus = Draft`, all attributes accepted by the `PUT` / `PATCH` 
 
 Response/projection fields such as `href`, `version`, `lifecycleStatus`, `statusReason`, `statusChangeDate`, `activeVersion`, and `_links` are not writable request fields unless explicitly documented otherwise.
 
+`isBundle` is optional in create and update request bodies. If omitted on create, IC MS defaults `isBundle` to `false`. Persisted Intent responses include the server-resolved `isBundle` value.
+
 Once an Intent leaves `Draft`, general attribute update on that submitted version is not allowed. Material changes after submission require creating a new Draft version, editing that Draft version, and explicitly submitting it with `submit: true`.
 
 Draft Intents are authoring records only. They are not admitted, optimised, assured, sent to downstream change execution, or used to drive `activeVersion`.
@@ -487,7 +489,6 @@ Accept: application/json
   "intentSpecification": {
     "id": "hospital-surgical-slice-spec-v1.20"
   },
-  "isBundle": false,
   "priority": "critical",
   "relatedParty": [
     {
@@ -570,7 +571,6 @@ Last-Modified: Sat, 18 Apr 2026 02:00:00 GMT
     "id": "hospital-surgical-slice-spec-v1.20",
     "href": "/intentManagement/v5/intentSpecification/hospital-surgical-slice-spec-v1.20"
   },
-  "isBundle": false,
   "priority": "critical",
   "relatedParty": [
     {
@@ -678,6 +678,7 @@ ETag: "intent-INT-HOSP-2026-001-v1"
   "lifecycleStatus": "Draft",
   "statusReason": "Intent saved as draft and not submitted for admission.",
   "statusChangeDate": "2026-04-18T12:00:00+10:00",
+  "isBundle": false,
   "@type": "Intent",
   "@baseType": "Entity"
 }
@@ -690,6 +691,8 @@ If `submit` is omitted on create, IC MS treats the request as submitted for admi
 If `submit: false` is supplied, IC MS persists the Intent as `Draft` and does not emit `IntentValidatedEvent`, optimise, assure, or send the Intent to downstream change execution.
 
 If `submit: true` is supplied, IC MS applies the runtime admission profile. IC MS emits `IntentValidatedEvent` after syntactic validation succeeds and the external Intent projection is persisted.
+
+If `isBundle` is omitted on create, IC MS defaults it to `false`. If supplied, it must be boolean. Persisted responses include the server-resolved value.
 
 `IntentValidatedEvent` is a state/progress event, not a point-to-point command for a specific consumer.
 
@@ -910,7 +913,6 @@ If-Match: "intent-INT-HOSP-2026-001-v3"
   "intentSpecification": {
     "id": "hospital-surgical-slice-spec-v1.20"
   },
-  "isBundle": false,
   "priority": "critical",
   "relatedParty": [
     {
@@ -2157,6 +2159,7 @@ Baseline:
 - If `submit` is omitted on initial create, IC MS treats the request as submitted for admission.
 - If an Intent is already persisted with `submit: false`, later omission of `submit` preserves Draft handling and must not automatically submit the Intent.
 - External consumers must not set or patch `lifecycleStatus`; lifecycle is assigned, transitioned, and projected by the intent management entity.
+- `isBundle` is optional in create/update requests; omitted create requests default to `false`, and persisted responses include the server-resolved value.
 - `PUT /intent/{id}` is a platform extension for deterministic full replacement and is allowed only while the current Intent version is in `Draft`.
 - `PATCH /intent/{id}` is supported for TMF compatibility and is allowed only while the current Intent version is in `Draft`.
 - Once an Intent leaves `Draft`, material changes require creating a new Draft version.

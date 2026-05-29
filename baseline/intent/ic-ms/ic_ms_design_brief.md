@@ -108,7 +108,7 @@ On `POST /intentManagement/v5/intent`, IC MS:
 5. rejects syntactically invalid requests
 6. accepts syntactically valid requests
 7. creates/persists the external `Intent` projection
-8. sets initial `lifecycleStatus = Acknowledged`
+8. sets initial `lifecycleStatus = Acknowledged` and persists the server-resolved `isBundle` value, defaulting to `false` when omitted on create
 9. emits `IntentValidatedEvent` to the internal Kafka event backbone after syntactic validation succeeds
 
 IC MS validates syntax and contract shape only.
@@ -925,7 +925,7 @@ For submitted admission:
 - if `intentSpecification.id` is omitted, IC MS rejects the request
 - `intentSpecification.familyId` and `intentSpecification.name` are optional hints only
 
-Draft creation remains light. A Draft Intent can be created with `submit: false` without `intentSpecification.id` or `expression.iri`; those fields become mandatory only when admission is requested.
+Draft creation remains light. A Draft Intent can be created with `submit: false` without `intentSpecification.id` or `expression.iri`; those fields become mandatory only when admission is requested. `isBundle` is optional and defaults to `false` when omitted on create.
 
 ### Two separate version concepts:
 
@@ -950,7 +950,7 @@ Draft creation remains light. A Draft Intent can be created with `submit: false`
 
 **Submitted runtime `Intent` admission requires both `intentSpecification.id` and `expression.iri`. `intentSpecification.id` selects the exact active platform-managed specification. `expression.iri` identifies the semantic/expression contract and must match the selected specification's `expressionSpecification.iri`. IC MS does not admit by IRI-only resolution.**
 
-**Draft creation remains light. A Draft Intent can be created with `submit: false` without `intentSpecification.id` or `expression.iri`; those fields become mandatory only when admission is requested.**
+**Draft creation remains light. A Draft Intent can be created with `submit: false` without `intentSpecification.id` or `expression.iri`; those fields become mandatory only when admission is requested. `isBundle` is optional and defaults to `false` when omitted on create.**
 
 **`GET` operations return current projected Intent state, not internal version aggregates, and do not resolve or mutate specification versions.**
 
@@ -1138,6 +1138,7 @@ For `intent`:
 | `id` | Stable Intent ID, for example `INT-HOSP-2026-001` |
 | `projected_version` | Current externally projected runtime version |
 | `lifecycle_status` | Current external `Intent.lifecycleStatus` |
+| `is_bundle` | Server-resolved bundle flag; defaults to `false` when omitted on create |
 | `status_reason` | Current external status reason |
 | `status_change_date` | Last lifecycle/status projection change timestamp |
 | `intent_specification_id` | Concrete `IntentSpecification.id` used by the projected version |
