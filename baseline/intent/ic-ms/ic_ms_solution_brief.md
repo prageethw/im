@@ -29,7 +29,7 @@ IC MS -> webhook_delivery_outbox -> HTTP POST -> external subscriber listener ca
 | External API boundary | Owns `/intentManagement/v5/intent`, `/intentManagement/v5/intent/{id}`, nested `IntentReport` read APIs, and intent event hub subscription APIs. |
 | Primary resource | `Intent`. |
 | Secondary resource | `IntentReport`. |
-| Upstream dependency | ID MS for active `IntentSpecification` resolution using mandatory `intentSpecification.id`, with mandatory `expression.iri` used as the semantic/expression contract identifier. |
+| Upstream dependency | ID MS for active `IntentSpecification` validation using mandatory `intentSpecification.id`, with mandatory `expression.iri` checked against the selected specification's `expressionSpecification.iri`. |
 | Internal event path | Emits admitted runtime intent state through `IntentValidatedEvent` using the IC MS internal event outbox and Kafka relay. |
 | Downstream event consumers | II MS consumes admitted runtime intent state through `IntentValidatedEvent`. |
 | Downstream status inputs | II MS rejection outcomes and IA MS assurance outcomes drive IC MS external lifecycle/status projection. |
@@ -49,9 +49,9 @@ IC MS owns the externally visible runtime projection, not the full internal fulf
 3. If `submit: false` is supplied, IC MS persists the Intent as `Draft`.
 4. A Draft Intent is an authoring record only; it is not admitted, optimised, assured, sent to downstream change execution, or used to drive `activeVersion`.
 5. If `submit` is omitted on initial create, IC MS treats the request as `submit: true`.
-6. If `submit: true` is supplied or defaulted, IC MS checks that the request carries mandatory `expression.iri`.
-7. IC MS resolves the applicable active `IntentSpecification` using mandatory `intentSpecification.id`, with mandatory `expression.iri` checked against the selected specification.
-8. IC MS validates the runtime expression/request shape against the resolved active definition owned by ID MS.
+6. If `submit: true` is supplied or defaulted, IC MS checks that the request carries both mandatory `intentSpecification.id` and mandatory `expression.iri`.
+7. IC MS resolves the exact active `IntentSpecification` using mandatory `intentSpecification.id`.
+8. IC MS confirms the request `expression.iri` matches the selected specification's `expressionSpecification.iri`, then validates the runtime expression/request shape against the resolved active definition owned by ID MS.
 9. If validation fails, IC MS returns a structured error such as `422 VALIDATION_FAILED`.
 10. If validation succeeds, IC MS persists the external `Intent` projection and sets the initial projected lifecycle state to `Acknowledged`.
 11. IC MS emits `IntentValidatedEvent` as an internal state/progress event.
@@ -118,7 +118,7 @@ IC MS does not create a self-publish/self-consume Kafka loop for hub notificatio
 
 ## Solution Elaboration:
 
-IC MS is the runtime equivalent of a controlled authoring, admission, and projection layer. It can persist Draft Intents for authoring when `submit: false` is supplied. It accepts submitted runtime intent requests only when the incoming payload is structurally valid and can be resolved to an applicable active `IntentSpecification` using mandatory `intentSpecification.id` and mandatory `expression.iri`.
+IC MS is the runtime equivalent of a controlled authoring, admission, and projection layer. It can persist Draft Intents for authoring when `submit: false` is supplied. It accepts submitted runtime intent requests only when the incoming payload is structurally valid, carries mandatory `intentSpecification.id`, carries mandatory `expression.iri`, and passes the consistency check against the selected active `IntentSpecification`.
 
 It does not interpret whether the intent is semantically achievable, feasible, optimal, policy-compliant, or currently assured.
 
@@ -146,7 +146,7 @@ IC MS is responsible for:
 |---|---|
 | Runtime `Intent` API | Create, list, retrieve, replace, patch, and terminate runtime intents. |
 | Draft Intent authoring | Persist and update Draft Intents using the `submit` request-control extension without admitting them to downstream processing. |
-| Runtime syntactic validation | Validate incoming runtime intent request shape against the active `IntentSpecification` resolved from mandatory `intentSpecification.id`, with mandatory `expression.iri` checked against the selected specification. |
+| Runtime syntactic validation | Validate submitted runtime intent request shape against the active `IntentSpecification` selected by mandatory `intentSpecification.id`, with mandatory `expression.iri` checked against the selected specification's `expressionSpecification.iri`. |
 | Initial admission | Persist syntactically valid submitted requests and project `Acknowledged`. |
 | Internal progress publication | Emit `IntentValidatedEvent` after syntactic validation succeeds. |
 | External lifecycle projection | Own consumer-facing `Intent.lifecycleStatus`, `statusReason`, and `statusChangeDate`; external consumers cannot set or patch these fields. |
@@ -176,7 +176,7 @@ IC MS does not own:
 | Raw orchestrator callback interpretation | IA MS |
 | Raw candidate/resource scoring exposure | Internal optimiser/assurance pipeline only |
 
-IC MS also does not resolve an `IntentSpecification` by `familyId`, name, key, or inferred expression shape alone. Runtime create/update requests must include `expression.iri`. `intentSpecification.id`, `intentSpecification.familyId`, and `intentSpecification.name` are optional. If `intentSpecification.id` is supplied, it is authoritative. `intentSpecification.id` must be supplied for submitted admission; missing or invalid `intentSpecification.id` is rejected.
+IC MS also does not resolve an `IntentSpecification` by `expression.iri` alone, `familyId`, name, key, or inferred expression shape alone. Submitted runtime create/update admission requests must include both `intentSpecification.id` and `expression.iri`. `intentSpecification.id` selects the exact active platform-managed specification. `expression.iri` identifies the semantic/expression contract and must match the selected specification's `expressionSpecification.iri`. `intentSpecification.familyId` and `intentSpecification.name` are optional hints only.
 
 IC MS does not allow external consumers to set or patch `lifecycleStatus`; lifecycle state is assigned and projected by the intent management entity.
 
@@ -458,7 +458,7 @@ IC MS should reject or ignore unsupported external request fields according to t
 |---|---|
 | `intentSpecification.familyId` as the authoritative validation key | IC MS does not resolve runtime requests by family alone; it is only an optional hint. |
 | `intentSpecification.name` as the authoritative validation key | IC MS does not resolve runtime requests by display name alone; it is only an optional hint. |
-| Missing `expression.iri` | Runtime request must include `expression.iri` so IC MS can resolve and validate the expression contract. |
+| Missing `expression.iri` | Submitted admission must include `expression.iri` so IC MS can validate the semantic/expression contract against the selected specification. |
 | Inferred specification from payload shape alone | IC MS must resolve the active validation contract by mandatory `intentSpecification.id`, with mandatory `expression.iri` checked against the selected specification. |
 | Internal optimiser candidate sets | Not part of the external runtime create/update contract. |
 | Raw Knowledge Plane facts | Not accepted through IC MS runtime APIs. |
@@ -745,8 +745,9 @@ Webhook notifications use HTTP headers, not Kafka CloudEvents headers.
 | Scenario | Behaviour |
 |---|---|
 | Invalid JSON or malformed request | Return `400 BAD_REQUEST`. |
+| Missing `intentSpecification.id` on submitted admission | Return `422 VALIDATION_FAILED` with reason `INTENT_SPECIFICATION_ID_REQUIRED`. |
 | Missing `expression.iri` | Return `422 VALIDATION_FAILED` with reason `EXPRESSION_IRI_REQUIRED`. |
-| Missing `intentSpecification.id` on submitted admission | Return `422 VALIDATION_FAILED` with reason `INTENT_SPECIFICATION_ID_REQUIRED` and require explicit `intentSpecification.id`. |
+| Runtime `expression.iri` does not match selected specification `expressionSpecification.iri` | Return `422 VALIDATION_FAILED` with reason `INTENT_EXPRESSION_IRI_MISMATCH`. |
 | Referenced specification is not active | Return `422 VALIDATION_FAILED` or `INTENT_SPECIFICATION_NOT_ACTIVE`. |
 | Active specification cannot be confirmed | Return `503 SERVICE_UNAVAILABLE` with retry guidance where applicable. |
 | `submit: false` supplied | Persist `Intent` as `Draft`; do not emit `IntentValidatedEvent`; do not optimise, assure, or send to downstream change execution. |
@@ -796,7 +797,7 @@ IC MS configuration should include:
 
 | Configuration area | Purpose |
 |---|---|
-| ID MS lookup endpoint | Resolve and validate the active `IntentSpecification` by authoritative `intentSpecification.id` when supplied, otherwise by mandatory `expression.iri`. |
+| ID MS lookup endpoint | Resolve and validate the active `IntentSpecification` by mandatory `intentSpecification.id`, then confirm `expression.iri` matches the selected specification's `expressionSpecification.iri`. |
 | Allowed lifecycle transitions | Control valid projected state movement. |
 | Draft and submit policy | Control `submit` defaulting, Draft persistence, Draft submission, and Draft-only editability. |
 | Internal event topic binding | Publish `IntentValidatedEvent`. |
@@ -814,7 +815,7 @@ External consumers can rely on IC MS to provide:
 | Contract item | Guarantee |
 |---|---|
 | Stable runtime `Intent` API | TMF-compliant create, list, retrieve, update, patch, and termination routes. |
-| Runtime validation discriminator | Runtime requests must include `expression.iri`; `intentSpecification.id` is mandatory for submitted admission. |
+| Runtime validation discriminator | Submitted runtime requests must include both `intentSpecification.id` and `expression.iri`. |
 | Draft authoring | Consumers can save and edit Draft Intents with `submit: false`; Drafts are not admitted or sent downstream. |
 | External status projection | `lifecycleStatus`, `statusReason`, and `statusChangeDate` are IC MS-owned projections and are not externally writable. |
 | Report read model | `IntentReport` is a read-only curated projection/audit resource for ordinary consumers. |
@@ -841,7 +842,7 @@ Internal consumers can rely on `IntentValidatedEvent` as the admitted runtime in
 | Item | Decision |
 |---|---|
 | IC MS service identity | Full name is `Intent Controller MS`; service name is `intent-controller-ms`. |
-| Runtime create/update active spec resolution | `expression.iri` is mandatory; `intentSpecification.id` is mandatory for submitted admission; family/name are optional hints only. |
+| Runtime create/update active spec resolution | Submitted admission requires both `intentSpecification.id` and `expression.iri`; family/name are optional hints only. |
 | IC MS validation scope | Syntactic/request-shape validation only for submitted requests; no semantic or optimisation ownership. |
 | Initial admitted state | `Acknowledged` after submitted request admission; `Draft` when `submit: false` is used. |
 | Internal handoff event | `IntentValidatedEvent`. |

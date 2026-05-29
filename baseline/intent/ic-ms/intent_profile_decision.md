@@ -63,7 +63,7 @@ This proposal defines a candidate intent management entity profile rule. It does
 
 ## 3. Context:
 
-An `IntentSpecification` defines the reusable contract. A runtime `Intent` is a concrete request made against that contract, either by explicit reference to an `IntentSpecification` or by an expression IRI that can be resolved to one active specification.
+An `IntentSpecification` defines the reusable contract. A runtime `Intent` is a concrete request made against that contract by explicit reference to an active `IntentSpecification.id`, with `expression.iri` used to confirm the semantic/expression contract.
 
 The admission request must contain enough machine-readable information to identify the governing `IntentSpecification`, confirm the semantic expression contract, and validate the runtime request. The persisted Intent must contain enough information to trace the request, audit the decision, project lifecycle state, and support later version or update handling.
 
@@ -77,7 +77,7 @@ The intent management entity must be able to answer questions such as:
 - What lifecycle state was projected externally?
 - What version of the runtime `Intent` is currently represented?
 - Can the request be traced back to a human-readable business statement?
-- Can downstream consumers interpret the request without re-resolving ambiguous context?
+- Can downstream consumers interpret the request without re-resolving ambiguous specification context?
 
 ## 4. Decision drivers:
 
@@ -264,7 +264,6 @@ A persisted `Intent` response after admission is accepted must include:
 - `statusReason`
 - `statusChangeDate`
 - `intentSpecification.id`
-- `intentSpecification.id`
 - `expression`
 - `expression.@type`
 - `expression.iri`
@@ -274,7 +273,7 @@ A persisted `Intent` response after admission is accepted must include:
 
 The important distinction is:
 
-> `intentSpecification.id` is optional in the admission request, but mandatory in the persisted response after admission is accepted.
+> `intentSpecification.id` is mandatory in the admission request and remains mandatory in the persisted response after admission is accepted.
 
 ### 5.7 Optional intent-management-entity governed enrichment fields:
 
@@ -283,7 +282,7 @@ Optional enrichment fields are useful, but they are not part of the generic mini
 | **Field** | **Proposed classification** | **Reason** |
 | --- | --- | --- |
 | `humanExpression` | **Strongly recommended** | Improves human traceability, auditability, triage, and business-level interpretation. |
-| `intentSpecification.id` in admission request | **Strongly recommended** | Removes ambiguity and speeds validation/interpretation where the requester knows the active specification. |
+| `intentSpecification.id` in admission request | **Mandatory for submitted admission** | Selects the exact active platform-managed `IntentSpecification` used for validation, governance, and audit. |
 | `description` | Optional | Useful for extra human-readable context. |
 | `validFor.startDateTime` | Optional | Useful when the runtime intent should be valid from a specific time. |
 | `isBundle` | Optional | Useful where bundled intent behaviour is supported. |
@@ -392,7 +391,7 @@ If accepted, this proposal gives the intent management entity:
 
 - a stable minimum profile for runtime Intent admission
 - a small Draft add-on for pre-admission authoring
-- support for both explicit and IRI-based specification resolution
+- deterministic active specification selection through mandatory `intentSpecification.id`, with `expression.iri` used as the semantic contract consistency check
 - stronger traceability after admission
 - clearer separation between minimum mandatory fields and optional enrichment
 
@@ -459,7 +458,7 @@ After this proposal is reviewed and baselined, update the affected architecture 
 
 - document the runtime `Intent` mandatory profile
 - clarify admission request minimum mandatory fields
-- clarify mandatory `intentSpecification.id` and strongly recommended `humanExpression`
+- clarify mandatory `intentSpecification.id`, mandatory `expression.iri`, and strongly recommended `humanExpression`
 - clarify persisted response mandatory fields
 - clarify `intentSpecification.id` and `expression.iri` consistency validation
 - keep runtime version/lifecycle profile wording aligned with the existing `activeVersion` baseline
