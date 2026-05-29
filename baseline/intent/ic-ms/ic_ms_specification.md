@@ -1395,7 +1395,7 @@ Cache-Control: private, max-age=300
 
 ---
 
-### 11A. IntentReport delete posture:
+### IntentReport delete posture:
 
 IC MS does not expose ordinary external `DELETE /intentManagement/v5/intent/{intentId}/intentReport/{id}` through NGW or public TMF-compliant consumer APIs by default.
 
@@ -1742,7 +1742,7 @@ X-Platform-Extension: false
 }
 ```
 
-### 15A. External event timestamp rule:
+### External event timestamp rule:
 
 External TMF-aligned event examples populate both `eventTime` and `timeOccurred` with the same canonical event occurrence timestamp. `timeOccurred` is the platform-corrected spelling used consistently across ID MS and IC MS external event examples. TMF921 examples contain the misspelled `timeOcurred`; this baseline intentionally uses the corrected spelling while preserving the same timestamp semantics.
 
