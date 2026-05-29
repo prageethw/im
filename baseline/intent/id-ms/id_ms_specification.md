@@ -102,7 +102,7 @@ Baseline rules:
 - Draft `IntentSpecification` resources may carry `version` before activation.
 - `ACTIVE` and `RETIRED` `IntentSpecification` resources are immutable for material contract changes.
 - Material change after activation requires a new Draft `IntentSpecification` version.
-- `familyId` is optional/governed. Where used, it groups related specification versions and supports active-version governance.
+- `specKey` is optional/governed. Where used, it groups related specification versions and supports active-version governance.
 - Runtime `Intent.version` identifies the admitted runtime request/projection version and must not be confused with `IntentSpecification.version`.
 
 
@@ -178,7 +178,7 @@ There is no `DELETED` lifecycle status. Delete is an operation/outcome, not a no
 - `DRAFT` specifications are editable.
 - `ACTIVE` and `RETIRED` specifications are immutable.
 - Meaningful change after activation requires a new versioned `IntentSpecification`.
-- Only one version in the same specification family should be `ACTIVE` for new runtime intent creation.
+- Only one version in the same specification key should be `ACTIVE` for new runtime intent creation.
 - Activating a new version retires the previous active version.
 - Retired specifications must not be used for new runtime `Intent` creation.
 - Existing runtime intents that reference a retired specification may continue temporarily where safe.
@@ -285,14 +285,14 @@ X-Platform-Extension: false
 ### Request
 
 ```http
-POST /intentManagement/v5/intentSpecification?fields=id,href,familyId,name,version,lifecycleStatus,isBundle,validFor,relatedParty,specCharacteristic,expressionSpecification,targetEntitySchema,@type,@baseType
+POST /intentManagement/v5/intentSpecification?fields=id,href,specKey,name,version,lifecycleStatus,isBundle,validFor,relatedParty,specCharacteristic,expressionSpecification,targetEntitySchema,@type,@baseType
 Content-Type: application/json
 Accept: application/json
 ```
 
 ```json
 {
-  "familyId": "hospital-surgical-slice-spec",
+  "specKey": "hospital-surgical-slice-spec",
   "name": "Hospital Surgical Slice Intent Specification",
   "description": "Definition-time specification for hospital surgical slice intents. This specification defines the allowed request shape for surgical connectivity intents. It is syntax-first: ID MS validates structure and allowed fields, while II MS and the knowledge plane validate semantic meaning, policy, and fulfilment feasibility.",
   "version": "1.19",
@@ -372,7 +372,7 @@ Accept: application/json
 }
 ```
 
-The client does not send `id`, `href`, `lifecycleStatus`, `Location`, `ETag`, or `_links`. ID MS generates these values and creates the resource as `DRAFT`. The client may omit `isBundle`; when omitted on create, ID MS defaults it to `false`.
+The client does not send `id`, `href`, `Location`, `ETag`, or `_links`. ID MS generates these values.
 
 ### Success response
 
@@ -391,7 +391,7 @@ Last-Modified: Sat, 18 Apr 2026 02:00:00 GMT
 {
   "id": "hospital-surgical-slice-spec-v1.19",
   "href": "/intentManagement/v5/intentSpecification/hospital-surgical-slice-spec-v1.19",
-  "familyId": "hospital-surgical-slice-spec",
+  "specKey": "hospital-surgical-slice-spec",
   "name": "Hospital Surgical Slice Intent Specification",
   "description": "Definition-time specification for hospital surgical slice intents. This specification defines the allowed request shape for surgical connectivity intents. It is syntax-first: ID MS validates structure and allowed fields, while II MS and the knowledge plane validate semantic meaning, policy, and fulfilment feasibility.",
   "version": "1.19",
@@ -498,7 +498,7 @@ Last-Modified: Sat, 18 Apr 2026 02:00:00 GMT
 ### Request
 
 ```http
-GET /intentManagement/v5/intentSpecification?offset=0&limit=10&lifecycleStatus=ACTIVE&fields=id,href,familyId,name,version,lifecycleStatus,isBundle,validFor,relatedParty,@type,@baseType
+GET /intentManagement/v5/intentSpecification?offset=0&limit=10&lifecycleStatus=ACTIVE&fields=id,href,specKey,name,version,lifecycleStatus,isBundle,validFor,relatedParty,@type,@baseType
 Accept: application/json
 ```
 
@@ -521,7 +521,7 @@ Cache-Control: private, max-age=60
   {
     "id": "hospital-surgical-slice-spec-v1.19",
     "href": "/intentManagement/v5/intentSpecification/hospital-surgical-slice-spec-v1.19",
-    "familyId": "hospital-surgical-slice-spec",
+    "specKey": "hospital-surgical-slice-spec",
     "name": "Hospital Surgical Slice Intent Specification",
     "version": "1.19",
     "lifecycleStatus": "ACTIVE",
@@ -566,14 +566,14 @@ The list operation returns a lightweight summary by default. It does not include
 ### Request
 
 ```http
-GET /intentManagement/v5/intentSpecification/hospital-surgical-slice-spec-v1.19?fields=id,href,familyId,name,description,version,lifecycleStatus,isBundle,validFor,relatedParty,specCharacteristic,expressionSpecification,targetEntitySchema,@type,@baseType
+GET /intentManagement/v5/intentSpecification/hospital-surgical-slice-spec-v1.19?fields=id,href,specKey,name,description,version,lifecycleStatus,isBundle,validFor,relatedParty,specCharacteristic,expressionSpecification,targetEntitySchema,@type,@baseType
 Accept: application/json
 ```
 
 ### Request with cache override
 
 ```http
-GET /intentManagement/v5/intentSpecification/hospital-surgical-slice-spec-v1.19?fields=id,href,familyId,name,description,version,lifecycleStatus,isBundle,validFor,relatedParty,specCharacteristic,expressionSpecification,targetEntitySchema,@type,@baseType
+GET /intentManagement/v5/intentSpecification/hospital-surgical-slice-spec-v1.19?fields=id,href,specKey,name,description,version,lifecycleStatus,isBundle,validFor,relatedParty,specCharacteristic,expressionSpecification,targetEntitySchema,@type,@baseType
 Accept: application/json
 Cache-Control: no-cache
 ```
@@ -596,7 +596,7 @@ Cache-Control: private, max-age=300
 {
   "id": "hospital-surgical-slice-spec-v1.19",
   "href": "/intentManagement/v5/intentSpecification/hospital-surgical-slice-spec-v1.19",
-  "familyId": "hospital-surgical-slice-spec",
+  "specKey": "hospital-surgical-slice-spec",
   "name": "Hospital Surgical Slice Intent Specification",
   "description": "Definition-time specification for hospital surgical slice intents. This specification defines the allowed request shape for surgical connectivity intents. It is syntax-first: ID MS validates structure and allowed fields, while II MS and the knowledge plane validate semantic meaning, policy, and fulfilment feasibility.",
   "version": "1.19",
@@ -722,7 +722,7 @@ X-Platform-Extension: false
 ### Request
 
 ```http
-PUT /intentManagement/v5/intentSpecification/hospital-surgical-slice-spec-v1.19?fields=id,href,familyId,name,description,version,lifecycleStatus,isBundle,validFor,relatedParty,specCharacteristic,expressionSpecification,targetEntitySchema,@type,@baseType
+PUT /intentManagement/v5/intentSpecification/hospital-surgical-slice-spec-v1.19?fields=id,href,specKey,name,description,version,lifecycleStatus,isBundle,validFor,relatedParty,specCharacteristic,expressionSpecification,targetEntitySchema,@type,@baseType
 Content-Type: application/json
 Accept: application/json
 If-Match: "intent-spec-hospital-surgical-slice-spec-v1.19-v1"
@@ -732,7 +732,7 @@ If-Match: "intent-spec-hospital-surgical-slice-spec-v1.19-v1"
 {
   "id": "hospital-surgical-slice-spec-v1.19",
   "href": "/intentManagement/v5/intentSpecification/hospital-surgical-slice-spec-v1.19",
-  "familyId": "hospital-surgical-slice-spec",
+  "specKey": "hospital-surgical-slice-spec",
   "name": "Hospital Surgical Slice Intent Specification",
   "description": "Updated definition-time specification for hospital surgical slice intents. This specification defines the allowed request shape for surgical connectivity intents. It is syntax-first: ID MS validates structure and allowed fields, while II MS and the knowledge plane validate semantic meaning, policy, and fulfilment feasibility.",
   "version": "1.19",
@@ -798,7 +798,7 @@ Last-Modified: Sat, 18 Apr 2026 03:00:00 GMT
 {
   "id": "hospital-surgical-slice-spec-v1.19",
   "href": "/intentManagement/v5/intentSpecification/hospital-surgical-slice-spec-v1.19",
-  "familyId": "hospital-surgical-slice-spec",
+  "specKey": "hospital-surgical-slice-spec",
   "name": "Hospital Surgical Slice Intent Specification",
   "description": "Updated definition-time specification for hospital surgical slice intents. This specification defines the allowed request shape for surgical connectivity intents. It is syntax-first: ID MS validates structure and allowed fields, while II MS and the knowledge plane validate semantic meaning, policy, and fulfilment feasibility.",
   "version": "1.19",
@@ -972,12 +972,12 @@ Cache-Control: no-store
 Prefer `PUT` for deterministic full replacement of editable `DRAFT` specifications.
 Use `PATCH` only where a TMF-compatible client cannot use `PUT` or where a tightly controlled, small targeted compatibility update is required.
 
-`PATCH` must not normally be used for material contract replacement, including `familyId`, `version`, `specCharacteristic`, `expressionSpecification`, `targetEntitySchema`, or major lifecycle/version contract identity.
+`PATCH` must not normally be used for material contract replacement, including `specKey`, `version`, `specCharacteristic`, `expressionSpecification`, `targetEntitySchema`, or major lifecycle/version contract identity.
 
 ### Request
 
 ```http
-PATCH /intentManagement/v5/intentSpecification/hospital-surgical-slice-spec-v1.19?fields=id,href,familyId,name,description,version,lifecycleStatus,isBundle,validFor,relatedParty,@type,@baseType
+PATCH /intentManagement/v5/intentSpecification/hospital-surgical-slice-spec-v1.19?fields=id,href,specKey,name,description,version,lifecycleStatus,isBundle,validFor,relatedParty,@type,@baseType
 Content-Type: application/merge-patch+json
 Accept: application/json
 If-Match: "intent-spec-hospital-surgical-slice-spec-v1.19-v1"
@@ -1006,7 +1006,7 @@ Last-Modified: Sat, 18 Apr 2026 03:00:00 GMT
 {
   "id": "hospital-surgical-slice-spec-v1.19",
   "href": "/intentManagement/v5/intentSpecification/hospital-surgical-slice-spec-v1.19",
-  "familyId": "hospital-surgical-slice-spec",
+  "specKey": "hospital-surgical-slice-spec",
   "name": "Hospital Surgical Slice Intent Specification",
   "description": "Updated draft description only.",
   "version": "1.19",
@@ -1179,7 +1179,7 @@ Although `PATCH` is discouraged as a general update method, this is an acceptabl
 ### PATCH activation request
 
 ```http
-PATCH /intentManagement/v5/intentSpecification/hospital-surgical-slice-spec-v1.20?fields=id,href,familyId,name,version,lifecycleStatus,previousActiveSpecification,@type,@baseType
+PATCH /intentManagement/v5/intentSpecification/hospital-surgical-slice-spec-v1.20?fields=id,href,specKey,name,version,lifecycleStatus,previousActiveSpecification,@type,@baseType
 Content-Type: application/merge-patch+json
 Accept: application/json
 If-Match: "intent-spec-hospital-surgical-slice-spec-v1.20-v1"
@@ -1212,7 +1212,7 @@ Last-Modified: Sat, 18 Apr 2026 03:30:00 GMT
 {
   "id": "hospital-surgical-slice-spec-v1.20",
   "href": "/intentManagement/v5/intentSpecification/hospital-surgical-slice-spec-v1.20",
-  "familyId": "hospital-surgical-slice-spec",
+  "specKey": "hospital-surgical-slice-spec",
   "name": "Hospital Surgical Slice Intent Specification",
   "version": "1.20",
   "lifecycleStatus": "ACTIVE",
@@ -1245,7 +1245,7 @@ Last-Modified: Sat, 18 Apr 2026 03:30:00 GMT
 |---|---|
 | Source state | Only `DRAFT` can be activated |
 | Target state | Activated version becomes `ACTIVE` |
-| Previous active | Previous `ACTIVE` version in the same `familyId` becomes `RETIRED` |
+| Previous active | Previous `ACTIVE` version in the same `specKey` becomes `RETIRED` |
 | New runtime creation | New runtime intents must use the new `ACTIVE` version |
 | Existing runtime intents | Existing intents that reference retired specifications may continue temporarily where safe |
 | Material update after activation | Not allowed; create a new versioned `DRAFT` |
@@ -1259,7 +1259,7 @@ Last-Modified: Sat, 18 Apr 2026 03:30:00 GMT
 Activation emits two `IntentSpecificationStatusChangeEvent` events:
 
 1. One event for the newly activated version, with the emitted `intentSpecification.lifecycleStatus` set to `ACTIVE`.
-2. One event for the previous active version in the same `familyId`, with the emitted `intentSpecification.lifecycleStatus` set to `RETIRED`.
+2. One event for the previous active version in the same `specKey`, with the emitted `intentSpecification.lifecycleStatus` set to `RETIRED`.
 
 The status-change event type identifies that the lifecycle status changed. The event body carries the current `IntentSpecification` resource snapshot and does not carry separate `previousLifecycleStatus` or `newLifecycleStatus` fields.
 
@@ -1580,7 +1580,7 @@ Event resource snapshots should carry consistent resource metadata:
 
 - `id`
 - `href`
-- `familyId`
+- `specKey`
 - `name`
 - `version`
 - `lifecycleStatus`
@@ -1621,7 +1621,7 @@ TMF921 examples contain the misspelled `timeOcurred`; this baseline intentionall
     "intentSpecification": {
       "id": "hospital-surgical-slice-spec-v1.20",
       "href": "/intentManagement/v5/intentSpecification/hospital-surgical-slice-spec-v1.20",
-      "familyId": "hospital-surgical-slice-spec",
+      "specKey": "hospital-surgical-slice-spec",
       "name": "Hospital Surgical Slice Intent Specification",
       "version": "1.20",
       "lifecycleStatus": "ACTIVE",
@@ -1675,7 +1675,7 @@ TMF921 examples contain the misspelled `timeOcurred`; this baseline intentionall
     "intentSpecification": {
       "id": "hospital-surgical-slice-spec-v1.19",
       "href": "/intentManagement/v5/intentSpecification/hospital-surgical-slice-spec-v1.19",
-      "familyId": "hospital-surgical-slice-spec",
+      "specKey": "hospital-surgical-slice-spec",
       "name": "Hospital Surgical Slice Intent Specification",
       "version": "1.19",
       "lifecycleStatus": "DRAFT",
@@ -1729,7 +1729,7 @@ TMF921 examples contain the misspelled `timeOcurred`; this baseline intentionall
     "intentSpecification": {
       "id": "hospital-surgical-slice-spec-v1.19",
       "href": "/intentManagement/v5/intentSpecification/hospital-surgical-slice-spec-v1.19",
-      "familyId": "hospital-surgical-slice-spec",
+      "specKey": "hospital-surgical-slice-spec",
       "name": "Hospital Surgical Slice Intent Specification",
       "version": "1.19",
       "lifecycleStatus": "DRAFT",
@@ -1790,7 +1790,7 @@ TMF921 examples contain the misspelled `timeOcurred`; this baseline intentionall
     "intentSpecification": {
       "id": "hospital-surgical-slice-spec-v1.20",
       "href": "/intentManagement/v5/intentSpecification/hospital-surgical-slice-spec-v1.20",
-      "familyId": "hospital-surgical-slice-spec",
+      "specKey": "hospital-surgical-slice-spec",
       "name": "Hospital Surgical Slice Intent Specification",
       "version": "1.20",
       "lifecycleStatus": "ACTIVE",
@@ -1844,7 +1844,7 @@ TMF921 examples contain the misspelled `timeOcurred`; this baseline intentionall
     "intentSpecification": {
       "id": "hospital-surgical-slice-spec-v1.18-draft",
       "href": "/intentManagement/v5/intentSpecification/hospital-surgical-slice-spec-v1.18-draft",
-      "familyId": "hospital-surgical-slice-spec",
+      "specKey": "hospital-surgical-slice-spec",
       "name": "Hospital Surgical Slice Intent Specification",
       "version": "1.18-draft",
       "lifecycleStatus": "DRAFT",
@@ -1937,7 +1937,7 @@ For ID MS, accepted platform extensions are:
 | `/intentManagement/v5/intentSpecification/hub` | Domain-scoped event subscription route | Allowed as a clearer domain-owned route when deliberately chosen |
 | `GET /intentManagement/v5/intentSpecification/hub/{id}` | Subscription inspection | Platform convenience operation; not required by strict TMF generic hub shape |
 | `DELETE /intentManagement/v5/intentSpecification/hub/{id}` | Domain-scoped subscription removal | Allowed as a clearer domain-owned route when deliberately chosen |
-| `familyId` | Specification-family grouping across versions | Platform governance field; does not replace TMF `id` or `version` |
+| `specKey` | Specification-key grouping across versions | Platform governance field; does not replace TMF `id` or `version` |
 | `_links` | Lifecycle-aware navigation and operation hints | Platform HATEOAS extension; clients must not require it for strict TMF compatibility |
 | `previousActiveSpecification` | Activation outcome trace | Platform governance projection showing the version retired during activation |
 | Strong `ETag` / `If-Match` governance | Unsafe-operation concurrency control | Platform concurrency policy applied consistently to mutable operations |

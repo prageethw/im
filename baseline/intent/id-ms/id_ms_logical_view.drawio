@@ -1,6 +1,6 @@
 <mxfile host="65bd71144e">
     <diagram name="ID MS - Logical View" id="id-ms-logical-view">
-        <mxGraphModel dx="584" dy="638" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1654" pageHeight="1169" math="0" shadow="0" adaptiveColors="none">
+        <mxGraphModel dx="592" dy="639" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1654" pageHeight="1169" math="0" shadow="0" adaptiveColors="none">
             <root>
                 <mxCell id="0"/>
                 <mxCell id="1" parent="0"/>
@@ -141,7 +141,7 @@
                 </mxCell>
                 <mxCell id="a3_lbl" value="forwards trusted system context&#xa;(no end-user context downstream)" style="edgeLabel;fontSize=10;fontStyle=2;" parent="a3" connectable="0" vertex="1">
                     <mxGeometry relative="0.5" as="geometry">
-                        <mxPoint x="-50" y="22" as="offset"/>
+                        <mxPoint x="-50" as="offset"/>
                     </mxGeometry>
                 </mxCell>
                 <mxCell id="a10" style="edgeStyle=orthogonalEdgeStyle;rounded=0;strokeColor=default;" parent="1" source="webhook_outbox" target="ext_subscriber" edge="1">

@@ -228,7 +228,7 @@ For submitted admission, `intentSpecification.id` is mandatory. IC MS does not i
 
 `expression.iri` is also mandatory because it identifies the expression language / ontology / expression contract used for runtime expression validation. IC MS must confirm that the runtime `expression.iri` is consistent with the selected specification's `expressionSpecification.iri`.
 
-`intentSpecification.familyId` and `intentSpecification.name` are optional descriptive/discovery hints only. They are not mandatory and are not authoritative runtime validation keys. If supplied, IC MS may use them for consistency checking or narrowing where supported, but they must not replace `intentSpecification.id`.
+`intentSpecification.specKey` and `intentSpecification.name` are optional descriptive/discovery hints only. They are not mandatory and are not authoritative runtime validation keys. If supplied, IC MS may use them for consistency checking or narrowing where supported, but they must not replace `intentSpecification.id`.
 
 Required submitted admission reference:
 
@@ -253,7 +253,7 @@ Unsupported admission request because `intentSpecification.id` is missing:
 }
 ```
 
-IC MS must not resolve `IntentSpecification` by IRI alone, family, key, name, or inferred payload shape alone for submitted runtime admission.
+IC MS must not resolve `IntentSpecification` by IRI alone, `specKey`, name, or inferred payload shape alone for submitted runtime admission.
 
 Baseline:
 - submitted admission requires `intentSpecification.id`
@@ -261,7 +261,7 @@ Baseline:
 - IC MS resolves the exact `ACTIVE` `IntentSpecification` by `intentSpecification.id`
 - IC MS rejects the admission request if `intentSpecification.id` is omitted
 - IC MS confirms the request `expression.iri` matches the selected specification's `expressionSpecification.iri`
-- `intentSpecification.familyId` and `intentSpecification.name` are optional hints only
+- `intentSpecification.specKey` and `intentSpecification.name` are optional hints only
 
 
 ### Intent-level lifecycleStatus values:
@@ -2145,13 +2145,13 @@ External hub notifications do not use these Kafka headers. They are HTTP webhook
 - `intentSpecification.id` selects the exact active platform-managed specification.
 - `expression.iri` identifies the semantic/expression contract and must match the selected specification's `expressionSpecification.iri`.
 - IC MS does not admit by IRI-only resolution.
-- `intentSpecification.familyId` and `intentSpecification.name` are optional hints only and are not authoritative runtime validation keys.
-- IC MS must not resolve `IntentSpecification` by family, key, name, or inferred payload shape alone.
+- `intentSpecification.specKey` and `intentSpecification.name` are optional hints only and are not authoritative runtime validation keys.
+- IC MS must not resolve `IntentSpecification` by `specKey`, name, or inferred payload shape alone.
 
 Baseline:
 - `expression.iri` is mandatory.
 - `intentSpecification.id` is mandatory for submitted admission.
-- `intentSpecification.familyId` and `intentSpecification.name` are optional hints only.
+- `intentSpecification.specKey` and `intentSpecification.name` are optional hints only.
 - `expression.iri` is the semantic/expression contract identifier and must match the selected specification's `expressionSpecification.iri`.
 - Normal governance expects one matching `ACTIVE` `IntentSpecification` per expression IRI; ambiguity or no match is rejected.
 - `DELETE /intent/{id}` is termination, not physical deletion.

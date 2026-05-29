@@ -73,7 +73,7 @@ Approved platform extensions are:
 | `PUT /intentManagement/v5/intentSpecification/{id}` | Deterministic full replacement of editable `DRAFT` specifications |
 | Domain-scoped `/intentSpecification/hub` routes | Keeps ID MS subscriptions scoped to `IntentSpecification` event notifications |
 | `GET /intentSpecification/hub/{id}` | Operational convenience for retrieving a domain-scoped subscription |
-| `familyId` | Version-family governance across related specification versions |
+| `specKey` | Spec-key version governance across related specification versions |
 | `_links` | Platform navigation affordance |
 | `previousActiveSpecification` | Activation/retirement traceability during active-version promotion |
 | Strong `ETag` / `If-Match` rules | Optimistic concurrency for unsafe operations |
@@ -117,7 +117,7 @@ They must not expose internal workflow events, KP details, runtime assurance sta
 List endpoint:
 
 ```http
-GET /intentManagement/v5/intentSpecification?offset=0&limit=20&lifecycleStatus=ACTIVE&name=Hospital%20Surgical%20Slice&version=1.19&fields=id,href,familyId,name,version,lifecycleStatus,isBundle,validFor,relatedParty,@type,@baseType
+GET /intentManagement/v5/intentSpecification?offset=0&limit=20&lifecycleStatus=ACTIVE&name=Hospital%20Surgical%20Slice&version=1.19&fields=id,href,specKey,name,version,lifecycleStatus,isBundle,validFor,relatedParty,@type,@baseType
 ```
 
 Supported query params:
@@ -166,7 +166,7 @@ Important:
 - `PATCH` is supported for TMF compatibility but discouraged as a general update method.
 - `PUT` is preferred for deterministic full replacement of editable `DRAFT` specifications.
 - Activation is a lifecycle update on `/intentSpecification/{id}`, not a custom `/activate` endpoint.
-- When a new version becomes `ACTIVE`, the previous `ACTIVE` version in the same `familyId` becomes `RETIRED`.
+- When a new version becomes `ACTIVE`, the previous `ACTIVE` version in the same `specKey` becomes `RETIRED`.
 
 ## ETag / If-Match rules:
 
@@ -220,28 +220,28 @@ Content-Type: application/json
 ## Create IntentSpecification:
 
 ```http
-POST /intentManagement/v5/intentSpecification?fields=id,href,familyId,name,version,lifecycleStatus,isBundle,validFor,relatedParty,specCharacteristic,expressionSpecification,targetEntitySchema,@type,@baseType
+POST /intentManagement/v5/intentSpecification?fields=id,href,specKey,name,version,lifecycleStatus,isBundle,validFor,relatedParty,specCharacteristic,expressionSpecification,targetEntitySchema,@type,@baseType
 Content-Type: application/json
 Accept: application/json
 ```
 
 Create request baseline includes:
 
-- `familyId`
+- `specKey` where supplied as the governed specification key
 - `name`
 - `description`
 - `version`
-- no caller-supplied `lifecycleStatus`; ID MS creates the resource as `DRAFT`
-- optional `isBundle`; defaults to `false` when omitted
 - `validFor`
 - `relatedParty`
 - `specCharacteristic`
 - `expressionSpecification`
 - `targetEntitySchema`
+
+ID MS creates the resource as `DRAFT`. `lifecycleStatus` is not accepted in the create request. `isBundle` is optional on create and defaults to `false` when omitted.
 - `@type: IntentSpecification`
 - `@baseType: EntitySpecification`
 
-Create clients must not supply `lifecycleStatus` or server-generated `_links`.
+Create clients must not supply server-generated `_links`.
 
 Success:
 
@@ -256,7 +256,7 @@ Last-Modified: Sat, 18 Apr 2026 02:00:00 GMT
 
 Notes:
 
-- Create always creates a `DRAFT` specification in the active baseline.
+- Create normally creates a `DRAFT` specification.
 - Response returns the full created `IntentSpecification`.
 - Response includes server-assigned `id`, `href`, `Location`, `ETag`, and `_links`.
 - `Location` points to the new resource.
@@ -265,7 +265,7 @@ Notes:
 ## Retrieve IntentSpecification:
 
 ```http
-GET /intentManagement/v5/intentSpecification/hospital-surgical-slice-spec-v1.19?fields=id,href,familyId,name,description,version,lifecycleStatus,isBundle,validFor,relatedParty,specCharacteristic,expressionSpecification,targetEntitySchema,@type,@baseType
+GET /intentManagement/v5/intentSpecification/hospital-surgical-slice-spec-v1.19?fields=id,href,specKey,name,description,version,lifecycleStatus,isBundle,validFor,relatedParty,specCharacteristic,expressionSpecification,targetEntitySchema,@type,@baseType
 Accept: application/json
 ```
 
@@ -285,7 +285,7 @@ Notes:
 
 - `GET` can be cached privately.
 - IC MS may use this to validate incoming runtime `Intent` requests.
-- The returned resource includes full `familyId`, `isBundle`, `validFor`, `relatedParty`, `specCharacteristic`, `expressionSpecification`, `targetEntitySchema`, lifecycle status, and `_links`.
+- The returned resource includes full `specKey`, `isBundle`, `validFor`, `relatedParty`, `specCharacteristic`, `expressionSpecification`, `targetEntitySchema`, lifecycle status, and `_links`.
 
 ## List IntentSpecifications:
 
@@ -295,7 +295,7 @@ Default list representation includes:
 
 - `id`
 - `href`
-- `familyId`
+- `specKey`
 - `name`
 - `version`
 - `lifecycleStatus`
@@ -311,7 +311,7 @@ The list operation does not include full `specCharacteristic`, `expressionSpecif
 ## Full update IntentSpecification:
 
 ```http
-PUT /intentManagement/v5/intentSpecification/hospital-surgical-slice-spec-v1.19?fields=id,href,familyId,name,description,version,lifecycleStatus,isBundle,validFor,relatedParty,specCharacteristic,expressionSpecification,targetEntitySchema,@type,@baseType
+PUT /intentManagement/v5/intentSpecification/hospital-surgical-slice-spec-v1.19?fields=id,href,specKey,name,description,version,lifecycleStatus,isBundle,validFor,relatedParty,specCharacteristic,expressionSpecification,targetEntitySchema,@type,@baseType
 Content-Type: application/json
 Accept: application/json
 If-Match: "intent-spec-hospital-surgical-slice-spec-v1.19-v1"
@@ -369,7 +369,7 @@ Rules:
 - Allowed only when `lifecycleStatus = DRAFT`.
 - Requires `If-Match`.
 - Prefer `PUT` for deterministic full replacement.
-- Must not normally be used for material replacement of `familyId`, `version`, `specCharacteristic`, `expressionSpecification`, `targetEntitySchema`, or major lifecycle/version contract identity.
+- Must not normally be used for material replacement of `specKey`, `version`, `specCharacteristic`, `expressionSpecification`, `targetEntitySchema`, or major lifecycle/version contract identity.
 
 ## Delete IntentSpecification:
 
@@ -414,7 +414,7 @@ Rules:
 
 - Only `DRAFT` can be activated.
 - Activated version becomes `ACTIVE`.
-- Previous `ACTIVE` version in the same `familyId` becomes `RETIRED`.
+- Previous `ACTIVE` version in the same `specKey` becomes `RETIRED`.
 - New runtime intent creation must use the new `ACTIVE` version.
 - Existing runtime intents referencing retired specs may continue temporarily where safe.
 - Missing `If-Match` returns `428`.
@@ -586,18 +586,18 @@ Delete is an operation/outcome, not a normal lifecycle state.
 
 - Each meaningful change after activation requires a new versioned `IntentSpecification`.
 - A new version starts as `DRAFT`.
-- The `familyId` groups related versions of the same specification.
-- Only one version in the same `familyId` should be `ACTIVE` for new runtime intent creation.
+- The `specKey` groups related versions of the same specification.
+- Only one version in the same `specKey` should be `ACTIVE` for new runtime intent creation.
 - When a new version becomes `ACTIVE`, the previous active version moves to `RETIRED`.
 - Retired specifications must not be used for new `Intent` creation.
 - Existing runtime intents that reference a retired specification may continue temporarily where safe.
 - Preferred long-term treatment is to migrate existing intents to the new active specification version where safe, or terminate and recreate them.
 
-### Specification family rule:
+### Specification key rule:
 
-A specification family is the logical grouping of related versions of the same specification.
+A specification key is the logical grouping of related versions of the same specification.
 
-Example family:
+Example spec key:
 
 ```text
 hospital-surgical-slice-spec
@@ -611,7 +611,7 @@ hospital-surgical-slice-spec-v1.19
 hospital-surgical-slice-spec-v1.20
 ```
 
-Only one version in that family should be `ACTIVE` for new runtime intent creation.
+Only one version with that `specKey` should be `ACTIVE` for new runtime intent creation.
 
 ### Mutability rules:
 
@@ -638,7 +638,7 @@ Activation should only be allowed when:
 - required `specCharacteristic` entries are present
 - `targetEntitySchema` references a valid governed expression-value schema artefact
 - the version identifier is unique
-- there is no conflicting active version in the same family, or the activation operation also retires the previous active version
+- there is no conflicting active version in the same specKey, or the activation operation also retires the previous active version
 - governance approval has been completed where required
 
 ### Delete rules:
@@ -790,8 +790,8 @@ When a new `IntentSpecification` version is promoted to `ACTIVE`, ID MS must ref
 Activation flow:
 
 1. ID MS performs activation against the source-of-truth DB.
-2. ID MS retires the previous active version in the same specification family.
-3. ID MS bypasses/refreshes its own cache for that specification family using an internal no-cache/refresh path.
+2. ID MS retires the previous active version in the same specification key.
+3. ID MS bypasses/refreshes its own cache for that specification key using an internal no-cache/refresh path.
 4. ID MS stores the new active version as the current cached active copy.
 5. ID MS ensures the previous active version is no longer returned as active.
 6. ID MS emits status-change events for:
@@ -998,7 +998,7 @@ Rationale:
 
 - `IntentSpecification` is naturally document-shaped.
 - JSONB supports flexible schema evolution.
-- Relational columns still support governance queries such as `id`, `familyId`, `name`, `version`, `lifecycleStatus`, `ETag`, and timestamps.
+- Relational columns still support governance queries such as `id`, `specKey`, `name`, `version`, `lifecycleStatus`, `ETag`, and timestamps.
 
 ### Suggested relational columns:
 
@@ -1007,7 +1007,7 @@ For `intent_specification`:
 | **Column** | **Purpose** |
 |---|---|
 | `id` | Stable specification ID, for example `hospital-surgical-slice-spec-v1.19` |
-| `family_id` | Logical specification family, for example `hospital-surgical-slice-spec` |
+| `spec_key` | Logical specification key, for example `hospital-surgical-slice-spec` |
 | `name` | Human-readable name |
 | `version` | Version string |
 | `lifecycle_status` | `DRAFT`, `ACTIVE`, or `RETIRED` |
@@ -1162,7 +1162,7 @@ ID MS still enforces:
 - valid request shape
 - `IntentSpecification` lifecycle rules
 - version uniqueness
-- one active version per `familyId`
+- one active version per `specKey`
 - immutable `ACTIVE` and `RETIRED` specifications
 - `ETag` / `If-Match` for unsafe operations
 - no `DELETED` lifecycle state
@@ -1235,7 +1235,7 @@ Recommended log fields:
 | `traceId` | Distributed trace ID where available |
 | `operation` | API or internal operation name |
 | `resourceId` | IntentSpecification ID where applicable |
-| `familyId` | Specification family where applicable |
+| `specKey` | Specification key where applicable |
 | `version` | Specification version where applicable |
 | `lifecycleStatus` | Current or target lifecycle status where applicable |
 | `result` | Success/failure/degraded |
@@ -1319,7 +1319,7 @@ Recommended audit record fields:
 | `service` | `intent-definition-ms` |
 | `operation` | Operation performed |
 | `resourceId` | Specification or subscription ID |
-| `familyId` | Specification family where applicable |
+| `specKey` | Specification key where applicable |
 | `version` | Specification version where applicable |
 | `previousLifecycleStatus` | Previous status where applicable for audit only |
 | `newLifecycleStatus` | New status where applicable for audit only |
@@ -1389,7 +1389,7 @@ Business/user authorisation audit remains with OEX, while ID MS audit focuses on
 | Eventing boundary | PASS | External `IntentSpecification` event family and boundary are present |
 | Persistence baseline | PASS | PostgreSQL-compatible RDBMS, JSONB, and outbox persistence are present |
 | Boundary exclusions | PASS | ID MS does not own runtime fulfilment concerns |
-| Platform extensions | PASS | `PUT`, domain-scoped hub, `familyId`, `_links`, ETag/If-Match, and caching are documented |
+| Platform extensions | PASS | `PUT`, domain-scoped hub, `specKey`, `_links`, ETag/If-Match, and caching are documented |
 
 ### Notes requiring attention:
 
@@ -1400,7 +1400,7 @@ Business/user authorisation audit remains with OEX, while ID MS audit focuses on
 - `PATCH` remains supported for TMF compatibility, but is discouraged generally.
 - External `IntentSpecificationCreateEvent`, `IntentSpecificationAttributeValueChangeEvent`, `IntentSpecificationStatusChangeEvent`, and `IntentSpecificationDeleteEvent` envelopes should populate both `eventTime` and `timeOccurred` with the same canonical occurrence timestamp.
 - `targetEntitySchema` is retained as the governed runtime expression-value schema reference.
-- `familyId` is retained for version-family governance.
+- `specKey` is retained for spec-key version governance.
 
 ### Final consistency position:
 
@@ -1444,7 +1444,7 @@ Baseline:
 - Draft `IntentSpecification` resources may carry `version`.
 - Material change after activation requires a new Draft `IntentSpecification` version.
 - `ACTIVE` and `RETIRED` specifications are immutable for material contract changes.
-- `familyId` is optional/governed; where used, it groups related specification versions.
+- `specKey` is optional/governed; where used, it groups related specification versions.
 - Runtime `Intent.version` and `IntentSpecification.version` are separate concepts.
 
 

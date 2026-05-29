@@ -6,7 +6,7 @@ Intent Definition MS (ID MS) is the definition-time microservice responsible for
 
 It defines what runtime intent expressions are allowed to look like, which specification versions are available for new runtime intent creation, and which lifecycle/version rules protect active and retired specifications. ID MS is deliberately not the runtime intent owner. It does not own runtime `Intent`, `IntentReport`, semantic validation, policy validation, network feasibility, optimisation, runtime assurance, telemetry, or callback ingestion.
 
-Those responsibilities remain with IC MS, II MS, IA MS, ICB MS, optimiser components, and knowledge/assurance services as applicable. The service follows the TMF921 `IntentSpecification` responsibility boundary while retaining documented platform extensions for deterministic full update, domain-scoped hub routes, version-family governance, HATEOAS links, optimistic concurrency, and explicit missing-precondition errors.
+Those responsibilities remain with IC MS, II MS, IA MS, ICB MS, optimiser components, and knowledge/assurance services as applicable. The service follows the TMF921 `IntentSpecification` responsibility boundary while retaining documented platform extensions for deterministic full update, domain-scoped hub routes, spec-key version governance, HATEOAS links, optimistic concurrency, and explicit missing-precondition errors.
 
 ## Logical View:
 ![alt text](id_ms_logical_view.svg)
@@ -23,7 +23,7 @@ Intent Definition MS (ID MS)
   v
 IntentSpecification catalogue
 IntentSpecification lifecycle state
-IntentSpecification version-family governance
+IntentSpecification spec-key version governance
 IntentSpecification hub subscriptions
 External IntentSpecification REST webhook notification delivery
 ```
@@ -36,7 +36,7 @@ Core logical resources are:
 |---|---|
 | `IntentSpecification` | Definition-time contract describing allowed runtime intent expression structure and governance metadata. |
 | `EventSubscription` | External listener subscription for ID MS `IntentSpecification` event notifications. |
-| Specification family | Logical version family grouped by `familyId`. |
+| Specification key | Logical spec key grouped by `specKey`. |
 | Specification version | Individual governed `IntentSpecification` version with its own lifecycle state. |
 
 ## Process View:
@@ -47,7 +47,7 @@ The primary ID MS process flows are:
 2. Retrieve or list specifications for discovery and runtime validation support.
 3. Update an editable draft specification using preferred full replacement or tightly controlled partial update.
 4. Activate a draft specification version through lifecycle update.
-5. Retire the previous active specification in the same `familyId` during activation.
+5. Retire the previous active specification in the same `specKey` during activation.
 6. Delete an unused draft specification where retention and runtime-reference rules allow it.
 7. Create, retrieve, and delete external event subscriptions.
 8. Deliver external `IntentSpecification` event notifications by REST webhook callback after successful resource changes.
@@ -62,7 +62,7 @@ The baseline surgical hospital slice specification uses:
 
 - `@type: IntentSpecification`
 - `@baseType: EntitySpecification`
-- `familyId` for version-family governance
+- `specKey` for spec-key version governance
 - `specCharacteristic` as a high-level characteristic catalogue
 - `expressionSpecification` as the expression contract reference
 - `targetEntitySchema` as the governed schema artefact reference for the expression-value shape
@@ -79,7 +79,7 @@ ID MS is responsible for:
 |---|---|
 | Specification catalogue | Create, list, retrieve, update, activate, retire, and delete governed `IntentSpecification` resources. |
 | Syntax contract | Publish the definition-time syntax and schema references used for runtime intent expression validation. |
-| Version governance | Enforce `familyId`, unique versions, active-version selection, and previous-active retirement. |
+| Version governance | Enforce `specKey`, unique versions, active-version selection, and previous-active retirement. |
 | Lifecycle governance | Enforce `DRAFT`, `ACTIVE`, and `RETIRED` lifecycle states and allowed transitions. |
 | Mutability control | Allow material update only while the specification is `DRAFT`. |
 | Concurrency | Enforce strong `ETag` / `If-Match` behaviour on unsafe operations. |
@@ -136,7 +136,7 @@ X-Platform-Extension: true
 
 ID MS exposes two contract families:
 
-| Contract family | Contract |
+| Contract key | Contract |
 |---|---|
 | Resource API | REST API for `IntentSpecification` lifecycle and version management. |
 | Hub API | Domain-scoped hub API for external `IntentSpecification` event subscriptions. |
@@ -204,7 +204,7 @@ Baseline:
 - Draft `IntentSpecification` resources may carry `version`.
 - Material change after activation requires a new Draft `IntentSpecification` version.
 - `ACTIVE` and `RETIRED` specifications are immutable for material contract changes.
-- `familyId` is optional/governed; where used, it groups related specification versions.
+- `specKey` is optional/governed; where used, it groups related specification versions.
 - Runtime `Intent.version` and `IntentSpecification.version` are separate concepts.
 
 
@@ -249,12 +249,12 @@ Baseline:
 |---|---|
 | `id` | Server-generated unique specification identifier. |
 | `href` | Server-generated resource URI. |
-| `familyId` | Groups related versions of the same specification family. |
+| `specKey` | Groups related versions of the same specification key. |
 | `name` | Human-readable specification name. |
 | `description` | Definition-time description of the specification purpose. |
-| `version` | Specification version within the family. |
-| `lifecycleStatus` | Server-managed lifecycle value. Create sets this to `DRAFT`; later governed updates may move it to `ACTIVE` or `RETIRED`. |
-| `isBundle` | Indicates whether the specification is a bundle. Optional in request bodies; defaults to `false` on create when omitted; always present in persisted responses. |
+| `version` | Specification version within the specification key. |
+| `lifecycleStatus` | One of `DRAFT`, `ACTIVE`, or `RETIRED`. |
+| `isBundle` | Indicates whether the specification is a bundle. |
 | `validFor` | Validity period metadata. |
 | `relatedParty` | Provider or other related-party metadata. |
 | `specCharacteristic` | High-level characteristic catalogue for discovery/governance. |
@@ -300,7 +300,7 @@ Clients must not use or submit `DELETED` as a lifecycle status.
 
 `PATCH` must not normally be used for material replacement of:
 
-- `familyId`
+- `specKey`
 - `version`
 - `specCharacteristic`
 - `expressionSpecification`
@@ -328,7 +328,7 @@ ID MS requires durable persistence for:
 | Store | Purpose |
 |---|---|
 | `IntentSpecification` store | Source of truth for specification resources, versions, lifecycle state, and schema references. |
-| Version-family index | Efficient lookup and enforcement of one active version per `familyId`. |
+| Spec-key version index | Efficient lookup and enforcement of one active version per `specKey`. |
 | Subscription store | Source of truth for domain-scoped hub subscriptions. |
 | Audit/history store | Retention of lifecycle and governance evidence, especially for active/retired specifications. |
 | Hub delivery outbox store | Durable ID MS-owned callback delivery work for external `IntentSpecification` event notifications after committed resource changes. |
@@ -417,7 +417,7 @@ A typical `IntentSpecificationStatusChangeEvent` webhook body has this logical s
     "intentSpecification": {
       "id": "hospital-surgical-slice-spec-v1.20",
       "href": "/intentManagement/v5/intentSpecification/hospital-surgical-slice-spec-v1.20",
-      "familyId": "hospital-surgical-slice-spec",
+      "specKey": "hospital-surgical-slice-spec",
       "name": "Hospital Surgical Slice Intent Specification",
       "version": "1.20",
       "lifecycleStatus": "ACTIVE",
@@ -489,7 +489,7 @@ Delete events are emitted only after successful delete and show the last known l
 - Activation is a lifecycle update on `/intentSpecification/{id}`.
 - Only `DRAFT` can be activated.
 - The activated version becomes `ACTIVE`.
-- The previous `ACTIVE` version in the same `familyId` becomes `RETIRED`.
+- The previous `ACTIVE` version in the same `specKey` becomes `RETIRED`.
 - New runtime intent creation must use the new active specification.
 - Existing runtime intents referencing retired specifications may continue temporarily where safe.
 - Activation emits two `IntentSpecificationStatusChangeEvent` events:
@@ -521,7 +521,7 @@ ID MS configuration should include:
 |---|---|
 | Allowed lifecycle states | `DRAFT`, `ACTIVE`, `RETIRED`. |
 | Mutability policy | Material update allowed only for `DRAFT`. |
-| Version-family rule | Only one active version per `familyId` for new runtime intent creation. |
+| Spec-key version rule | Only one active version per `specKey` for new runtime intent creation. |
 | Cache policy | GET-only private caching, with bounded TTLs. |
 | Concurrency policy | Unsafe operations require `If-Match`. |
 | Hub route policy | Domain-scoped `/intentSpecification/hub` routes retained as platform extension for REST webhook subscription delivery. |
@@ -558,7 +558,7 @@ Consumers of ID MS should rely on these behaviours:
 | `PUT` support | Closed. `PUT` is an approved platform extension for deterministic full replacement of editable drafts. |
 | `PATCH` position | Closed. Supported for TMF compatibility but discouraged generally. |
 | Activation endpoint | Closed. No custom `/activate`; use lifecycle update through `PUT` or `PATCH`. |
-| Version family | Closed. Use `familyId`; only one active version per family for new runtime creation. |
+| Spec key | Closed. Use `specKey`; only one active version per specKey for new runtime creation. |
 | Hub delivery model | Closed. `/intentSpecification/hub` uses REST webhook subscriber listener callback delivery backed by an ID MS-owned local delivery outbox; Kafka is not used for external hub notification delivery. |
 | Event family | Closed. `IntentSpecificationCreateEvent`, `IntentSpecificationAttributeValueChangeEvent`, `IntentSpecificationStatusChangeEvent`, and `IntentSpecificationDeleteEvent`. |
 | Event timestamp spelling | Closed. Use both `eventTime` and corrected `timeOccurred` with the same canonical occurrence timestamp. |

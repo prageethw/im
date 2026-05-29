@@ -35,7 +35,7 @@ The solution is split into definition-time and runtime concerns.
 
 Definition-time concern:
 
-- ID MS owns the `IntentSpecification` catalogue, lifecycle, version family, schema references, subscription model, and external specification events.
+- ID MS owns the `IntentSpecification` catalogue, lifecycle, spec key, schema references, subscription model, and external specification events.
 - An `IntentSpecification` defines the syntax contract that a runtime intent must follow.
 - Only `ACTIVE` specifications may be used for new runtime intent creation.
 - `DRAFT` specifications are editable; `ACTIVE` and `RETIRED` specifications are immutable for material contract changes.
@@ -72,7 +72,7 @@ An authorised specification owner creates a new `IntentSpecification` as a `DRAF
 
 ### Activate intent capability:
 
-An authorised governance actor promotes a draft specification version to `ACTIVE` through a lifecycle update. Activation retires the previously active version with the same `familyId` and makes the new version available for creating new runtime intents.
+An authorised governance actor promotes a draft specification version to `ACTIVE` through a lifecycle update. Activation retires the previously active version with the same `specKey` and makes the new version available for creating new runtime intents.
 
 ### Create runtime intent:
 
@@ -185,7 +185,7 @@ ID MS and IC MS hub notifications are REST webhook callbacks with TMF-aligned ev
 3. ID MS persists the specification and emits IntentSpecificationCreateEvent.
 4. Authorised actor updates the draft using PUT or controlled PATCH.
 5. Authorised actor promotes the draft to ACTIVE through lifecycle update.
-6. ID MS retires the previous active version in the same familyId.
+6. ID MS retires the previous active version in the same specKey.
 7. ID MS emits IntentSpecificationStatusChangeEvent for activation and retirement.
 8. IC MS and other authorised consumers use the active specification for runtime validation.
 ```
@@ -240,7 +240,7 @@ The preferred platform update path is deterministic full replacement through `PU
 Activation rules:
 
 - Only `DRAFT` can become `ACTIVE`.
-- The previous active version in the same `familyId` becomes `RETIRED`.
+- The previous active version in the same `specKey` becomes `RETIRED`.
 - New runtime intent creation uses the newly active version.
 - Existing runtime intents referencing retired versions may continue where safe.
 - Activation emits status-change events for both the activated version and the retired previous active version.
@@ -348,7 +348,7 @@ Legacy callback state/source/timestamp fields and `callbackType` must not be use
 | Capability | ID MS | IC MS | II MS | IA MS | ICB MS |
 |---|---:|---:|---:|---:|---:|
 | Manage `IntentSpecification` | Yes | No | No | No | No |
-| Manage specification lifecycle/version family | Yes | No | No | No | No |
+| Manage specification lifecycle/spec key | Yes | No | No | No | No |
 | Expose runtime `Intent` API | No | Yes | No | No | No |
 | Expose runtime `IntentReport` API | No | Yes | No | No | No |
 | Admit syntactically valid runtime intents | No | Yes | No | No | No |
@@ -523,7 +523,7 @@ Expected platform controls include:
 | External events leaking internal details | Security and contract instability | Keep external events resource-scoped and curated. |
 | Callback state misinterpreted at ingestion | Incorrect lifecycle projection | ICB remains raw ingestion only; IA owns mapping. |
 | `IntentNetworkReadyEvent` misunderstood as apply success | Premature external `Active` projection | Document that apply success requires callback and/or observation evidence. |
-| Specification lifecycle/version mistakes | Runtime intents created against wrong contract | Enforce one active version per `familyId` and active-only runtime creation. |
+| Specification lifecycle/version mistakes | Runtime intents created against wrong contract | Enforce one active version per `specKey` and active-only runtime creation. |
 | Kafka duplicate delivery | Duplicate lifecycle/report updates | Idempotent consumers and stable deduplication keys. |
 | Webhook delivery retry duplication | Duplicate subscriber notifications | Use event identifiers, idempotent subscriber listener handling, and delivery retry tracking. |
 | Long-lived stale docs | Implementation drift | Use GitHub main/baseline/intent as source of truth and update solution briefs after baseline changes. |
