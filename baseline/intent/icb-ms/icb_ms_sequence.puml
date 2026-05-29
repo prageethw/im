@@ -21,8 +21,14 @@ participant "Kafka\nt7.intent.management.events.callbacks" as KAFKA
 participant "Intent Assurance MS\n(IA MS)" as IAMS
 participant "Intent Creation MS\n(IC MS)" as ICMS
 
+note over ICBMS, IAMS
+ICB MS validates structure only and relays raw callback facts.
+It does not validate intent existence or map lifecycle meaning.
+IA MS owns intent correlation, raw state mapping, and assurance outcomes.
+end note
+
 == 1. External Callback Submission ==
-EXT -> GW : POST /intentManagement/v5/intentCallback\n{ intentId, sourceState.state, callbackSource, timestamp, ... }
+EXT -> GW : POST /intent-callback/v1/submissions\n{ intentId, callbackSource, callbackTimestamp,\n  sourceState.state, sourceReference, details, ... }
 
 == 2. API Gateway — Authentication + Trusted Context ==
 GW -> GW : authenticate caller\n(mTLS / OAuth2 / platform token)
@@ -48,7 +54,7 @@ else authenticated
             == 5. Durable Persistence — Single DB Transaction ==
             note over ICBMS, STORE : Callback submission and outbox record written\nin one atomic DB transaction.\nIf persistence is unavailable, ICB MS fails fast\nand does not accept the callback.
             group Atomic DB transaction
-                ICBMS -> STORE : write callback submission record\n{ intentId, sourceState.state, callbackSource,\n  callerId, timestamp, raw payload }
+                ICBMS -> STORE : write callback submission record\n{ intentId, callbackSource, callbackTimestamp,\n  sourceState.state, callerId, raw payload }
                 ICBMS -> STORE : write ICB outbox record\n{ eventType: IntentCallbackEvent,\n  status: PENDING, payload }
                 alt DB commit succeeds
                     STORE --> ICBMS : committed
@@ -68,7 +74,7 @@ else authenticated
             note over RELAY, KAFKA : Kafka availability does not affect the 202 response.\nIf Kafka is unavailable, the relay retries publication\nfrom the durable outbox later.
             RELAY -> STORE : poll PENDING outbox records
             STORE --> RELAY : [ICB outbox record { IntentCallbackEvent }]
-            RELAY -> KAFKA : publish IntentCallbackEvent\nt7.intent.management.events.callbacks\n{ intentId, sourceState.state, callbackSource,\n  callerId, timestamp }
+            RELAY -> KAFKA : publish IntentCallbackEvent\nt7.intent.management.events.callbacks\n{ intentId, callbackSource, callbackTimestamp,\n  sourceState.state, sourceReference, receivedAt }
             alt Kafka available
                 KAFKA --> RELAY : ack
                 RELAY -> STORE : mark outbox record DELIVERED
@@ -84,7 +90,7 @@ else authenticated
             alt intentId not found in IA state
                 IAMS -> IAMS : log unresolvable callback (audit)
             else intentId resolved
-                IAMS -> IAMS : map raw sourceState.state\n→ IA-owned lifecycle + assurance meaning
+                IAMS -> IAMS : map raw sourceState.state\n→ lifecycleStatus + statusReason
                 IAMS -> IAMS : correlate with observer scope + runtime context
                 IAMS -> IAMS : evaluate assurance outcome
                 IAMS -> IAMS : write IntentAssuranceEvent to IA outbox

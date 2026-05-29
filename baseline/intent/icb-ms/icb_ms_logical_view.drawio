@@ -40,7 +40,16 @@
                 <mxCell id="13" value="consume" style="edgeStyle=orthogonalEdgeStyle;rounded=0;fontSize=11;fillColor=#d5e8d4;strokeColor=default;" parent="1" source="7" target="8" edge="1">
                     <mxGeometry relative="1" as="geometry"/>
                 </mxCell>
-            </root>
+            
+        <mxCell id="icb_contract_note" value="Canonical callback contract
+IntentCallbackEvent
+Fields: intentId, callbackSource, callbackTimestamp, sourceState.state
+ICB does not validate intent existence or map lifecycle meaning
+IA owns correlation and lifecycle-driving assurance outcome" style="shape=note;whiteSpace=wrap;html=1;backgroundOutline=1;darkOpacity=0.05;fillColor=#fff2cc;strokeColor=#d6b656;fontSize=11;align=left;" vertex="1" parent="1">
+          <mxGeometry x="40" y="40" width="260" height="120" as="geometry" />
+        </mxCell>
+
+</root>
         </mxGraphModel>
     </diagram>
 </mxfile>
