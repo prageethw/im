@@ -149,13 +149,7 @@ The platform base path is:
 /intentManagement/v5
 ```
 
-A strict TMF deployment may expose the same API through:
-
-```http
-/tmf-api/intentManagement/v5
-```
-
-The gateway may map the strict deployment prefix to the platform-owned service path without changing resource semantics.
+Strict TMF-compatible gateway routing may map deployment-specific external prefixes to the platform-owned service path without changing resource semantics.
 
 ## Request shape / event shape:
 
@@ -423,8 +417,8 @@ A typical `IntentSpecificationStatusChangeEvent` webhook body has this logical s
   "title": "IntentSpecification status changed",
   "event": {
     "intentSpecification": {
-      "id": "hospital-surgical-slice-spec-v1.20",
-      "href": "/intentManagement/v5/intentSpecification/hospital-surgical-slice-spec-v1.20",
+      "id": "hospital-surgical-slice-spec",
+      "href": "/intentManagement/v5/intentSpecification/hospital-surgical-slice-spec?version=1.20",
       "specKey": "hospital-surgical-slice-spec",
       "name": "Hospital Surgical Slice Intent Specification",
       "version": "1.20",

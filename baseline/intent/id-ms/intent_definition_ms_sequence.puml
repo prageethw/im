@@ -28,11 +28,11 @@ note over GW, IDMS
 end note
 
 == 1. Create New Draft IntentSpecification: ==
-Client -> GW : POST /intentManagement/v5/intentSpecification\nCreate DRAFT candidate\n{ specKey, name, expressionSpecification, targetEntitySchema, ... }\n(no id, draftId, version, lifecycleStatus)
+Client -> GW : POST /intentManagement/v5/intentSpecification\nTMF-compliant IntentSpecification request\n{ specKey, name, ... }
 GW -> IDMS : Forward request using system/service identity
 
 group Atomic DB transaction:
-  IDMS -> CAT : Resolve id from specKey, assign draftId, persist DRAFT candidate
+  IDMS -> CAT : Persist new DRAFT IntentSpecification
   IDMS -> OUTBOX : Write IntentSpecificationCreateEvent row\n{ status: PENDING }
 end
 
@@ -70,7 +70,7 @@ note over Client, IDMS
   Specification must be DRAFT.
   If-Match is required.
 end note
-Client -> GW : PUT /intentManagement/v5/intentSpecification/draft/{draftId}\nIf-Match: "<etag>"\n{ complete IntentSpecification resource }
+Client -> GW : PUT /intentManagement/v5/intentSpecification/draft/{draftId}\nIf-Match: "<draft-etag>"\n{ complete DRAFT candidate resource }
 GW -> IDMS : Forward request using system/service identity
 alt Missing If-Match:
   IDMS --> GW : 428 Precondition Required\n{ code: PRECONDITION_REQUIRED, reason: IF_MATCH_REQUIRED }
@@ -80,7 +80,7 @@ else Stale / mismatched ETag:
   GW --> Client : 412 Precondition Failed
 else If-Match valid and resource is DRAFT:
   group Atomic DB transaction:
-    IDMS -> CAT : Replace DRAFT candidate selected by draftId
+    IDMS -> CAT : Replace DRAFT IntentSpecification
     IDMS -> OUTBOX : Write IntentSpecificationAttributeValueChangeEvent row
   end
   IDMS --> GW : 200 OK\nETag + TMF-compliant IntentSpecification
@@ -102,7 +102,7 @@ note over Client, IDMS
   Specification must be DRAFT.
   If-Match is required.
 end note
-Client -> GW : PATCH /intentManagement/v5/intentSpecification/draft/{draftId}\nIf-Match: "<etag>"\n{ partial fields }
+Client -> GW : PATCH /intentManagement/v5/intentSpecification/draft/{draftId}\nIf-Match: "<draft-etag>"\n{ partial DRAFT fields }
 GW -> IDMS : Forward request using system/service identity
 alt Missing If-Match:
   IDMS --> GW : 428 Precondition Required\n{ code: PRECONDITION_REQUIRED, reason: IF_MATCH_REQUIRED }
@@ -112,7 +112,7 @@ else Stale / mismatched ETag:
   GW --> Client : 412 Precondition Failed
 else If-Match valid and resource is DRAFT:
   group Atomic DB transaction:
-    IDMS -> CAT : Apply controlled partial update or activation to DRAFT candidate
+    IDMS -> CAT : Apply controlled partial update to DRAFT IntentSpecification
     IDMS -> OUTBOX : Write IntentSpecificationAttributeValueChangeEvent row
   end
   IDMS --> GW : 200 OK\nETag + TMF-compliant IntentSpecification
@@ -122,11 +122,11 @@ end
 == 4. Activate Draft and Auto-Retire Previous Active Version: ==
 note over Client, IDMS
   Activation is represented as lifecycleStatus change.
-  Service does not expose POST .../intentSpecification/{id}/activate. Activation uses PATCH or PUT /draft/{draftId}.
+  Service does not expose POST .../intentSpecification/{id}/activate.
   Active lifecycle values are DRAFT, ACTIVE, and RETIRED.
   DELETED is not an IntentSpecification lifecycleStatus.
 end note
-Client -> GW : PUT or PATCH /intentManagement/v5/intentSpecification/draft/{draftId}\nIf-Match: "<etag>"\n{ lifecycleStatus: "ACTIVE" }
+Client -> GW : PUT or PATCH /intentManagement/v5/intentSpecification/draft/{draftId}\nIf-Match: "<draft-etag>"\n{ lifecycleStatus: "ACTIVE" }
 GW -> IDMS : Forward request using system/service identity
 alt Missing If-Match:
   IDMS --> GW : 428 Precondition Required
@@ -162,7 +162,7 @@ note over Client, IDMS
   Allowed only for DRAFT resources when retention and runtime-reference rules permit.
   If-Match is required.
 end note
-Client -> GW : DELETE /intentManagement/v5/intentSpecification/draft/{draftId}\nIf-Match: "<etag>"
+Client -> GW : DELETE /intentManagement/v5/intentSpecification/{id}\nIf-Match: "<etag>"
 GW -> IDMS : Forward request using system/service identity
 alt Missing If-Match:
   IDMS --> GW : 428 Precondition Required\n{ code: PRECONDITION_REQUIRED, reason: IF_MATCH_REQUIRED }
@@ -171,7 +171,7 @@ else Stale / mismatched ETag:
   IDMS --> GW : 412 Precondition Failed\n{ code: PRECONDITION_FAILED, reason: ETAG_MISMATCH }
   GW --> Client : 412 Precondition Failed
 else Retention / runtime-reference rule violation:
-  IDMS -> CAT : Validate DRAFT candidate status, no active runtime references, and retention policy
+  IDMS -> CAT : Validate DRAFT status and no active runtime references
   CAT --> IDMS : Conflict
   IDMS --> GW : 409 Conflict\n{ reason }
   GW --> Client : 409 Conflict\n{ reason }

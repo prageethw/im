@@ -101,13 +101,13 @@
                         <mxPoint x="-54" y="56" as="offset"/>
                     </mxGeometry>
                 </mxCell>
-                <mxCell id="grp_family" value="Specification Family&#xa;(grouped by specKey)" style="swimlane;startSize=48;fillColor=#d5e8d4;strokeColor=default;fontStyle=1;fontSize=12;container=0;" parent="zone_idms" vertex="1">
+                <mxCell id="grp_family" value="Specification Key&#xa;(grouped by specKey)" style="swimlane;startSize=48;fillColor=#d5e8d4;strokeColor=default;fontStyle=1;fontSize=12;container=0;" parent="zone_idms" vertex="1">
                     <mxGeometry x="30" y="220" width="290" height="258" as="geometry"/>
                 </mxCell>
-                <mxCell id="res_lifecycle" value="IntentSpecification Lifecycle State&#xa;&#xa;DRAFT candidate → ACTIVE → RETIRED&#xa;DRAFT selected by draftId.&#xa;Activation assigns version and retires&#xa;previous ACTIVE for same specKey.&#xa;No DELETED lifecycle state." style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=default;fontStyle=1;fontSize=11;align=left;spacingLeft=8;container=0;" parent="zone_idms" vertex="1">
+                <mxCell id="res_lifecycle" value="IntentSpecification Lifecycle State&#xa;&#xa;DRAFT → ACTIVE → RETIRED&#xa;Activation auto-retires previous&#xa;ACTIVE version in same specKey.&#xa;No DELETED lifecycle state." style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=default;fontStyle=1;fontSize=11;align=left;spacingLeft=8;container=0;" parent="zone_idms" vertex="1">
                     <mxGeometry x="350" y="220" width="300" height="105" as="geometry"/>
                 </mxCell>
-                <mxCell id="res_governance" value="Spec-Key Version Governance&#xa;&#xa;Governs version uniqueness,&#xa;specKey grouping, promotion rules,&#xa;and one ACTIVE version per specKey." style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=default;fontStyle=1;fontSize=11;align=left;spacingLeft=8;container=0;" parent="zone_idms" vertex="1">
+                <mxCell id="res_governance" value="Version-Family Governance&#xa;&#xa;Governs version uniqueness,&#xa;specKey grouping, promotion rules,&#xa;and one ACTIVE version per family." style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=default;fontStyle=1;fontSize=11;align=left;spacingLeft=8;container=0;" parent="zone_idms" vertex="1">
                     <mxGeometry x="350" y="370" width="300" height="100" as="geometry"/>
                 </mxCell>
                 <mxCell id="res_catalogue" value="IntentSpecification Catalogue&#xa;(DB / store)&#xa;&#xa;Source of truth for definition-time contracts" style="shape=cylinder3;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=default;fontStyle=1;fontSize=12;container=0;" parent="zone_idms" vertex="1">
@@ -119,7 +119,7 @@
                 <mxCell id="res_spec" value="IntentSpecification&#xa;&#xa;Definition-time contract describing&#xa;allowed runtime intent expression&#xa;structure and governance metadata." style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=default;fontSize=11;align=left;spacingLeft=8;container=0;" parent="zone_idms" vertex="1">
                     <mxGeometry x="45" y="290" width="260" height="80" as="geometry"/>
                 </mxCell>
-                <mxCell id="res_version" value="Specification Version&#xa;&#xa;Official ACTIVE/RETIRED version&#xa;with lifecycle state. DRAFT uses draftId&#xa;and ETag until activation." style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=default;fontSize=11;align=left;spacingLeft=8;container=0;" parent="zone_idms" vertex="1">
+                <mxCell id="res_version" value="Specification Version&#xa;&#xa;Individual governed IntentSpecification&#xa;version with its own lifecycle state." style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=default;fontSize=11;align=left;spacingLeft=8;container=0;" parent="zone_idms" vertex="1">
                     <mxGeometry x="45" y="385" width="260" height="63" as="geometry"/>
                 </mxCell>
                 <mxCell id="a1" style="edgeStyle=orthogonalEdgeStyle;rounded=0;" parent="1" source="ext_client" target="gateway" edge="1">

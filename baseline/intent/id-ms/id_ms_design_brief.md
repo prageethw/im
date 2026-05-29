@@ -97,8 +97,8 @@ External `IntentSpecificationCreateEvent`, `IntentSpecificationAttributeValueCha
 | Partial update or activate DRAFT candidate | `PATCH` | `/intentSpecification/draft/{draftId}` |
 | Delete unused DRAFT candidate | `DELETE` | `/intentSpecification/draft/{draftId}` |
 
-`PUT /intentSpecification/{id}` is an intentional platform extension for deterministic full replacement.
-`PATCH /intentSpecification/{id}` remains supported for TMF compatibility, but is discouraged as a general update method.
+`PUT /intentSpecification/draft/{draftId}` is an intentional platform extension for deterministic full replacement.
+`PATCH /intentSpecification/draft/{draftId}` remains supported for TMF compatibility, but is discouraged as a general update method.
 
 ## Hub subscription APIs:
 
@@ -177,9 +177,9 @@ Important:
 | `POST /intentSpecification` | Response must include `ETag` |
 | `GET /intentSpecification/{id}` | Response must include `ETag` |
 | `GET /intentSpecification` | Response should include list-level `ETag` |
-| `PUT /intentSpecification/{id}` | Request must include `If-Match` |
-| `PATCH /intentSpecification/{id}` | Request must include `If-Match` |
-| `DELETE /intentSpecification/{id}` | Request must include `If-Match` |
+| `PUT /intentSpecification/draft/{draftId}` | Request must include `If-Match` |
+| `PATCH /intentSpecification/draft/{draftId}` | Request must include `If-Match` |
+| `DELETE /intentSpecification/{id}` and `DELETE /intentSpecification/draft/{draftId}` | Request must include `If-Match` where applicable |
 | `POST /intentSpecification/hub` | Response must include `ETag` |
 | `DELETE /intentSpecification/hub/{id}` | Request must include `If-Match` |
 
@@ -604,12 +604,12 @@ Example spec key:
 hospital-surgical-slice-spec
 ```
 
-Example versions:
+Example official versions for the same stable specification id:
 
 ```text
-hospital-surgical-slice-spec-v1.18
-hospital-surgical-slice-spec-v1.19
-hospital-surgical-slice-spec-v1.20
+id: hospital-surgical-slice-spec, version: 1.18
+id: hospital-surgical-slice-spec, version: 1.19
+id: hospital-surgical-slice-spec, version: 1.20
 ```
 
 Only one version with that `specKey` should be `ACTIVE` for new runtime intent creation.
@@ -1008,7 +1008,7 @@ For `intent_specification`:
 
 | **Column** | **Purpose** |
 |---|---|
-| `id` | Stable specification ID, for example `hospital-surgical-slice-spec-v1.19` |
+| `id` | Stable specification ID, for example `hospital-surgical-slice-spec` |
 | `spec_key` | Logical specification key, for example `hospital-surgical-slice-spec` |
 | `name` | Human-readable name |
 | `version` | Version string |

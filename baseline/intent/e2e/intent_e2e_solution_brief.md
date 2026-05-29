@@ -227,13 +227,13 @@ Successful creation normally returns `201 Created`, a server-generated `id`, `hr
 
 ## Activate intent specification:
 
-Activation is a lifecycle update on the resource. The platform must not expose a custom activation action, such as:
+Activation is a lifecycle update on the selected DRAFT candidate addressed by `draftId`. The platform must not expose a custom activation action, such as:
 
 ```http
 POST /intentManagement/v5/intentSpecification/{id}/activate
 ```
 
-The preferred platform update path is deterministic full replacement through `PUT` for editable drafts, with `PATCH` retained for TMF compatibility and controlled small updates. Unsafe state-changing operations require `If-Match`.
+Draft candidate updates use `PUT /intentManagement/v5/intentSpecification/draft/{draftId}` for deterministic full replacement, with controlled `PATCH /intentManagement/v5/intentSpecification/draft/{draftId}` retained for small targeted updates. Unsafe state-changing operations require `If-Match`.
 
 `PATCH` uses JSON Merge Patch semantics and full PATCH request examples must use `Content-Type: application/merge-patch+json`.
 
@@ -561,9 +561,9 @@ Expected platform controls include:
 | Create specification | `POST` | `/intentManagement/v5/intentSpecification` |
 | List specifications | `GET` | `/intentManagement/v5/intentSpecification` |
 | Retrieve specification | `GET` | `/intentManagement/v5/intentSpecification/{id}` |
-| Full replace specification | `PUT` | `/intentManagement/v5/intentSpecification/{id}` |
-| Partial update specification | `PATCH` | `/intentManagement/v5/intentSpecification/{id}` |
-| Delete draft specification | `DELETE` | `/intentManagement/v5/intentSpecification/{id}` |
+| Full replace draft specification candidate | `PUT` | `/intentManagement/v5/intentSpecification/draft/{draftId}` |
+| Partial update draft specification candidate | `PATCH` | `/intentManagement/v5/intentSpecification/draft/{draftId}` |
+| Delete draft specification candidate | `DELETE` | `/intentManagement/v5/intentSpecification/draft/{draftId}` |
 | Create specification event subscription | `POST` | `/intentManagement/v5/intentSpecification/hub` |
 | Retrieve specification subscription | `GET` | `/intentManagement/v5/intentSpecification/hub/{id}` |
 | Delete specification subscription | `DELETE` | `/intentManagement/v5/intentSpecification/hub/{id}` |
