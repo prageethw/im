@@ -88,10 +88,10 @@ IC MS therefore has two separate event-delivery paths:
 
 ---
 
-### 1A. TMF compliance and platform extension baseline:
+### TMF compliance and platform extension baseline:
 
 
-### Response classification headers:
+#### Response classification headers:
 
 IC MS returns response classification headers on external REST API responses so callers can distinguish strict TMF-native behaviour from documented platform-extension behaviour.
 
@@ -133,7 +133,7 @@ X-Platform-Extension: true
 
 IC MS keeps the external `Intent` and `IntentReport` contract TMF-aligned while documenting controlled platform extensions explicitly.
 
-### Strict TMF-compatible operations:
+#### Strict TMF-compatible operations:
 
 | **Capability** | **Route family** | **Position** |
 |---|---|---|
@@ -143,7 +143,7 @@ IC MS keeps the external `Intent` and `IntentReport` contract TMF-aligned while 
 | IntentReport list/retrieve | `GET /intent/{intentId}/intentReport`, `GET /intent/{intentId}/intentReport/{id}` | TMF-aligned nested report projection |
 | Hub subscription create/delete | `POST /hub`, `DELETE /hub/{id}` | Strict TMF route family |
 
-### Accepted platform extensions:
+#### Accepted platform extensions:
 
 | **Extension** | **Reason** |
 |---|---|
