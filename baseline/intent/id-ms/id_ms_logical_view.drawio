@@ -1,6 +1,6 @@
 <mxfile host="65bd71144e">
     <diagram name="ID MS - Logical View" id="id-ms-logical-view">
-        <mxGraphModel dx="592" dy="639" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1654" pageHeight="1169" math="0" shadow="0" adaptiveColors="none">
+        <mxGraphModel dx="584" dy="638" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1654" pageHeight="1169" math="0" shadow="0" adaptiveColors="none">
             <root>
                 <mxCell id="0"/>
                 <mxCell id="1" parent="0"/>
@@ -116,7 +116,7 @@
                 <mxCell id="res_eventsub" value="EventSubscription&#xa;&#xa;Domain-scoped external listener&#xa;subscription for ID MS&#xa;IntentSpecification event notifications." style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=default;fontStyle=1;fontSize=11;align=left;spacingLeft=8;container=0;" parent="zone_idms" vertex="1">
                     <mxGeometry x="260" y="620" width="220" height="122" as="geometry"/>
                 </mxCell>
-                <mxCell id="res_spec" value="IntentSpecification&#xa;&#xa;Definition-time contract describing&#xa;allowed runtime intent expression&#xa;structure and governance metadata." style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=default;fontSize=11;align=left;spacingLeft=8;container=0;" parent="zone_idms" vertex="1">
+                <mxCell id="res_spec" value="IntentSpecification&#xa;&#xa;Definition-time contract describing&#xa;allowed runtime intent expression&#xa;structure and governance metadata.&#xa;&#xa;Create: server sets DRAFT;&#xa;isBundle defaults false." style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=default;fontSize=11;align=left;spacingLeft=8;container=0;" parent="zone_idms" vertex="1">
                     <mxGeometry x="45" y="290" width="260" height="80" as="geometry"/>
                 </mxCell>
                 <mxCell id="res_version" value="Specification Version&#xa;&#xa;Individual governed IntentSpecification&#xa;version with its own lifecycle state." style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=default;fontSize=11;align=left;spacingLeft=8;container=0;" parent="zone_idms" vertex="1">
@@ -141,7 +141,7 @@
                 </mxCell>
                 <mxCell id="a3_lbl" value="forwards trusted system context&#xa;(no end-user context downstream)" style="edgeLabel;fontSize=10;fontStyle=2;" parent="a3" connectable="0" vertex="1">
                     <mxGeometry relative="0.5" as="geometry">
-                        <mxPoint x="-50" as="offset"/>
+                        <mxPoint x="-50" y="22" as="offset"/>
                     </mxGeometry>
                 </mxCell>
                 <mxCell id="a10" style="edgeStyle=orthogonalEdgeStyle;rounded=0;strokeColor=default;" parent="1" source="webhook_outbox" target="ext_subscriber" edge="1">
