@@ -262,7 +262,7 @@ These fields do not replace `expressionSpecification.iri`, `targetEntitySchema`,
 Runtime Intent instances created using an `ACTIVE` `IntentSpecification` remain tied to the specification identity and version used at admission.
 
 - `IntentSpecification` lifecycle may evolve from `DRAFT` to `ACTIVE` to `RETIRED`.
-- Existing runtime Intent instances referencing a RETIRED specification may continue under IC MS or platform governance policy.
+- Existing runtime Intent instances referencing a `RETIRED` specification may continue where platform policy allows.
 - A change in intent requirements must result in submission of a new Intent instance. Runtime mutation of admitted Intent instances is not supported.
 - ID MS does not mutate runtime Intent instances.
 - `ACTIVE` and `RETIRED` `IntentSpecification` versions remain immutable for material contract changes.
@@ -277,7 +277,7 @@ Runtime Intent instances created using an `ACTIVE` `IntentSpecification` remain 
 - At most one ACTIVE lineage may exist for a given `specKey`; duplicate ACTIVE lineages for the same `specKey` are a data-integrity breach.
 - Activating a selected DRAFT candidate retires the previous ACTIVE version for the same resolved `id`.
 - Retired specifications must not be used for new runtime `Intent` creation.
-- Existing runtime Intent instances referencing a RETIRED specification may continue under IC MS or platform governance policy.
+- Existing runtime Intent instances referencing a RETIRED specification may continue under external platform governance policy.
 
 ### Caching and ETag rules
 
@@ -378,7 +378,7 @@ X-Platform-Extension: false
 
 ## 4. Create IntentSpecification
 
-`POST /intentSpecification` creates a mutable DRAFT candidate only. The request must include `specKey`; ID MS resolves the stable server-assigned `IntentSpecification.id` from `specKey` and assigns a new `draftId`. The DRAFT candidate has no official public `version`; draft revision is represented by the returned `ETag`. Any version indicator during draft authoring is non-authoritative and must not be relied on.
+`POST /intentSpecification` creates a mutable DRAFT candidate only. The request must include `specKey`; ID MS resolves the stable server-assigned `IntentSpecification.id` from `specKey` and assigns a new `draftId`. The DRAFT candidate has no official public `version`; draft revision is represented by the returned `ETag`. Any version indicator during draft authoring is non-authoritative and must not be relied on. DRAFT candidates do not expose or guarantee any version identifier.
 
 ### Request
 
@@ -1011,7 +1011,9 @@ Cache-Control: no-store
 
 ## 8. Partial update DRAFT IntentSpecification candidate
 
-`PATCH` is supported for TMF compatibility but discouraged as a general update method. Prefer `PUT` for deterministic full replacement of editable `DRAFT` specifications.
+`PATCH` remains supported for TMF compatibility, but it is discouraged as a general update method.
+Prefer `PUT` for deterministic full replacement of editable `DRAFT` specifications.
+Use `PATCH` only where a TMF-compatible client cannot use `PUT` or where a tightly controlled, small targeted compatibility update is required.
 
 `PATCH` must not normally be used for material contract replacement, including `specKey`, `version`, `specCharacteristic`, `expressionSpecification`, `targetEntitySchema`, or major lifecycle and version contract identity.
 
@@ -1215,7 +1217,7 @@ For the preferred platform extension where the caller sends the full resource re
 PUT /intentManagement/v5/intentSpecification/draft/{draftId}
 ```
 
-`PATCH` is supported for TMF compatibility but discouraged as a general update method. Prefer `PUT` for deterministic full replacement of editable `DRAFT` specifications. Activation through `PATCH` is an acceptable tightly controlled lifecycle transition case.
+Although `PATCH` is discouraged as a general update method, this is an acceptable tightly controlled TMF-compatible case because activation is a small lifecycle-status update.
 
 ### PATCH activation request
 
@@ -1289,7 +1291,7 @@ Last-Modified: Sat, 18 Apr 2026 03:30:00 GMT
 | Target state | Activated version becomes `ACTIVE` |
 | Previous active | Previous `ACTIVE` version for the same resolved `id` becomes `RETIRED` transactionally |
 | New runtime creation | New runtime intents must use the new `ACTIVE` version |
-| Existing runtime intents | Existing runtime Intent instances referencing a RETIRED specification may continue under IC MS or platform governance policy |
+| Existing runtime intents | Existing runtime Intent instances referencing a RETIRED specification may continue under external platform governance policy |
 | Material update after activation | Not allowed; create a new mutable DRAFT candidate |
 | ETag required | `If-Match` is required |
 | Missing `If-Match` | `428 Precondition Required` |

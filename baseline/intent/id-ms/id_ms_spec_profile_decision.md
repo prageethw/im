@@ -88,7 +88,7 @@ targetEntitySchema
 _links
 ```
 
-DRAFT candidates do not expose an official public `version`. Draft revision is represented by `ETag`. Any version indicator during draft authoring is non-authoritative and must not be relied on.
+DRAFT candidates do not expose an official public `version`. Draft revision is represented by `ETag`. Any version indicator during draft authoring is non-authoritative and must not be relied on. DRAFT candidates do not expose or guarantee any version identifier.
 
 ## 4. specKey and id resolution rule:
 
@@ -244,7 +244,7 @@ IC MS runtime admission must reference a concrete ACTIVE `intentSpecification.id
 Runtime Intent instances created using an `ACTIVE` `IntentSpecification` remain tied to the specification identity and version used at admission.
 
 - `IntentSpecification` lifecycle may evolve from `DRAFT` to `ACTIVE` to `RETIRED`.
-- Existing runtime Intent instances referencing a RETIRED specification may continue under IC MS or platform governance policy.
+- Existing runtime Intent instances referencing a RETIRED specification may continue under external platform governance policy.
 - A change in intent requirements must result in submission of a new Intent instance. Runtime mutation of admitted Intent instances is not supported.
 - ID MS does not mutate runtime Intent instances.
 - `ACTIVE` and `RETIRED` `IntentSpecification` versions remain immutable for material contract changes.

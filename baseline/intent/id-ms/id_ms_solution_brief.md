@@ -197,7 +197,7 @@ Content-Type: application/merge-patch+json
 
 `IntentSpecification.version` is a design-time contract version and is separate from runtime `Intent.version`.
 
-A mutable DRAFT `IntentSpecification` candidate does not expose an official public `version`. Draft revision is represented by `ETag`. Any version indicator during draft authoring is non-authoritative and must not be relied on. ID MS assigns the official design-time contract `version` only when the selected DRAFT candidate is activated.
+A mutable DRAFT `IntentSpecification` candidate does not expose an official public `version`. Draft revision is represented by `ETag`. Any version indicator during draft authoring is non-authoritative and must not be relied on. DRAFT candidates do not expose or guarantee any version identifier. ID MS assigns the official design-time contract `version` only when the selected DRAFT candidate is activated.
 
 Baseline:
 
@@ -246,9 +246,65 @@ Baseline:
 
 ## Optional IntentSpecification behaviour metadata:
 
-`intentBehaviour` and `intentLayer` are optional classification metadata fields on `IntentSpecification`. They support catalogue visibility, governance visibility, and external consumer understanding. They are not used by ID MS for runtime decisioning, runtime validation, admission control, or behavioural enforcement.
+`intentBehaviour` and `intentLayer` are optional classification metadata fields on `IntentSpecification`.
 
-Refer to the ID MS specification for the full `intentBehaviour` and `intentLayer` field definitions, allowed values, and constraints.
+They support:
+
+- catalogue visibility
+- governance visibility
+- external consumer understanding
+
+They are not used by ID MS for:
+
+- runtime decisioning
+- runtime validation
+- admission control
+- behavioural enforcement
+
+They are not required for DRAFT creation, activation, or runtime Intent admission in the current baseline. If omitted, ID MS does not infer or default these values unless an explicit platform policy is later introduced.
+
+The only ID MS-level `intentBehaviour` fields defined in this baseline are:
+
+- `category`
+- `constraintMode`
+- `objectiveType`
+- `fulfilmentMode`
+
+No additional behaviour fields are defined at ID MS level.
+
+Example optional metadata for the hospital surgical slice specification:
+
+```json
+{
+  "intentBehaviour": {
+    "category": "REALTIME",
+    "constraintMode": "STRICT",
+    "objectiveType": "SLA",
+    "fulfilmentMode": "CONTINUOUS"
+  },
+  "intentLayer": "SERVICE"
+}
+```
+
+Controlled values:
+
+| **Field** | **Allowed values** | **Meaning** |
+|---|---|---|
+| `intentBehaviour.category` | `REALTIME`, `BATCH`, `OPTIMISATION`, `ASSURANCE` | Broad behavioural type of intents created from the specification. |
+| `intentBehaviour.constraintMode` | `STRICT`, `FLEXIBLE` | Whether constraints are normally mandatory or may be relaxed by governed policy or negotiation. |
+| `intentBehaviour.objectiveType` | `SLA`, `COST`, `ENERGY`, `BALANCED` | Main decision or optimisation objective. |
+| `intentBehaviour.fulfilmentMode` | `IMMEDIATE`, `LONGRUNNING`, `CONTINUOUS` | Fulfilment behaviour. |
+| `intentLayer` | `BUSINESS`, `SERVICE`, `RESOURCE` | Abstraction layer of the intent. |
+
+`fulfilmentMode` values mean:
+
+| **Value** | **Meaning** |
+|---|---|
+| `IMMEDIATE` | Fulfilment is expected to complete in a short-lived operation. |
+| `LONGRUNNING` | Fulfilment spans a longer-running workflow with delayed completion feedback. |
+| `CONTINUOUS` | Downstream systems may operate in a closed-loop manner to maintain the intent objective over time. |
+
+`IMMEDIATE` and `LONGRUNNING` describe fulfilment timing. `CONTINUOUS` indicates that downstream systems may operate in a closed-loop manner to maintain the intent objective over time. This does not imply mutation of the submitted runtime Intent instance.
 
 These fields do not replace `expressionSpecification.iri`, `targetEntitySchema`, `specCharacteristic`, or request-specific `serviceType`, `serviceClass`, `priority`, targets, constraints, and preferences inside the governed expression schema.
 
@@ -499,7 +555,9 @@ Delete events are emitted only after successful delete and show the last known l
 
 ### Partial update behaviour:
 
-- `PATCH` is supported for TMF compatibility but discouraged as a general update method. Prefer `PUT` for deterministic full replacement of editable `DRAFT` specifications.
+- `PATCH` remains available for TMF compatibility.
+- `PATCH` is discouraged as a general update method.
+- `PATCH` should be used only for tightly controlled small compatibility updates.
 - `PATCH` must not normally replace material contract fields.
 
 ### Activation behaviour:
@@ -510,7 +568,7 @@ Delete events are emitted only after successful delete and show the last known l
 - The activated version becomes `ACTIVE`.
 - The previous `ACTIVE` version in the same `specKey` becomes `RETIRED`.
 - New runtime intent creation must use the new active specification.
-- Existing runtime Intent instances referencing a RETIRED specification may continue under IC MS or platform governance policy.
+- Existing runtime Intent instances referencing a RETIRED specification may continue under external platform governance policy.
 - Activation responses may include this platform governance projection:
 
 ```json
