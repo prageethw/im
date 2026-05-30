@@ -360,7 +360,7 @@ This example proves the minimum active-runtime-contract profile.
 It adds the mandatory fields required before the specification can be used as a published runtime contract.
 
 ```http
-PUT /intentManagement/v5/intentSpecification/hospital-surgical-slice-spec-v1.19
+PUT /intentManagement/v5/intentSpecification/draft/id-draft-hospital-surgical-slice-a
 Content-Type: application/json
 Accept: application/json
 If-Match: "intent-spec-hospital-surgical-slice-spec-v1.19-v1"

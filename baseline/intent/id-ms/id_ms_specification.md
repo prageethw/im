@@ -138,10 +138,10 @@ Header classification guidance:
 
 | **ID MS response area** | **X-TMF-Native** | **X-Platform-Extension** | **Reason** |
 |---|---:|---:|---|
-| `POST /intentSpecification`, `GET /intentSpecification`, `GET /intentSpecification/{id}`, `GET /intentSpecification/draft/{draftId}`, `PATCH /intentSpecification/draft/{draftId}`, `DELETE /intentSpecification/{id}`, and `DELETE /intentSpecification/draft/{draftId}` using strict TMF-compatible behaviour | `true` | `false` | TMF-compatible IntentSpecification resource operations. |
-| `PUT /intentSpecification/draft/{draftId}` | `false` | `true` | Deterministic full replacement of a mutable DRAFT candidate is a platform extension. |
-| `PATCH /intentSpecification/draft/{draftId}` used for tightly controlled activation | `true` | `false` | Uses TMF-compatible partial update on the selected DRAFT candidate. |
-| `PUT /intentSpecification/draft/{draftId}` used for full-resource finalisation/activation | `false` | `true` | Full-resource finalisation through PUT is a platform extension. |
+| `POST /intentSpecification`, `GET /intentSpecification`, `GET /intentSpecification/{id}`, and `DELETE /intentSpecification/{id}` using strict TMF-compatible behaviour | `true` | `false` | TMF-compatible official IntentSpecification resource operations. |
+| `GET /intentSpecification/draft/{draftId}`, `PUT /intentSpecification/draft/{draftId}`, `PATCH /intentSpecification/draft/{draftId}`, and `DELETE /intentSpecification/draft/{draftId}` | `false` | `true` | DRAFT-candidate route family is a platform extension used to retrieve, edit, activate, or delete mutable draft candidates before activation. |
+| `PATCH /intentSpecification/draft/{draftId}` used for tightly controlled activation | `false` | `true` | Uses TMF-compatible partial-update semantics on the platform-extension DRAFT-candidate route. |
+| `PUT /intentSpecification/draft/{draftId}` used for full-resource finalisation/activation | `false` | `true` | Full-resource finalisation through PUT on the DRAFT-candidate route is a platform extension. |
 | Strict `/hub` create/delete responses | `true` | `false` | Strict TMF hub route family. |
 | Domain-scoped `/intentSpecification/hub` responses | `false` | `true` | Domain-owned hub route family is a platform extension. |
 | `GET /intentSpecification/hub/{id}` | `false` | `true` | Subscription retrieval is an operational convenience extension. |

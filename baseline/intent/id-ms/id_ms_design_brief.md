@@ -62,7 +62,7 @@ Strict TMF-compatible operations remain:
 | Create specification | `POST /intentManagement/v5/intentSpecification` |
 | List specifications | `GET /intentManagement/v5/intentSpecification` |
 | Retrieve specification | `GET /intentManagement/v5/intentSpecification/{id}` |
-| Partial update specification | `PATCH /intentManagement/v5/intentSpecification/{id}` |
+| Partial update DRAFT candidate | `PATCH /intentManagement/v5/intentSpecification/draft/{draftId}` |
 | Delete specification | `DELETE /intentManagement/v5/intentSpecification/{id}` |
 | Generic hub create/delete | `/hub` exposure where strict TMF gateway routing is required |
 
@@ -70,7 +70,7 @@ Approved platform extensions are:
 
 | **Extension** | **Reason** |
 |---|---|
-| `PUT /intentManagement/v5/intentSpecification/{id}` | Deterministic full replacement of editable `DRAFT` specifications |
+| `PUT /intentManagement/v5/intentSpecification/draft/{draftId}` | Deterministic full replacement of editable DRAFT candidates |
 | Domain-scoped `/intentSpecification/hub` routes | Keeps ID MS subscriptions scoped to `IntentSpecification` event notifications |
 | `GET /intentSpecification/hub/{id}` | Operational convenience for retrieving a domain-scoped subscription |
 | `specKey` | Spec-key version governance across related specification versions |
@@ -311,7 +311,7 @@ The list operation does not include full `specCharacteristic`, `expressionSpecif
 ## Full update IntentSpecification:
 
 ```http
-PUT /intentManagement/v5/intentSpecification/hospital-surgical-slice-spec-v1.19?fields=id,href,specKey,name,description,version,lifecycleStatus,isBundle,validFor,relatedParty,specCharacteristic,expressionSpecification,targetEntitySchema,@type,@baseType
+PUT /intentManagement/v5/intentSpecification/draft/id-draft-hospital-surgical-slice-a?fields=id,href,specKey,name,description,version,lifecycleStatus,isBundle,validFor,relatedParty,specCharacteristic,expressionSpecification,targetEntitySchema,@type,@baseType
 Content-Type: application/json
 Accept: application/json
 If-Match: "intent-spec-hospital-surgical-slice-spec-v1.19-v1"
@@ -355,7 +355,7 @@ Content-Type: application/json
 ## Partial update IntentSpecification:
 
 ```http
-PATCH /intentManagement/v5/intentSpecification/hospital-surgical-slice-spec-v1.19
+PATCH /intentManagement/v5/intentSpecification/draft/id-draft-hospital-surgical-slice-a
 Content-Type: application/merge-patch+json
 Accept: application/json
 If-Match: "intent-spec-hospital-surgical-slice-spec-v1.19-v1"
@@ -407,7 +407,7 @@ Do not expose:
 POST /intentManagement/v5/intentSpecification/{id}/activate
 ```
 
-Use `PATCH /intentManagement/v5/intentSpecification/{id}` for strict TMF-compatible lifecycle update, or `PUT /intentManagement/v5/intentSpecification/{id}` as the preferred platform extension when the caller sends the full resource.
+Use `PATCH /intentManagement/v5/intentSpecification/draft/{draftId}` for TMF-compatible partial-update semantics on the platform-extension DRAFT-candidate route, or `PUT /intentManagement/v5/intentSpecification/draft/{draftId}` as the preferred platform extension when the caller sends the full DRAFT candidate representation.
 Although `PATCH` is discouraged as a general update method, it is acceptable for this tightly controlled TMF-compatible lifecycle transition.
 
 Rules:
@@ -766,8 +766,8 @@ If-Match
 Applies to:
 
 ```http
-PUT /intentManagement/v5/intentSpecification/{id}
-PATCH /intentManagement/v5/intentSpecification/{id}
+PUT /intentManagement/v5/intentSpecification/draft/{draftId}
+PATCH /intentManagement/v5/intentSpecification/draft/{draftId}
 DELETE /intentManagement/v5/intentSpecification/{id}
 DELETE /intentManagement/v5/intentSpecification/hub/{id}
 ```
