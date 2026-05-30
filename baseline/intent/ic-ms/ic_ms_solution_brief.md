@@ -69,7 +69,7 @@ IC MS owns the externally visible runtime projection, not the full internal fulf
 7. If `submit` is omitted while the current Intent is already Draft, the Intent remains Draft.
 8. If `submit: true` is supplied, IC MS validates the runtime admission profile and, if accepted, moves the projected lifecycle to `Acknowledged`.
 9. Once an Intent leaves Draft, general attribute update on that submitted version is not allowed.
-10. Material changes after submission require creating a new Draft authoring record, editing that Draft version, and explicitly submitting it.
+10. Material changes after submission require creating a new Draft authoring record, editing that Draft authoring record, and explicitly submitting it.
 11. IC MS projects the current runtime version externally while retaining internal version history for audit and traceability.
 
 A new runtime version must not be created while there is already a newer candidate version in `Acknowledged` or `InProgress`. Draft authoring records are not admitted runtime candidates and do not drive `activeVersion`.
@@ -436,7 +436,7 @@ External `GET /intent/{id}` returns the current projected `Intent` state. It doe
 | Rule | Baseline |
 |---|---|
 | New version gating | Do not create another newer version while there is already a newer candidate version in `Acknowledged` or `InProgress`. |
-| Draft version behaviour | Draft authoring records are editable pre-admission authoring records and do not drive `activeVersion`. |
+| Draft authoring-record behaviour | Draft authoring records are editable pre-admission authoring records and do not drive `activeVersion`. |
 | New version becomes `activeVersion` after previous `Active` / `Degraded` / `Paused` | Previous version moves to `Standby`. |
 | New version becomes `activeVersion` after previous `Rejected` / `Failed` | Previous version moves to `Terminated`. |
 | Standby reactivation | `Standby -> Acknowledged -> InProgress -> Active`. |

@@ -305,10 +305,9 @@ Failed
 Terminated
 ```
 
-### Intent-version lifecycleStatus values:
+### Intent-version lifecycleStatus values after admission:
 
 ```text
-Draft
 Acknowledged
 InProgress
 Active
