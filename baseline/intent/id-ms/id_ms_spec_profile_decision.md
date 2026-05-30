@@ -88,7 +88,7 @@ targetEntitySchema
 _links
 ```
 
-DRAFT candidates do not expose an official public `version`. Draft revision is represented by `ETag`.
+DRAFT candidates do not expose an official public `version`. Draft revision is represented by `ETag`. Any version indicator during draft authoring is non-authoritative and must not be relied on.
 
 ## 4. specKey and id resolution rule:
 
@@ -227,7 +227,7 @@ For the hospital surgical slice example, the recommended optional metadata is:
 }
 ```
 
-`IMMEDIATE` and `LONGRUNNING` describe fulfilment timing. `CONTINUOUS` refers to downstream closed-loop system behaviour only. It indicates that downstream systems may monitor, assure, adapt, re-optimise, or reselect resources to maintain the intent objective over time. It does not imply mutation or update of the submitted runtime Intent instance.
+`IMMEDIATE` and `LONGRUNNING` describe fulfilment timing. `CONTINUOUS` indicates that downstream systems may operate in a closed-loop manner to maintain the intent objective over time. This does not imply mutation of the submitted runtime Intent instance.
 
 These fields do not replace `expressionSpecification.iri`, `targetEntitySchema`, `specCharacteristic`, or request-specific `serviceType`, `serviceClass`, `priority`, targets, constraints, and preferences inside the governed expression schema.
 
@@ -244,7 +244,7 @@ IC MS runtime admission must reference a concrete ACTIVE `intentSpecification.id
 Runtime Intent instances created using an `ACTIVE` `IntentSpecification` remain tied to the specification identity and version used at admission.
 
 - `IntentSpecification` lifecycle may evolve from `DRAFT` to `ACTIVE` to `RETIRED`.
-- Existing runtime Intent instances referencing a `RETIRED` specification may continue where platform policy allows.
-- A change in intent requirements should be handled through a controlled runtime Intent update or recreate flow owned by IC MS.
+- Existing runtime Intent instances referencing a RETIRED specification may continue under IC MS or platform governance policy.
+- A change in intent requirements must result in submission of a new Intent instance. Runtime mutation of admitted Intent instances is not supported.
 - ID MS does not mutate runtime Intent instances.
 - `ACTIVE` and `RETIRED` `IntentSpecification` versions remain immutable for material contract changes.

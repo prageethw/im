@@ -105,6 +105,10 @@ ID MS does not:
 - use `DELETED` as an `IntentSpecification.lifecycleStatus`;
 - publish external hub notifications to Kafka topics.
 
+## Response locale:
+
+`Content-Language: en-AU` is the platform default response locale used in examples. It does not change field names, enum values, identifiers, or JSON payload semantics.
+
 ## Response classification headers:
 
 The service returns response classification headers on external REST API responses so callers can distinguish strict TMF-native behaviour from documented platform-extension behaviour.
@@ -193,7 +197,7 @@ Content-Type: application/merge-patch+json
 
 `IntentSpecification.version` is a design-time contract version and is separate from runtime `Intent.version`.
 
-A mutable DRAFT `IntentSpecification` candidate does not expose an official public `version`. Draft revision is represented by `ETag`. ID MS assigns the official design-time contract `version` only when the selected DRAFT candidate is activated.
+A mutable DRAFT `IntentSpecification` candidate does not expose an official public `version`. Draft revision is represented by `ETag`. Any version indicator during draft authoring is non-authoritative and must not be relied on. ID MS assigns the official design-time contract `version` only when the selected DRAFT candidate is activated.
 
 Baseline:
 
@@ -242,65 +246,9 @@ Baseline:
 
 ## Optional IntentSpecification behaviour metadata:
 
-`intentBehaviour` and `intentLayer` are optional classification metadata fields on `IntentSpecification`.
+`intentBehaviour` and `intentLayer` are optional classification metadata fields on `IntentSpecification`. They support catalogue visibility, governance visibility, and external consumer understanding. They are not used by ID MS for runtime decisioning, runtime validation, admission control, or behavioural enforcement.
 
-They support:
-
-- catalogue visibility
-- governance visibility
-- external consumer understanding
-
-They are not used by ID MS for:
-
-- runtime decisioning
-- runtime validation
-- admission control
-- behavioural enforcement
-
-They are not required for DRAFT creation, activation, or runtime Intent admission in the current baseline. If omitted, ID MS does not infer or default these values unless an explicit platform policy is later introduced.
-
-The only ID MS-level `intentBehaviour` fields defined in this baseline are:
-
-- `category`
-- `constraintMode`
-- `objectiveType`
-- `fulfilmentMode`
-
-No additional behaviour fields are defined at ID MS level.
-
-Example optional metadata for the hospital surgical slice specification:
-
-```json
-{
-  "intentBehaviour": {
-    "category": "REALTIME",
-    "constraintMode": "STRICT",
-    "objectiveType": "SLA",
-    "fulfilmentMode": "CONTINUOUS"
-  },
-  "intentLayer": "SERVICE"
-}
-```
-
-Controlled values:
-
-| **Field** | **Allowed values** | **Meaning** |
-|---|---|---|
-| `intentBehaviour.category` | `REALTIME`, `BATCH`, `OPTIMISATION`, `ASSURANCE` | Broad behavioural type of intents created from the specification. |
-| `intentBehaviour.constraintMode` | `STRICT`, `FLEXIBLE` | Whether constraints are normally mandatory or may be relaxed by governed policy or negotiation. |
-| `intentBehaviour.objectiveType` | `SLA`, `COST`, `ENERGY`, `BALANCED` | Main decision or optimisation objective. |
-| `intentBehaviour.fulfilmentMode` | `IMMEDIATE`, `LONGRUNNING`, `CONTINUOUS` | Fulfilment behaviour. |
-| `intentLayer` | `BUSINESS`, `SERVICE`, `RESOURCE` | Abstraction layer of the intent. |
-
-`fulfilmentMode` values mean:
-
-| **Value** | **Meaning** |
-|---|---|
-| `IMMEDIATE` | Fulfilment is expected to complete in a short-lived operation. |
-| `LONGRUNNING` | Fulfilment spans a longer-running workflow with delayed completion feedback. |
-| `CONTINUOUS` | Downstream systems may operate in a closed-loop manner to maintain the intent objective over time. |
-
-`IMMEDIATE` and `LONGRUNNING` describe fulfilment timing. `CONTINUOUS` refers to downstream closed-loop system behaviour only. It indicates that downstream systems may monitor, assure, adapt, re-optimise, or reselect resources to maintain the intent objective over time. It does not imply mutation or update of the submitted runtime Intent instance.
+Refer to the ID MS specification for the full `intentBehaviour` and `intentLayer` field definitions, allowed values, and constraints.
 
 These fields do not replace `expressionSpecification.iri`, `targetEntitySchema`, `specCharacteristic`, or request-specific `serviceType`, `serviceClass`, `priority`, targets, constraints, and preferences inside the governed expression schema.
 
@@ -487,8 +435,8 @@ A typical `IntentSpecificationStatusChangeEvent` webhook body has this logical s
   "title": "IntentSpecification status changed",
   "event": {
     "intentSpecification": {
-      "id": "hospital-surgical-slice-spec",
-      "href": "/intentManagement/v5/intentSpecification/hospital-surgical-slice-spec?version=1.20",
+      "id": "ispec-hss-001",
+      "href": "/intentManagement/v5/intentSpecification/ispec-hss-001?version=1.20",
       "specKey": "hospital-surgical-slice-spec",
       "name": "Hospital Surgical Slice Intent Specification",
       "version": "1.20",
@@ -523,7 +471,7 @@ Delete events are emitted only after successful delete and show the last known l
 
 - Create produces a mutable `DRAFT` candidate and assigns a `draftId`.
 - ID MS validates resource shape and required syntax and schema references.
-- ID MS resolves `id` from `specKey` and generates `draftId`, DRAFT `href`, `Location`, `ETag`, and `_links`.
+- ID MS resolves server-assigned `id` from `specKey` and generates `draftId`, DRAFT `href`, `Location`, `ETag`, and `_links`; `id` must not be assumed to equal `specKey`.
 - Successful create returns `201 Created` with the full created DRAFT candidate resource.
 - Successful create emits `IntentSpecificationCreateEvent`.
 
@@ -551,20 +499,37 @@ Delete events are emitted only after successful delete and show the last known l
 
 ### Partial update behaviour:
 
-- `PATCH` remains available for TMF compatibility.
-- `PATCH` is discouraged as a general update method.
-- `PATCH` should be used only for tightly controlled small compatibility updates.
+- `PATCH` is supported for TMF compatibility but discouraged as a general update method. Prefer `PUT` for deterministic full replacement of editable `DRAFT` specifications.
 - `PATCH` must not normally replace material contract fields.
 
 ### Activation behaviour:
 
 - Activation is a lifecycle update on `/intentSpecification/draft/{draftId}`.
+- PUT activation semantics: when a full DRAFT candidate representation includes `lifecycleStatus: ACTIVE`, ID MS treats that value as a governed activation instruction, not as free-form mutation of a server-managed field.
 - Only `DRAFT` can be activated.
 - The activated version becomes `ACTIVE`.
 - The previous `ACTIVE` version in the same `specKey` becomes `RETIRED`.
 - New runtime intent creation must use the new active specification.
-- Existing runtime intents referencing retired specifications may continue temporarily where safe.
-- Activation emits two `IntentSpecificationStatusChangeEvent` events:
+- Existing runtime Intent instances referencing a RETIRED specification may continue under IC MS or platform governance policy.
+- Activation responses may include this platform governance projection:
+
+```json
+{
+  "id": "ispec-hss-001",
+  "href": "/intentManagement/v5/intentSpecification/ispec-hss-001",
+  "specKey": "hospital-surgical-slice-spec",
+  "version": "1.20",
+  "lifecycleStatus": "ACTIVE",
+  "previousActiveSpecification": {
+    "id": "ispec-hss-001",
+    "href": "/intentManagement/v5/intentSpecification/ispec-hss-001?version=1.19",
+    "version": "1.19",
+    "lifecycleStatus": "RETIRED"
+  }
+}
+```
+
+Activation emits two `IntentSpecificationStatusChangeEvent` events:
   - one for the newly activated specification version with `lifecycleStatus: ACTIVE`;
   - one for the previous active specification version with `lifecycleStatus: RETIRED`.
 
@@ -593,7 +558,7 @@ ID MS configuration should include:
 |---|---|
 | Allowed lifecycle states | `DRAFT`, `ACTIVE`, `RETIRED`. |
 | Mutability policy | Material update allowed only for `DRAFT`. |
-| Spec-key version rule | Only one active version per `specKey` for new runtime intent creation. |
+| Spec-key version rule | Only one ACTIVE version is allowed for a given `specKey`. |
 | Cache policy | GET-only private caching, with bounded TTLs. |
 | Concurrency policy | Unsafe operations require `If-Match`. |
 | Hub route policy | Domain-scoped `/intentSpecification/hub` routes retained as platform extension for REST webhook subscription delivery. |

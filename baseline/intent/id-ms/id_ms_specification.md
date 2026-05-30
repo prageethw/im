@@ -97,7 +97,7 @@ Baseline rules:
 
 - `POST /intentSpecification` always creates a mutable DRAFT candidate.
 - The caller must provide `specKey` on create and must not provide `id`, `draftId`, `version`, `href`, `lifecycleStatus`, server timestamps, or `_links`.
-- ID MS resolves the stable server-assigned `IntentSpecification.id` from `specKey` when the DRAFT candidate is created. If a current ACTIVE specification exists for the same `specKey`, the DRAFT candidate is assigned to that existing `id`; otherwise ID MS creates a new `id`. If only RETIRED versions exist for the same `specKey`, ID MS creates a new `id` unless governed lineage reuse is explicitly introduced later.
+- ID MS resolves the stable server-assigned `IntentSpecification.id` from `specKey` when the DRAFT candidate is created. The server-assigned `id` must not be assumed to equal `specKey`. If a current ACTIVE specification exists for the same `specKey`, the DRAFT candidate is assigned to that existing `id`; otherwise ID MS creates a new `id`. If only RETIRED versions exist for the same `specKey`, ID MS creates a new `id` unless governed lineage reuse is explicitly introduced later.
 - ID MS assigns a new `draftId` for each mutable DRAFT candidate. DRAFT candidate retrieval, update, activation, and deletion use `/intentSpecification/draft/{draftId}`.
 - DRAFT candidates do not expose an official public `version`; draft revision is represented by `ETag`.
 - When a DRAFT candidate is activated, ID MS assigns the official `version`, carries the selected `draftId` forward as provenance, and transactionally retires the previous ACTIVE version for the same resolved `id`.
@@ -118,6 +118,14 @@ Content-Type: application/merge-patch+json
 
 
 
+
+### Response locale:
+
+`Content-Language: en-AU` is the platform default response locale used in examples. It does not change field names, enum values, identifiers, or JSON payload semantics.
+
+### Schema hash rule:
+
+Where `targetEntitySchema.schemaHash` is supplied, real values must use the `sha256:<hex>` form. The placeholder `sha256:REPLACE_WITH_PUBLISHED_SCHEMA_HASH` is illustrative only and must not be used in deployed resources. Verification against a schema registry is an implementation detail unless a stronger registry integration rule is introduced later.
 
 ### Response classification headers:
 
@@ -245,7 +253,7 @@ Controlled values:
 | `LONGRUNNING` | Fulfilment spans a longer-running workflow with delayed completion feedback. |
 | `CONTINUOUS` | Downstream systems may operate in a closed-loop manner to maintain the intent objective over time. |
 
-`IMMEDIATE` and `LONGRUNNING` describe fulfilment timing. `CONTINUOUS` refers to downstream closed-loop system behaviour only. It indicates that downstream systems may monitor, assure, adapt, re-optimise, or reselect resources to maintain the intent objective over time. It does not imply mutation or update of the submitted runtime Intent instance.
+`IMMEDIATE` and `LONGRUNNING` describe fulfilment timing. `CONTINUOUS` indicates that downstream systems may operate in a closed-loop manner to maintain the intent objective over time. This does not imply mutation of the submitted runtime Intent instance.
 
 These fields do not replace `expressionSpecification.iri`, `targetEntitySchema`, `specCharacteristic`, or request-specific `serviceType`, `serviceClass`, `priority`, targets, constraints, and preferences inside the governed expression schema.
 
@@ -254,8 +262,8 @@ These fields do not replace `expressionSpecification.iri`, `targetEntitySchema`,
 Runtime Intent instances created using an `ACTIVE` `IntentSpecification` remain tied to the specification identity and version used at admission.
 
 - `IntentSpecification` lifecycle may evolve from `DRAFT` to `ACTIVE` to `RETIRED`.
-- Existing runtime Intent instances referencing a `RETIRED` specification may continue where platform policy allows.
-- A change in intent requirements should be handled through a controlled runtime Intent update or recreate flow owned by IC MS.
+- Existing runtime Intent instances referencing a RETIRED specification may continue under IC MS or platform governance policy.
+- A change in intent requirements must result in submission of a new Intent instance. Runtime mutation of admitted Intent instances is not supported.
 - ID MS does not mutate runtime Intent instances.
 - `ACTIVE` and `RETIRED` `IntentSpecification` versions remain immutable for material contract changes.
 
@@ -269,7 +277,7 @@ Runtime Intent instances created using an `ACTIVE` `IntentSpecification` remain 
 - At most one ACTIVE lineage may exist for a given `specKey`; duplicate ACTIVE lineages for the same `specKey` are a data-integrity breach.
 - Activating a selected DRAFT candidate retires the previous ACTIVE version for the same resolved `id`.
 - Retired specifications must not be used for new runtime `Intent` creation.
-- Existing runtime intents that reference a retired specification may continue temporarily where safe.
+- Existing runtime Intent instances referencing a RETIRED specification may continue under IC MS or platform governance policy.
 
 ### Caching and ETag rules
 
@@ -370,7 +378,7 @@ X-Platform-Extension: false
 
 ## 4. Create IntentSpecification
 
-`POST /intentSpecification` creates a mutable DRAFT candidate only. The request must include `specKey`; ID MS resolves the stable server-assigned `IntentSpecification.id` from `specKey` and assigns a new `draftId`. The DRAFT candidate has no official public `version`; draft revision is represented by the returned `ETag`.
+`POST /intentSpecification` creates a mutable DRAFT candidate only. The request must include `specKey`; ID MS resolves the stable server-assigned `IntentSpecification.id` from `specKey` and assigns a new `draftId`. The DRAFT candidate has no official public `version`; draft revision is represented by the returned `ETag`. Any version indicator during draft authoring is non-authoritative and must not be relied on.
 
 ### Request
 
@@ -384,7 +392,7 @@ Accept: application/json
 {
   "specKey": "hospital-surgical-slice-spec",
   "name": "Hospital Surgical Slice Intent Specification",
-  "description": "Definition-time specification for hospital surgical slice intents. This specification defines the allowed request shape for surgical connectivity intents. It is syntax-first: ID MS validates structure and allowed fields, while II MS and the knowledge plane validate semantic meaning, policy, and fulfilment feasibility.",
+  "description": "Definition-time specification for hospital surgical slice intents. This specification defines the allowed request shape for surgical connectivity intents. ID MS performs syntax and structure validation only. II MS and the knowledge plane validate semantic meaning, policy, and fulfilment feasibility.",
   "validFor": {
     "startDateTime": "2026-04-18T12:00:00+10:00"
   },
@@ -410,7 +418,7 @@ Accept: application/json
   "intentLayer": "SERVICE",
   "@type": "IntentSpecification",
   "@baseType": "EntitySpecification",
-  "@schemaLocation": "https://mycsp.com.au/schemas/intentManagement/v5/intentSpecification/hospital-surgical-slice-spec.schema.json",
+  "@schemaLocation": "https://mycsp.com.au/schemas/intentManagement/v5/intentSpecification/ispec-hss-001.schema.json",
   "specCharacteristic": [
     {
       "@type": "CharacteristicSpecification",
@@ -455,12 +463,12 @@ Last-Modified: Sat, 18 Apr 2026 02:00:00 GMT
 
 ```json
 {
-  "id": "hospital-surgical-slice-spec",
+  "id": "ispec-hss-001",
   "href": "/intentManagement/v5/intentSpecification/draft/id-draft-hospital-surgical-slice-a",
   "specKey": "hospital-surgical-slice-spec",
   "draftId": "id-draft-hospital-surgical-slice-a",
   "name": "Hospital Surgical Slice Intent Specification",
-  "description": "Definition-time specification for hospital surgical slice intents. This specification defines the allowed request shape for surgical connectivity intents. It is syntax-first: ID MS validates structure and allowed fields, while II MS and the knowledge plane validate semantic meaning, policy, and fulfilment feasibility.",
+  "description": "Definition-time specification for hospital surgical slice intents. This specification defines the allowed request shape for surgical connectivity intents. ID MS performs syntax and structure validation only. II MS and the knowledge plane validate semantic meaning, policy, and fulfilment feasibility.",
   "lifecycleStatus": "DRAFT",
   "statusChangeDate": "2026-04-18T12:00:00+10:00",
   "creationDate": "2026-04-18T12:00:00+10:00",
@@ -532,10 +540,9 @@ Cache-Control: private, max-age=60
 ```json
 [
   {
-    "id": "hospital-surgical-slice-spec",
-    "href": "/intentManagement/v5/intentSpecification/hospital-surgical-slice-spec",
+    "id": "ispec-hss-001",
+    "href": "/intentManagement/v5/intentSpecification/ispec-hss-001",
     "specKey": "hospital-surgical-slice-spec",
-    "draftId": "id-draft-hospital-surgical-slice-a",
     "name": "Hospital Surgical Slice Intent Specification",
     "version": "1.19",
     "lifecycleStatus": "ACTIVE",
@@ -559,13 +566,13 @@ Cache-Control: private, max-age=60
     "@baseType": "EntitySpecification",
     "_links": {
       "self": {
-        "href": "/intentManagement/v5/intentSpecification/hospital-surgical-slice-spec"
+        "href": "/intentManagement/v5/intentSpecification/ispec-hss-001"
       },
       "collection": {
         "href": "/intentManagement/v5/intentSpecification"
       },
       "retire": {
-        "href": "/intentManagement/v5/intentSpecification/hospital-surgical-slice-spec",
+        "href": "/intentManagement/v5/intentSpecification/ispec-hss-001",
         "method": "DELETE"
       },
       "createNewVersion": {
@@ -577,7 +584,7 @@ Cache-Control: private, max-age=60
 ]
 ```
 
-The list operation returns a lightweight summary by default. For `ACTIVE` and `RETIRED` official versions, `href` and `self` use `/intentSpecification/{id}`. `draftId` may be returned as immutable provenance, but DRAFT candidate mutation still uses `/intentSpecification/draft/{draftId}`. The list response does not include full `specCharacteristic`, `expressionSpecification`, or `targetEntitySchema` unless explicitly requested through `fields`.
+The list operation returns a lightweight summary by default. For `ACTIVE` and `RETIRED` official versions, `href` and `self` use `/intentSpecification/{id}`. The default list response does not include `draftId`, full `specCharacteristic`, `expressionSpecification`, or `targetEntitySchema` unless explicitly requested through `fields`. Where returned, `draftId` is immutable provenance only; DRAFT candidate mutation still uses `/intentSpecification/draft/{draftId}`.
 
 ---
 
@@ -588,14 +595,14 @@ This operation retrieves the current official `ACTIVE` version by `id` by defaul
 ### Request
 
 ```http
-GET /intentManagement/v5/intentSpecification/hospital-surgical-slice-spec?fields=id,href,specKey,draftId,name,description,version,lifecycleStatus,isBundle,validFor,relatedParty,specCharacteristic,expressionSpecification,targetEntitySchema,@type,@baseType
+GET /intentManagement/v5/intentSpecification/ispec-hss-001?fields=id,href,specKey,draftId,name,description,version,lifecycleStatus,isBundle,validFor,relatedParty,specCharacteristic,expressionSpecification,targetEntitySchema,@type,@baseType
 Accept: application/json
 ```
 
 ### Request with cache override
 
 ```http
-GET /intentManagement/v5/intentSpecification/hospital-surgical-slice-spec?fields=id,href,specKey,draftId,name,description,version,lifecycleStatus,isBundle,validFor,relatedParty,specCharacteristic,expressionSpecification,targetEntitySchema,@type,@baseType
+GET /intentManagement/v5/intentSpecification/ispec-hss-001?fields=id,href,specKey,draftId,name,description,version,lifecycleStatus,isBundle,validFor,relatedParty,specCharacteristic,expressionSpecification,targetEntitySchema,@type,@baseType
 Accept: application/json
 Cache-Control: no-cache
 ```
@@ -608,20 +615,20 @@ Content-Type: application/json
 Content-Language: en-AU
 X-TMF-Native: true
 X-Platform-Extension: false
-Content-Location: /intentManagement/v5/intentSpecification/hospital-surgical-slice-spec
-ETag: "intent-spec-hospital-surgical-slice-spec-v1.19-r1"
+Content-Location: /intentManagement/v5/intentSpecification/ispec-hss-001
+ETag: "intent-spec-ispec-hss-001-v1.19-r1"
 Last-Modified: Sat, 18 Apr 2026 02:00:00 GMT
 Cache-Control: private, max-age=300
 ```
 
 ```json
 {
-  "id": "hospital-surgical-slice-spec",
-  "href": "/intentManagement/v5/intentSpecification/hospital-surgical-slice-spec",
+  "id": "ispec-hss-001",
+  "href": "/intentManagement/v5/intentSpecification/ispec-hss-001",
   "specKey": "hospital-surgical-slice-spec",
   "draftId": "id-draft-hospital-surgical-slice-a",
   "name": "Hospital Surgical Slice Intent Specification",
-  "description": "Definition-time specification for hospital surgical slice intents. This specification defines the allowed request shape for surgical connectivity intents. It is syntax-first: ID MS validates structure and allowed fields, while II MS and the knowledge plane validate semantic meaning, policy, and fulfilment feasibility.",
+  "description": "Definition-time specification for hospital surgical slice intents. This specification defines the allowed request shape for surgical connectivity intents. ID MS performs syntax and structure validation only. II MS and the knowledge plane validate semantic meaning, policy, and fulfilment feasibility.",
   "version": "1.19",
   "lifecycleStatus": "ACTIVE",
   "isBundle": false,
@@ -649,7 +656,7 @@ Cache-Control: private, max-age=300
   "intentLayer": "SERVICE",
   "@type": "IntentSpecification",
   "@baseType": "EntitySpecification",
-  "@schemaLocation": "https://mycsp.com.au/schemas/intentManagement/v5/intentSpecification/hospital-surgical-slice-spec.schema.json",
+  "@schemaLocation": "https://mycsp.com.au/schemas/intentManagement/v5/intentSpecification/ispec-hss-001.schema.json",
   "specCharacteristic": [
     {
       "@type": "CharacteristicSpecification",
@@ -707,13 +714,13 @@ Cache-Control: private, max-age=300
   },
   "_links": {
     "self": {
-      "href": "/intentManagement/v5/intentSpecification/hospital-surgical-slice-spec"
+      "href": "/intentManagement/v5/intentSpecification/ispec-hss-001"
     },
     "collection": {
       "href": "/intentManagement/v5/intentSpecification"
     },
     "retire": {
-      "href": "/intentManagement/v5/intentSpecification/hospital-surgical-slice-spec",
+      "href": "/intentManagement/v5/intentSpecification/ispec-hss-001",
       "method": "DELETE"
     },
     "createNewVersion": {
@@ -773,7 +780,7 @@ If-Match: "id-draft-hospital-surgical-slice-a-r1"
 {
   "specKey": "hospital-surgical-slice-spec",
   "name": "Hospital Surgical Slice Intent Specification",
-  "description": "Updated definition-time specification for hospital surgical slice intents. This specification defines the allowed request shape for surgical connectivity intents. It is syntax-first: ID MS validates structure and allowed fields, while II MS and the knowledge plane validate semantic meaning, policy, and fulfilment feasibility.",
+  "description": "Updated definition-time specification for hospital surgical slice intents. This specification defines the allowed request shape for surgical connectivity intents. ID MS performs syntax and structure validation only. II MS and the knowledge plane validate semantic meaning, policy, and fulfilment feasibility.",
   "isBundle": false,
   "validFor": {
     "startDateTime": "2026-04-18T12:00:00+10:00"
@@ -833,12 +840,12 @@ Last-Modified: Sat, 18 Apr 2026 03:00:00 GMT
 
 ```json
 {
-  "id": "hospital-surgical-slice-spec",
+  "id": "ispec-hss-001",
   "href": "/intentManagement/v5/intentSpecification/draft/id-draft-hospital-surgical-slice-a",
   "specKey": "hospital-surgical-slice-spec",
   "draftId": "id-draft-hospital-surgical-slice-a",
   "name": "Hospital Surgical Slice Intent Specification",
-  "description": "Updated definition-time specification for hospital surgical slice intents. This specification defines the allowed request shape for surgical connectivity intents. It is syntax-first: ID MS validates structure and allowed fields, while II MS and the knowledge plane validate semantic meaning, policy, and fulfilment feasibility.",
+  "description": "Updated definition-time specification for hospital surgical slice intents. This specification defines the allowed request shape for surgical connectivity intents. ID MS performs syntax and structure validation only. II MS and the knowledge plane validate semantic meaning, policy, and fulfilment feasibility.",
   "isBundle": false,
   "validFor": {
     "startDateTime": "2026-04-18T12:00:00+10:00"
@@ -1004,9 +1011,7 @@ Cache-Control: no-store
 
 ## 8. Partial update DRAFT IntentSpecification candidate
 
-`PATCH` remains supported for TMF compatibility, but it is discouraged as a general update method.
-Prefer `PUT` for deterministic full replacement of editable `DRAFT` specifications.
-Use `PATCH` only where a TMF-compatible client cannot use `PUT` or where a tightly controlled, small targeted compatibility update is required.
+`PATCH` is supported for TMF compatibility but discouraged as a general update method. Prefer `PUT` for deterministic full replacement of editable `DRAFT` specifications.
 
 `PATCH` must not normally be used for material contract replacement, including `specKey`, `version`, `specCharacteristic`, `expressionSpecification`, `targetEntitySchema`, or major lifecycle and version contract identity.
 
@@ -1040,7 +1045,7 @@ Last-Modified: Sat, 18 Apr 2026 03:00:00 GMT
 
 ```json
 {
-  "id": "hospital-surgical-slice-spec",
+  "id": "ispec-hss-001",
   "href": "/intentManagement/v5/intentSpecification/draft/id-draft-hospital-surgical-slice-a",
   "specKey": "hospital-surgical-slice-spec",
   "draftId": "id-draft-hospital-surgical-slice-a",
@@ -1210,7 +1215,7 @@ For the preferred platform extension where the caller sends the full resource re
 PUT /intentManagement/v5/intentSpecification/draft/{draftId}
 ```
 
-Although `PATCH` is discouraged as a general update method, this is an acceptable tightly controlled TMF-compatible case because activation is a small lifecycle-status update.
+`PATCH` is supported for TMF compatibility but discouraged as a general update method. Prefer `PUT` for deterministic full replacement of editable `DRAFT` specifications. Activation through `PATCH` is an acceptable tightly controlled lifecycle transition case.
 
 ### PATCH activation request
 
@@ -1229,7 +1234,7 @@ If-Match: "id-draft-hospital-surgical-slice-b-r3"
 
 ### PUT activation option
 
-`PUT` may also be used when the caller sends the full replacement representation with `lifecycleStatus: ACTIVE` as part of the complete `IntentSpecification` resource.
+`PUT` may also be used when the caller sends the full replacement representation with `lifecycleStatus: ACTIVE` as part of the complete `IntentSpecification` resource. In this case, ID MS treats `lifecycleStatus: ACTIVE` as a governed activation instruction for the selected DRAFT candidate, not as a free-form mutation of a server-managed field. The activation request still requires `If-Match` and must satisfy the ACTIVE profile before ID MS promotes the candidate.
 
 ### Success response
 
@@ -1239,23 +1244,23 @@ Content-Type: application/json
 Content-Language: en-AU
 X-TMF-Native: false
 X-Platform-Extension: true
-Content-Location: /intentManagement/v5/intentSpecification/hospital-surgical-slice-spec
+Content-Location: /intentManagement/v5/intentSpecification/ispec-hss-001
 ETag: "intent-spec-hospital-surgical-slice-r4"
 Last-Modified: Sat, 18 Apr 2026 03:30:00 GMT
 ```
 
 ```json
 {
-  "id": "hospital-surgical-slice-spec",
-  "href": "/intentManagement/v5/intentSpecification/hospital-surgical-slice-spec",
+  "id": "ispec-hss-001",
+  "href": "/intentManagement/v5/intentSpecification/ispec-hss-001",
   "draftId": "id-draft-hospital-surgical-slice-b",
   "specKey": "hospital-surgical-slice-spec",
   "name": "Hospital Surgical Slice Intent Specification",
   "version": "1.20",
   "lifecycleStatus": "ACTIVE",
   "previousActiveSpecification": {
-    "id": "hospital-surgical-slice-spec",
-    "href": "/intentManagement/v5/intentSpecification/hospital-surgical-slice-spec?version=1.19",
+    "id": "ispec-hss-001",
+    "href": "/intentManagement/v5/intentSpecification/ispec-hss-001?version=1.19",
     "version": "1.19",
     "lifecycleStatus": "RETIRED"
   },
@@ -1263,7 +1268,7 @@ Last-Modified: Sat, 18 Apr 2026 03:30:00 GMT
   "@baseType": "EntitySpecification",
   "_links": {
     "self": {
-      "href": "/intentManagement/v5/intentSpecification/hospital-surgical-slice-spec"
+      "href": "/intentManagement/v5/intentSpecification/ispec-hss-001"
     },
     "collection": {
       "href": "/intentManagement/v5/intentSpecification"
@@ -1284,7 +1289,7 @@ Last-Modified: Sat, 18 Apr 2026 03:30:00 GMT
 | Target state | Activated version becomes `ACTIVE` |
 | Previous active | Previous `ACTIVE` version for the same resolved `id` becomes `RETIRED` transactionally |
 | New runtime creation | New runtime intents must use the new `ACTIVE` version |
-| Existing runtime intents | Existing intents that reference retired specifications may continue temporarily where safe |
+| Existing runtime intents | Existing runtime Intent instances referencing a RETIRED specification may continue under IC MS or platform governance policy |
 | Material update after activation | Not allowed; create a new mutable DRAFT candidate |
 | ETag required | `If-Match` is required |
 | Missing `If-Match` | `428 Precondition Required` |
@@ -1658,8 +1663,8 @@ TMF921 examples contain the misspelled `timeOcurred`; this baseline intentionall
   "title": "IntentSpecification status changed",
   "event": {
     "intentSpecification": {
-      "id": "hospital-surgical-slice-spec",
-      "href": "/intentManagement/v5/intentSpecification/hospital-surgical-slice-spec",
+      "id": "ispec-hss-001",
+      "href": "/intentManagement/v5/intentSpecification/ispec-hss-001",
       "specKey": "hospital-surgical-slice-spec",
       "name": "Hospital Surgical Slice Intent Specification",
       "version": "1.20",
@@ -1712,7 +1717,7 @@ TMF921 examples contain the misspelled `timeOcurred`; this baseline intentionall
   "title": "IntentSpecification created",
   "event": {
     "intentSpecification": {
-      "id": "hospital-surgical-slice-spec",
+      "id": "ispec-hss-001",
       "href": "/intentManagement/v5/intentSpecification/draft/id-draft-hospital-surgical-slice-a",
       "specKey": "hospital-surgical-slice-spec",
       "draftId": "id-draft-hospital-surgical-slice-a",
@@ -1766,7 +1771,7 @@ TMF921 examples contain the misspelled `timeOcurred`; this baseline intentionall
   "title": "IntentSpecification attributes changed",
   "event": {
     "intentSpecification": {
-      "id": "hospital-surgical-slice-spec",
+      "id": "ispec-hss-001",
       "href": "/intentManagement/v5/intentSpecification/draft/id-draft-hospital-surgical-slice-a",
       "specKey": "hospital-surgical-slice-spec",
       "draftId": "id-draft-hospital-surgical-slice-a",
@@ -1827,8 +1832,8 @@ TMF921 examples contain the misspelled `timeOcurred`; this baseline intentionall
   "title": "IntentSpecification status changed",
   "event": {
     "intentSpecification": {
-      "id": "hospital-surgical-slice-spec",
-      "href": "/intentManagement/v5/intentSpecification/hospital-surgical-slice-spec",
+      "id": "ispec-hss-001",
+      "href": "/intentManagement/v5/intentSpecification/ispec-hss-001",
       "specKey": "hospital-surgical-slice-spec",
       "name": "Hospital Surgical Slice Intent Specification",
       "version": "1.20",
@@ -1881,7 +1886,7 @@ TMF921 examples contain the misspelled `timeOcurred`; this baseline intentionall
   "title": "IntentSpecification deleted",
   "event": {
     "intentSpecification": {
-      "id": "hospital-surgical-slice-spec",
+      "id": "ispec-hss-001",
       "href": "/intentManagement/v5/intentSpecification/draft/id-draft-hospital-surgical-slice-old",
       "specKey": "hospital-surgical-slice-spec",
       "draftId": "id-draft-hospital-surgical-slice-old",
@@ -1935,7 +1940,7 @@ TMF921 examples contain the misspelled `timeOcurred`; this baseline intentionall
 - `priority` values are `critical`, `high`, and `standard`.
 - `intentBehaviour` and `intentLayer` are optional definition-time metadata fields for catalogue classification, governance visibility, and external consumer understanding.
 - `intentBehaviour` and `intentLayer` are not used by ID MS for behavioural enforcement, runtime decisioning, validation, or admission control.
-- `intentBehaviour.fulfilmentMode` values are `IMMEDIATE`, `LONGRUNNING`, and `CONTINUOUS`; `CONTINUOUS` means downstream systems may operate in a closed-loop manner to maintain the intent objective over time and does not imply mutation or update of the submitted runtime Intent instance.
+- `intentBehaviour.fulfilmentMode` values are `IMMEDIATE`, `LONGRUNNING`, and `CONTINUOUS`. `CONTINUOUS` indicates that downstream systems may operate in a closed-loop manner to maintain the intent objective over time. This does not imply mutation of the submitted runtime Intent instance.
 - Use `priority`, not `priority_level`.
 - Do not use `DELETED` as an `IntentSpecification.lifecycleStatus`.
 - ETag is used for unsafe-operation concurrency only.
