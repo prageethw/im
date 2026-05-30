@@ -1,244 +1,212 @@
-# IntentSpecification mandatory profile proposal
+# IntentSpecification consumer profile proposal
 
 | **Document status** | **Value** |
 | --- | --- |
 | Status | Proposed decision paper |
-| Scope | IntentSpecification minimum mandatory profile proposal |
-| Primary focus | DRAFT profile, ACTIVE profile, persisted identity, expressionSpecification, targetEntitySchema, specCharacteristic, and optional enrichment separation |
-| Out of scope | Operation routing, activation mechanics, retire behaviour, hub subscriptions, runtime Intent admission, and draftId provenance lookup |
+| Scope | Consumer-submitted IntentSpecification profile proposal |
+| Primary focus | Minimum mandatory, strongly recommended, and optional values consumers provide for DRAFT creation and ACTIVE publication |
+| Out of scope | Operation routing, activation mechanics, retire behaviour, hub subscriptions, runtime Intent admission, draftId provenance lookup, and runtime fulfilment behaviour |
 | Source of truth if accepted | ID MS Specification and ID MS Design Brief |
 
 ## Table of contents:
 
 - [1. Proposal summary](#1-proposal-summary)
-- [2. Context](#2-context)
-- [3. Proposal drivers](#3-proposal-drivers)
-- [4. Proposed minimum mandatory profile by lifecycle state](#4-proposed-minimum-mandatory-profile-by-lifecycle-state)
-- [5. Proposed DRAFT profile](#5-proposed-draft-profile)
-- [6. Proposed ACTIVE profile](#6-proposed-active-profile)
-- [7. Proposed expressionSpecification rule](#7-proposed-expressionspecification-rule)
-- [8. Proposed targetEntitySchema rule](#8-proposed-targetentityschema-rule)
-- [9. Proposed specCharacteristic rule](#9-proposed-speccharacteristic-rule)
-- [10. Optional enrichment fields](#10-optional-enrichment-fields)
-- [11. Lifecycle-aware validation proposal](#11-lifecycle-aware-validation-proposal)
-- [12. Examples](#12-examples)
-- [13. Consequences if accepted](#13-consequences-if-accepted)
-- [14. Alternatives considered](#14-alternatives-considered)
-- [15. Proposal outcome](#15-proposal-outcome)
-- [16. References](#16-references)
-- [17. Follow-up work if accepted](#17-follow-up-work-if-accepted)
+- [2. Scope and terminology](#2-scope-and-terminology)
+- [3. Consumer-submitted DRAFT creation profile](#3-consumer-submitted-draft-creation-profile)
+- [4. Consumer-submitted ACTIVE publication profile](#4-consumer-submitted-active-publication-profile)
+- [5. Server-managed and prohibited consumer fields](#5-server-managed-and-prohibited-consumer-fields)
+- [6. Field classification summary](#6-field-classification-summary)
+- [7. Minimal DRAFT create example](#7-minimal-draft-create-example)
+- [8. Strongly recommended DRAFT create example](#8-strongly-recommended-draft-create-example)
+- [9. ACTIVE publication example](#9-active-publication-example)
+- [10. Consequences if accepted](#10-consequences-if-accepted)
+- [11. References](#11-references)
+- [12. Follow-up work if accepted](#12-follow-up-work-if-accepted)
 
 ## 1. Proposal summary:
 
-This document proposes a minimum mandatory attribute profile for `IntentSpecification` resources used by the intent management entity.
+This document proposes the consumer-submitted profile for `IntentSpecification` resources in ID MS.
 
-TMF921 provides the generic `IntentSpecification` resource model, operation pattern, and event pattern. It does not prescribe every implementation-specific mandatory field needed for a runtime-ready intent platform. This proposal therefore recommends a stricter implementation profile so that an `IntentSpecification` can be safely governed, activated, discovered, and used by downstream components as a runtime expression contract.
+The purpose is deliberately narrow: define which values consumers should provide when creating a DRAFT candidate and which values must be present before the candidate can be published as an ACTIVE `IntentSpecification` contract.
 
-The proposal is intentionally limited to the mandatory profile question. It is not the source of truth for operation routes, draft candidate routing, activation mechanics, retire behaviour, hub subscription behaviour, runtime Intent admission, or `draftId` provenance lookup. Those details belong in the ID MS Specification and ID MS Design Brief.
+This proposal does not define API routing, activation mechanics, retire behaviour, hub subscription behaviour, runtime Intent admission, or `draftId` provenance lookup. Those details belong in the ID MS Specification and ID MS Design Brief.
 
-The key proposal is:
+The proposal separates consumer-provided fields into three classes:
 
-- A persisted DRAFT `IntentSpecification` should contain enough information to be identified, managed, and governed.
-- An ACTIVE `IntentSpecification` should contain enough information to act as a complete published runtime contract.
-- Optional enrichment fields should remain separate from the minimum mandatory profile.
-- Operation-level behaviour should be specified elsewhere, not repeated in this proposal paper.
-
-## 2. Context:
-
-For the intent management entity, an `IntentSpecification` is more than a descriptive catalogue record. Once active, it becomes a published runtime contract that downstream components use to validate and interpret submitted runtime intent expressions.
-
-If the active resource is too sparse, downstream behaviour becomes ambiguous. The platform must be able to determine:
-
-- which specification defines the submitted runtime expression
-- which semantic and expression contract applies
-- which schema validates the runtime expression body
-- whether the specification is active and valid
-- whether consumers can understand the supported characteristics
-
-This proposal therefore recommends a lifecycle-aware mandatory profile that is stricter than a minimal interpretation of the generic TMF resource shape.
-
-## 3. Proposal drivers:
-
-| **Driver** | **Need** |
+| **Class** | **Meaning** |
 | --- | --- |
-| TMF alignment | Use the TMF921 `IntentSpecification` resource model without inventing an incompatible shape. |
-| Runtime safety | Prevent activation of incomplete specifications that cannot support runtime expression validation. |
-| Governance | Ensure persisted specifications have stable identity, lifecycle status, and version identity where applicable. |
-| Discoverability | Ensure active specifications can be understood by portals, operators, and integration consumers. |
-| Validation | Ensure active specifications identify their machine-readable validation contract. |
-| Semantic clarity | Ensure active specifications identify their semantic and expression contract. |
-| Evolvability | Allow incomplete DRAFT resources while preventing incomplete ACTIVE contracts. |
+| Minimum mandatory | Consumer must provide this for the relevant submission stage. |
+| Strongly recommended | Consumer should provide this for a usable, governed, and discoverable specification, but it is not part of the absolute minimum. |
+| Optional | Consumer may provide this where relevant, but ID MS must not depend on it for the minimum profile. |
 
-## 4. Proposed minimum mandatory profile by lifecycle state:
+## 2. Scope and terminology:
 
-The proposal separates the DRAFT and ACTIVE mandatory profiles.
+This proposal uses these terms:
 
-A DRAFT specification may be incomplete because it is still being authored. It still needs enough information to be managed safely.
+| **Term** | **Meaning** |
+| --- | --- |
+| DRAFT creation | Consumer submission that creates an editable `IntentSpecification` DRAFT candidate. |
+| ACTIVE publication | Consumer submission that completes the candidate sufficiently for ID MS to publish it as an ACTIVE contract. |
+| Consumer-submitted field | A field the external consumer may send in the request body. |
+| Server-managed field | A field generated or controlled by ID MS and not supplied by the consumer. |
 
-An ACTIVE specification is a published runtime contract. It should be complete enough for discovery, validation, governance, and runtime interpretation.
+This proposal is about `IntentSpecification` consumer submissions, not runtime `Intent` admission requests.
 
-| **Field** | **DRAFT** | **ACTIVE** | **Reason** |
-| --- | --- | --- | --- |
-| `id` | Mandatory on persisted resource | Mandatory | Stable server-managed resource identity. |
-| `href` | Mandatory on persisted resource | Mandatory | Canonical resource URL for TMF-style navigation and references. |
-| `name` | Mandatory | Mandatory | Human-readable catalogue name. |
-| `version` | Not exposed as official public version while DRAFT | Mandatory | Official activated contract version. |
-| `lifecycleStatus` | Server-managed on create; mandatory on persisted resource | Mandatory | Identifies whether the specification is DRAFT, ACTIVE, or RETIRED. |
-| `isBundle` | Optional on request; mandatory on persisted resource | Mandatory | Clarifies whether the specification is a bundle; defaults to `false` when omitted. |
-| `validFor.startDateTime` | Optional | Mandatory | Defines when the active contract becomes valid. |
-| `expressionSpecification` | Optional | Mandatory | Defines expression contract metadata. |
-| `expressionSpecification.iri` | Optional | Mandatory | Authoritative semantic and expression contract identifier. |
-| `expressionSpecification.expressionLanguage` | Optional | Mandatory | Defines the expression representation and interpretation model. |
-| `targetEntitySchema` | Optional | Mandatory | Authoritative validation contract for runtime expression values. |
-| `specCharacteristic` | Optional | Mandatory | Catalogue and governance view of supported characteristics. |
-| `@type` | Mandatory | Mandatory | TMF polymorphic resource type. |
-| `@baseType` | Mandatory | Mandatory | TMF base type alignment. |
+## 3. Consumer-submitted DRAFT creation profile:
 
-## 5. Proposed DRAFT profile:
+A DRAFT creation request should be lightweight. It only needs enough information for ID MS to create, identify, and govern the editable candidate.
 
-A DRAFT `IntentSpecification` may be incomplete because it is still being authored, reviewed, or governed.
+### 3.1 Minimum mandatory fields for DRAFT creation:
 
-Proposed mandatory fields for a persisted DRAFT resource:
-
-| **Field** | **Proposed requirement** | **Reason** |
+| **Field** | **Requirement** | **Reason** |
 | --- | --- | --- |
-| `id` | Mandatory on persisted resource | Stable server-managed identity. |
-| `href` | Mandatory on persisted resource | Canonical resource URL. |
-| `name` | Mandatory | Human-readable catalogue name. |
-| `lifecycleStatus` | Mandatory on persisted resource | Must indicate DRAFT state. |
-| `isBundle` | Mandatory on persisted resource | Defaults to `false` when omitted on create. |
-| `@type` | Mandatory | TMF polymorphic resource type. |
-| `@baseType` | Mandatory | TMF base type alignment. |
+| `specKey` | Minimum mandatory | Groups related specification versions under a governed definition key. |
+| `name` | Minimum mandatory | Provides a human-readable catalogue name. |
+| `@type` | Minimum mandatory | Identifies the TMF polymorphic resource type. |
+| `@baseType` | Minimum mandatory | Preserves TMF base type alignment. |
 
-DRAFT candidates do not expose or guarantee an official public version identifier. Draft revision is represented by the entity tag and draft governance model defined in the ID MS Specification.
+### 3.2 Strongly recommended fields for DRAFT creation:
 
-Fields such as `expressionSpecification`, `targetEntitySchema`, and `specCharacteristic` may be added while the DRAFT is being authored. They become mandatory before the specification can become ACTIVE.
-
-## 6. Proposed ACTIVE profile:
-
-An ACTIVE `IntentSpecification` is a published runtime contract. It should be complete enough for discovery, governance, validation, and downstream interpretation.
-
-Proposed mandatory fields for an ACTIVE resource:
-
-| **Field** | **Proposed requirement** | **Reason** |
+| **Field** | **Classification** | **Reason** |
 | --- | --- | --- |
-| `id` | Mandatory | Stable official specification identity. |
-| `href` | Mandatory | Canonical resource URL. |
-| `name` | Mandatory | Human-readable catalogue name. |
-| `version` | Mandatory | Official activated contract version. |
-| `lifecycleStatus` | Mandatory | Must indicate ACTIVE state. |
-| `isBundle` | Mandatory | Required for consistent interpretation. |
-| `validFor.startDateTime` | Mandatory | Defines when the active contract becomes valid. |
-| `expressionSpecification` | Mandatory | Defines expression contract metadata. |
-| `expressionSpecification.iri` | Mandatory | Authoritative semantic and expression contract identifier. |
-| `expressionSpecification.expressionLanguage` | Mandatory | Defines the expression representation and interpretation model. |
-| `targetEntitySchema` | Mandatory | Authoritative validation contract for runtime expression values. |
-| `specCharacteristic` | Mandatory | Catalogue and governance view of important supported characteristics. |
-| `@type` | Mandatory | TMF polymorphic resource type. |
-| `@baseType` | Mandatory | TMF base type alignment. |
+| `description` | Strongly recommended | Explains the purpose of the specification. |
+| `isBundle` | Strongly recommended | Clarifies whether the specification is a bundle. If omitted, ID MS may default it to `false` where that policy is adopted. |
+| `validFor.startDateTime` | Strongly recommended | Provides intended validity timing for later publication. |
+| `relatedParty` | Strongly recommended | Captures owner or provider context. |
+| `expressionSpecification` | Strongly recommended | Allows early review of the semantic and expression contract. |
+| `targetEntitySchema` | Strongly recommended | Allows early review of the runtime expression validation contract. |
+| `specCharacteristic` | Strongly recommended | Allows early catalogue and governance review. |
 
-Optional TMF fields may still be used where relevant, including `description`, `lastUpdate`, `validFor.endDateTime`, `relatedParty`, relationships, attachments, constraints, and `@schemaLocation`.
+### 3.3 Optional fields for DRAFT creation:
 
-## 7. Proposed expressionSpecification rule:
-
-For an ACTIVE `IntentSpecification`, `expressionSpecification` should be mandatory.
-
-Within `expressionSpecification`, the proposal makes these fields mandatory:
-
-- `iri`
-- `expressionLanguage`
-
-The `iri` identifies the semantic and expression contract. The `expressionLanguage` identifies how the expression is represented and interpreted, such as JSON-LD.
-
-If `expressionSpecification.iri` is required for active runtime behaviour, then the parent `expressionSpecification` object cannot be optional for ACTIVE resources.
-
-## 8. Proposed targetEntitySchema rule:
-
-For an ACTIVE `IntentSpecification`, `targetEntitySchema` should be mandatory.
-
-`targetEntitySchema` is the authoritative machine-readable schema reference for validating runtime expression values. For the intent management entity, it should define the allowed shape of the submitted expression value, including the governed context structure used by the active specification.
-
-`targetEntitySchema` should not be replaced by `specCharacteristic`. The two fields serve different purposes.
-
-## 9. Proposed specCharacteristic rule:
-
-For an ACTIVE `IntentSpecification`, `specCharacteristic` should be mandatory.
-
-`specCharacteristic` provides the catalogue-facing and governance-facing view of important supported characteristics. It helps users, experience-layer applications, governance processes, and integration consumers understand what the specification supports.
-
-However, `specCharacteristic` is not the authoritative deep validation schema for the runtime expression body. That role belongs to `targetEntitySchema`.
-
-The proposed pattern is:
-
-- `specCharacteristic` gives discoverable high-level characteristics
-- `targetEntitySchema` gives detailed machine validation
-- `expressionSpecification.iri` identifies the semantic and expression contract
-
-## 10. Optional enrichment fields:
-
-Some fields are useful but should not be part of the generic minimum mandatory profile.
-
-| **Field** | **Proposed classification** | **Reason** |
+| **Field** | **Classification** | **Reason** |
 | --- | --- | --- |
-| `specKey` | Optional or implementation-governed | Useful for version grouping, but not part of the generic minimum mandatory profile proposed here. |
-| `description` | Optional | Useful for catalogue readability and governance context. |
-| `relatedParty` | Optional or implementation-governed | Useful for ownership and provider attribution. |
-| `intentBehaviour` | Optional classification metadata | Useful for catalogue visibility, governance visibility, and external consumer understanding. It is not used by ID MS for runtime decisioning, runtime validation, admission control, or behavioural enforcement. |
-| `intentLayer` | Optional classification metadata | Useful for identifying whether the specification is business, service, or resource level. It is not used by ID MS for runtime decisioning, runtime validation, admission control, or behavioural enforcement. |
-| `@schemaLocation` | Optional or implementation-governed | Useful where a concrete schema for the resource representation is published. |
-| `validFor.endDateTime` | Optional | Useful where the specification has a planned expiry. |
-| `schemaVersion` or `schemaHash` inside `targetEntitySchema` | Optional or implementation-governed | Useful for stronger schema governance and integrity checking. |
-| `_links` | Optional or implementation-governed | Useful for discoverable operation affordances. |
+| `intentBehaviour` | Optional | Classification metadata for catalogue visibility, governance visibility, and external consumer understanding. Not used by ID MS for runtime decisioning, runtime validation, admission control, or behavioural enforcement. |
+| `intentLayer` | Optional | Classification metadata that identifies whether the specification is business, service, or resource level. Not used by ID MS for runtime decisioning, runtime validation, admission control, or behavioural enforcement. |
+| `validFor.endDateTime` | Optional | Useful when the specification has a planned end of validity. |
+| `@schemaLocation` | Optional | Useful where a concrete resource representation schema is published. |
+| `schemaHash` inside `targetEntitySchema` | Optional | Useful for schema integrity checking where schema governance supports it. |
 
-This proposal intentionally does not define the complete controlled value set for every optional enrichment field. The ID MS Specification is the source of truth for concrete field constraints if those fields are adopted.
+DRAFT candidates do not expose or guarantee any official version identifier. Any version indicator during authoring is non-authoritative. Draft revision is represented by the entity tag and draft governance model defined in the ID MS Specification.
 
-## 11. Lifecycle-aware validation proposal:
+## 4. Consumer-submitted ACTIVE publication profile:
 
-This proposal recommends lifecycle-aware validation.
+Before an `IntentSpecification` can be published as ACTIVE, the consumer-submitted candidate must contain a complete contract profile.
 
-Create and update operations may allow incomplete DRAFT resources. Activation to ACTIVE should validate the full ACTIVE mandatory profile.
+### 4.1 Minimum mandatory fields for ACTIVE publication:
 
-If a client attempts to activate a specification that does not satisfy the ACTIVE profile, the intent management entity should reject the request.
+| **Field** | **Requirement** | **Reason** |
+| --- | --- | --- |
+| `specKey` | Minimum mandatory | Confirms the governed definition key for the candidate. |
+| `name` | Minimum mandatory | Provides the published catalogue name. |
+| `isBundle` | Minimum mandatory | Required for consistent resource interpretation. |
+| `validFor.startDateTime` | Minimum mandatory | Defines when the published contract becomes valid. |
+| `expressionSpecification` | Minimum mandatory | Defines the expression contract metadata. |
+| `expressionSpecification.iri` | Minimum mandatory | Identifies the semantic and expression contract. |
+| `expressionSpecification.expressionLanguage` | Minimum mandatory | Identifies the expression representation and interpretation model. |
+| `targetEntitySchema` | Minimum mandatory | Provides the machine-readable runtime expression validation contract. |
+| `targetEntitySchema.@schemaLocation` | Minimum mandatory | Identifies the governed expression schema artefact. |
+| `specCharacteristic` | Minimum mandatory | Provides the catalogue and governance view of important supported characteristics. |
+| `@type` | Minimum mandatory | Identifies the TMF polymorphic resource type. |
+| `@baseType` | Minimum mandatory | Preserves TMF base type alignment. |
 
-The preferred response is:
+### 4.2 Strongly recommended fields for ACTIVE publication:
 
-```text
-422 Unprocessable Entity
-```
+| **Field** | **Classification** | **Reason** |
+| --- | --- | --- |
+| `description` | Strongly recommended | Makes the published specification easier to understand and govern. |
+| `relatedParty` | Strongly recommended | Captures provider, owner, or governance party context. |
+| `intentBehaviour` | Strongly recommended | Supports catalogue classification and consumer understanding. |
+| `intentLayer` | Strongly recommended | Clarifies whether the specification is business, service, or resource level. |
+| `schemaHash` inside `targetEntitySchema` | Strongly recommended | Supports schema integrity checking where schema governance supports it. |
+| `@schemaLocation` | Strongly recommended | Points to the resource representation schema where published. |
 
-This means the request is syntactically valid, but the resource cannot transition to the requested lifecycle state because it violates the proposed `IntentSpecification` profile.
+### 4.3 Optional fields for ACTIVE publication:
 
-## 12. Examples:
+| **Field** | **Classification** | **Reason** |
+| --- | --- | --- |
+| `validFor.endDateTime` | Optional | Useful where expiry or retirement planning is known. |
+| `attachment` | Optional | Useful for supporting documents where the implementation permits it. |
+| `constraint` | Optional | Useful for additional TMF constraint metadata where required. |
+| `entitySpecRelationship` | Optional | Useful for relationships to other entity specifications where required. |
+| `intentSpecRelationship` | Optional | Useful for relationships to other intent specifications where required. |
 
-The examples below are intentionally minimal. They illustrate the proposed mandatory profile only. Operation-specific request and response examples belong in the ID MS Specification.
+## 5. Server-managed and prohibited consumer fields:
 
-### 12.1 Minimal DRAFT representation:
+Consumers must not provide server-managed fields in DRAFT create requests.
+
+| **Field** | **Rule** |
+| --- | --- |
+| `id` | Server-assigned by ID MS. Consumer must not provide it on create. |
+| `href` | Server-generated canonical URL. Consumer must not provide it on create. |
+| `draftId` | Server-assigned DRAFT candidate identifier. Consumer must not provide it on create. |
+| `version` | Official public version is assigned by ID MS only on ACTIVE publication. Consumer must not provide an official version in DRAFT create. |
+| `lifecycleStatus` | Server-managed lifecycle state. Consumer must not set it on create. |
+| `creationDate` | Server-managed timestamp. |
+| `lastUpdate` | Server-managed timestamp. |
+| `statusChangeDate` | Server-managed timestamp. |
+| `_links` | Server-generated navigation and operation affordances. |
+| `ETag` | Response header, not a request body field. |
+| `Location` | Response header, not a request body field. |
+
+## 6. Field classification summary:
+
+| **Field** | **DRAFT create** | **ACTIVE publication** |
+| --- | --- | --- |
+| `specKey` | Minimum mandatory | Minimum mandatory |
+| `name` | Minimum mandatory | Minimum mandatory |
+| `@type` | Minimum mandatory | Minimum mandatory |
+| `@baseType` | Minimum mandatory | Minimum mandatory |
+| `description` | Strongly recommended | Strongly recommended |
+| `isBundle` | Strongly recommended | Minimum mandatory |
+| `validFor.startDateTime` | Strongly recommended | Minimum mandatory |
+| `relatedParty` | Strongly recommended | Strongly recommended |
+| `expressionSpecification` | Strongly recommended | Minimum mandatory |
+| `expressionSpecification.iri` | Strongly recommended | Minimum mandatory |
+| `expressionSpecification.expressionLanguage` | Strongly recommended | Minimum mandatory |
+| `targetEntitySchema` | Strongly recommended | Minimum mandatory |
+| `targetEntitySchema.@schemaLocation` | Strongly recommended | Minimum mandatory |
+| `specCharacteristic` | Strongly recommended | Minimum mandatory |
+| `intentBehaviour` | Optional | Strongly recommended |
+| `intentLayer` | Optional | Strongly recommended |
+| `schemaHash` inside `targetEntitySchema` | Optional | Strongly recommended |
+| `validFor.endDateTime` | Optional | Optional |
+| `@schemaLocation` | Optional | Strongly recommended |
+
+## 7. Minimal DRAFT create example:
 
 ```json
 {
-  "id": "ispec-hss-001",
-  "href": "/intentManagement/v5/intentSpecification/draft/id-draft-hospital-surgical-slice-a",
+  "specKey": "hospital-surgical-slice-spec",
   "name": "Hospital Surgical Slice Intent Specification",
-  "lifecycleStatus": "DRAFT",
-  "isBundle": false,
   "@type": "IntentSpecification",
   "@baseType": "EntitySpecification"
 }
 ```
 
-### 12.2 Minimal ACTIVE representation:
+## 8. Strongly recommended DRAFT create example:
 
 ```json
 {
-  "id": "ispec-hss-001",
-  "href": "/intentManagement/v5/intentSpecification/ispec-hss-001",
+  "specKey": "hospital-surgical-slice-spec",
   "name": "Hospital Surgical Slice Intent Specification",
-  "version": "1.20",
-  "lifecycleStatus": "ACTIVE",
+  "description": "Definition-time specification for hospital surgical slice intents. This specification defines the allowed request shape for surgical connectivity intents. ID MS performs syntax and structure validation only; II MS and the knowledge plane validate semantic meaning, policy, and fulfilment feasibility.",
   "isBundle": false,
   "validFor": {
     "startDateTime": "2026-04-18T12:00:00+10:00"
   },
+  "relatedParty": [
+    {
+      "@type": "RelatedPartyRefOrPartyRoleRef",
+      "role": "Provider",
+      "partyOrPartyRole": {
+        "@type": "PartyRoleRef",
+        "id": "mycsp",
+        "name": "MyCSP",
+        "@referredType": "Provider"
+      }
+    }
+  ],
   "expressionSpecification": {
     "@type": "ExpressionSpecification",
     "expressionLanguage": "JSON-LD",
@@ -246,13 +214,18 @@ The examples below are intentionally minimal. They illustrate the proposed manda
   },
   "targetEntitySchema": {
     "@type": "TargetEntitySchema",
-    "@schemaLocation": "https://mycsp.com.au/schemas/intentManagement/v5/intentExpression/hospital-surgical-slice-spec-v1.20.expression.schema.json"
+    "@schemaLocation": "https://mycsp.com.au/schemas/intentManagement/v5/intentExpression/hospital-surgical-slice.expression.schema.json",
+    "schemaHash": "sha256:REPLACE_WITH_PUBLISHED_SCHEMA_HASH"
   },
   "specCharacteristic": [
     {
       "@type": "CharacteristicSpecification",
+      "id": "context",
       "name": "context",
-      "valueType": "object"
+      "valueType": "object",
+      "configurable": true,
+      "minCardinality": 1,
+      "maxCardinality": 1
     }
   ],
   "@type": "IntentSpecification",
@@ -260,52 +233,83 @@ The examples below are intentionally minimal. They illustrate the proposed manda
 }
 ```
 
-## 13. Consequences if accepted:
+## 9. ACTIVE publication example:
+
+```json
+{
+  "specKey": "hospital-surgical-slice-spec",
+  "name": "Hospital Surgical Slice Intent Specification",
+  "description": "Definition-time specification for hospital surgical slice intents. This specification defines the allowed request shape for surgical connectivity intents. ID MS performs syntax and structure validation only; II MS and the knowledge plane validate semantic meaning, policy, and fulfilment feasibility.",
+  "isBundle": false,
+  "validFor": {
+    "startDateTime": "2026-04-18T12:00:00+10:00"
+  },
+  "relatedParty": [
+    {
+      "@type": "RelatedPartyRefOrPartyRoleRef",
+      "role": "Provider",
+      "partyOrPartyRole": {
+        "@type": "PartyRoleRef",
+        "id": "mycsp",
+        "name": "MyCSP",
+        "@referredType": "Provider"
+      }
+    }
+  ],
+  "intentBehaviour": {
+    "category": "REALTIME",
+    "constraintMode": "STRICT",
+    "objectiveType": "SLA",
+    "fulfilmentMode": "CONTINUOUS"
+  },
+  "intentLayer": "SERVICE",
+  "expressionSpecification": {
+    "@type": "ExpressionSpecification",
+    "expressionLanguage": "JSON-LD",
+    "iri": "https://mycsp.com.au/tio/hospital-surgical-slice/v1.0"
+  },
+  "targetEntitySchema": {
+    "@type": "TargetEntitySchema",
+    "@schemaLocation": "https://mycsp.com.au/schemas/intentManagement/v5/intentExpression/hospital-surgical-slice-spec-v1.20.expression.schema.json",
+    "schemaVersion": "1.20",
+    "schemaHash": "sha256:REPLACE_WITH_PUBLISHED_SCHEMA_HASH"
+  },
+  "specCharacteristic": [
+    {
+      "@type": "CharacteristicSpecification",
+      "id": "context",
+      "name": "context",
+      "description": "Top-level semantic context supported by this IntentSpecification.",
+      "valueType": "object",
+      "configurable": true,
+      "minCardinality": 1,
+      "maxCardinality": 1
+    }
+  ],
+  "@type": "IntentSpecification",
+  "@baseType": "EntitySpecification",
+  "@schemaLocation": "https://mycsp.com.au/schemas/intentManagement/v5/intentSpecification/ispec-hss-001.schema.json"
+}
+```
+
+## 10. Consequences if accepted:
 
 Positive consequences:
 
-- clearer minimum DRAFT and ACTIVE profiles
-- safer activation rules
-- better runtime validation readiness
-- cleaner separation between catalogue characteristics and validation schema
-- stronger semantic and expression contract clarity
-- less risk of activating incomplete specification contracts
+- consumers know the minimum fields needed to create a DRAFT candidate
+- consumers know the stronger profile needed before ACTIVE publication
+- DRAFT authoring remains lightweight
+- ACTIVE publication remains contract-safe
+- server-managed fields are clearly separated from consumer-submitted fields
+- optional classification metadata stays out of runtime enforcement
 
 Trade-offs:
 
-- the implementation profile is stricter than a minimal TMF interpretation
-- activation validation becomes more important
-- clients must supply more information before a specification can become ACTIVE
-- DRAFT and ACTIVE validation rules become intentionally different
+- the ACTIVE publication profile is stricter than the minimum generic TMF shape
+- consumers may need to supply more complete metadata before publication
+- the proposal requires lifecycle-aware validation in ID MS if accepted
 
-## 14. Alternatives considered:
-
-### 14.1 Treat generic TMF optionality as sufficient:
-
-This was not recommended because it could allow ACTIVE specifications that are not usable for runtime validation or interpretation.
-
-### 14.2 Make every useful field mandatory at create time:
-
-This was not recommended because it would make DRAFT authoring too rigid. The platform should allow incomplete drafts while enforcing completeness before activation.
-
-### 14.3 Make `expressionSpecification.iri` mandatory but keep `expressionSpecification` optional:
-
-This was not recommended because the child field cannot be required while the parent object remains optional for ACTIVE resources.
-
-## 15. Proposal outcome:
-
-This proposal recommends adopting a lifecycle-aware `IntentSpecification` mandatory profile:
-
-- DRAFT requires enough information to be identified, managed, and governed.
-- ACTIVE requires the full runtime-contract profile.
-- `expressionSpecification`, `expressionSpecification.iri`, and `expressionSpecification.expressionLanguage` are mandatory for ACTIVE resources.
-- `targetEntitySchema` is mandatory for ACTIVE resources.
-- `specCharacteristic` is mandatory for ACTIVE resources.
-- Optional enrichment fields remain outside the generic minimum mandatory profile.
-
-If accepted, the ID MS Specification and ID MS Design Brief should remain the source of truth for concrete operation behaviour and detailed constraints.
-
-## 16. References:
+## 11. References:
 
 | **Reference** | **URL** | **Relevance** |
 | --- | --- | --- |
@@ -315,12 +319,12 @@ If accepted, the ID MS Specification and ID MS Design Brief should remain the so
 | TR292 TM Forum Intent Ontology v3.6.0 | https://www.tmforum.org/resources/standard/tr292-intent-ontology-tio-v3-6-0/ | Provides intent ontology context behind semantic and expression contract identifiers. |
 | Intent architecture baseline repository | https://github.com/prageethw/im/tree/main/baseline/intent | Holds the project baseline artifacts. |
 
-## 17. Follow-up work if accepted:
+## 12. Follow-up work if accepted:
 
 If accepted, update or confirm the ID MS Specification and ID MS Design Brief so they:
 
-- document the accepted mandatory profile
-- enforce lifecycle-aware validation
-- keep DRAFT and ACTIVE validation distinct
+- document the accepted consumer-submitted DRAFT and ACTIVE profiles
+- enforce the accepted profile during DRAFT creation and ACTIVE publication
+- keep server-managed fields separate from consumer-submitted fields
 - keep operation routes and examples in specification artifacts rather than this proposal paper
-- keep runtime Intent admission rules out of this proposal paper except as references where needed
+- keep runtime Intent admission rules out of this proposal paper
