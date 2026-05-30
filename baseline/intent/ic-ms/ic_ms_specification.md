@@ -446,7 +446,8 @@ Do not use string placeholders for array/object fields.
 | `422` | `VALIDATION_FAILED` | Runtime Intent fails request-shape/spec validation, misses mandatory `intentSpecification.id`, misses mandatory `expression.iri`, or has an IRI/specification mismatch |
 | `422` | `INTENT_SPECIFICATION_NOT_ACTIVE` | Referenced IntentSpecification is not active |
 | `428` | `PRECONDITION_REQUIRED` | Required `If-Match` header is missing for an unsafe operation |
-| `503` | `SERVICE_UNAVAILABLE` | IC MS DB unavailable or active spec cannot be confirmed |
+| `503` | `SERVICE_UNAVAILABLE` / `IC_MS_DATABASE_UNAVAILABLE` | IC MS source-of-truth database is unavailable |
+| `503` | `SERVICE_UNAVAILABLE` / `INTENT_SPECIFICATION_LOOKUP_UNAVAILABLE` | Referenced ACTIVE IntentSpecification cannot be confirmed |
 | `500` | `INTERNAL_ERROR` | Unexpected server error |
 
 ### Missing If-Match response:
@@ -1557,12 +1558,39 @@ Accept: application/json
 }
 ```
 
-### Success response:
+### Strict TMF route success response:
+
+```http
+HTTP/1.1 201 Created
+Location: /intentManagement/v5/hub/sub-intent-001
+Content-Type: application/json
+Content-Language: en-AU
+X-TMF-Native: true
+X-Platform-Extension: false
+ETag: "subscription-sub-intent-001-v1"
+```
+
+```json
+{
+  "id": "sub-intent-001",
+  "callback": "https://consumer.example.com/listener/intent/events",
+  "query": "eventType=IntentStatusChangeEvent",
+  "@type": "EventSubscription",
+  "_links": {
+    "self": {
+      "href": "/intentManagement/v5/hub/sub-intent-001"
+    }
+  }
+}
+```
+
+### Domain-scoped platform extension success response:
 
 ```http
 HTTP/1.1 201 Created
 Location: /intentManagement/v5/intent/hub/sub-intent-001
 Content-Type: application/json
+Content-Language: en-AU
 X-TMF-Native: false
 X-Platform-Extension: true
 ETag: "subscription-sub-intent-001-v1"
@@ -1646,9 +1674,10 @@ X-Correlation-Id: corr-intent-status-001
 ### Subscriber listener success response:
 
 ```http
+HTTP/1.1 204 No Content
+Content-Language: en-AU
 X-TMF-Native: false
 X-Platform-Extension: true
-HTTP/1.1 204 No Content
 ```
 
 ---
@@ -1709,9 +1738,10 @@ If-Match: "subscription-sub-intent-001-v1"
 ### Success response:
 
 ```http
+HTTP/1.1 204 No Content
+Content-Language: en-AU
 X-TMF-Native: false
 X-Platform-Extension: true
-HTTP/1.1 204 No Content
 ```
 
 ---
@@ -1826,6 +1856,28 @@ X-Platform-Extension: false
 }
 ```
 
+### IC MS database unavailable:
+
+```http
+HTTP/1.1 503 Service Unavailable
+Content-Type: application/json
+Content-Language: en-AU
+X-TMF-Native: true
+X-Platform-Extension: false
+Retry-After: 30
+```
+
+```json
+{
+  "code": "SERVICE_UNAVAILABLE",
+  "reason": "IC_MS_DATABASE_UNAVAILABLE",
+  "message": "Intent service is temporarily unavailable because the persistence layer cannot be accessed.",
+  "status": 503,
+  "referenceError": "https://mycsp.com.au/errors/SERVICE_UNAVAILABLE",
+  "@type": "Error"
+}
+```
+
 ### IntentSpecification lookup unavailable:
 
 ```http
@@ -1869,7 +1921,7 @@ X-Platform-Extension: false
 
 ---
 
-### Submitted Intent update not allowed:
+### Submitted Intent PATCH not allowed:
 
 ```http
 HTTP/1.1 409 Conflict
@@ -1882,7 +1934,27 @@ X-Platform-Extension: false
 {
   "code": "INVALID_STATE_TRANSITION",
   "reason": "INTENT_NOT_DRAFT",
-  "message": "Intent attributes can be updated only while the Intent is in Draft. Create a new Draft authoring record for material changes after submission.",
+  "message": "Intent attributes can be patched only while the Intent is in Draft. Create a new Draft authoring record for material changes after submission.",
+  "status": 409,
+  "referenceError": "https://mycsp.com.au/errors/INVALID_STATE_TRANSITION",
+  "@type": "Error"
+}
+```
+
+### Submitted Intent PUT not allowed:
+
+```http
+HTTP/1.1 409 Conflict
+Content-Type: application/json
+X-TMF-Native: false
+X-Platform-Extension: true
+```
+
+```json
+{
+  "code": "INVALID_STATE_TRANSITION",
+  "reason": "INTENT_NOT_DRAFT",
+  "message": "Intent attributes can be replaced with PUT only while the Intent is in Draft. Create a new Draft authoring record for material changes after submission.",
   "status": 409,
   "referenceError": "https://mycsp.com.au/errors/INVALID_STATE_TRANSITION",
   "@type": "Error"
@@ -1907,6 +1979,8 @@ IC MS emits external TMF-aligned resource events for `Intent` projection changes
 | `IntentDeleteEvent` | Runtime Intent termination accepted; retained projection moves to `Terminated` |
 
 These are external projection/resource events only.
+
+`IntentAttributeValueChangeEvent` and `IntentReportAttributeValueChangeEvent` may include a curated `changedAttributes` array inside the event payload wrapper. This field is used to identify externally safe attribute deltas only. It must not expose raw telemetry, internal optimiser candidate scoring, raw callback payloads, internal Kafka payloads, or implementation-only details.
 
 They must not expose raw telemetry, raw optimiser decisions, raw `t7.knowledge plane` data, raw callback payloads, internal candidate scoring, or internal Kafka event payloads.
 

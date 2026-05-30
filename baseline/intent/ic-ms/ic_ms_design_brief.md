@@ -283,6 +283,8 @@ IntentReportDeleteEvent
 
 `IntentReportDeleteEvent` is retained in this vocabulary for TMF alignment and governed internal/admin deletion or retention purge scenarios only; it is not emitted for ordinary external consumer delete because that operation is not exposed by default.
 
+`IntentAttributeValueChangeEvent` and `IntentReportAttributeValueChangeEvent` may include a curated `changedAttributes` array inside the event payload wrapper. This field is an external projection aid for safe attribute deltas only. It must not expose raw telemetry, internal optimiser candidate scoring, raw callback payloads, internal Kafka payloads, or implementation-only details.
+
 ### External event timestamp rule:
 
 External TMF-aligned event examples and emitted event envelopes populate both `eventTime` and `timeOccurred` with the same canonical event occurrence timestamp. `timeOccurred` is the corrected platform spelling used consistently across IC MS and ID MS external event examples.

@@ -603,6 +603,8 @@ IntentReportDeleteEvent
 
 `IntentReportDeleteEvent` is included for TMF vocabulary alignment but is emitted only after governed internal/admin removal where notification is allowed by policy.
 
+`IntentAttributeValueChangeEvent` and `IntentReportAttributeValueChangeEvent` may include a curated `changedAttributes` array inside the event payload wrapper. This is an external projection aid for safe attribute deltas, not a channel for raw telemetry, internal optimiser scoring, callback payloads, or implementation-only detail.
+
 Status-change events carry the current `intent.lifecycleStatus` snapshot in the `event.intent` payload. They do not carry separate `previousLifecycleStatus` or `newLifecycleStatus` fields in the external event payload. The event type, timestamp, and emitted resource snapshot provide the lifecycle-change signal.
 
 ## Internal Kafka CloudEvents headers:
