@@ -635,7 +635,7 @@ id: hospital-surgical-slice-spec, version: 1.19
 id: hospital-surgical-slice-spec, version: 1.20
 ```
 
-Only one version with that `specKey` should be `ACTIVE` for new runtime intent creation.
+Only one ACTIVE version is allowed for a given specKey.
 
 Lineage reuse across retired-only specifications is not assumed by default. Reintroduction or reuse of a prior lineage requires explicit governance.
 
