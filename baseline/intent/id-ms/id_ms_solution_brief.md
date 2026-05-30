@@ -517,7 +517,7 @@ A typical `IntentSpecificationStatusChangeEvent` webhook body has this logical s
   "event": {
     "intentSpecification": {
       "id": "ispec-hss-001",
-      "href": "/intentManagement/v5/intentSpecification/ispec-hss-001?version=1.20",
+      "href": "/intentManagement/v5/intentSpecification/ispec-hss-001",
       "specKey": "hospital-surgical-slice-spec",
       "name": "Hospital Surgical Slice Intent Specification",
       "version": "1.20",
@@ -599,7 +599,7 @@ Delete events are emitted only after successful delete and show the last known l
 ```json
 {
   "id": "ispec-hss-001",
-  "href": "/intentManagement/v5/intentSpecification/ispec-hss-001?version=1.20",
+  "href": "/intentManagement/v5/intentSpecification/ispec-hss-001",
   "specKey": "hospital-surgical-slice-spec",
   "version": "1.20",
   "lifecycleStatus": "ACTIVE",
@@ -713,3 +713,10 @@ Consumers of ID MS should rely on these behaviours:
 | Base path | `/intentManagement/v5` |
 | Primary resource | `IntentSpecification` |
 | Primary responsibility | Definition-time `IntentSpecification` catalogue, lifecycle and version governance, syntax contract, and external REST webhook specification-event notifications. |
+
+## Error-code coverage note:
+
+| HTTP | Code | Meaning |
+|---:|---|---|
+| `409` | `VERSION_CONFLICT` | Requested version or activation conflicts with current specification lineage/version governance. |
+
