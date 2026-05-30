@@ -100,6 +100,7 @@ Baseline rules:
 - ID MS resolves the stable server-assigned `IntentSpecification.id` from `specKey` when the DRAFT candidate is created. The server-assigned `id` must not be assumed to equal `specKey`. If a current ACTIVE specification exists for the same `specKey`, the DRAFT candidate is assigned to that existing `id`; otherwise ID MS creates a new `id`. If only RETIRED versions exist for the same `specKey`, ID MS creates a new `id` unless governed lineage reuse is explicitly introduced later.
 - ID MS assigns a new `draftId` for each mutable DRAFT candidate. DRAFT candidate retrieval, update, activation, and deletion use `/intentSpecification/draft/{draftId}`.
 - DRAFT candidates do not expose an official public `version`; draft revision is represented by `ETag`.
+- DRAFT candidates do not expose or guarantee any version identifier. Any version indicator during authoring is non-authoritative.
 - When a DRAFT candidate is activated, ID MS assigns the official `version`, carries the selected `draftId` forward as provenance, and transactionally retires the previous ACTIVE version for the same resolved `id`.
 - `ACTIVE` and `RETIRED` `IntentSpecification` resources are immutable for material contract changes.
 - Runtime `Intent.version` identifies the admitted runtime request/projection version and must not be confused with `IntentSpecification.version`.
