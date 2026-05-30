@@ -219,7 +219,7 @@ IC MS owns the external lifecycle/status projection, but not the runtime truth.
 | **Lifecycle/status source** | **IC MS action** |
 |---|---|
 | IC MS syntactic validation succeeds | Project `Acknowledged` |
-| II MS semantic/policy rejection | Project `Rejected` |
+| II MS semantic and policy rejection | Project `Rejected` |
 | IA MS apply success / active assurance | Project `Active` |
 | IA MS degraded assurance | Project `Degraded` |
 | IA MS paused/failed/terminated outcome | Project `Paused`, `Failed`, or `Terminated` |
@@ -287,7 +287,7 @@ IntentReportDeleteEvent
 
 External TMF-aligned event examples and emitted event envelopes populate both `eventTime` and `timeOccurred` with the same canonical event occurrence timestamp. `timeOccurred` is the corrected platform spelling used consistently across IC MS and ID MS external event examples.
 
-These events are external projection/resource events only. They must not expose raw telemetry, raw optimiser decisions, raw `t7.knowledge plane` data, raw callback payloads, internal candidate scoring, internal Kafka event payloads, or full internal `IntentAssuranceEvent` body unless deliberately curated into `IntentReport`.
+These events are external projection and resource events only. They must not expose raw telemetry, raw optimiser decisions, raw `t7.knowledge plane` data, raw callback payloads, internal candidate scoring, internal Kafka event payloads, or full internal `IntentAssuranceEvent` body unless deliberately curated into `IntentReport`.
 
 ## IntentReport responsibility:
 
@@ -727,9 +727,9 @@ skinparam note {
 }
 
 [*] --> Acknowledged : POST /intent passes\nsyntactic validation
-Acknowledged --> Rejected : II MS semantic/policy\nrejection outcome
+Acknowledged --> Rejected : II MS semantic and policy\nrejection outcome
 Acknowledged --> InProgress : downstream fulfilment\nstarts
-InProgress --> Rejected : semantic/policy\nrejection outcome
+InProgress --> Rejected : semantic and policy\nrejection outcome
 InProgress --> Active : IA MS confirms apply /\nassurance active
 InProgress --> Failed : IA MS apply / runtime\nfailure outcome
 Active --> Degraded : IA MS reports\ndegraded assurance
@@ -786,11 +786,11 @@ skinparam note {
 }
 
 [*] --> Acknowledged : version created /\nsyntactically admitted
-Acknowledged --> Rejected : semantic/policy\nrejection
+Acknowledged --> Rejected : semantic and policy\nrejection
 Acknowledged --> InProgress : fulfilment starts
 InProgress --> Active : apply + assurance\nconfirmed
 InProgress --> Failed : apply / fulfilment\nfailed
-InProgress --> Rejected : semantic/policy\nrejection
+InProgress --> Rejected : semantic and policy\nrejection
 Active --> Degraded : assurance degraded
 Degraded --> Active : assurance recovered
 Active --> Standby : newer version becomes Active
@@ -876,9 +876,10 @@ Accept: application/json
   "statusReason": "Intent version v2 is active and assurance is healthy.",
   "statusChangeDate": "2026-04-18T12:20:00+10:00",
   "intentSpecification": {
-    "id": "hospital-surgical-slice-spec",
+    "id": "ispec-hss-001",
+    "specKey": "hospital-surgical-slice-spec",
   "version": "1.20",
-    "href": "/intentManagement/v5/intentSpecification/hospital-surgical-slice-spec?version=1.20"
+    "href": "/intentManagement/v5/intentSpecification/ispec-hss-001?version=1.20"
   },
   "@type": "Intent",
   "@baseType": "Entity"
@@ -1017,7 +1018,7 @@ DELETE /intentManagement/v5/intent/{id}
 |---|---|---|
 | IC MS -> DB | Hard fail-fast | Return `503`; consumer retries |
 | IC MS -> cache | Graceful/silent | Bypass cache or ignore failed cache writes; use DB/source-of-truth; emit telemetry |
-| IC MS -> ID MS | Cached active-spec fallback then fail-closed for create/update | Use valid fresh cached active spec where available; otherwise fail closed for runtime-content admission |
+| IC MS -> ID MS | Cached active-spec fallback then fail-closed for create and update | Use valid fresh cached active spec where available; otherwise fail closed for runtime-content admission |
 | IC MS -> Kafka/event broker | Graceful/silent with internal event outbox | API succeeds after DB + internal event outbox commit; relay retries Kafka later |
 | IC MS -> external webhook callback | Async fail-fast per delivery attempt | Delivery attempt fails fast, retries later; original API unaffected |
 
@@ -1294,7 +1295,7 @@ Design rules:
 
 ## Runtime expression context alignment with ID MS:
 
-IC MS must use the ID MS external runtime expression baseline for runtime Intent create/update/retrieve examples. External `Intent.expression.expressionValue` contains a single `context` object.
+IC MS must use the ID MS external runtime expression baseline for runtime Intent create and update/retrieve examples. External `Intent.expression.expressionValue` contains a single `context` object.
 
 The `context` object contains only the canonical semantic buckets:
 

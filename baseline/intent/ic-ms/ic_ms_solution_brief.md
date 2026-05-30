@@ -174,9 +174,9 @@ IC MS does not own:
 | Real-time telemetry | Telemetry platform consumed by IA MS |
 | Callback ingestion | ICB MS |
 | Raw orchestrator callback interpretation | IA MS |
-| Raw candidate/resource scoring exposure | Internal optimiser/assurance pipeline only |
+| Raw candidate and resource scoring exposure | Internal optimiser/assurance pipeline only |
 
-IC MS also does not resolve an `IntentSpecification` by `expression.iri` alone, `specKey`, name, key, or inferred expression shape alone. Submitted runtime create/update admission requests must include both `intentSpecification.id` and `expression.iri`. `intentSpecification.id` selects the exact active platform-managed specification. `expression.iri` identifies the semantic/expression contract and must match the selected specification's `expressionSpecification.iri`. `intentSpecification.specKey` and `intentSpecification.name` are optional hints only.
+IC MS also does not resolve an `IntentSpecification` by `expression.iri` alone, `specKey`, name, key, or inferred expression shape alone. Submitted runtime create and update admission requests must include both `intentSpecification.id` and `expression.iri`. `intentSpecification.id` selects the exact active platform-managed specification. `expression.iri` identifies the semantic/expression contract and must match the selected specification's `expressionSpecification.iri`. `intentSpecification.specKey` and `intentSpecification.name` are optional hints only.
 
 IC MS does not allow external consumers to set or patch `lifecycleStatus`; lifecycle state is assigned and projected by the intent management entity.
 
@@ -297,7 +297,7 @@ Baseline:
 
 ## Request shape:
 
-A runtime intent create/update request uses the following baseline:
+A runtime intent create and update request uses the following baseline:
 
 | Field | Requirement |
 |---|---|
@@ -325,7 +325,8 @@ Example explicit specification reference:
 ```json
 {
   "intentSpecification": {
-    "id": "hospital-surgical-slice-spec",
+    "id": "ispec-hss-001",
+    "specKey": "hospital-surgical-slice-spec",
   "version": "1.20"
   },
   "expression": {
@@ -422,7 +423,7 @@ External `GET /intent/{id}` returns the current projected `Intent` state. It doe
 | Submit Draft | `submit: true` requests admission. IC MS validates the runtime admission profile and, if accepted, projects `Acknowledged`. |
 | Draft editability | While `lifecycleStatus = Draft`, all attributes accepted by the `PUT` / `PATCH` request contract are mutable. |
 | Immutable identity | `id` is immutable; if included in `PUT`, it must match the path `id`. |
-| Lifecycle ownership | `lifecycleStatus` is not writable through create/update contracts; it is assigned and projected by the intent management entity. |
+| Lifecycle ownership | `lifecycleStatus` is not writable through create and update contracts; it is assigned and projected by the intent management entity. |
 | Bundle defaulting | `isBundle` is optional in request bodies and defaults to `false` when omitted on create; persisted responses include the server-resolved value. |
 | Submitted-version update | Once an Intent leaves Draft, general attribute update on that submitted version is not allowed. Material changes require a new Draft version. |
 
@@ -462,13 +463,13 @@ IC MS should reject or ignore unsupported external request fields according to t
 | `intentSpecification.name` as the authoritative validation key | IC MS does not resolve runtime requests by display name alone; it is only an optional hint. |
 | Missing `expression.iri` | Submitted admission must include `expression.iri` so IC MS can validate the semantic/expression contract against the selected specification. |
 | Inferred specification from payload shape alone | IC MS must resolve the active validation contract by mandatory `intentSpecification.id`, with mandatory `expression.iri` checked against the selected specification. |
-| Internal optimiser candidate sets | Not part of the external runtime create/update contract. |
+| Internal optimiser candidate sets | Not part of the external runtime create and update contract. |
 | Raw Knowledge Plane facts | Not accepted through IC MS runtime APIs. |
 | Raw telemetry observations | IA MS consumes telemetry; IC MS exposes curated projections only. |
 | Raw orchestrator callback payloads | ICB MS ingests callbacks; IA MS interprets them. |
 | Consumer-supplied lifecycle/status projection authority | IC MS owns external lifecycle/status projection. |
-| Consumer-supplied `lifecycleStatus` in create/update | Lifecycle state is assigned and projected by the intent management entity; external consumers use `submit`, not `lifecycleStatus`, to request draft/save versus admission. |
-| Missing `isBundle` in create/update request | Not an error. IC MS defaults omitted `isBundle` to `false` on create and preserves the persisted/server-resolved value on Draft updates unless explicitly changed. |
+| Consumer-supplied `lifecycleStatus` in create and update | Lifecycle state is assigned and projected by the intent management entity; external consumers use `submit`, not `lifecycleStatus`, to request draft/save versus admission. |
+| Missing `isBundle` in create and update request | Not an error. IC MS defaults omitted `isBundle` to `false` on create and preserves the persisted/server-resolved value on Draft updates unless explicitly changed. |
 | Consumer-supplied `IntentReport` mutation fields | Reports are curated projection/audit resources. |
 | String placeholders for object/array fields in examples or payloads | Typed placeholder rule requires object placeholders for objects and array placeholders for arrays. |
 
@@ -480,7 +481,7 @@ Authorisation responsibilities include:
 
 | Area | Behaviour |
 |---|---|
-| Runtime intent create/update/delete | Only authorised external consumers or platform actors can create, update Draft Intents, submit Draft Intents, or terminate runtime intents. |
+| Runtime intent create and update/delete | Only authorised external consumers or platform actors can create, update Draft Intents, submit Draft Intents, or terminate runtime intents. |
 | Report read access | Consumers can only read reports they are authorised to access. |
 | Hub subscription management | Only authorised subscribers can create or delete event subscriptions. |
 | Internal event consumption | Internal consumers use service-to-service identity and platform trust controls. |
@@ -641,7 +642,8 @@ Canonical message intent:
     "intentVersion": "v1",
     "lifecycleStatus": "Acknowledged",
     "intentSpecification": {
-      "id": "hospital-surgical-slice-spec",
+      "id": "ispec-hss-001",
+      "specKey": "hospital-surgical-slice-spec",
   "version": "1.20"
     },
     "expression": {
@@ -678,7 +680,7 @@ Canonical message intent:
         "href": "/intentManagement/v5/intent/INT-HOSP-2026-001"
       },
       "intentSpecification": {
-        "href": "/intentManagement/v5/intentSpecification/hospital-surgical-slice-spec?version=1.20"
+        "href": "/intentManagement/v5/intentSpecification/ispec-hss-001?version=1.20"
       }
     }
   }
@@ -846,7 +848,7 @@ Internal consumers can rely on `IntentValidatedEvent` as the admitted runtime in
 | Item | Decision |
 |---|---|
 | IC MS service identity | Full name is `Intent Controller MS`; service name is `intent-controller-ms`. |
-| Runtime create/update active spec resolution | Submitted admission requires both `intentSpecification.id` and `expression.iri`; family/name are optional hints only. |
+| Runtime create and update active spec resolution | Submitted admission requires both `intentSpecification.id` and `expression.iri`; specKey and name are optional hints only. |
 | IC MS validation scope | Syntactic/request-shape validation only for submitted requests; no semantic or optimisation ownership. |
 | Initial admitted state | `Acknowledged` after submitted request admission; `Draft` when `submit: false` is used. |
 | Internal handoff event | `IntentValidatedEvent`. |

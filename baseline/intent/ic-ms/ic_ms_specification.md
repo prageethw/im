@@ -235,7 +235,8 @@ Required submitted admission reference:
 ```json
 {
   "intentSpecification": {
-    "id": "hospital-surgical-slice-spec",
+    "id": "ispec-hss-001",
+    "specKey": "hospital-surgical-slice-spec",
   "version": "1.20"
   },
   "expression": {
@@ -488,7 +489,8 @@ Accept: application/json
   "humanExpression": "I need a surgical connection in Sydney Hospital with latency less than or equal to 10 ms and availability at least 99.99%.",
   "submit": true,
   "intentSpecification": {
-    "id": "hospital-surgical-slice-spec",
+    "id": "ispec-hss-001",
+    "specKey": "hospital-surgical-slice-spec",
   "version": "1.20"
   },
   "priority": "critical",
@@ -570,9 +572,10 @@ Last-Modified: Sat, 18 Apr 2026 02:00:00 GMT
   "statusReason": "Intent request accepted for semantic validation and fulfilment.",
   "statusChangeDate": "2026-04-18T12:00:00+10:00",
   "intentSpecification": {
-    "id": "hospital-surgical-slice-spec",
+    "id": "ispec-hss-001",
+    "specKey": "hospital-surgical-slice-spec",
   "version": "1.20",
-    "href": "/intentManagement/v5/intentSpecification/hospital-surgical-slice-spec?version=1.20"
+    "href": "/intentManagement/v5/intentSpecification/ispec-hss-001?version=1.20"
   },
   "priority": "critical",
   "relatedParty": [
@@ -743,7 +746,8 @@ Cache-Control: private, max-age=60
     "statusReason": "Intent version v2 is active and assurance is healthy.",
     "statusChangeDate": "2026-04-18T12:20:00+10:00",
     "intentSpecification": {
-      "id": "hospital-surgical-slice-spec",
+      "id": "ispec-hss-001",
+      "specKey": "hospital-surgical-slice-spec",
   "version": "1.20"
     },
     "@type": "Intent",
@@ -808,9 +812,10 @@ Cache-Control: private, max-age=300
   "statusReason": "Intent version v2 is active and assurance is healthy.",
   "statusChangeDate": "2026-04-18T12:20:00+10:00",
   "intentSpecification": {
-    "id": "hospital-surgical-slice-spec",
+    "id": "ispec-hss-001",
+    "specKey": "hospital-surgical-slice-spec",
   "version": "1.20",
-    "href": "/intentManagement/v5/intentSpecification/hospital-surgical-slice-spec?version=1.20"
+    "href": "/intentManagement/v5/intentSpecification/ispec-hss-001?version=1.20"
   },
   "isBundle": false,
   "priority": "critical",
@@ -916,7 +921,8 @@ If-Match: "intent-INT-HOSP-2026-001-v3"
   "humanExpression": "I need a surgical connection in Sydney Hospital with latency less than or equal to 8 ms and availability at least 99.99%.",
   "submit": false,
   "intentSpecification": {
-    "id": "hospital-surgical-slice-spec",
+    "id": "ispec-hss-001",
+    "specKey": "hospital-surgical-slice-spec",
   "version": "1.20"
   },
   "priority": "critical",
@@ -993,9 +999,10 @@ ETag: "intent-INT-HOSP-2026-001-v4"
   "statusReason": "Draft intent updated and not submitted for admission.",
   "statusChangeDate": "2026-04-18T12:00:00+10:00",
   "intentSpecification": {
-    "id": "hospital-surgical-slice-spec",
+    "id": "ispec-hss-001",
+    "specKey": "hospital-surgical-slice-spec",
   "version": "1.20",
-    "href": "/intentManagement/v5/intentSpecification/hospital-surgical-slice-spec?version=1.20"
+    "href": "/intentManagement/v5/intentSpecification/ispec-hss-001?version=1.20"
   },
   "isBundle": false,
   "priority": "critical",
@@ -1085,7 +1092,8 @@ If-Match: "intent-INT-HOSP-2026-001-v4"
 {
   "submit": false,
   "intentSpecification": {
-    "id": "hospital-surgical-slice-spec",
+    "id": "ispec-hss-001",
+    "specKey": "hospital-surgical-slice-spec",
   "version": "1.20"
   },
   "expression": {
@@ -1144,9 +1152,10 @@ ETag: "intent-INT-HOSP-2026-001-v5"
   "statusReason": "Draft intent patched and not submitted for admission.",
   "statusChangeDate": "2026-04-18T12:00:00+10:00",
   "intentSpecification": {
-    "id": "hospital-surgical-slice-spec",
+    "id": "ispec-hss-001",
+    "specKey": "hospital-surgical-slice-spec",
   "version": "1.20",
-    "href": "/intentManagement/v5/intentSpecification/hospital-surgical-slice-spec?version=1.20"
+    "href": "/intentManagement/v5/intentSpecification/ispec-hss-001?version=1.20"
   },
   "isBundle": false,
   "priority": "critical",
@@ -1683,7 +1692,7 @@ X-Platform-Extension: false
 {
   "code": "VALIDATION_FAILED",
   "reason": "EXPRESSION_IRI_REQUIRED",
-  "message": "Runtime Intent create/update requests must include expression.iri so IC MS can resolve the applicable expression contract for runtime validation.",
+  "message": "Runtime Intent create and update requests must include expression.iri so IC MS can resolve the applicable expression contract for runtime validation.",
   "status": 422,
   "referenceError": "https://mycsp.com.au/errors/VALIDATION_FAILED",
   "@type": "Error"
@@ -1723,7 +1732,7 @@ X-Platform-Extension: false
 {
   "code": "VALIDATION_FAILED",
   "reason": "INTENT_SPECIFICATION_NOT_ACTIVE",
-  "message": "Referenced IntentSpecification hospital-surgical-slice-spec version 1.20 is not ACTIVE.",
+  "message": "Referenced IntentSpecification ispec-hss-001 version 1.20 is not ACTIVE.",
   "status": 422,
   "referenceError": "https://mycsp.com.au/errors/VALIDATION_FAILED",
   "@type": "Error"
@@ -1810,7 +1819,7 @@ IC MS emits external TMF-aligned resource events for `Intent` projection changes
 | `IntentStatusChangeEvent` | External lifecycle/status projection changed |
 | `IntentDeleteEvent` | Runtime Intent termination accepted; retained projection moves to `Terminated` |
 
-These are external projection/resource events only.
+These are external projection and resource events only.
 
 They must not expose raw telemetry, raw optimiser decisions, raw `t7.knowledge plane` data, raw callback payloads, internal candidate scoring, or internal Kafka event payloads.
 
@@ -1836,7 +1845,8 @@ They must not expose raw telemetry, raw optimiser decisions, raw `t7.knowledge p
       "version": "v1",
       "lifecycleStatus": "Acknowledged",
       "intentSpecification": {
-        "id": "hospital-surgical-slice-spec",
+        "id": "ispec-hss-001",
+        "specKey": "hospital-surgical-slice-spec",
   "version": "1.20"
       },
       "@type": "Intent",
@@ -2151,7 +2161,7 @@ External hub notifications do not use these Kafka headers. They are HTTP webhook
 
 - `GET /intent/{id}` returns current projected Intent state, not a full internal version aggregate.
 - `GET /intent` lists current projected Intent states for retained Intent IDs.
-- Submitted runtime create/update admission requires both mandatory `intentSpecification.id` and mandatory `expression.iri`.
+- Submitted runtime create and update admission requires both mandatory `intentSpecification.id` and mandatory `expression.iri`.
 - `intentSpecification.id` selects the exact active platform-managed specification.
 - `expression.iri` identifies the semantic/expression contract and must match the selected specification's `expressionSpecification.iri`.
 - IC MS does not admit by IRI-only resolution.
@@ -2169,7 +2179,7 @@ Baseline:
 - If `submit` is omitted on initial create, IC MS treats the request as submitted for admission.
 - If an Intent is already persisted with `submit: false`, later omission of `submit` preserves Draft handling and must not automatically submit the Intent.
 - External consumers must not set or patch `lifecycleStatus`; lifecycle is assigned, transitioned, and projected by the intent management entity.
-- `isBundle` is optional in create/update requests; omitted create requests default to `false`, and persisted responses include the server-resolved value.
+- `isBundle` is optional in create and update requests; omitted create requests default to `false`, and persisted responses include the server-resolved value.
 - `PUT /intent/{id}` is a platform extension for deterministic full replacement and is allowed only while the current Intent version is in `Draft`.
 - `PATCH /intent/{id}` is supported for TMF compatibility and is allowed only while the current Intent version is in `Draft`.
 - Once an Intent leaves `Draft`, material changes require creating a new Draft version.
@@ -2215,7 +2225,8 @@ IC MS accepts and projects runtime Intent resources using the external runtime e
   "humanExpression": "I need a surgical connection in Sydney Hospital with latency less than or equal to 10 ms and availability at least 99.99%.",
   "submit": true,
   "intentSpecification": {
-    "id": "hospital-surgical-slice-spec",
+    "id": "ispec-hss-001",
+    "specKey": "hospital-surgical-slice-spec",
   "version": "1.20"
   },
   "expression": {
@@ -2268,7 +2279,8 @@ IC MS accepts and projects runtime Intent resources using the external runtime e
     "lifecycleStatus": "Acknowledged",
     "statusReason": "Intent request passed IC MS admission validation and was admitted for downstream processing.",
     "intentSpecification": {
-      "id": "hospital-surgical-slice-spec",
+      "id": "ispec-hss-001",
+      "specKey": "hospital-surgical-slice-spec",
   "version": "1.20"
     },
     "expression": {
@@ -2305,9 +2317,10 @@ IC MS accepts and projects runtime Intent resources using the external runtime e
         "href": "/intentManagement/v5/intent/INT-HOSP-2026-001"
       },
       "intentSpecification": {
-        "id": "hospital-surgical-slice-spec",
+        "id": "ispec-hss-001",
+        "specKey": "hospital-surgical-slice-spec",
   "version": "1.20",
-        "href": "/intentManagement/v5/intentSpecification/hospital-surgical-slice-spec?version=1.20"
+        "href": "/intentManagement/v5/intentSpecification/ispec-hss-001?version=1.20"
       }
     }
   }

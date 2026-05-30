@@ -177,7 +177,8 @@ This means the intent management entity does not infer the governing runtime con
 {
   "name": "Sydney Hospital Surgical Connection Intent",
   "intentSpecification": {
-    "id": "hospital-surgical-slice-spec"
+    "id": "ispec-hss-001",
+    "specKey": "hospital-surgical-slice-spec"
   },
   "expression": {
     "@type": "JsonLdExpression",
@@ -243,7 +244,8 @@ MISSING_INTENT_SPECIFICATION_ID
 {
   "name": "Sydney Hospital Surgical Connection Intent",
   "intentSpecification": {
-    "id": "hospital-surgical-slice-spec"
+    "id": "ispec-hss-001",
+    "specKey": "hospital-surgical-slice-spec"
   },
   "expression": {
     "@type": "JsonLdExpression",

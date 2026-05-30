@@ -323,7 +323,8 @@ This example supplies both `intentSpecification.id` and `expression.iri`, becaus
   "name": "Sydney Hospital Surgical Connection Intent",
   "humanExpression": "I need a surgical connection in Sydney Hospital with latency less than or equal to 10 ms and availability at least 99.99%.",
   "intentSpecification": {
-    "id": "hospital-surgical-slice-spec"
+    "id": "ispec-hss-001",
+    "specKey": "hospital-surgical-slice-spec"
   },
   "expression": {
     "@type": "JsonLdExpression",
@@ -365,7 +366,8 @@ This example supplies both `intentSpecification.id` and `expression.iri`, becaus
   "statusChangeDate": "2026-04-18T12:10:00+10:00",
   "isBundle": false,
   "intentSpecification": {
-    "id": "hospital-surgical-slice-spec"
+    "id": "ispec-hss-001",
+    "specKey": "hospital-surgical-slice-spec"
   },
   "expression": {
     "@type": "JsonLdExpression",
