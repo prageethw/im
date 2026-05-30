@@ -976,7 +976,7 @@ Draft creation remains light. A Draft Intent can be created with `submit: false`
 | `GET /intent` | Lists current projected Intent states for retained Intent IDs. |
 | `PUT /intent/{id}` | Platform extension for deterministic full replacement. Allowed only while Draft. If `submit: true` is supplied, requires both `intentSpecification.id` and `expression.iri` for admission. |
 | `PATCH /intent/{id}` | TMF-compatible partial update using JSON Merge Patch. Allowed only while Draft. If `submit: true` is supplied, requires both `intentSpecification.id` and `expression.iri`. |
-| New Draft authoring record after submission | New submitted-version changes are represented by a new Draft authoring record using a documented platform extension route or operation to be finalised. `PUT` and `PATCH` must not mutate an admitted runtime version. |
+| New Draft authoring record after submission | New submitted-version changes require a new Draft authoring record. The route or operation for creating that record is intentionally deferred as future scope. `PUT` and `PATCH` must not mutate an admitted runtime version. |
 | `DELETE /intent/{id}` | Treated as termination, not physical delete; retained Intent projection moves to `Terminated`. |
 
 ### Baseline statement:
