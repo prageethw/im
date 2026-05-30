@@ -54,7 +54,7 @@
                 <mxCell id="e3" style="edgeStyle=orthogonalEdgeStyle;rounded=0;dashed=1;fillColor=#d5e8d4;strokeColor=default;" parent="1" source="icms_core" target="idms" edge="1">
                     <mxGeometry relative="1" as="geometry"/>
                 </mxCell>
-                <mxCell id="e3_lbl" value="GET active IntentSpecification&#xa;(syntactic validation)" style="edgeLabel;fontSize=10;fontStyle=2;container=0;rounded=0;" parent="e3" connectable="0" vertex="1">
+                <mxCell id="e3_lbl" value="GET active IntentSpecification&#xa;(schema and request-shape validation)" style="edgeLabel;fontSize=10;fontStyle=2;container=0;rounded=0;" parent="e3" connectable="0" vertex="1">
                     <mxGeometry relative="0.5" as="geometry">
                         <mxPoint x="-58" y="-42" as="offset"/>
                     </mxGeometry>

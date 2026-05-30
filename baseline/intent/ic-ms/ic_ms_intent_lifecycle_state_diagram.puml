@@ -35,7 +35,7 @@ state Rejected     #f5cba7 : Semantic / policy\nrejection
 state Terminated   #aab7b8 : Retained — no longer\nruntime-active
 
 ' ── Entry ─────────────────────────────────────────────────────────────────
-[*] --> Acknowledged : POST /intent passes\nTMF syntactic validation
+[*] --> Acknowledged : POST /intent passes\nTMF schema and request-shape validation
 
 ' ── Acknowledged ──────────────────────────────────────────────────────────
 Acknowledged --> InProgress : change execution starts

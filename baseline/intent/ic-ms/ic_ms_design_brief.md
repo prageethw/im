@@ -23,9 +23,9 @@ It is responsible for:
 | External `Intent` API | Create, retrieve, list, update, patch, delete runtime intents |
 | External `IntentReport` API | Expose read-only assurance/report projections for intents |
 | Runtime lifecycle/status projection | Own external `Intent.lifecycleStatus`, `statusReason`, and `statusChangeDate` |
-| Syntactic validation | Validate incoming runtime `Intent` against active `IntentSpecification` from ID MS |
-| Initial admission | Accept syntactically valid requests and project `Acknowledged` |
-| Internal state/progress event publication | Emit `IntentValidatedEvent` to the internal Kafka event backbone after syntactic validation succeeds |
+| Schema and request-shape validation | Validate incoming runtime `Intent` against `ACTIVE` `IntentSpecification` from ID MS |
+| Initial admission | Accept schema and request-shape valid requests and project `Acknowledged` |
+| Internal state/progress event publication | Emit `IntentValidatedEvent` to the internal Kafka event backbone after schema and request-shape validation succeeds |
 | Rejection projection | Consume rejection outcome from II MS and project `Rejected` |
 | Assurance projection | Consume `IntentAssuranceEvent` from IA MS and update external `Intent` / `IntentReport` |
 | External webhook notifications | Deliver TMF-aligned `Intent` and `IntentReport` notifications by HTTP POST to subscriber listener callback URLs |
@@ -104,14 +104,14 @@ On `POST /intentManagement/v5/intent`, IC MS:
 1. receives the external runtime intent request
 2. validates basic TMF/resource shape
 3. resolves the referenced `IntentSpecification`
-4. validates the request against the active `IntentSpecification`
-5. rejects syntactically invalid requests
-6. accepts syntactically valid requests
+4. validates the request against the `ACTIVE` `IntentSpecification`
+5. rejects schema and request-shape invalid requests
+6. accepts schema and request-shape valid requests
 7. creates/persists the external `Intent` projection
 8. sets initial `lifecycleStatus = Acknowledged` and persists the server-resolved `isBundle` value, defaulting to `false` when omitted on create
-9. emits `IntentValidatedEvent` to the internal Kafka event backbone after syntactic validation succeeds
+9. emits `IntentValidatedEvent` to the internal Kafka event backbone after schema and request-shape validation succeeds
 
-IC MS validates syntax and contract shape only.
+IC MS validates schema and request shape against the selected active IntentSpecification contract only.
 
 It does not decide semantic meaning, network feasibility, policy allowability, resource candidates, optimisation, apply result, or runtime assurance truth.
 
@@ -131,7 +131,7 @@ Kafka is used for internal platform events where independent internal consumers 
 IC MS does not emit `IntentValidatedEvent` as a point-to-point command for one specific consumer. IC MS emits `IntentValidatedEvent` as a platform state/progress event that states:
 
 ```text
-This Intent has passed IC MS syntactic validation and has been admitted into the intent lifecycle.
+This Intent has passed IC MS schema and request-shape validation and has been admitted into the intent lifecycle.
 ```
 
 Current primary consumer:
@@ -218,7 +218,7 @@ IC MS owns the external lifecycle/status projection, but not the runtime truth.
 
 | **Lifecycle/status source** | **IC MS action** |
 |---|---|
-| IC MS syntactic validation succeeds | Project `Acknowledged` |
+| IC MS schema and request-shape validation succeeds | Project `Acknowledged` |
 | II MS semantic and policy rejection | Project `Rejected` |
 | IA MS apply success / active assurance | Project `Active` |
 | IA MS degraded assurance | Project `Degraded` |
@@ -236,7 +236,7 @@ IntentValidatedEvent
 Meaning:
 
 ```text
-The runtime Intent has passed IC MS syntactic validation and is admitted for downstream semantic validation, resolution, and fulfilment processing.
+The runtime Intent has passed IC MS schema and request-shape validation and is admitted for downstream semantic validation, resolution, and fulfilment processing.
 ```
 
 ### Current primary consumer:
@@ -387,7 +387,7 @@ Platform preference:
 
 ## IC MS boundary statement:
 
-**IC MS is the TMF-compliant runtime intent controller. It owns external `Intent` and `IntentReport` resources, performs syntactic validation against active `IntentSpecification`, emits `IntentValidatedEvent` as an internal state/progress event, and projects external lifecycle/status from II MS rejection outcomes and IA MS assurance outcomes. IC MS does not perform semantic validation, policy validation, optimisation, network apply, runtime assurance, telemetry ingestion, or callback mediation.**
+**IC MS is the TMF-compliant runtime intent controller. It owns external `Intent` and `IntentReport` resources, performs schema and request-shape validation against `ACTIVE` `IntentSpecification`, emits `IntentValidatedEvent` as an internal state/progress event, and projects external lifecycle/status from II MS rejection outcomes and IA MS assurance outcomes. IC MS does not perform semantic validation, policy validation, optimisation, network apply, runtime assurance, telemetry ingestion, or callback mediation.**
 
 ## Lifecycle/status and versioning baseline:
 
@@ -414,9 +414,9 @@ Individual Intent versions can use:
 Acknowledged
 InProgress
 Active
-Standby
 Degraded
 Paused
+Standby
 Rejected
 Failed
 Terminated
@@ -427,7 +427,7 @@ Retired
 
 | **Version lifecycleStatus** | **Meaning** |
 |---|---|
-| `Acknowledged` | Version accepted after syntactic validation |
+| `Acknowledged` | Version accepted after schema and request-shape validation |
 | `InProgress` | Version change handling is in progress, including semantic resolution, optimisation where applicable, apply/change execution, or assurance confirmation |
 | `Active` | Version is currently active in the network/service |
 | `Standby` | Version is not currently active, but is retained as a valid rollback or future reactivation candidate |
@@ -480,7 +480,7 @@ Runtime truth comes from:
 
 | **Source** | **Meaning** |
 |---|---|
-| IC MS | Syntactic admission only |
+| IC MS | Schema and request-shape admission only |
 | II MS | Semantic/policy rejection outcome |
 | IA MS | Apply, active, degraded, failed, paused, and runtime assurance outcomes |
 | External client/OEX | Termination request |
@@ -489,7 +489,7 @@ Runtime truth comes from:
 
 | **Step** | **Trigger / event** | **Intent version** | **Version lifecycleStatus** | **Intent activeVersion** | **IC MS external projection** |
 |---:|---|---|---|---|---|
-| 1 | `POST /intent` passes syntactic validation | `v1` | `Acknowledged` | none | Intent admitted; `IntentValidatedEvent` emitted |
+| 1 | `POST /intent` passes schema and request-shape validation | `v1` | `Acknowledged` | none | Intent admitted; `IntentValidatedEvent` emitted |
 | 2 | Downstream fulfilment starts | `v1` | `InProgress` | none | Intent is being processed |
 | 3 | IA MS confirms apply/assurance active | `v1` | `Active` | `v1` | Intent active; `v1` becomes active version |
 | 4 | Runtime degradation reported by IA MS | `v1` | `Degraded` | `v1` | Intent degraded, but `v1` remains `activeVersion` |
@@ -646,7 +646,7 @@ The retained `Intent` record remains available for:
 
 **IC MS does not physically delete runtime `Intent` records by default. Termination transitions the retained Intent projection to `Terminated` for audit, reporting, lifecycle history, and traceability.**
 
-**IC MS must not invent runtime lifecycle truth. It projects external `Intent.lifecycleStatus`, `statusReason`, and `statusChangeDate` based on syntactic admission, II MS rejection outcomes, IA MS assurance outcomes, and accepted termination requests.**
+**IC MS must not invent runtime lifecycle truth. It projects external `Intent.lifecycleStatus`, `statusReason`, and `statusChangeDate` based on schema and request-shape admission, II MS rejection outcomes, IA MS assurance outcomes, and accepted termination requests.**
 
 ## Intent lifecycle state diagrams:
 
@@ -678,9 +678,9 @@ Terminated
 Acknowledged
 InProgress
 Active
-Standby
 Degraded
 Paused
+Standby
 Rejected
 Failed
 Terminated
@@ -726,7 +726,7 @@ skinparam note {
   FontColor #111827
 }
 
-[*] --> Acknowledged : POST /intent passes\nsyntactic validation
+[*] --> Acknowledged : POST /intent passes\nschema and request-shape validation
 Acknowledged --> Rejected : II MS semantic and policy\nrejection outcome
 Acknowledged --> InProgress : downstream fulfilment\nstarts
 InProgress --> Rejected : semantic and policy\nrejection outcome
@@ -878,7 +878,7 @@ Accept: application/json
   "intentSpecification": {
     "id": "ispec-hss-001",
     "specKey": "hospital-surgical-slice-spec",
-  "version": "1.20",
+    "version": "1.20",
     "href": "/intentManagement/v5/intentSpecification/ispec-hss-001?version=1.20"
   },
   "@type": "Intent",
@@ -923,7 +923,7 @@ For submitted admission:
 - IC MS resolves the exact `IntentSpecification` by `intentSpecification.id`
 - the resolved `IntentSpecification` must be `ACTIVE`
 - IC MS validates that the supplied `expression.iri` is consistent with the resolved specification's `expressionSpecification.iri`
-- IC MS validates the runtime expression against the resolved active specification
+- IC MS validates the runtime expression against the resolved `ACTIVE` specification
 - if `intentSpecification.id` is omitted, IC MS rejects the request
 - `intentSpecification.specKey` and `intentSpecification.name` are optional hints only
 
@@ -946,6 +946,7 @@ Draft creation remains light. A Draft Intent can be created with `submit: false`
 | `GET /intent` | Lists current projected Intent states for retained Intent IDs. |
 | `PUT /intent/{id}` | Platform extension for deterministic full replacement. Allowed only while Draft. If `submit: true` is supplied, requires both `intentSpecification.id` and `expression.iri` for admission. |
 | `PATCH /intent/{id}` | TMF-compatible partial update using JSON Merge Patch. Allowed only while Draft. If `submit: true` is supplied, requires both `intentSpecification.id` and `expression.iri`. |
+| New Draft version after submission | New submitted-version changes are represented by a new Draft version using a documented platform extension route or operation to be finalised. `PUT` and `PATCH` must not mutate an admitted runtime version. |
 | `DELETE /intent/{id}` | Treated as termination, not physical delete; retained Intent projection moves to `Terminated`. |
 
 ### Baseline statement:
@@ -1024,13 +1025,13 @@ DELETE /intentManagement/v5/intent/{id}
 
 ### ID MS dependency rule:
 
-For submitted `POST`, submitted `PUT`, and submitted/runtime-content-changing `PATCH`, IC MS must validate against the resolved active `IntentSpecification` selected by mandatory `intentSpecification.id`, and must confirm the request `expression.iri` matches the selected specification's `expressionSpecification.iri`.
+For submitted `POST`, submitted `PUT`, and submitted/runtime-content-changing `PATCH`, IC MS must validate against the resolved `ACTIVE` `IntentSpecification` selected by mandatory `intentSpecification.id`, and must confirm the request `expression.iri` matches the selected specification's `expressionSpecification.iri`.
 
 If ID MS cannot confirm that spec is `ACTIVE`:
 
 | **Situation** | **IC MS behaviour** |
 |---|---|
-| Valid fresh cached active spec exists | Continue syntactic validation using cache |
+| Valid fresh cached active spec exists | Continue schema and request-shape validation using cache |
 | No valid fresh cached active spec | Fail closed; do not admit/create new runtime version |
 
 ### Failure responses:
@@ -1077,7 +1078,7 @@ Retry-After: 30
 
 **IC MS caching applies only to GET responses. Clients either use cached GET responses within TTL or request a fresh copy using `Cache-Control: no-cache`. ETag is used only for unsafe-operation concurrency through `If-Match`. No caching strategy is baselined for non-GET operations.**
 
-**For runtime-content admission, IC MS must confirm the resolved active `IntentSpecification` from ID MS or a valid fresh cached active specification. If it cannot confirm the active specification, IC MS fails closed and does not admit the runtime Intent or runtime version.**
+**For runtime-content admission, IC MS must confirm the resolved `ACTIVE` `IntentSpecification` from ID MS or a valid fresh cached active specification. If it cannot confirm the active specification, IC MS fails closed and does not admit the runtime Intent or runtime version.**
 
 **IC MS uses dependency-specific circuit-breaker behaviour. DB failure is hard fail-fast and returns `503 Service Unavailable`. Cache failure is graceful/silent. Kafka/event-broker failure is handled through internal event outbox. External webhook callback failure is asynchronous and does not affect the original API response.**
 
@@ -1286,7 +1287,9 @@ The domain payload sits inside `expression.expressionValue.context`:
 
 Design rules:
 
-- IC MS validates syntactic shape against the active ID MS `IntentSpecification.expressionSpecification` and `targetEntitySchema` contract.
+- Top-level `priority` is an API and platform processing priority used by IC MS and platform controls. `expression.expressionValue.context.constraints.priority` is a domain fulfilment constraint interpreted by downstream semantic validation, policy, optimisation, and assurance components. When both are present, they should normally be consistent, but they are not the same field.
+
+- IC MS validates schema and request shape against the active ID MS `IntentSpecification.expressionSpecification` and `targetEntitySchema` contract.
 - IC MS preserves the external TMF expression wrapper on TMF-compliant `Intent` resources.
 - IC MS emits `IntentValidatedEvent` with the admitted expression as internal native JSON using the same canonical `targets`, `constraints`, and `preferences` buckets, without the external TMF expression wrapper.
 - `location`, `serviceType`, and `serviceClass` sit under `context.constraints`; they are not peer fields beside `targets`, `constraints`, and `preferences`.
