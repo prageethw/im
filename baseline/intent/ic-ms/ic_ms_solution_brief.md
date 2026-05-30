@@ -395,12 +395,11 @@ Terminated
 
 ![alt text](ic_ms_intent_lifecycle_state_diagram.svg)
 
-### Intent-version lifecycleStatus values:
+### Intent-version lifecycleStatus values after admission:
 
-The Intent-version-level `lifecycleStatus` is the lifecycle truth for each individual runtime version. It supports version history, rollback/restart, audit, and governance.
+The Intent-version-level `lifecycleStatus` is the lifecycle truth for each admitted runtime version. It supports version history, rollback/restart, audit, and governance.
 
 ```text
-Draft
 Acknowledged
 InProgress
 Active
