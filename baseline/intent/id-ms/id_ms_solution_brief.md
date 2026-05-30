@@ -66,6 +66,7 @@ The baseline surgical hospital slice specification uses:
 - `specCharacteristic` as a high-level characteristic catalogue
 - `expressionSpecification` as the expression contract reference
 - `targetEntitySchema` as the governed schema artefact reference for the expression-value shape
+- optional `intentBehaviour` and `intentLayer` metadata for catalogue discovery, governance, and future platform reasoning
 - `priority` values of `critical`, `high`, and `standard`
 - canonical `context.targets`, `context.constraints`, and `context.preferences` semantics in the expression model
 
@@ -149,7 +150,13 @@ The platform base path is:
 /intentManagement/v5
 ```
 
-Strict TMF-compatible gateway routing may map deployment-specific external prefixes to the platform-owned service path without changing resource semantics.
+A strict TMF deployment may expose the same API through:
+
+```http
+/tmf-api/intentManagement/v5
+```
+
+The gateway may map the strict deployment prefix to the platform-owned service path without changing resource semantics.
 
 ## Request shape / event shape:
 
@@ -160,9 +167,9 @@ Strict TMF-compatible gateway routing may map deployment-specific external prefi
 | Create specification | `POST` | `/intentManagement/v5/intentSpecification` |
 | List specifications | `GET` | `/intentManagement/v5/intentSpecification` |
 | Retrieve specification by ID | `GET` | `/intentManagement/v5/intentSpecification/{id}` |
-| Full replace DRAFT candidate | `PUT` | `/intentManagement/v5/intentSpecification/draft/{draftId}` |
-| Partial update or activate DRAFT candidate | `PATCH` | `/intentManagement/v5/intentSpecification/draft/{draftId}` |
-| Retire current ACTIVE specification | `DELETE` | `/intentManagement/v5/intentSpecification/{id}` |
+| Full replace specification | `PUT` | `/intentManagement/v5/intentSpecification/{id}` |
+| Partial update specification | `PATCH` | `/intentManagement/v5/intentSpecification/{id}` |
+| Delete specification | `DELETE` | `/intentManagement/v5/intentSpecification/{id}` |
 
 ### Hub subscription API:
 
@@ -191,16 +198,14 @@ Content-Type: application/merge-patch+json
 
 `IntentSpecification.version` is a design-time contract version and is separate from runtime `Intent.version`.
 
-A mutable DRAFT `IntentSpecification` candidate does not expose an official public `version`. Draft revision is represented by `ETag`. ID MS assigns the official design-time contract `version` only when the selected DRAFT candidate is activated.
+A Draft `IntentSpecification` may carry its intended specification `version` while being authored. This is different from a Draft runtime `Intent`, which is not assigned a permanent runtime `version` until admission is accepted.
 
 Baseline:
 
-- `POST /intentSpecification` creates a mutable DRAFT candidate.
-- `specKey` is mandatory on create and is used by ID MS to resolve the stable server-assigned `IntentSpecification.id`.
-- ID MS assigns a new `draftId` for each mutable DRAFT candidate.
-- DRAFT candidate retrieval, update, activation, and deletion use `/intentSpecification/draft/{draftId}`.
-- Material change after activation requires a new mutable DRAFT candidate.
+- Draft `IntentSpecification` resources may carry `version`.
+- Material change after activation requires a new Draft `IntentSpecification` version.
 - `ACTIVE` and `RETIRED` specifications are immutable for material contract changes.
+- `specKey` is optional/governed; where used, it groups related specification versions.
 - Runtime `Intent.version` and `IntentSpecification.version` are separate concepts.
 
 
@@ -237,6 +242,39 @@ Baseline:
 - Keep simplified object-map examples only where they are deliberately explanatory.
 
 
+
+## Optional IntentSpecification behaviour metadata:
+
+`intentBehaviour` and `intentLayer` are optional definition-time metadata fields on `IntentSpecification`. They support catalogue discovery, governance, and future platform reasoning. They are not required for DRAFT creation, activation, or runtime Intent admission in the current baseline. If omitted, ID MS does not infer or default these values unless an explicit platform policy is later introduced.
+
+Example optional metadata for the hospital surgical slice specification:
+
+```json
+{
+  "intentBehaviour": {
+    "category": "REALTIME",
+    "constraintMode": "STRICT",
+    "objectiveType": "SLA",
+    "fulfilmentMode": "CONTINUOUS"
+  },
+  "intentLayer": "SERVICE"
+}
+```
+
+Controlled values:
+
+| **Field** | **Allowed values** | **Meaning** |
+|---|---|---|
+| `intentBehaviour.category` | `REALTIME`, `BATCH`, `OPTIMISATION`, `ASSURANCE` | Broad behavioural type of intents created from the specification. |
+| `intentBehaviour.constraintMode` | `STRICT`, `FLEXIBLE` | Whether constraints are normally mandatory or may be relaxed by governed policy/negotiation. |
+| `intentBehaviour.objectiveType` | `SLA`, `COST`, `ENERGY`, `BALANCED` | Main decision or optimisation objective. |
+| `intentBehaviour.fulfilmentMode` | `IMMEDIATE`, `LONGRUNNING`, `CONTINUOUS` | Fulfilment behaviour. `CONTINUOUS` means the system adopts a closed loop for the intent. |
+| `intentLayer` | `BUSINESS`, `SERVICE`, `RESOURCE` | Abstraction layer of the intent. |
+
+`IMMEDIATE` and `LONGRUNNING` describe fulfilment timing. `CONTINUOUS` describes whether the system is closed-looped for the intent.
+
+These fields do not replace `expressionSpecification.iri`, `targetEntitySchema`, `specCharacteristic`, or request-specific `serviceType`, `serviceClass`, `priority`, targets, constraints, and preferences inside the governed expression schema.
+
 ## Field specification:
 
 ### IntentSpecification fields:
@@ -245,10 +283,10 @@ Baseline:
 |---|---|
 | `id` | Server-generated unique specification identifier. |
 | `href` | Server-generated resource URI. |
-| `specKey` | Mandatory create-time key used to resolve the stable server-assigned `IntentSpecification.id` and group related official versions. |
+| `specKey` | Groups related versions of the same specification key. |
 | `name` | Human-readable specification name. |
 | `description` | Definition-time description of the specification purpose. |
-| `version` | Official public specification version, assigned only when a selected DRAFT candidate is activated. |
+| `version` | Specification version within the specification key. |
 | `lifecycleStatus` | One of `DRAFT`, `ACTIVE`, or `RETIRED`. |
 | `isBundle` | Indicates whether the specification is a bundle. |
 | `validFor` | Validity period metadata. |
@@ -256,6 +294,8 @@ Baseline:
 | `specCharacteristic` | High-level characteristic catalogue for discovery/governance. |
 | `expressionSpecification` | Authoritative expression contract reference. |
 | `targetEntitySchema` | Governed expression-value schema reference. |
+| `intentBehaviour` | Optional definition-time behaviour metadata for catalogue discovery, governance, and future platform reasoning. |
+| `intentLayer` | Optional definition-time abstraction-layer metadata. |
 | `@type` | `IntentSpecification`. |
 | `@baseType` | `EntitySpecification`. |
 | `@schemaLocation` | Schema location for the specification resource, where supplied. |
@@ -284,16 +324,10 @@ There is no `DELETED` lifecycle state. Delete is an operation/outcome, not a lif
 
 ## Fields not accepted:
 
-Clients must not provide server-generated or lifecycle/version values on create:
+Clients must not provide server-generated values on create:
 
 - `id`
 - `href`
-- `draftId`
-- official `version`
-- `lifecycleStatus`
-- `creationDate`
-- `lastUpdate`
-- `statusChangeDate`
 - `Location`
 - `ETag`
 - `_links`
@@ -451,10 +485,10 @@ Delete events are emitted only after successful delete and show the last known l
 
 ### Create behaviour:
 
-- Create produces a mutable `DRAFT` candidate and assigns a `draftId`.
+- Create normally produces a `DRAFT` specification.
 - ID MS validates resource shape and required syntax/schema references.
-- ID MS resolves `id` from `specKey` and generates `draftId`, DRAFT `href`, `Location`, `ETag`, and `_links`.
-- Successful create returns `201 Created` with the full created DRAFT candidate resource.
+- ID MS generates `id`, `href`, `Location`, `ETag`, and `_links`.
+- Successful create returns `201 Created` with the full created resource.
 - Successful create emits `IntentSpecificationCreateEvent`.
 
 ### List behaviour:
@@ -488,7 +522,7 @@ Delete events are emitted only after successful delete and show the last known l
 
 ### Activation behaviour:
 
-- Activation is a lifecycle update on `/intentSpecification/draft/{draftId}`.
+- Activation is a lifecycle update on `/intentSpecification/{id}`.
 - Only `DRAFT` can be activated.
 - The activated version becomes `ACTIVE`.
 - The previous `ACTIVE` version in the same `specKey` becomes `RETIRED`.
