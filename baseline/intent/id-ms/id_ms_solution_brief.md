@@ -599,7 +599,7 @@ Delete events are emitted only after successful delete and show the last known l
 ```json
 {
   "id": "ispec-hss-001",
-  "href": "/intentManagement/v5/intentSpecification/ispec-hss-001",
+  "href": "/intentManagement/v5/intentSpecification/ispec-hss-001?version=1.20",
   "specKey": "hospital-surgical-slice-spec",
   "version": "1.20",
   "lifecycleStatus": "ACTIVE",

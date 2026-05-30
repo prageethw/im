@@ -237,6 +237,8 @@ Missing `If-Match` response:
 ```http
 HTTP/1.1 428 Precondition Required
 Content-Type: application/json
+Content-Language: en-AU
+Cache-Control: no-store
 ```
 
 ```json
@@ -255,6 +257,8 @@ Stale or mismatched ETag response:
 ```http
 HTTP/1.1 412 Precondition Failed
 Content-Type: application/json
+Content-Language: en-AU
+Cache-Control: no-store
 ```
 
 ```json
@@ -326,7 +330,7 @@ HTTP/1.1 200 OK
 Content-Type: application/json
 Content-Language: en-AU
 Content-Location: /intentManagement/v5/intentSpecification/ispec-hss-001
-ETag: "intent-spec-ispec-hss-001-version-1.19-r1"
+ETag: "intent-spec-ispec-hss-001-v1.19-r1"
 Last-Modified: Sat, 18 Apr 2026 02:00:00 GMT
 Cache-Control: private, max-age=300
 ```
@@ -936,6 +940,7 @@ If active specification cannot be confirmed from ID MS or a valid fresh cache:
 ```http
 HTTP/1.1 503 Service Unavailable
 Content-Type: application/json
+Content-Language: en-AU
 Retry-After: 30
 ```
 
@@ -971,6 +976,7 @@ If DB cannot be accessed:
 ```http
 HTTP/1.1 503 Service Unavailable
 Content-Type: application/json
+Content-Language: en-AU
 Retry-After: 30
 ```
 

@@ -372,8 +372,10 @@ The following query parameters are supported where applicable:
 ```http
 HTTP/1.1 428 Precondition Required
 Content-Type: application/json
+Content-Language: en-AU
 X-TMF-Native: true
 X-Platform-Extension: false
+Cache-Control: no-store
 ```
 
 ```json
@@ -392,8 +394,10 @@ X-Platform-Extension: false
 ```http
 HTTP/1.1 412 Precondition Failed
 Content-Type: application/json
+Content-Language: en-AU
 X-TMF-Native: true
 X-Platform-Extension: false
+Cache-Control: no-store
 ```
 
 ```json
@@ -403,6 +407,28 @@ X-Platform-Extension: false
   "message": "The supplied ETag does not match the current resource version.",
   "status": 412,
   "referenceError": "https://mycsp.com.au/errors/PRECONDITION_FAILED",
+  "@type": "Error"
+}
+```
+
+### Internal error response
+
+```http
+HTTP/1.1 500 Internal Server Error
+Content-Type: application/json
+Content-Language: en-AU
+X-TMF-Native: true
+X-Platform-Extension: false
+Cache-Control: no-store
+```
+
+```json
+{
+  "code": "INTERNAL_ERROR",
+  "reason": "UNEXPECTED_ERROR",
+  "message": "An unexpected server error occurred while processing the request.",
+  "status": 500,
+  "referenceError": "https://mycsp.com.au/errors/INTERNAL_ERROR",
   "@type": "Error"
 }
 ```
@@ -493,6 +519,8 @@ X-Platform-Extension: false
 ETag: "id-draft-hospital-surgical-slice-a-r1"
 Last-Modified: Sat, 18 Apr 2026 02:00:00 GMT
 ```
+
+The response is classified as TMF-native because `POST /intentSpecification` is the TMF-aligned create operation. The `Location` points to the platform DRAFT candidate route because the created resource is a mutable DRAFT candidate addressed by `draftId` until activation.
 
 ```json
 {
@@ -1107,8 +1135,7 @@ Last-Modified: Sat, 18 Apr 2026 03:00:00 GMT
     },
     "partialUpdate": {
       "href": "/intentManagement/v5/intentSpecification/draft/id-draft-hospital-surgical-slice-a",
-      "method": "PATCH",
-      "warning": "PATCH is supported for TMF compatibility but discouraged as a general update method. Prefer PUT for deterministic full replacement of editable DRAFT specifications."
+      "method": "PATCH"
     },
     "delete": {
       "href": "/intentManagement/v5/intentSpecification/draft/id-draft-hospital-surgical-slice-a",
@@ -1259,8 +1286,7 @@ Last-Modified: Sat, 18 Apr 2026 03:00:00 GMT
     },
     "partialUpdate": {
       "href": "/intentManagement/v5/intentSpecification/draft/id-draft-hospital-surgical-slice-a",
-      "method": "PATCH",
-      "warning": "PATCH is supported for TMF compatibility but discouraged as a general update method. Prefer PUT for deterministic full replacement of editable DRAFT specifications."
+      "method": "PATCH"
     }
   }
 }
@@ -1506,7 +1532,7 @@ Although `PATCH` is discouraged as a general update method, this is an acceptabl
 The following activation example assumes a second DRAFT candidate, `id-draft-hospital-surgical-slice-b`, was created for the next official version after earlier draft work on `id-draft-hospital-surgical-slice-a`.
 
 ```http
-PATCH /intentManagement/v5/intentSpecification/draft/id-draft-hospital-surgical-slice-b?fields=id,href,specKey,name,version,lifecycleStatus,previousActiveSpecification,@type,@baseType
+PATCH /intentManagement/v5/intentSpecification/draft/id-draft-hospital-surgical-slice-b?fields=id,href,specKey,name,lifecycleStatus,previousActiveSpecification,@type,@baseType
 Content-Type: application/merge-patch+json
 Accept: application/json
 If-Match: "id-draft-hospital-surgical-slice-b-r3"
@@ -1922,6 +1948,7 @@ Cache-Control: no-store
 ```http
 HTTP/1.1 503 Service Unavailable
 Content-Type: application/json
+Content-Language: en-AU
 X-TMF-Native: true
 X-Platform-Extension: false
 Retry-After: 30
