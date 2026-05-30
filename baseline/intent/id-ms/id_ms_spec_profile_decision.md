@@ -1,4 +1,4 @@
-# IntentSpecification consumer profile proposal
+# TAF - Decision Proposal IntentSpecification, Minimum data requirements.
 
 | **Document status** | **Value** |
 | --- | --- |
