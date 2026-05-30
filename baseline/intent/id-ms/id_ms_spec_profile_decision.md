@@ -1,4 +1,4 @@
-# IntentSpecification consumer profile proposal
+# TAF - Decision Proposal IntentSpecification, Minimum data requirements.
 
 | **Document status** | **Value** |
 | --- | --- |
@@ -78,6 +78,8 @@ When a consumer creates a DRAFT candidate:
 ID MS assigns a new `draftId` for the mutable candidate. ID MS assigns the official public `version` only when the DRAFT candidate is published as ACTIVE.
 
 This keeps the consumer-submitted create profile simple while preserving server control of official identity, draft candidate identity, and published version identity.
+
+![view](id_ms_spec_profile_decision.svg)
 
 ## 4. Base and extended attribute classification:
 
