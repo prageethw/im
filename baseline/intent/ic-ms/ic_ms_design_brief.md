@@ -383,6 +383,9 @@ X-Platform-Extension: true
 ```
 
 
+
+For `PATCH /intent/{id}`, strict TMF-compatible partial update behaviour can use `X-TMF-Native: true` and `X-Platform-Extension: false` when no IC MS extension semantics are invoked. If `PATCH` uses `submit` Draft/admission-control semantics, classify the response as `X-TMF-Native: false` and `X-Platform-Extension: true`.
+
 IC MS remains TMF-aligned at the external contract level, while retaining documented, non-breaking platform extensions for deterministic update, domain-scoped subscription management, concurrency, and retained projection governance.
 
 Strict TMF-compatible external operations:
@@ -1068,7 +1071,9 @@ DB unavailable:
 ```http
 HTTP/1.1 503 Service Unavailable
 Content-Type: application/json
+Content-Language: en-AU
 Retry-After: 30
+Cache-Control: no-store
 ```
 
 ```json
@@ -1087,7 +1092,9 @@ Active IntentSpecification cannot be confirmed:
 ```http
 HTTP/1.1 503 Service Unavailable
 Content-Type: application/json
+Content-Language: en-AU
 Retry-After: 30
+Cache-Control: no-store
 ```
 
 ```json

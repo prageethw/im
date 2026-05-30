@@ -134,8 +134,8 @@ Header classification guidance:
 
 | **IC MS response area** | **X-TMF-Native** | **X-Platform-Extension** | **Reason** |
 |---|---:|---:|---|
-| `POST /intent`, `GET /intent`, `GET /intent/{id}`, `PATCH /intent/{id}` using strict TMF-compatible behaviour | `true` | `false` | TMF-compatible Intent resource operations. |
-| `POST /intent` or `PATCH /intent/{id}` using `submit` Draft/admission control | `false` | `true` | `submit` is an IC MS request-control extension. |
+| `POST /intent`, `GET /intent`, `GET /intent/{id}`, `PATCH /intent/{id}` using strict TMF-compatible behaviour without `submit` Draft/admission-control semantics | `true` | `false` | TMF-compatible Intent resource operations. |
+| `POST /intent` or `PATCH /intent/{id}` using `submit` Draft/admission-control semantics | `false` | `true` | `submit` is an IC MS request-control extension. |
 | `PUT /intent/{id}` | `false` | `true` | Deterministic full replacement is a platform extension. |
 | `DELETE /intent/{id}` termination/retention response | `false` | `true` | The verb is TMF-compatible, but retained termination behaviour is platform-specific. |
 | `GET /intent/{intentId}/intentReport`, `GET /intent/{intentId}/intentReport/{id}` | `true` | `false` | TMF-aligned read-only report projection. |
@@ -662,8 +662,7 @@ Last-Modified: Sat, 18 Apr 2026 02:00:00 GMT
     },
     "partialUpdate": {
       "href": "/intentManagement/v5/intent/INT-HOSP-2026-001",
-      "method": "PATCH",
-      "warning": "PATCH is supported for compatibility but PUT is preferred for deterministic full updates."
+      "method": "PATCH"
     }
   }
 }
@@ -1001,6 +1000,7 @@ If-Match: "intent-INT-HOSP-2026-001-v3"
 ```http
 HTTP/1.1 200 OK
 Content-Type: application/json
+Content-Language: en-AU
 X-TMF-Native: false
 X-Platform-Extension: true
 Content-Location: /intentManagement/v5/intent/INT-HOSP-2026-001
@@ -1071,8 +1071,7 @@ ETag: "intent-INT-HOSP-2026-001-v4"
     },
     "partialUpdate": {
       "href": "/intentManagement/v5/intent/INT-HOSP-2026-001",
-      "method": "PATCH",
-      "warning": "PATCH is supported for compatibility but PUT is preferred for deterministic full updates."
+      "method": "PATCH"
     }
   }
 }
@@ -1151,6 +1150,7 @@ If-Match: "intent-INT-HOSP-2026-001-v4"
 ```http
 HTTP/1.1 200 OK
 Content-Type: application/json
+Content-Language: en-AU
 X-TMF-Native: false
 X-Platform-Extension: true
 Content-Location: /intentManagement/v5/intent/INT-HOSP-2026-001
@@ -1221,8 +1221,7 @@ ETag: "intent-INT-HOSP-2026-001-v5"
     },
     "partialUpdate": {
       "href": "/intentManagement/v5/intent/INT-HOSP-2026-001",
-      "method": "PATCH",
-      "warning": "PATCH is supported for compatibility but PUT is preferred for deterministic full updates."
+      "method": "PATCH"
     }
   }
 }
@@ -1867,6 +1866,7 @@ Content-Language: en-AU
 X-TMF-Native: true
 X-Platform-Extension: false
 Retry-After: 30
+Cache-Control: no-store
 ```
 
 ```json
@@ -1889,6 +1889,7 @@ Content-Language: en-AU
 X-TMF-Native: true
 X-Platform-Extension: false
 Retry-After: 30
+Cache-Control: no-store
 ```
 
 ```json
@@ -1923,6 +1924,28 @@ X-Platform-Extension: false
 ```
 
 ---
+
+### Runtime update resource conflict:
+
+```http
+HTTP/1.1 409 Conflict
+Content-Type: application/json
+Content-Language: en-AU
+X-TMF-Native: true
+X-Platform-Extension: false
+Cache-Control: no-store
+```
+
+```json
+{
+  "code": "RESOURCE_CONFLICT",
+  "reason": "INTENT_PROJECTION_CONFLICT",
+  "message": "Runtime update conflicts with the current Intent projection state.",
+  "status": 409,
+  "referenceError": "https://mycsp.com.au/errors/RESOURCE_CONFLICT",
+  "@type": "Error"
+}
+```
 
 ### Submitted Intent PATCH not allowed:
 
@@ -1962,6 +1985,28 @@ X-Platform-Extension: true
   "message": "Intent attributes can be replaced with PUT only while the Intent is in Draft. Create a new Draft authoring record for material changes after submission.",
   "status": 409,
   "referenceError": "https://mycsp.com.au/errors/INVALID_STATE_TRANSITION",
+  "@type": "Error"
+}
+```
+
+### Internal server error:
+
+```http
+HTTP/1.1 500 Internal Server Error
+Content-Type: application/json
+Content-Language: en-AU
+X-TMF-Native: true
+X-Platform-Extension: false
+Cache-Control: no-store
+```
+
+```json
+{
+  "code": "INTERNAL_ERROR",
+  "reason": "UNEXPECTED_SERVER_ERROR",
+  "message": "An unexpected server error occurred while processing the request.",
+  "status": 500,
+  "referenceError": "https://mycsp.com.au/errors/INTERNAL_ERROR",
   "@type": "Error"
 }
 ```

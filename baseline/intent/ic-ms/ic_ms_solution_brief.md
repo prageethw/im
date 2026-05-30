@@ -585,6 +585,7 @@ External IC MS events use a TMF-aligned event resource shape.
 | `priority` | Event priority. |
 | `title` | Human-readable event title. |
 | `event` | Event payload wrapper containing `intent` or `intentReport`. |
+| `changedAttributes` | Optional curated attribute-delta array used by attribute-value-change events only; must not expose raw telemetry, internal optimiser scoring, callback payloads, or implementation-only detail. |
 | `reportingSystem` | IC MS reporting system identity. |
 | `source` | IC MS source identity. |
 | `@type` | Event type. |
