@@ -8,33 +8,13 @@ skinparam ArrowColor #424242
 skinparam RectangleBorderColor #424242
 
 rectangle "TMF921 IntentSpecification\nbase resource model" as TMF #EEF2FF
-
 rectangle "ID MS proposed consumer profile\n\nTMF-aligned, not TMF-minimal" as PROFILE #E8F5E9
 
 TMF --> PROFILE : proposed stricter profile\nfor ID MS consumers
 
+rectangle "Attribute classification\n\nTMF-aligned base attributes\n- name\n- description\n- isBundle\n- validFor\n- relatedParty\n- specCharacteristic\n- expressionSpecification\n- targetEntitySchema\n- @type, @baseType, @schemaLocation\n\nID MS extended attributes\n- specKey\n- intentBehaviour\n- intentLayer\n- schemaHash where governed" as EXT_ATTR #F3E5F5
 
-rectangle "Attribute classification
-
-TMF-aligned base attributes
-- name
-- description
-- isBundle
-- validFor
-- relatedParty
-- specCharacteristic
-- expressionSpecification
-- targetEntitySchema
-- @type, @baseType, @schemaLocation
-
-ID MS extended attributes
-- specKey
-- intentBehaviour
-- intentLayer
-- schemaHash where governed" as EXT_ATTR #F3E5F5
-
-PROFILE --> EXT_ATTR : calls out base and
-extended attributes
+PROFILE --> EXT_ATTR : calls out base and\nextended attributes
 
 rectangle "Consumer-submitted DRAFT create profile" as DRAFT_CREATE #FFF8E1 {
   rectangle "Minimum mandatory\n\n- specKey\n- name\n- @type\n- @baseType" as DRAFT_MIN
