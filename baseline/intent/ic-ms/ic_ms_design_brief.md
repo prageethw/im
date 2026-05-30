@@ -691,7 +691,7 @@ Retired
 
 | **Rule** | **Baseline** |
 |---|---|
-| Initial syntactic success | Intent/version starts as `Acknowledged` |
+| Initial schema/request-shape success | Intent/version starts as `Acknowledged` |
 | Semantic/policy rejection | Moves to `Rejected` |
 | Fulfilment/apply starts | Moves to `InProgress` |
 | Assurance confirms active | Moves to `Active` |
@@ -785,7 +785,7 @@ skinparam note {
   FontColor #111827
 }
 
-[*] --> Acknowledged : version created /\nsyntactically admitted
+[*] --> Acknowledged : version created /\nschema and request-shape admitted
 Acknowledged --> Rejected : semantic and policy\nrejection
 Acknowledged --> InProgress : fulfilment starts
 InProgress --> Active : apply + assurance\nconfirmed
