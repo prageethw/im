@@ -1,4 +1,4 @@
-# TAF - Decision Proposal IntentSpecification, Minimum data requirements.
+# IntentSpecification consumer profile proposal
 
 | **Document status** | **Value** |
 | --- | --- |
@@ -16,7 +16,7 @@
 - [4. Base and extended attribute classification](#4-base-and-extended-attribute-classification)
 - [5. Consumer-submitted DRAFT creation profile](#5-consumer-submitted-draft-creation-profile)
 - [6. Consumer-submitted ACTIVE publication profile](#6-consumer-submitted-active-publication-profile)
-- [7. Server-managed and prohibited consumer fields](#7-server-managed-and-prohibited-consumer-fields)
+- [7. Consumer and ID MS ownership summary](#7-consumer-and-id-ms-ownership-summary)
 - [8. Field classification summary](#8-field-classification-summary)
 - [9. Minimal DRAFT create example](#9-minimal-draft-create-example)
 - [10. Strongly recommended DRAFT create example](#10-strongly-recommended-draft-create-example)
@@ -58,16 +58,16 @@ This proposal is about `IntentSpecification` consumer submissions, not runtime `
 
 ## 3. Consumer identity submission model:
 
-For `POST /intentSpecification`, consumers submit `specKey`; they do not submit `id`, `draftId`, or official `version`.
+For `POST /intentSpecification`, consumers submit `specKey` to identify the logical specification they want to create or evolve. ID MS owns the generated identifiers and lifecycle metadata.
 
 The proposed model is:
 
 | **Identifier** | **Owner** | **Purpose** |
 | --- | --- | --- |
 | `specKey` | Consumer-submitted | Logical specification key used by the consumer to create or evolve a specification family. |
-| `id` | Server-assigned by ID MS | Stable official `IntentSpecification` lineage key. Consumers must not provide it in `POST /intentSpecification`. |
-| `draftId` | Server-assigned by ID MS | Mutable DRAFT candidate key. Consumers must not provide it in `POST /intentSpecification`. |
-| `version` | Server-assigned by ID MS on ACTIVE publication | Official public contract version. Consumers must not provide an official version in DRAFT creation. |
+| `id` | Server-assigned by ID MS | Stable official `IntentSpecification` lineage key. |
+| `draftId` | Server-assigned by ID MS | Mutable DRAFT candidate key. |
+| `version` | Server-assigned by ID MS on ACTIVE publication | Official public contract version. |
 
 When a consumer creates a DRAFT candidate:
 
@@ -78,8 +78,6 @@ When a consumer creates a DRAFT candidate:
 ID MS assigns a new `draftId` for the mutable candidate. ID MS assigns the official public `version` only when the DRAFT candidate is published as ACTIVE.
 
 This keeps the consumer-submitted create profile simple while preserving server control of official identity, draft candidate identity, and published version identity.
-
-![view](id_ms_spec_profile_decision.svg)
 
 ## 4. Base and extended attribute classification:
 
@@ -194,23 +192,21 @@ Before an `IntentSpecification` can be published as ACTIVE, the consumer-submitt
 | `entitySpecRelationship` | Optional | Useful for relationships to other entity specifications where required. |
 | `intentSpecRelationship` | Optional | Useful for relationships to other intent specifications where required. |
 
-## 7. Server-managed and prohibited consumer fields:
+## 7. Consumer and ID MS ownership summary:
 
-Consumers must not provide server-managed fields in DRAFT create requests.
+The consumer-submitted profile stays simple. Consumers provide the authoring and contract values needed to create or publish an `IntentSpecification`. ID MS owns generated identity, lifecycle, version, timestamp, link, and response metadata.
 
-| **Field** | **Rule** |
-| --- | --- |
-| `id` | Server-assigned official lineage key. Consumer must not provide it on create. ID MS resolves or creates it from the submitted `specKey` according to platform governance. |
-| `href` | Server-generated canonical URL. Consumer must not provide it on create. |
-| `draftId` | Server-assigned DRAFT candidate identifier. Consumer must not provide it on create. |
-| `version` | Official public version is assigned by ID MS only on ACTIVE publication. Consumer must not provide an official version in DRAFT create. Any version indicator during authoring is non-authoritative. |
-| `lifecycleStatus` | Server-managed lifecycle state. Consumer must not set it on create. |
-| `creationDate` | Server-managed timestamp. |
-| `lastUpdate` | Server-managed timestamp. |
-| `statusChangeDate` | Server-managed timestamp. |
-| `_links` | Server-generated navigation and operation affordances. |
-| `ETag` | Response header, not a request body field. |
-| `Location` | Response header, not a request body field. |
+| **Area** | **Owner** | **Rule** |
+| --- | --- | --- |
+| `specKey` | Consumer-submitted | Logical specification key used to create or evolve an `IntentSpecification`. |
+| Authoring and contract values | Consumer-submitted | Includes fields such as `name`, `description`, `isBundle`, `validFor`, `relatedParty`, `specCharacteristic`, `expressionSpecification`, `targetEntitySchema`, `intentBehaviour`, and `intentLayer` where applicable. |
+| `id` | ID MS-generated | Official `IntentSpecification` lineage key resolved or created from the submitted `specKey` according to platform governance. |
+| `draftId` | ID MS-generated | Mutable DRAFT candidate key and later provenance key. |
+| `version` | ID MS-assigned | Official public contract version assigned when the DRAFT candidate is published as ACTIVE. |
+| `lifecycleStatus` | ID MS-managed | Lifecycle state controlled by ID MS. |
+| `href`, `_links`, timestamps, `ETag`, and `Location` | ID MS-generated | Resource navigation, timestamps, concurrency metadata, and response metadata generated by ID MS. |
+
+This avoids a long negative list of prohibited fields while keeping the ownership boundary clear.
 
 ## 8. Field classification summary:
 

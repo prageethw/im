@@ -22,9 +22,9 @@ rectangle "Consumer-submitted DRAFT create profile" as DRAFT_CREATE #FFF8E1 {
   rectangle "Optional classification\n\n- intentBehaviour\n- intentLayer\n\nClassification only.\nNot used by ID MS for runtime\ndecisioning, validation, admission\ncontrol, or behavioural enforcement." as DRAFT_OPT
 }
 
-rectangle "Server-managed identity\nand version fields" as SERVER #E3F2FD {
-  rectangle "Consumer must not send\nin POST request\n\n- id\n- href\n- draftId\n- official version\n- lifecycleStatus\n- timestamps\n- _links\n- ETag\n- Location" as PROHIBITED
-  rectangle "ID MS assigns\n\nspecKey = consumer-submitted logical key\nid = server-assigned official lineage key\ndraftId = server-assigned DRAFT candidate key\nversion = server-assigned on ACTIVE publication" as SERVER_ASSIGN
+rectangle "Consumer and ID MS ownership" as SERVER #E3F2FD {
+  rectangle "Ownership boundary\n\nConsumer submits authoring\nand contract values.\n\nID MS owns generated\nidentity, lifecycle, version,\ntimestamp, link, and response\nmetadata." as OWNERSHIP
+  rectangle "Identity model\n\nspecKey = consumer-submitted logical key\nid = server-assigned official lineage key\ndraftId = server-assigned DRAFT candidate key\nversion = server-assigned on ACTIVE publication" as SERVER_ASSIGN
 }
 
 rectangle "New version handling" as VERSIONING #E0F2F1 {
