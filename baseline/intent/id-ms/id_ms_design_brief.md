@@ -750,7 +750,7 @@ Lineage reuse across retired-only specifications is not assumed by default. Rein
 
 Activation should only be allowed when:
 
-- the specification is syntactically valid
+- the specification is schema and structurally valid
 - the `expressionSpecification` is valid
 - required `specCharacteristic` entries are present
 - `targetEntitySchema` references a valid governed expression-value schema artefact
@@ -921,7 +921,7 @@ Baseline statement:
 
 ### IC MS cache behaviour:
 
-IC MS may use a cached `ACTIVE` `IntentSpecification` for runtime `Intent` syntactic validation only when:
+IC MS may use a cached `ACTIVE` `IntentSpecification` for runtime `Intent` schema and request-shape validation only when:
 
 - the cached specification is within the configured freshness window
 - the cached specification lifecycle is `ACTIVE`

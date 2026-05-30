@@ -1224,7 +1224,7 @@ Use `PATCH` only where a TMF-compatible client cannot use `PUT` or where a tight
 ### Request
 
 ```http
-PATCH /intentManagement/v5/intentSpecification/draft/id-draft-hospital-surgical-slice-a?fields=id,href,specKey,name,description,version,lifecycleStatus,isBundle,validFor,relatedParty,@type,@baseType
+PATCH /intentManagement/v5/intentSpecification/draft/id-draft-hospital-surgical-slice-a?fields=id,href,specKey,name,description,lifecycleStatus,isBundle,validFor,relatedParty,@type,@baseType
 Content-Type: application/merge-patch+json
 Accept: application/json
 If-Match: "id-draft-hospital-surgical-slice-a-r1"
