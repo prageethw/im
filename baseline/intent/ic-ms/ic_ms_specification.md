@@ -11,7 +11,7 @@
 | Base path | `/intentManagement/v5` |
 | Primary resource | `Intent` |
 | Secondary resource | `IntentReport` |
-| Primary responsibility | TMF-compliant runtime `Intent` controller, schema and request-shape admission, lifecycle/status projection, and external runtime intent events |
+| Primary responsibility | TMF-compliant runtime `Intent` controller, syntactic admission, lifecycle/status projection, and external runtime intent events |
 
 **TMF deployment path note:**
 
@@ -142,8 +142,6 @@ Header classification guidance:
 | Strict `/hub` create/delete responses | `true` | `false` | Strict TMF hub route family. |
 | Domain-scoped `/intent/hub` responses | `false` | `true` | Domain-owned hub route family is a platform extension. |
 
-When `submit` is omitted and the default create-admission behaviour is used without extension fields, the response may be classified as TMF-native where no platform-extension semantics are invoked. When `submit` is supplied, Draft behaviour is used, or admission control depends on the `submit` request-control extension, classify the response as a platform extension.
-
 Example TMF-native response headers:
 
 ```http
@@ -264,7 +262,6 @@ Required submitted admission reference:
 {
   "intentSpecification": {
     "id": "ispec-hss-001",
-    "specKey": "hospital-surgical-slice-spec",
     "version": "1.20"
   },
   "expression": {
@@ -283,7 +280,7 @@ Unsupported admission request because `intentSpecification.id` is missing:
 }
 ```
 
-IC MS must not resolve `IntentSpecification` by IRI alone, `specKey`, name, or inferred payload shape alone for submitted runtime admission.
+IC MS must not resolve `IntentSpecification` by IRI alone, family, key, name, or inferred payload shape alone for submitted runtime admission.
 
 Baseline:
 - submitted admission requires `intentSpecification.id`
@@ -350,13 +347,9 @@ While `lifecycleStatus = Draft`, all attributes accepted by the `PUT` / `PATCH` 
 
 Response/projection fields such as `href`, `version`, `lifecycleStatus`, `statusReason`, `statusChangeDate`, `activeVersion`, and `_links` are not writable request fields unless explicitly documented otherwise.
 
-`isBundle` is optional in create and update request bodies. If omitted on create, IC MS defaults `isBundle` to `false`. Persisted Intent responses include the server-resolved `isBundle` value.
-
-Once an Intent leaves `Draft`, general attribute update on that submitted version is not allowed. Material changes after submission require creating a new Draft authoring record, editing that Draft version, and explicitly submitting it with `submit: true`.
+Once an Intent leaves `Draft`, general attribute update on that submitted version is not allowed. Material changes after submission require creating a new Draft authoring record, editing that Draft authoring record, and explicitly submitting it with `submit: true`.
 
 Draft Intents are authoring records only. They are not admitted, optimised, assured, sent to downstream change execution, or used to drive `activeVersion`.
-
-Draft Intents are not assigned a permanent runtime version. Draft authoring revision is represented by ETag. A permanent runtime version is assigned only when the Draft is submitted and admitted.
 
 ### Intent version transition rules:
 
@@ -520,9 +513,9 @@ Accept: application/json
   "submit": true,
   "intentSpecification": {
     "id": "ispec-hss-001",
-    "specKey": "hospital-surgical-slice-spec",
     "version": "1.20"
   },
+  "isBundle": false,
   "priority": "critical",
   "relatedParty": [
     {
@@ -583,8 +576,8 @@ HTTP/1.1 201 Created
 Location: /intentManagement/v5/intent/INT-HOSP-2026-001
 Content-Type: application/json
 Content-Language: en-AU
-X-TMF-Native: false
-X-Platform-Extension: true
+X-TMF-Native: true
+X-Platform-Extension: false
 ETag: "intent-INT-HOSP-2026-001-v1"
 Last-Modified: Sat, 18 Apr 2026 02:00:00 GMT
 ```
@@ -603,10 +596,10 @@ Last-Modified: Sat, 18 Apr 2026 02:00:00 GMT
   "statusChangeDate": "2026-04-18T12:00:00+10:00",
   "intentSpecification": {
     "id": "ispec-hss-001",
-    "specKey": "hospital-surgical-slice-spec",
     "version": "1.20",
     "href": "/intentManagement/v5/intentSpecification/ispec-hss-001?version=1.20"
   },
+  "isBundle": false,
   "priority": "critical",
   "relatedParty": [
     {
@@ -678,7 +671,7 @@ Last-Modified: Sat, 18 Apr 2026 02:00:00 GMT
 A caller can create an Intent as a draft by setting `submit: false`. A Draft Intent is persisted for authoring only and is not admitted, optimised, assured, or sent to downstream change execution.
 
 ```http
-POST /intentManagement/v5/intent?fields=id,href,name,humanExpression,submit,lifecycleStatus,statusReason,statusChangeDate,@type,@baseType
+POST /intentManagement/v5/intent?fields=id,href,name,humanExpression,submit,version,lifecycleStatus,statusReason,statusChangeDate,@type,@baseType
 Content-Type: application/json
 Accept: application/json
 ```
@@ -698,8 +691,8 @@ HTTP/1.1 201 Created
 Location: /intentManagement/v5/intent/INT-HOSP-2026-001
 Content-Type: application/json
 Content-Language: en-AU
-X-TMF-Native: false
-X-Platform-Extension: true
+X-TMF-Native: true
+X-Platform-Extension: false
 ETag: "intent-INT-HOSP-2026-001-v1"
 ```
 
@@ -710,10 +703,10 @@ ETag: "intent-INT-HOSP-2026-001-v1"
   "name": "Sydney Hospital Surgical Connection Intent",
   "humanExpression": "I need a surgical connection in Sydney Hospital with latency less than or equal to 10 ms.",
   "submit": false,
+  "version": "v1",
   "lifecycleStatus": "Draft",
   "statusReason": "Intent saved as draft and not submitted for admission.",
   "statusChangeDate": "2026-04-18T12:00:00+10:00",
-  "isBundle": false,
   "@type": "Intent",
   "@baseType": "Entity"
 }
@@ -726,8 +719,6 @@ If `submit` is omitted on create, IC MS treats the request as submitted for admi
 If `submit: false` is supplied, IC MS persists the Intent as `Draft` and does not emit `IntentValidatedEvent`, optimise, assure, or send the Intent to downstream change execution.
 
 If `submit: true` is supplied, IC MS applies the runtime admission profile. IC MS emits `IntentValidatedEvent` after schema and request-shape validation succeeds and the external Intent projection is persisted.
-
-If `isBundle` is omitted on create, IC MS defaults it to `false`. If supplied, it must be boolean. Persisted responses include the server-resolved value.
 
 `IntentValidatedEvent` is a state/progress event, not a point-to-point command for a specific consumer.
 
@@ -776,7 +767,6 @@ Cache-Control: private, max-age=60
     "statusChangeDate": "2026-04-18T12:20:00+10:00",
     "intentSpecification": {
       "id": "ispec-hss-001",
-      "specKey": "hospital-surgical-slice-spec",
       "version": "1.20"
     },
     "@type": "Intent",
@@ -842,7 +832,6 @@ Cache-Control: private, max-age=300
   "statusChangeDate": "2026-04-18T12:20:00+10:00",
   "intentSpecification": {
     "id": "ispec-hss-001",
-    "specKey": "hospital-surgical-slice-spec",
     "version": "1.20",
     "href": "/intentManagement/v5/intentSpecification/ispec-hss-001?version=1.20"
   },
@@ -951,9 +940,9 @@ If-Match: "intent-INT-HOSP-2026-001-v3"
   "submit": false,
   "intentSpecification": {
     "id": "ispec-hss-001",
-    "specKey": "hospital-surgical-slice-spec",
     "version": "1.20"
   },
+  "isBundle": false,
   "priority": "critical",
   "relatedParty": [
     {
@@ -1009,8 +998,8 @@ If-Match: "intent-INT-HOSP-2026-001-v3"
 ```http
 HTTP/1.1 200 OK
 Content-Type: application/json
-X-TMF-Native: false
-X-Platform-Extension: true
+X-TMF-Native: true
+X-Platform-Extension: false
 Content-Location: /intentManagement/v5/intent/INT-HOSP-2026-001
 ETag: "intent-INT-HOSP-2026-001-v4"
 ```
@@ -1028,7 +1017,6 @@ ETag: "intent-INT-HOSP-2026-001-v4"
   "statusChangeDate": "2026-04-18T12:00:00+10:00",
   "intentSpecification": {
     "id": "ispec-hss-001",
-    "specKey": "hospital-surgical-slice-spec",
     "version": "1.20",
     "href": "/intentManagement/v5/intentSpecification/ispec-hss-001?version=1.20"
   },
@@ -1121,7 +1109,6 @@ If-Match: "intent-INT-HOSP-2026-001-v4"
   "submit": false,
   "intentSpecification": {
     "id": "ispec-hss-001",
-    "specKey": "hospital-surgical-slice-spec",
     "version": "1.20"
   },
   "expression": {
@@ -1161,8 +1148,8 @@ If-Match: "intent-INT-HOSP-2026-001-v4"
 ```http
 HTTP/1.1 200 OK
 Content-Type: application/json
-X-TMF-Native: false
-X-Platform-Extension: true
+X-TMF-Native: true
+X-Platform-Extension: false
 Content-Location: /intentManagement/v5/intent/INT-HOSP-2026-001
 ETag: "intent-INT-HOSP-2026-001-v5"
 ```
@@ -1180,7 +1167,6 @@ ETag: "intent-INT-HOSP-2026-001-v5"
   "statusChangeDate": "2026-04-18T12:00:00+10:00",
   "intentSpecification": {
     "id": "ispec-hss-001",
-    "specKey": "hospital-surgical-slice-spec",
     "version": "1.20",
     "href": "/intentManagement/v5/intentSpecification/ispec-hss-001?version=1.20"
   },
@@ -1253,11 +1239,6 @@ If `submit: true` is supplied, IC MS validates the runtime admission profile and
 
 Once an Intent leaves `Draft`, partial update on that submitted version is not allowed. Material changes require creating a new Draft authoring record.
 
-
-### New Draft authoring record after submission:
-
-Material changes after a submitted Intent version require a new Draft authoring record. The exact platform extension route or operation for creating that new Draft authoring record is reserved and will be finalised in the IC MS API design. `PUT` and `PATCH` must not mutate an admitted runtime version.
-
 ---
 
 ## 9. Terminate Intent:
@@ -1276,8 +1257,8 @@ If-Match: "intent-INT-HOSP-2026-001-v5"
 HTTP/1.1 202 Accepted
 Content-Type: application/json
 Content-Language: en-AU
-X-TMF-Native: false
-X-Platform-Extension: true
+X-TMF-Native: true
+X-Platform-Extension: false
 Location: /intentManagement/v5/intent/INT-HOSP-2026-001
 ETag: "intent-INT-HOSP-2026-001-v6"
 ```
@@ -1442,10 +1423,30 @@ Cache-Control: private, max-age=300
       },
       "targetSummary": {
         "targets": [
-          { "name": "maxLatencyMs", "target": 10, "observedValue": 8, "unit": "ms" },
-          { "name": "minAvailabilityPercent", "target": 99.99, "observedValue": 99.995, "unit": "percent" },
-          { "name": "maxJitterMs", "target": 2, "observedValue": 1.5, "unit": "ms" },
-          { "name": "maxPacketLossPercent", "target": 0.01, "observedValue": 0.005, "unit": "percent" }
+          {
+            "name": "maxLatencyMs",
+            "target": 10,
+            "observedValue": 8,
+            "unit": "ms"
+          },
+          {
+            "name": "minAvailabilityPercent",
+            "target": 99.99,
+            "observedValue": 99.995,
+            "unit": "percent"
+          },
+          {
+            "name": "maxJitterMs",
+            "target": 2,
+            "observedValue": 1.5,
+            "unit": "ms"
+          },
+          {
+            "name": "maxPacketLossPercent",
+            "target": 0.01,
+            "observedValue": 0.005,
+            "unit": "percent"
+          }
         ]
       },
       "observationSummary": {
@@ -1478,9 +1479,15 @@ Cache-Control: private, max-age=300
   "@type": "IntentReport",
   "@baseType": "Entity",
   "_links": {
-    "self": { "href": "/intentManagement/v5/intent/INT-HOSP-2026-001/intentReport/IR-INT-HOSP-2026-001-003" },
-    "intent": { "href": "/intentManagement/v5/intent/INT-HOSP-2026-001" },
-    "list": { "href": "/intentManagement/v5/intent/INT-HOSP-2026-001/intentReport" }
+    "self": {
+      "href": "/intentManagement/v5/intent/INT-HOSP-2026-001/intentReport/IR-INT-HOSP-2026-001-003"
+    },
+    "intent": {
+      "href": "/intentManagement/v5/intent/INT-HOSP-2026-001"
+    },
+    "list": {
+      "href": "/intentManagement/v5/intent/INT-HOSP-2026-001/intentReport"
+    }
   }
 }
 ```
@@ -1556,8 +1563,8 @@ Accept: application/json
 HTTP/1.1 201 Created
 Location: /intentManagement/v5/intent/hub/sub-intent-001
 Content-Type: application/json
-X-TMF-Native: false
-X-Platform-Extension: true
+X-TMF-Native: true
+X-Platform-Extension: false
 ETag: "subscription-sub-intent-001-v1"
 ```
 
@@ -1668,8 +1675,8 @@ Cache-Control: no-cache
 ```http
 HTTP/1.1 200 OK
 Content-Type: application/json
-X-TMF-Native: false
-X-Platform-Extension: true
+X-TMF-Native: true
+X-Platform-Extension: false
 ETag: "subscription-sub-intent-001-v1"
 Cache-Control: private, max-age=300
 ```
@@ -1702,8 +1709,8 @@ If-Match: "subscription-sub-intent-001-v1"
 ### Success response:
 
 ```http
-X-TMF-Native: false
-X-Platform-Extension: true
+X-TMF-Native: true
+X-Platform-Extension: false
 HTTP/1.1 204 No Content
 ```
 
@@ -1750,7 +1757,6 @@ X-Platform-Extension: false
   "@type": "Error"
 }
 ```
-
 
 ### Expression IRI mismatch:
 
@@ -1900,7 +1906,7 @@ IC MS emits external TMF-aligned resource events for `Intent` projection changes
 | `IntentStatusChangeEvent` | External lifecycle/status projection changed |
 | `IntentDeleteEvent` | Runtime Intent termination accepted; retained projection moves to `Terminated` |
 
-These are external projection and resource events only.
+These are external projection/resource events only.
 
 They must not expose raw telemetry, raw optimiser decisions, raw `t7.knowledge plane` data, raw callback payloads, internal candidate scoring, or internal Kafka event payloads.
 
@@ -1927,7 +1933,6 @@ They must not expose raw telemetry, raw optimiser decisions, raw `t7.knowledge p
       "lifecycleStatus": "Acknowledged",
       "intentSpecification": {
         "id": "ispec-hss-001",
-        "specKey": "hospital-surgical-slice-spec",
         "version": "1.20"
       },
       "@type": "Intent",
@@ -1965,7 +1970,7 @@ They must not expose raw telemetry, raw optimiser decisions, raw `t7.knowledge p
       "id": "INT-HOSP-2026-001",
       "href": "/intentManagement/v5/intent/INT-HOSP-2026-001",
       "name": "Sydney Hospital Surgical Connection Intent",
-          "lifecycleStatus": "Acknowledged",
+      "lifecycleStatus": "Acknowledged",
       "@type": "Intent",
       "@baseType": "Entity"
     },
@@ -2049,7 +2054,7 @@ They must not expose raw telemetry, raw optimiser decisions, raw `t7.knowledge p
       "id": "INT-HOSP-2026-001",
       "href": "/intentManagement/v5/intent/INT-HOSP-2026-001",
       "name": "Sydney Hospital Surgical Connection Intent",
-          "lifecycleStatus": "Terminated",
+      "lifecycleStatus": "Terminated",
       "@type": "Intent",
       "@baseType": "Entity"
     }
@@ -2241,11 +2246,11 @@ External hub notifications do not use these Kafka headers. They are HTTP webhook
 - `GET /intent/{id}` returns current projected Intent state, not a full internal version aggregate.
 - `GET /intent` lists current projected Intent states for retained Intent IDs.
 - Submitted runtime create and update admission requires both mandatory `intentSpecification.id` and mandatory `expression.iri`.
-- `intentSpecification.id` selects the exact active platform-managed specification.
+- `intentSpecification.id` selects the exact `ACTIVE` platform-managed specification.
 - `expression.iri` identifies the semantic/expression contract and must match the selected specification's `expressionSpecification.iri`.
 - IC MS does not admit by IRI-only resolution.
 - `intentSpecification.specKey` and `intentSpecification.name` are optional hints only and are not authoritative runtime validation keys.
-- IC MS must not resolve `IntentSpecification` by `specKey`, name, or inferred payload shape alone.
+- IC MS must not resolve `IntentSpecification` by family, key, name, or inferred payload shape alone.
 
 Baseline:
 - `expression.iri` is mandatory.
@@ -2258,7 +2263,6 @@ Baseline:
 - If `submit` is omitted on initial create, IC MS treats the request as submitted for admission.
 - If an Intent is already persisted with `submit: false`, later omission of `submit` preserves Draft handling and must not automatically submit the Intent.
 - External consumers must not set or patch `lifecycleStatus`; lifecycle is assigned, transitioned, and projected by the intent management entity.
-- `isBundle` is optional in create and update requests; omitted create requests default to `false`, and persisted responses include the server-resolved value.
 - `PUT /intent/{id}` is a platform extension for deterministic full replacement and is allowed only while the current Intent/Draft projection is in `Draft`.
 - `PATCH /intent/{id}` is supported for TMF compatibility and is allowed only while the current Intent/Draft projection is in `Draft`.
 - Once an Intent leaves `Draft`, material changes require creating a new Draft authoring record.
@@ -2305,7 +2309,6 @@ IC MS accepts and projects runtime Intent resources using the external runtime e
   "submit": true,
   "intentSpecification": {
     "id": "ispec-hss-001",
-    "specKey": "hospital-surgical-slice-spec",
     "version": "1.20"
   },
   "expression": {
@@ -2359,11 +2362,9 @@ IC MS accepts and projects runtime Intent resources using the external runtime e
     "statusReason": "Intent request passed IC MS admission validation and was admitted for downstream processing.",
     "intentSpecification": {
       "id": "ispec-hss-001",
-      "specKey": "hospital-surgical-slice-spec",
       "version": "1.20"
     },
     "expression": {
-      "iri": "https://mycsp.com.au/tio/hospital-surgical-slice/v1.0",
       "context": {
         "targets": {
           "maxLatencyMs": 10,
@@ -2398,7 +2399,6 @@ IC MS accepts and projects runtime Intent resources using the external runtime e
       },
       "intentSpecification": {
         "id": "ispec-hss-001",
-        "specKey": "hospital-surgical-slice-spec",
         "version": "1.20",
         "href": "/intentManagement/v5/intentSpecification/ispec-hss-001?version=1.20"
       }
@@ -2413,5 +2413,5 @@ IC MS accepts and projects runtime Intent resources using the external runtime e
 - `context` contains only `targets`, `constraints`, and `preferences`.
 - `location`, `serviceType`, and `serviceClass` sit under `context.constraints`.
 - `IntentValidatedEvent.body.expression` carries the same canonical semantic buckets internally without the external TMF expression wrapper.
-- IC MS validates schema and request shape against the active ID MS `expressionSpecification` and `targetEntitySchema`.
+- IC MS validates syntactic shape against the active ID MS `expressionSpecification` and `targetEntitySchema`.
 - IC MS does not perform semantic/KP validation, optimisation, change execution, or assurance.
