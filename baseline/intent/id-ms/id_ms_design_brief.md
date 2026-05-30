@@ -550,6 +550,25 @@ ETag: "subscription-sub-001-v1"
 Cache-Control: private, max-age=300
 ```
 
+```json
+{
+  "id": "sub-001",
+  "href": "/intentManagement/v5/intentSpecification/hub/sub-001",
+  "callback": "https://consumer.example.com/listener/intentSpecification/events",
+  "query": "eventType=IntentSpecificationStatusChangeEvent",
+  "@type": "EventSubscription",
+  "_links": {
+    "self": {
+      "href": "/intentManagement/v5/intentSpecification/hub/sub-001"
+    },
+    "delete": {
+      "href": "/intentManagement/v5/intentSpecification/hub/sub-001",
+      "method": "DELETE"
+    }
+  }
+}
+```
+
 ## Hub delete subscription:
 
 ```http
