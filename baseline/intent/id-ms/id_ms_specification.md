@@ -1929,14 +1929,13 @@ TMF921 examples contain the misspelled `timeOcurred`; this baseline intentionall
 - `characteristicValueSpecification` is used only for defaults, examples, or constrained allowed values where useful.
 - Numeric SLA values in `characteristicValueSpecification` are illustrative/default guidance only, not semantic enforcement.
 - ID MS validates resource shape and syntax.
-- II MS and knowledge sources own semantic/policy validation.
+- II MS and knowledge sources own semantic and policy validation.
 - IA MS owns runtime assurance.
 - `timeWindow.startDateTime` is required when `timeWindow` is present.
 - `priority` values are `critical`, `high`, and `standard`.
 - `intentBehaviour` and `intentLayer` are optional definition-time metadata fields for catalogue classification, governance visibility, and external consumer understanding.
 - `intentBehaviour` and `intentLayer` are not used by ID MS for behavioural enforcement, runtime decisioning, validation, or admission control.
-- `intentBehaviour.fulfilmentMode` values are `IMMEDIATE`, `LONGRUNNING`, and `CONTINUOUS`; `CONTINUOUS` means downstream systems may operate in a closed-loop manner to maintain the intent objective over time and does not imply mutation of the submitted runtime Intent instance.
-- `CONTINUOUS` does not imply modification of the submitted runtime Intent instance.
+- `intentBehaviour.fulfilmentMode` values are `IMMEDIATE`, `LONGRUNNING`, and `CONTINUOUS`; `CONTINUOUS` means downstream systems may operate in a closed-loop manner to maintain the intent objective over time and does not imply mutation or update of the submitted runtime Intent instance.
 - Use `priority`, not `priority_level`.
 - Do not use `DELETED` as an `IntentSpecification.lifecycleStatus`.
 - ETag is used for unsafe-operation concurrency only.

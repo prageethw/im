@@ -233,7 +233,7 @@ Preferred governed `expression.expressionValue` shape:
 Baseline:
 
 - `targetEntitySchema` owns the detailed validation contract.
-- `expressionSpecification.iri` identifies the semantic/expression contract.
+- `expressionSpecification.iri` identifies the semantic and expression contract.
 - `specCharacteristic` gives catalogue/discovery summary only.
 - Use array-based `targets`, `constraints`, and `preferences` for scalability.
 - Keep simplified object-map examples only where they are deliberately explanatory.

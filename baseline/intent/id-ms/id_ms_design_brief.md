@@ -393,7 +393,7 @@ Rules:
 - `ACTIVE` and `RETIRED` official specifications are not deleted through this route.
 - Retiring an official `ACTIVE` specification uses `DELETE /intentSpecification/{id}` where supported by governance.
 - Delete is blocked if existing runtime intents reference the specification.
-- Delete is blocked if audit/retention policy requires preservation.
+- Delete is blocked if audit or retention policy requires preservation.
 - Delete does not create `lifecycleStatus = DELETED`.
 - Delete emits `IntentSpecificationDeleteEvent` only after successful delete.
 - Physical versus logical removal is an implementation detail.
@@ -656,7 +656,7 @@ Delete is blocked when:
 - the specification is `ACTIVE`
 - the specification is `RETIRED`
 - existing runtime intents reference the specification
-- audit/retention policy requires preservation
+- audit or retention policy requires preservation
 
 Delete success returns `204 No Content` and does not create `lifecycleStatus = DELETED`.
 
@@ -914,13 +914,13 @@ For create, update, delete, activation, and retirement:
 - deliver subscribed notifications asynchronously by HTTP `POST` through the ID MS webhook delivery relay
 - if the subscriber callback endpoint is unavailable, the delivery attempt fails fast
 - retry later using bounded retry and backoff policy
-- do not fail the original API call after successful DB/outbox commit
+- do not fail the original API call after successful DB and outbox commit
 
 Rules:
 
 - webhook delivery failure is graceful/silent for the original API consumer
 - webhook delivery failure is operationally visible through retry metrics and alerts
-- if DB/outbox commit fails, API operation fails because durable notification delivery cannot be guaranteed
+- if DB and outbox commit fails, API operation fails because durable notification delivery cannot be guaranteed
 
 ### External callback webhook failure:
 
@@ -1059,12 +1059,12 @@ Rules:
 | Liveness | Process is running and can respond |
 | Readiness | Service can access critical dependencies needed for serving traffic |
 | DB readiness | Required for normal ID MS resource operations |
-| Webhook delivery relay readiness | Should not block API readiness if DB/outbox commit path is healthy |
+| Webhook delivery relay readiness | Should not block API readiness if DB and outbox commit path is healthy |
 | Cache readiness | Should not block API readiness because cache failure is graceful/silent |
 
 Readiness should fail when the DB and source-of-truth path is unavailable.
 Readiness should not fail only because cache is unavailable.
-Webhook delivery failures should be surfaced through relay metrics/alerts rather than making the ID MS API unavailable when the DB/outbox path is healthy.
+Webhook delivery failures should be surfaced through relay metrics and alerts rather than making the ID MS API unavailable when the DB and outbox path is healthy.
 
 ### Configuration and secrets:
 
@@ -1557,7 +1557,7 @@ Preferred governed `expression.expressionValue` shape:
 Baseline:
 
 - `targetEntitySchema` owns the detailed validation contract.
-- `expressionSpecification.iri` identifies the semantic/expression contract.
+- `expressionSpecification.iri` identifies the semantic and expression contract.
 - `specCharacteristic` gives catalogue/discovery summary only.
 - Use array-based `targets`, `constraints`, and `preferences` for scalability.
 - Keep simplified object-map examples only where they are deliberately explanatory.

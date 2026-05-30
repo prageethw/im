@@ -13,7 +13,7 @@ skinparam sequenceGroupBackgroundColor #f9f9f9
 
 title Intent Definition MS (ID MS): Primary Process Sequence Flows:
 
-actor "External Client\n/ OEX / Authorised Platform" as Client
+actor "External Client\nOEX\nAuthorised Platform" as Client
 participant "NGW\n(user context terminates here)" as GW
 participant "Intent Definition MS\n(ID MS)" as IDMS
 collections "IntentSpecification\nCatalogue" as CAT
@@ -47,18 +47,18 @@ SUBREG --> DISPATCHER : [{ subscriptionId, callbackUrl }]
 loop for each matched subscription:
   DISPATCHER -> SUB : HTTPS POST to subscriber-owned callbackUrl\nHTTP webhook; no external Kafka\nTMF-aligned event payload\n{ eventType: IntentSpecificationCreateEvent, event, eventId, eventTime, ... }
   alt HTTP 2xx:
-    SUB --> DISPATCHER : 200 OK / 202 Accepted
+    SUB --> DISPATCHER : 200 OK or 202 Accepted
     DISPATCHER -> OUTBOX : Mark event row DELIVERED
-  else HTTP error / timeout:
-    SUB --> DISPATCHER : 4xx / 5xx / timeout
+  else HTTP error or timeout:
+    SUB --> DISPATCHER : 4xx, 5xx, or timeout
     DISPATCHER -> OUTBOX : Increment retry count\nexponential back-off; dead-letter after max retries
   end
 end
 
-== 2. Retrieve / List IntentSpecifications: ==
+== 2. Retrieve and List IntentSpecifications: ==
 Client -> GW : GET /intentManagement/v5/intentSpecification\nor GET /intentManagement/v5/intentSpecification/{id}
 GW -> IDMS : Forward request using system identity
-IDMS -> CAT : Query catalogue for discovery / validation support
+IDMS -> CAT : Query catalogue for discovery and validation support
 CAT --> IDMS : IntentSpecification list or single resource
 IDMS --> GW : 200 OK\nETag + TMF-compliant IntentSpecification representation
 GW --> Client : 200 OK\nETag + TMF-compliant IntentSpecification representation
@@ -75,7 +75,7 @@ GW -> IDMS : Forward request using system identity
 alt Missing If-Match:
   IDMS --> GW : 428 Precondition Required\n{ code: PRECONDITION_REQUIRED, reason: IF_MATCH_REQUIRED }
   GW --> Client : 428 Precondition Required
-else Stale / mismatched ETag:
+else Stale or mismatched ETag:
   IDMS --> GW : 412 Precondition Failed\n{ code: PRECONDITION_FAILED, reason: ETAG_MISMATCH }
   GW --> Client : 412 Precondition Failed
 else If-Match valid and resource is DRAFT:
@@ -93,7 +93,7 @@ OUTBOX --> DISPATCHER : [IntentSpecificationAttributeValueChangeEvent]
 DISPATCHER -> SUBREG : Lookup matching subscriptions
 SUBREG --> DISPATCHER : [{ callbackUrl }]
 DISPATCHER -> SUB : HTTPS POST to subscriber-owned callbackUrl\nTMF-aligned webhook event payload\nNo external Kafka delivery
-SUB --> DISPATCHER : 200 OK / 202 Accepted
+SUB --> DISPATCHER : 200 OK or 202 Accepted
 DISPATCHER -> OUTBOX : Mark DELIVERED
 
 == 3b. Partial Update (supported but discouraged PATCH): ==
@@ -107,7 +107,7 @@ GW -> IDMS : Forward request using system identity
 alt Missing If-Match:
   IDMS --> GW : 428 Precondition Required\n{ code: PRECONDITION_REQUIRED, reason: IF_MATCH_REQUIRED }
   GW --> Client : 428 Precondition Required
-else Stale / mismatched ETag:
+else Stale or mismatched ETag:
   IDMS --> GW : 412 Precondition Failed\n{ code: PRECONDITION_FAILED, reason: ETAG_MISMATCH }
   GW --> Client : 412 Precondition Failed
 else If-Match valid and resource is DRAFT:
@@ -131,7 +131,7 @@ GW -> IDMS : Forward request using system identity
 alt Missing If-Match:
   IDMS --> GW : 428 Precondition Required
   GW --> Client : 428 Precondition Required
-else Stale / mismatched ETag:
+else Stale or mismatched ETag:
   IDMS --> GW : 412 Precondition Failed
   GW --> Client : 412 Precondition Failed
 else If-Match valid:
@@ -151,33 +151,33 @@ OUTBOX --> DISPATCHER : [StatusChange(ACTIVE), StatusChange(RETIRED)]
 DISPATCHER -> SUBREG : Lookup matching subscriptions
 SUBREG --> DISPATCHER : [{ callbackUrl }]
 DISPATCHER -> SUB : HTTPS POST to subscriber-owned callbackUrl\nTMF-aligned IntentSpecificationStatusChangeEvent\n{ lifecycleStatus: "ACTIVE" }
-SUB --> DISPATCHER : 200 OK / 202 Accepted
+SUB --> DISPATCHER : 200 OK or 202 Accepted
 DISPATCHER -> SUB : HTTPS POST to subscriber-owned callbackUrl\nTMF-aligned IntentSpecificationStatusChangeEvent\n{ lifecycleStatus: "RETIRED", id: previousSpecId }
-SUB --> DISPATCHER : 200 OK / 202 Accepted
+SUB --> DISPATCHER : 200 OK or 202 Accepted
 DISPATCHER -> OUTBOX : Mark both events DELIVERED
 
 == 5. Delete Unused Draft IntentSpecification: ==
 note over Client, IDMS
   Delete is an operation outcome, not a DELETED lifecycle state.
-  Allowed only for DRAFT resources when retention and runtime-reference rules permit.
+  Allowed only for DRAFT candidates when retention and runtime-reference rules permit.
   If-Match is required.
 end note
-Client -> GW : DELETE /intentManagement/v5/intentSpecification/{id}\nIf-Match: "<etag>"
+Client -> GW : DELETE /intentManagement/v5/intentSpecification/draft/{draftId}\nIf-Match: "<draft-etag>"
 GW -> IDMS : Forward request using system identity
 alt Missing If-Match:
   IDMS --> GW : 428 Precondition Required\n{ code: PRECONDITION_REQUIRED, reason: IF_MATCH_REQUIRED }
   GW --> Client : 428 Precondition Required
-else Stale / mismatched ETag:
+else Stale or mismatched ETag:
   IDMS --> GW : 412 Precondition Failed\n{ code: PRECONDITION_FAILED, reason: ETAG_MISMATCH }
   GW --> Client : 412 Precondition Failed
-else Retention / runtime-reference rule violation:
+else Retention or runtime-reference rule violation:
   IDMS -> CAT : Validate DRAFT status and no active runtime references
   CAT --> IDMS : Conflict
   IDMS --> GW : 409 Conflict\n{ reason }
   GW --> Client : 409 Conflict\n{ reason }
 else Deletion permitted:
   group Atomic DB transaction:
-    IDMS -> CAT : Remove IntentSpecification / apply retention policy
+    IDMS -> CAT : Remove IntentSpecification or apply retention policy
     IDMS -> OUTBOX : Write IntentSpecificationDeleteEvent row
   end
   IDMS --> GW : 204 No Content
@@ -190,7 +190,7 @@ OUTBOX --> DISPATCHER : [IntentSpecificationDeleteEvent]
 DISPATCHER -> SUBREG : Lookup matching subscriptions
 SUBREG --> DISPATCHER : [{ callbackUrl }]
 DISPATCHER -> SUB : HTTPS POST to subscriber-owned callbackUrl\nTMF-aligned IntentSpecificationDeleteEvent\nNo external Kafka delivery
-SUB --> DISPATCHER : 200 OK / 202 Accepted
+SUB --> DISPATCHER : 200 OK or 202 Accepted
 DISPATCHER -> OUTBOX : Mark DELIVERED
 
 == 6a. Register External Event Subscription: ==
@@ -220,7 +220,7 @@ GW -> IDMS : Forward request using system identity
 alt Missing If-Match:
   IDMS --> GW : 428 Precondition Required\n{ code: PRECONDITION_REQUIRED, reason: IF_MATCH_REQUIRED }
   GW --> Client : 428 Precondition Required
-else Stale / mismatched ETag:
+else Stale or mismatched ETag:
   IDMS --> GW : 412 Precondition Failed\n{ code: PRECONDITION_FAILED, reason: ETAG_MISMATCH }
   GW --> Client : 412 Precondition Failed
 else If-Match valid:
