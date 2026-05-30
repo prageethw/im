@@ -140,7 +140,6 @@ Header classification guidance:
 |---|---:|---:|---|
 | `POST /intentSpecification`, `GET /intentSpecification`, `GET /intentSpecification/{id}`, and `DELETE /intentSpecification/{id}` using strict TMF-compatible behaviour | `true` | `false` | TMF-compatible IntentSpecification resource operations. |
 | `PUT /intentSpecification/draft/{draftId}`, `PATCH /intentSpecification/draft/{draftId}`, and `DELETE /intentSpecification/draft/{draftId}` | `false` | `true` | Draft-candidate route family is a platform extension used to edit or delete mutable draft candidates before activation. |
-| `PUT /intentSpecification/draft/{draftId}` | `false` | `true` | Deterministic full replacement of a mutable DRAFT candidate is a platform extension. |
 | `PATCH /intentSpecification/draft/{draftId}` used for tightly controlled activation | `false` | `true` | Uses TMF-compatible partial-update semantics on the platform-extension DRAFT-candidate route. |
 | `PUT /intentSpecification/draft/{draftId}` used for full-resource activation | `false` | `true` | Full-resource activation through PUT on the DRAFT candidate is a platform extension. |
 | Strict `/hub` create/delete responses | `true` | `false` | Strict TMF hub route family. |
@@ -293,7 +292,6 @@ Accept: application/json
 ```json
 {
   "specKey": "hospital-surgical-slice-spec",
-  "draftId": "id-draft-hospital-surgical-slice-a",
   "name": "Hospital Surgical Slice Intent Specification",
   "description": "Definition-time specification for hospital surgical slice intents. This specification defines the allowed request shape for surgical connectivity intents. It is syntax-first: ID MS validates structure and allowed fields, while II MS and the knowledge plane validate semantic meaning, policy, and fulfilment feasibility.",
   "validFor": {
@@ -372,7 +370,7 @@ Accept: application/json
 }
 ```
 
-The client does not send `id`, `href`, `Location`, `ETag`, or `_links`. ID MS generates these values.
+The client does not send `id`, `draftId`, `href`, `Location`, `ETag`, or `_links`. ID MS generates these values.
 
 ### Success response
 
@@ -392,7 +390,6 @@ Last-Modified: Sat, 18 Apr 2026 02:00:00 GMT
   "id": "hospital-surgical-slice-spec",
   "href": "/intentManagement/v5/intentSpecification/draft/id-draft-hospital-surgical-slice-a",
   "specKey": "hospital-surgical-slice-spec",
-  "draftId": "id-draft-hospital-surgical-slice-a",
   "name": "Hospital Surgical Slice Intent Specification",
   "description": "Definition-time specification for hospital surgical slice intents. This specification defines the allowed request shape for surgical connectivity intents. It is syntax-first: ID MS validates structure and allowed fields, while II MS and the knowledge plane validate semantic meaning, policy, and fulfilment feasibility.",
   "lifecycleStatus": "DRAFT",
@@ -566,14 +563,14 @@ The list operation returns a lightweight summary by default. It does not include
 ### Request
 
 ```http
-GET /intentManagement/v5/intentSpecification/hospital-surgical-slice-spec?version=1.19?fields=id,href,specKey,name,description,version,lifecycleStatus,isBundle,validFor,relatedParty,specCharacteristic,expressionSpecification,targetEntitySchema,@type,@baseType
+GET /intentManagement/v5/intentSpecification/hospital-surgical-slice-spec?version=1.19&fields=id,href,specKey,name,description,version,lifecycleStatus,isBundle,validFor,relatedParty,specCharacteristic,expressionSpecification,targetEntitySchema,@type,@baseType
 Accept: application/json
 ```
 
 ### Request with cache override
 
 ```http
-GET /intentManagement/v5/intentSpecification/hospital-surgical-slice-spec?version=1.19?fields=id,href,specKey,name,description,version,lifecycleStatus,isBundle,validFor,relatedParty,specCharacteristic,expressionSpecification,targetEntitySchema,@type,@baseType
+GET /intentManagement/v5/intentSpecification/hospital-surgical-slice-spec?version=1.19&fields=id,href,specKey,name,description,version,lifecycleStatus,isBundle,validFor,relatedParty,specCharacteristic,expressionSpecification,targetEntitySchema,@type,@baseType
 Accept: application/json
 Cache-Control: no-cache
 ```
@@ -587,7 +584,7 @@ Content-Language: en-AU
 X-TMF-Native: true
 X-Platform-Extension: false
 Content-Location: /intentManagement/v5/intentSpecification/hospital-surgical-slice-spec?version=1.19
-ETag: "id-draft-hospital-surgical-slice-a-r1"
+ETag: "intent-spec-hospital-surgical-slice-spec-version-1.19-r1"
 Last-Modified: Sat, 18 Apr 2026 02:00:00 GMT
 Cache-Control: private, max-age=300
 ```
@@ -722,7 +719,7 @@ X-Platform-Extension: false
 ### Request
 
 ```http
-PUT /intentManagement/v5/intentSpecification/hospital-surgical-slice-spec?version=1.19?fields=id,href,specKey,name,description,version,lifecycleStatus,isBundle,validFor,relatedParty,specCharacteristic,expressionSpecification,targetEntitySchema,@type,@baseType
+PUT /intentManagement/v5/intentSpecification/hospital-surgical-slice-spec?version=1.19&fields=id,href,specKey,name,description,version,lifecycleStatus,isBundle,validFor,relatedParty,specCharacteristic,expressionSpecification,targetEntitySchema,@type,@baseType
 Content-Type: application/json
 Accept: application/json
 If-Match: "id-draft-hospital-surgical-slice-a-r1"
@@ -733,7 +730,6 @@ If-Match: "id-draft-hospital-surgical-slice-a-r1"
   "id": "hospital-surgical-slice-spec",
   "href": "/intentManagement/v5/intentSpecification/draft/id-draft-hospital-surgical-slice-a",
   "specKey": "hospital-surgical-slice-spec",
-  "draftId": "id-draft-hospital-surgical-slice-a",
   "name": "Hospital Surgical Slice Intent Specification",
   "description": "Updated definition-time specification for hospital surgical slice intents. This specification defines the allowed request shape for surgical connectivity intents. It is syntax-first: ID MS validates structure and allowed fields, while II MS and the knowledge plane validate semantic meaning, policy, and fulfilment feasibility.",
   "lifecycleStatus": "DRAFT",
@@ -799,7 +795,6 @@ Last-Modified: Sat, 18 Apr 2026 03:00:00 GMT
   "id": "hospital-surgical-slice-spec",
   "href": "/intentManagement/v5/intentSpecification/draft/id-draft-hospital-surgical-slice-a",
   "specKey": "hospital-surgical-slice-spec",
-  "draftId": "id-draft-hospital-surgical-slice-a",
   "name": "Hospital Surgical Slice Intent Specification",
   "description": "Updated definition-time specification for hospital surgical slice intents. This specification defines the allowed request shape for surgical connectivity intents. It is syntax-first: ID MS validates structure and allowed fields, while II MS and the knowledge plane validate semantic meaning, policy, and fulfilment feasibility.",
   "lifecycleStatus": "DRAFT",
@@ -977,7 +972,7 @@ Use `PATCH` only where a TMF-compatible client cannot use `PUT` or where a tight
 ### Request
 
 ```http
-PATCH /intentManagement/v5/intentSpecification/hospital-surgical-slice-spec?version=1.19?fields=id,href,specKey,name,description,version,lifecycleStatus,isBundle,validFor,relatedParty,@type,@baseType
+PATCH /intentManagement/v5/intentSpecification/hospital-surgical-slice-spec?version=1.19&fields=id,href,specKey,name,description,version,lifecycleStatus,isBundle,validFor,relatedParty,@type,@baseType
 Content-Type: application/merge-patch+json
 Accept: application/json
 If-Match: "id-draft-hospital-surgical-slice-a-r1"
@@ -1007,7 +1002,6 @@ Last-Modified: Sat, 18 Apr 2026 03:00:00 GMT
   "id": "hospital-surgical-slice-spec",
   "href": "/intentManagement/v5/intentSpecification/draft/id-draft-hospital-surgical-slice-a",
   "specKey": "hospital-surgical-slice-spec",
-  "draftId": "id-draft-hospital-surgical-slice-a",
   "name": "Hospital Surgical Slice Intent Specification",
   "description": "Updated draft description only.",
   "lifecycleStatus": "DRAFT",
