@@ -15,14 +15,15 @@
 - [3. Context](#3-context)
 - [4. Decision drivers](#4-decision-drivers)
 - [5. Proposal](#5-proposal)
-  - [5.1 TMF-aligned, not TMF-minimal](#51-tmf-aligned-not-tmf-minimal)
-  - [5.2 Runtime Intent admission profile](#52-runtime-intent-admission-profile)
-  - [5.3 Minimum attributes for Intent Draft creation](#53-minimum-attributes-for-intent-draft-creation)
-  - [5.4 Minimum response attributes for Intent Draft creation](#54-minimum-response-attributes-for-intent-draft-creation)
-  - [5.5 IntentSpecification resolution rule](#55-intentspecification-resolution-rule)
-  - [5.6 Persisted response profile after admission](#56-persisted-response-profile-after-admission)
-  - [5.7 Optional intent-management-entity governed enrichment fields](#57-optional-intent-management-entity-governed-enrichment-fields)
-  - [5.8 Lifecycle ownership guardrail](#58-lifecycle-ownership-guardrail)
+  - [5.1 Request vs persisted response quick reference](#51-request-vs-persisted-response-quick-reference)
+  - [5.2 TMF-aligned, not TMF-minimal](#52-tmf-aligned-not-tmf-minimal)
+  - [5.3 Runtime Intent admission profile](#53-runtime-intent-admission-profile)
+  - [5.4 Minimum attributes for Intent Draft creation](#54-minimum-attributes-for-intent-draft-creation)
+  - [5.5 Minimum response attributes for Intent Draft creation](#55-minimum-response-attributes-for-intent-draft-creation)
+  - [5.6 IntentSpecification resolution rule](#56-intentspecification-resolution-rule)
+  - [5.7 Persisted response profile after admission](#57-persisted-response-profile-after-admission)
+  - [5.8 Optional intent-management-entity governed enrichment fields](#58-optional-intent-management-entity-governed-enrichment-fields)
+  - [5.9 Lifecycle ownership guardrail](#59-lifecycle-ownership-guardrail)
 - [6. Examples](#6-examples)
   - [6.1 Minimal admission request](#61-minimal-admission-request)
   - [6.2 Minimal persisted response after admission](#62-minimal-persisted-response-after-admission)
@@ -93,7 +94,19 @@ The intent management entity must be able to answer questions such as:
 
 ## 5. Proposal:
 
-### 5.1 TMF-aligned, not TMF-minimal:
+### 5.1 Request vs persisted response quick reference:
+
+| **Profile point** | **Consumer/request fields** | **Persisted response fields** |
+| --- | --- | --- |
+| Draft create request | `name`, `submit: false`, `@type`, `@baseType`; `humanExpression` strongly recommended | Not applicable |
+| Draft create response | Not applicable | `id`, `href`, `name`, `submit: false`, `lifecycleStatus: Draft`, `statusReason`, `statusChangeDate`, server-resolved `isBundle`, `@type`, `@baseType`; no permanent runtime `version` |
+| Submitted admission request | `name`, `intentSpecification.id`, `expression`, `expression.@type`, `expression.iri`, `expression.expressionValue`, `@type`, `@baseType`; `humanExpression` strongly recommended | Not applicable |
+| Persisted admitted response | Not applicable | `id`, `href`, `name`, permanent runtime `version`, `lifecycleStatus`, `statusReason`, `statusChangeDate`, server-resolved `isBundle`, resolved `intentSpecification.id`, `expression`, `@type`, `@baseType` |
+| GET projection | Not applicable | Current projected runtime `Intent` state only; not the full internal version aggregate |
+
+This distinction prevents Draft authoring fields, submitted admission fields, and persisted projection fields from being treated as the same contract.
+
+### 5.2 TMF-aligned, not TMF-minimal:
 
 The intent management entity remains TMF-aligned by using the TMF921 runtime `Intent` resource model and operation pattern.
 
@@ -103,7 +116,7 @@ The rule is:
 
 > TMF-aligned does not mean TMF-minimal.
 
-### 5.2 Runtime Intent admission profile:
+### 5.3 Runtime Intent admission profile:
 
 The runtime admission profile is the main profile in this paper.
 
@@ -128,7 +141,7 @@ The admission request is **strongly** encouraged to include:
 
 `intentSpecification.id` is mandatory for admission because it selects the exact platform-managed `IntentSpecification` resource used for validation, governance, and audit. `expression.iri` is also mandatory because it identifies the semantic/expression contract the runtime expression claims to follow. Both fields are required because they serve different purposes.
 
-### 5.3 Minimum attributes for Intent Draft creation:
+### 5.4 Minimum attributes for Intent Draft creation:
 
 Draft is a pre-admission authoring convenience.
 
@@ -187,7 +200,7 @@ Recommended Draft creation request payload with `humanExpression`:
 
 When a Draft is later moved into admission using `submit: true`, it must satisfy the normal runtime Intent admission profile defined in section 5.2.
 
-### 5.4 Minimum response attributes for Intent Draft creation:
+### 5.5 Minimum response attributes for Intent Draft creation:
 
 A persisted Draft response should include enough information to identify, retrieve, edit, and understand the Draft state.
 
@@ -243,7 +256,7 @@ Recommended Draft creation response payload with `humanExpression` when supplied
 }
 ```
 
-### 5.5 IntentSpecification resolution rule:
+### 5.6 IntentSpecification resolution rule:
 
 `expression.iri` is mandatory for admission.
 
@@ -259,7 +272,7 @@ If `intentSpecification.id` is omitted, the admission request must be rejected. 
 
 After successful admission, `intentSpecification.id` remains mandatory on the persisted `Intent` representation because the intent management entity must record which active specification governed validation and admission.
 
-### 5.6 Persisted response profile after admission:
+### 5.7 Persisted response profile after admission:
 
 A persisted `Intent` response after admission is accepted must include:
 
@@ -283,7 +296,7 @@ The important distinction is:
 
 > `intentSpecification.id` is mandatory in the admission request and remains mandatory in the persisted response after admission is accepted.
 
-### 5.7 Optional intent-management-entity governed enrichment fields:
+### 5.8 Optional intent-management-entity governed enrichment fields:
 
 Optional enrichment fields are useful, but they are not part of the generic minimum mandatory profile.
 
@@ -298,11 +311,14 @@ Optional enrichment fields are useful, but they are not part of the generic mini
 | `relatedParty` | Optional | Useful for requester, customer, or provider attribution. |
 | `_links` | Optional | Useful for discoverable operation affordances. |
 
+
+Top-level `priority` and `expression.expressionValue.context.constraints.priority` are different fields. Top-level `priority` is an API or platform processing priority used by IC MS and platform controls. `constraints.priority` is a domain-specific fulfilment constraint interpreted by downstream semantic validation, policy, optimisation, and assurance components. When both are present, they should normally be consistent, but they are not the same field.
+
 Optional enrichment fields may be required by a specific implementation, product, channel, policy, onboarding profile, or security posture.
 
 However, they are not part of the generic minimum mandatory profile defined by this proposal.
 
-### 5.8 Lifecycle ownership guardrail:
+### 5.9 Lifecycle ownership guardrail:
 
 External consumers must not supply `lifecycleStatus` in any external write request.
 

@@ -176,7 +176,7 @@ IC MS does not own:
 | Raw orchestrator callback interpretation | IA MS |
 | Raw candidate and resource scoring exposure | Internal optimiser/assurance pipeline only |
 
-IC MS also does not resolve an `IntentSpecification` by `expression.iri` alone, `specKey`, name, key, or inferred expression shape alone. Submitted runtime create and update admission requests must include both `intentSpecification.id` and `expression.iri`. `intentSpecification.id` selects the exact active platform-managed specification. `expression.iri` identifies the semantic/expression contract and must match the selected specification's `expressionSpecification.iri`. `intentSpecification.specKey` and `intentSpecification.name` are optional hints only.
+IC MS also does not resolve an `IntentSpecification` by `expression.iri` alone, `specKey`, name, key, or inferred expression shape alone. Submitted runtime create and update admission requests must include both `intentSpecification.id` and `expression.iri`. `intentSpecification.id` selects the exact ACTIVE platform-managed specification. `expression.iri` identifies the semantic/expression contract and must match the selected specification's `expressionSpecification.iri`. `intentSpecification.specKey` and `intentSpecification.name` are optional hints only.
 
 IC MS does not allow external consumers to set or patch `lifecycleStatus`; lifecycle state is assigned and projected by the intent management entity.
 
@@ -307,7 +307,7 @@ A runtime intent create and update request uses the following baseline:
 | `description` | Optional descriptive text. |
 | `humanExpression` | Human-readable expression of the requested outcome. |
 | `submit` | Optional IC MS extension request-control field. `false` saves or keeps Draft; `true` submits for admission. If omitted on initial create, the request is treated as submitted. If omitted on an existing Draft, Draft handling is preserved. |
-| `intentSpecification.id` | Mandatory for submitted admission; selects the exact active platform-managed specification used for validation, governance, and audit. |
+| `intentSpecification.id` | Mandatory for submitted admission; selects the exact ACTIVE platform-managed specification used for validation, governance, and audit. |
 | `expression.iri` | Mandatory for submitted admission; identifies the semantic/expression contract and must match the selected specification's `expressionSpecification.iri`. |
 | `intentSpecification.specKey` | Optional descriptive/discovery hint; not an authoritative validation key. |
 | `intentSpecification.name` | Optional descriptive/discovery hint; not an authoritative validation key. |
@@ -317,12 +317,12 @@ A runtime intent create and update request uses the following baseline:
 | `expression.expressionValue.context.preferences` | Optional soft selection guidance as defined by the specification. |
 | `isBundle` | Optional runtime bundle flag. Defaults to `false` when omitted on create; persisted responses include the server-resolved value. |
 | `priority` | Runtime priority where applicable. |
-
-Top-level `priority` is an API and platform processing priority used by IC MS and platform controls. `expression.expressionValue.context.constraints.priority` is a domain fulfilment constraint interpreted by downstream semantic validation, policy, optimisation, and assurance components. When both are present, they should normally be consistent, but they are not the same field.
 | `relatedParty` | Requester/customer/operator party references where applicable. |
 | `validFor` | Runtime validity window where applicable. |
 | `@type` | `Intent`. |
 | `@baseType` | `Entity`. |
+
+Top-level `priority` is an API and platform processing priority used by IC MS and platform controls. `expression.expressionValue.context.constraints.priority` is a domain fulfilment constraint interpreted by downstream semantic validation, policy, optimisation, and assurance components. When both are present, they should normally be consistent, but they are not the same field.
 
 Example explicit specification reference:
 
@@ -466,7 +466,7 @@ IC MS should reject or ignore unsupported external request fields according to t
 | `intentSpecification.specKey` as the authoritative validation key | IC MS does not resolve runtime requests by specKey alone; it is only an optional hint. |
 | `intentSpecification.name` as the authoritative validation key | IC MS does not resolve runtime requests by display name alone; it is only an optional hint. |
 | Missing `expression.iri` | Submitted admission must include `expression.iri` so IC MS can validate the semantic/expression contract against the selected specification. |
-| Inferred specification from payload shape alone | IC MS must resolve the active validation contract by mandatory `intentSpecification.id`, with mandatory `expression.iri` checked against the selected specification. |
+| Inferred specification from payload shape alone | IC MS must resolve the ACTIVE validation contract by mandatory `intentSpecification.id`, with mandatory `expression.iri` checked against the selected specification. |
 | Internal optimiser candidate sets | Not part of the external runtime create and update contract. |
 | Raw Knowledge Plane facts | Not accepted through IC MS runtime APIs. |
 | Raw telemetry observations | IA MS consumes telemetry; IC MS exposes curated projections only. |
@@ -757,7 +757,7 @@ Webhook notifications use HTTP headers, not Kafka CloudEvents headers.
 | Missing `intentSpecification.id` on submitted admission | Return `422 VALIDATION_FAILED` with reason `INTENT_SPECIFICATION_ID_REQUIRED`. |
 | Missing `expression.iri` | Return `422 VALIDATION_FAILED` with reason `EXPRESSION_IRI_REQUIRED`. |
 | Runtime `expression.iri` does not match selected specification `expressionSpecification.iri` | Return `422 VALIDATION_FAILED` with reason `INTENT_EXPRESSION_IRI_MISMATCH`. |
-| Referenced specification is not active | Return `422 VALIDATION_FAILED` or `INTENT_SPECIFICATION_NOT_ACTIVE`. |
+| Referenced specification is not ACTIVE | Return `422 VALIDATION_FAILED` or `INTENT_SPECIFICATION_NOT_ACTIVE`. |
 | Active specification cannot be confirmed | Return `503 SERVICE_UNAVAILABLE` with retry guidance where applicable. |
 | `submit: false` supplied | Persist `Intent` as `Draft`; do not emit `IntentValidatedEvent`; do not optimise, assure, or send to downstream change execution. |
 | `submit` omitted on initial create | Treat as submitted for admission. |
@@ -851,7 +851,7 @@ Internal consumers can rely on `IntentValidatedEvent` as the admitted runtime in
 | Item | Decision |
 |---|---|
 | IC MS service identity | Full name is `Intent Controller MS`; service name is `intent-controller-ms`. |
-| Runtime create and update active spec resolution | Submitted admission requires both `intentSpecification.id` and `expression.iri`; specKey and name are optional hints only. |
+| Runtime create and update ACTIVE spec resolution | Submitted admission requires both `intentSpecification.id` and `expression.iri`; specKey and name are optional hints only. |
 | IC MS validation scope | Schema and request-shape validation only for submitted requests; no semantic or optimisation ownership. |
 | Initial admitted state | `Acknowledged` after submitted request admission; `Draft` when `submit: false` is used. |
 | Internal handoff event | `IntentValidatedEvent`. |

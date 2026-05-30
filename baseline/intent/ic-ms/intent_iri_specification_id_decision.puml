@@ -1,5 +1,5 @@
 @startuml
-title Runtime Intent contract reference decision: IRI, IntentSpecification ID, or both
+title Runtime Intent contract reference proposal: IRI, IntentSpecification ID, or both
 
 skinparam shadowing false
 skinparam defaultTextAlignment center
@@ -9,34 +9,38 @@ skinparam RectangleBorderColor #424242
 
 rectangle "Runtime Intent\nadmission request" as INTENT #EEF2FF
 
-rectangle "Decision question" as QUESTION #FFF3E0 {
-  rectangle "Should admission require:\n\n1. rejected expression.iri-only admission\n2. intentSpecification.id only\n3. both fields" as Q
+rectangle "Proposal question" as QUESTION #FFF3E0 {
+  rectangle "Should admission require:\n\n1. expression.iri only\n2. intentSpecification.id only\n3. both fields" as Q
 }
 
 rectangle "Rejected option 1:\nexpression.iri-only admission" as IRI_ONLY #FFEBEE {
-  rectangle "Meaning\n\nExpression declares semantic /\nexpression contract." as IRI_MEANING
+  rectangle "Meaning\n\nExpression declares the\nsemantic and expression contract." as IRI_MEANING
   rectangle "Problem\n\nSame IRI can be referenced by\nmultiple ACTIVE IntentSpecifications.\n\nAdmission becomes ambiguous." as IRI_PROBLEM
-  rectangle "Decision\n\nRejected" as IRI_REJECTED
+  rectangle "Proposal outcome\n\nReject" as IRI_REJECTED
 }
 
-rectangle "Option 2:\nintentSpecification.id only" as ID_ONLY #FFEBEE {
+rectangle "Rejected option 2:\nintentSpecification.id only" as ID_ONLY #FFEBEE {
   rectangle "Meaning\n\nRequest selects exact\nplatform-managed specification." as ID_MEANING
   rectangle "Problem\n\nRuntime expression no longer\nself-declares semantic contract.\n\nNo IRI consistency check." as ID_PROBLEM
-  rectangle "Decision\n\nRejected" as ID_REJECTED
+  rectangle "Proposal outcome\n\nReject" as ID_REJECTED
 }
 
-rectangle "Option 3:\nRequire both" as BOTH #E8F5E9 {
+rectangle "Recommended option:\nRequire both" as BOTH #E8F5E9 {
   rectangle "intentSpecification.id\n\nSelects exact ACTIVE\nplatform-managed specification\nfor validation, governance,\nlifecycle and audit." as BOTH_ID
 
-  rectangle "expression.iri\n\nIdentifies semantic /\nexpression contract claimed\nby the runtime expression." as BOTH_IRI
+  rectangle "expression.iri\n\nIdentifies the semantic and\nexpression contract claimed\nby the runtime expression." as BOTH_IRI
 
   rectangle "Consistency check\n\nIntent.expression.iri must match\nIntentSpecification.expressionSpecification.iri." as BOTH_CHECK
 
-  rectangle "Decision\n\nAccepted baseline" as BOTH_ACCEPTED
+  rectangle "Proposal outcome\n\nRecommended baseline" as BOTH_RECOMMENDED
 }
 
 rectangle "Admission validation" as VALIDATION #E3F2FD {
   rectangle "1. Require intentSpecification.id\n2. Retrieve referenced specification\n3. Verify lifecycleStatus = ACTIVE\n4. Require expression.iri\n5. Compare with expressionSpecification.iri\n6. Reject missing or mismatched values" as VALIDATION_STEPS
+}
+
+rectangle "Shortcut admission guardrail" as SHORTCUTS #FCE4EC {
+  rectangle "Do not implement:\n\n- IRI-only admission\n- specKey-only admission\n- name-only admission\n- payload-shape inference" as SHORTCUT_RULE
 }
 
 rectangle "Draft handling" as DRAFT #FFF8E1 {
@@ -44,7 +48,7 @@ rectangle "Draft handling" as DRAFT #FFF8E1 {
 }
 
 rectangle "Outcome" as OUTCOME #E0F2F1 {
-  rectangle "Runtime admission requires both:\n\n- intentSpecification.id\n- expression.iri\n\nNo admission by expression IRI alone." as OUTCOME_RULE
+  rectangle "Runtime admission requires both:\n\n- intentSpecification.id\n- expression.iri\n\nNo shortcut admission." as OUTCOME_RULE
 }
 
 INTENT --> QUESTION
@@ -55,7 +59,8 @@ QUESTION --> BOTH
 IRI_ONLY -[#red,dashed]-> BOTH : ambiguity risk
 ID_ONLY -[#red,dashed]-> BOTH : loses semantic self-description
 BOTH --> VALIDATION
-VALIDATION --> OUTCOME
+VALIDATION --> SHORTCUTS
+SHORTCUTS --> OUTCOME
 DRAFT --> VALIDATION : submit=true
 
 note bottom of BOTH

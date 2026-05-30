@@ -11,14 +11,19 @@ rectangle "TMF921 Intent\nbase resource model" as TMF #EEF2FF
 
 rectangle "Intent management entity\nmandatory profile\n\nTMF-aligned, not TMF-minimal" as PROFILE #E8F5E9
 
-TMF --> PROFILE : implementation profile\nfor runtime Intent handling
+rectangle "Request vs persisted response" as QUICK #E1F5FE {
+  rectangle "Draft request\n\nname + submit=false\n+ TMF type fields" as QUICK_DRAFT_REQ
+  rectangle "Draft response\n\nidentity + Draft lifecycle\n+ no permanent runtime version" as QUICK_DRAFT_RESP
+  rectangle "Submitted request\n\nintentSpecification.id\n+ expression.iri\n+ expression body" as QUICK_SUBMIT_REQ
+  rectangle "Admitted response\n\nruntime version\n+ lifecycle projection\n+ resolved specification" as QUICK_ADMIT_RESP
+}
 
 rectangle "Primary profile:\nruntime Intent admission" as ADMISSION #FFE0B2 {
   rectangle "Minimum admission request\n\n- name\n- intentSpecification.id\n- expression\n- expression.@type\n- expression.iri\n- expression.expressionValue\n- @type\n- @baseType" as ADMISSION_MIN
 
-  rectangle "Strongly encouraged\n\n- humanExpression" as ADMISSION_RECOMMENDED
+  rectangle "Strongly recommended\n\n- humanExpression" as ADMISSION_RECOMMENDED
 
-  rectangle "Both are mandatory\nfor admission\n\nintentSpecification.id selects\nthe platform-managed specification.\n\nexpression.iri identifies\nthe semantic/expression contract." as BOTH_REQUIRED
+  rectangle "Both are mandatory\nfor admission\n\nintentSpecification.id selects\nthe platform-managed specification.\n\nexpression.iri identifies\nthe semantic and expression contract." as BOTH_REQUIRED
 
   rectangle "Consistency validation\n\n1. Retrieve ACTIVE IntentSpecification\n   by intentSpecification.id\n2. Compare runtime expression.iri\n   with IntentSpecification.expressionSpecification.iri\n3. Reject if missing or mismatched" as CONSISTENCY
 }
@@ -29,7 +34,7 @@ rectangle "Persisted Intent response\nafter admission is accepted" as ADMISSION_
   rectangle "Key distinction\n\nintentSpecification.id is mandatory\nin the admission request and\nin the persisted response.\n\nexpression.iri is mandatory\nin the admission request and\npersisted expression." as RESPONSE_DISTINCTION
 }
 
-rectangle "Draft \npre-admission authoring context" as DRAFT #FFF8E1 {
+rectangle "Draft\npre-admission authoring context" as DRAFT #FFF8E1 {
   rectangle "Minimum Draft creation request\n\n- name\n- submit = false\n- @type\n- @baseType" as DRAFT_MIN
 
   rectangle "Strongly recommended\nfor Draft\n\n- humanExpression" as DRAFT_RECOMMENDED
@@ -46,15 +51,19 @@ rectangle "Optional intent-management-entity\ngoverned enrichment fields" as ENR
 
   rectangle "Optional / governed\n\n- description\n- validFor.startDateTime\n- isBundle\n- priority\n- relatedParty\n- _links" as ENRICHMENT_OPTIONAL
 
+  rectangle "Priority distinction\n\nTop-level priority = API and platform processing.\nconstraints.priority = domain fulfilment constraint." as PRIORITY_NOTE
+
   rectangle "Rule\n\nMay be required by a specific\nimplementation, product, channel,\npolicy, onboarding profile,\nor security posture.\n\nNot part of the generic\nminimum mandatory profile." as ENRICHMENT_RULE
 }
 
 rectangle "Lifecycle ownership guardrail" as GUARDRAIL #E3F2FD {
-  rectangle "External consumers must not supply\nlifecycleStatus in any external\nwrite request.\n\ncreate / PUT / PATCH / other writes" as NO_LIFECYCLE
+  rectangle "External consumers must not supply\nlifecycleStatus in any external\nwrite request.\n\ncreate, PUT, PATCH, or other writes" as NO_LIFECYCLE
 
   rectangle "lifecycleStatus is assigned,\ntransitioned, and projected by\nthe intent management entity." as LIFECYCLE_RULE
 }
 
+TMF --> PROFILE : implementation profile\nfor runtime Intent handling
+PROFILE --> QUICK : separates request\nand persisted fields
 PROFILE --> ADMISSION : main baseline
 ADMISSION --> BOTH_REQUIRED : requires exact resource\nand semantic contract
 BOTH_REQUIRED --> CONSISTENCY : validate before admission

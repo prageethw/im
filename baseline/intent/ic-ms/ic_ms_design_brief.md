@@ -111,7 +111,7 @@ On `POST /intentManagement/v5/intent`, IC MS:
 8. sets initial `lifecycleStatus = Acknowledged` and persists the server-resolved `isBundle` value, defaulting to `false` when omitted on create
 9. emits `IntentValidatedEvent` to the internal Kafka event backbone after schema and request-shape validation succeeds
 
-IC MS validates schema and request shape against the selected active IntentSpecification contract only.
+IC MS validates schema and request shape against the selected ACTIVE IntentSpecification contract only.
 
 It does not decide semantic meaning, network feasibility, policy allowability, resource candidates, optimisation, apply result, or runtime assurance truth.
 
@@ -691,7 +691,7 @@ Retired
 
 | **Rule** | **Baseline** |
 |---|---|
-| Initial syntactic success | Intent/version starts as `Acknowledged` |
+| Initial schema/request-shape success | Intent/version starts as `Acknowledged` |
 | Semantic/policy rejection | Moves to `Rejected` |
 | Fulfilment/apply starts | Moves to `InProgress` |
 | Assurance confirms active | Moves to `Active` |
@@ -785,7 +785,7 @@ skinparam note {
   FontColor #111827
 }
 
-[*] --> Acknowledged : version created /\nsyntactically admitted
+[*] --> Acknowledged : version created /\nschema and request-shape admitted
 Acknowledged --> Rejected : semantic and policy\nrejection
 Acknowledged --> InProgress : fulfilment starts
 InProgress --> Active : apply + assurance\nconfirmed
@@ -941,7 +941,7 @@ Draft creation remains light. A Draft Intent can be created with `submit: false`
 | **Operation** | **Behaviour** |
 |---|---|
 | `POST /intent` with `submit: false` | Creates or saves a Draft authoring record. Does not require `intentSpecification.id` or `expression.iri` unless supplied as Draft content. |
-| `POST /intent` with `submit: true` or omitted `submit` | Requires both `intentSpecification.id` and `expression.iri`; validates the runtime expression against the selected active specification; creates projected runtime version `v1`. |
+| `POST /intent` with `submit: true` or omitted `submit` | Requires both `intentSpecification.id` and `expression.iri`; validates the runtime expression against the selected ACTIVE specification; creates projected runtime version `v1`. |
 | `GET /intent/{id}` | Returns current projected Intent state for that Intent ID, not the full internal version aggregate. |
 | `GET /intent` | Lists current projected Intent states for retained Intent IDs. |
 | `PUT /intent/{id}` | Platform extension for deterministic full replacement. Allowed only while Draft. If `submit: true` is supplied, requires both `intentSpecification.id` and `expression.iri` for admission. |
@@ -951,7 +951,7 @@ Draft creation remains light. A Draft Intent can be created with `submit: false`
 
 ### Baseline statement:
 
-**Submitted runtime `Intent` admission requires both `intentSpecification.id` and `expression.iri`. `intentSpecification.id` selects the exact active platform-managed specification. `expression.iri` identifies the semantic/expression contract and must match the selected specification's `expressionSpecification.iri`. IC MS does not admit by IRI-only resolution.**
+**Submitted runtime `Intent` admission requires both `intentSpecification.id` and `expression.iri`. `intentSpecification.id` selects the exact ACTIVE platform-managed specification. `expression.iri` identifies the semantic/expression contract and must match the selected specification's `expressionSpecification.iri`. IC MS does not admit by IRI-only resolution.**
 
 **Draft creation remains light. A Draft Intent can be created with `submit: false` without `intentSpecification.id` or `expression.iri`; those fields become mandatory only when admission is requested. `isBundle` is optional and defaults to `false` when omitted on create.**
 
@@ -1019,7 +1019,7 @@ DELETE /intentManagement/v5/intent/{id}
 |---|---|---|
 | IC MS -> DB | Hard fail-fast | Return `503`; consumer retries |
 | IC MS -> cache | Graceful/silent | Bypass cache or ignore failed cache writes; use DB/source-of-truth; emit telemetry |
-| IC MS -> ID MS | Cached active-spec fallback then fail-closed for create and update | Use valid fresh cached active spec where available; otherwise fail closed for runtime-content admission |
+| IC MS -> ID MS | Cached active-spec fallback then fail-closed for create and update | Use valid fresh cached ACTIVE spec where available; otherwise fail closed for runtime-content admission |
 | IC MS -> Kafka/event broker | Graceful/silent with internal event outbox | API succeeds after DB + internal event outbox commit; relay retries Kafka later |
 | IC MS -> external webhook callback | Async fail-fast per delivery attempt | Delivery attempt fails fast, retries later; original API unaffected |
 
@@ -1031,8 +1031,8 @@ If ID MS cannot confirm that spec is `ACTIVE`:
 
 | **Situation** | **IC MS behaviour** |
 |---|---|
-| Valid fresh cached active spec exists | Continue schema and request-shape validation using cache |
-| No valid fresh cached active spec | Fail closed; do not admit/create new runtime version |
+| Valid fresh cached ACTIVE spec exists | Continue schema and request-shape validation using cache |
+| No valid fresh cached ACTIVE spec | Fail closed; do not admit/create new runtime version |
 
 ### Failure responses:
 
@@ -1067,7 +1067,7 @@ Retry-After: 30
 {
   "code": "SERVICE_UNAVAILABLE",
   "reason": "INTENT_SPECIFICATION_LOOKUP_UNAVAILABLE",
-  "message": "Intent creation or update cannot be accepted because the referenced active IntentSpecification could not be confirmed.",
+  "message": "Intent creation or update cannot be accepted because the referenced ACTIVE IntentSpecification could not be confirmed.",
   "status": 503,
   "referenceError": "https://mycsp.com.au/errors/SERVICE_UNAVAILABLE",
   "@type": "Error"
@@ -1078,7 +1078,7 @@ Retry-After: 30
 
 **IC MS caching applies only to GET responses. Clients either use cached GET responses within TTL or request a fresh copy using `Cache-Control: no-cache`. ETag is used only for unsafe-operation concurrency through `If-Match`. No caching strategy is baselined for non-GET operations.**
 
-**For runtime-content admission, IC MS must confirm the resolved `ACTIVE` `IntentSpecification` from ID MS or a valid fresh cached active specification. If it cannot confirm the active specification, IC MS fails closed and does not admit the runtime Intent or runtime version.**
+**For runtime-content admission, IC MS must confirm the resolved `ACTIVE` `IntentSpecification` from ID MS or a valid fresh cached ACTIVE specification. If it cannot confirm the ACTIVE specification, IC MS fails closed and does not admit the runtime Intent or runtime version.**
 
 **IC MS uses dependency-specific circuit-breaker behaviour. DB failure is hard fail-fast and returns `503 Service Unavailable`. Cache failure is graceful/silent. Kafka/event-broker failure is handled through internal event outbox. External webhook callback failure is asynchronous and does not affect the original API response.**
 
@@ -1211,7 +1211,7 @@ Initial deployment may be single-region or same-region multi-AZ. The selected da
 | Liveness | Process is running and can respond |
 | Readiness | Service can access dependencies needed for serving traffic |
 | DB readiness | Required for normal IC MS resource operations |
-| ID MS readiness for admission | Required for new runtime-content admission unless valid fresh cached active spec exists |
+| ID MS readiness for admission | Required for new runtime-content admission unless valid fresh cached ACTIVE spec exists |
 | Kafka/internal outbox relay readiness | Should not block API readiness if DB/outbox commit path is healthy |
 | Webhook delivery relay readiness | Should not block API readiness; delivery failures are retried asynchronously |
 | Cache readiness | Should not block API readiness because cache failure is graceful/silent |
@@ -1289,7 +1289,7 @@ Design rules:
 
 - Top-level `priority` is an API and platform processing priority used by IC MS and platform controls. `expression.expressionValue.context.constraints.priority` is a domain fulfilment constraint interpreted by downstream semantic validation, policy, optimisation, and assurance components. When both are present, they should normally be consistent, but they are not the same field.
 
-- IC MS validates schema and request shape against the active ID MS `IntentSpecification.expressionSpecification` and `targetEntitySchema` contract.
+- IC MS validates schema and request shape against the ACTIVE ID MS `IntentSpecification.expressionSpecification` and `targetEntitySchema` contract.
 - IC MS preserves the external TMF expression wrapper on TMF-compliant `Intent` resources.
 - IC MS emits `IntentValidatedEvent` with the admitted expression as internal native JSON using the same canonical `targets`, `constraints`, and `preferences` buckets, without the external TMF expression wrapper.
 - `location`, `serviceType`, and `serviceClass` sit under `context.constraints`; they are not peer fields beside `targets`, `constraints`, and `preferences`.
