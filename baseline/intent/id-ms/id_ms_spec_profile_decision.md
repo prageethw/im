@@ -1,4 +1,4 @@
-# IntentSpecification consumer profile proposal
+# IntentSpecification consumer profile proposal.
 
 | **Document status** | **Value** |
 | --- | --- |
