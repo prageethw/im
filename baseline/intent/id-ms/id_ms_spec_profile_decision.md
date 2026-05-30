@@ -20,6 +20,8 @@ draftId -> server-assigned mutable DRAFT candidate selector
 version -> official public version assigned only when a selected DRAFT is activated
 ```
 
+`id` is server-assigned and stable for the official specification lineage. It must not be assumed to equal `specKey`; examples use `id: ispec-hss-001` and `specKey: hospital-surgical-slice-spec` where the distinction matters.
+
 ## 2. Create request profile:
 
 `POST /intentSpecification` creates a mutable DRAFT candidate only.
@@ -148,6 +150,8 @@ specCharacteristic[]
 @type
 @baseType
 ```
+
+Where `schemaHash` is supplied in `targetEntitySchema`, real values use the `sha256:<hex>` format. Schema registry lookup and verification remain implementation details unless stricter policy is introduced.
 
 ## 7. Activation rule:
 
