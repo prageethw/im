@@ -138,9 +138,10 @@ Header classification guidance:
 
 | **ID MS response area** | **X-TMF-Native** | **X-Platform-Extension** | **Reason** |
 |---|---:|---:|---|
-| `POST /intentSpecification`, `GET /intentSpecification`, `GET /intentSpecification/{id}`, `PATCH /intentSpecification/draft/{draftId}`, `DELETE /intentSpecification/{id}`, and `DELETE /intentSpecification/draft/{draftId}` using strict TMF-compatible behaviour | `true` | `false` | TMF-compatible IntentSpecification resource operations. |
+| `POST /intentSpecification`, `GET /intentSpecification`, `GET /intentSpecification/{id}`, and `DELETE /intentSpecification/{id}` using strict TMF-compatible behaviour | `true` | `false` | TMF-compatible IntentSpecification resource operations. |
+| `PUT /intentSpecification/draft/{draftId}`, `PATCH /intentSpecification/draft/{draftId}`, and `DELETE /intentSpecification/draft/{draftId}` | `false` | `true` | Draft-candidate route family is a platform extension used to edit or delete mutable draft candidates before activation. |
 | `PUT /intentSpecification/draft/{draftId}` | `false` | `true` | Deterministic full replacement of a mutable DRAFT candidate is a platform extension. |
-| `PATCH /intentSpecification/draft/{draftId}` used for tightly controlled activation | `true` | `false` | Uses TMF-compatible partial update on the DRAFT candidate resource. |
+| `PATCH /intentSpecification/draft/{draftId}` used for tightly controlled activation | `false` | `true` | Uses TMF-compatible partial-update semantics on the platform-extension DRAFT-candidate route. |
 | `PUT /intentSpecification/draft/{draftId}` used for full-resource activation | `false` | `true` | Full-resource activation through PUT on the DRAFT candidate is a platform extension. |
 | Strict `/hub` create/delete responses | `true` | `false` | Strict TMF hub route family. |
 | Domain-scoped `/intentSpecification/hub` responses | `false` | `true` | Domain-owned hub route family is a platform extension. |
@@ -1161,7 +1162,7 @@ POST /intentManagement/v5/intentSpecification/draft/{draftId}/activate
 
 Use the existing resource update endpoint instead.
 
-For strict TMF-compatible lifecycle update, use:
+For TMF-compatible partial-update semantics on the platform-extension DRAFT-candidate route, use:
 
 ```http
 PATCH /intentManagement/v5/intentSpecification/draft/{draftId}
@@ -2014,7 +2015,7 @@ A strict TMF-compatible API gateway may map deployment-specific external prefixe
 ID MS and IC MS remain TMF-aligned at the external contract level.
 Controlled platform extensions are allowed when documented, non-breaking, and semantically compatible with TMF.
 
-For ID MS, `PATCH /intentSpecification/draft/{draftId}` is the strict TMF-compatible update operation for mutable DRAFT candidates, while `PUT /intentSpecification/draft/{draftId}` is an accepted platform extension for deterministic full replacement of mutable DRAFT candidates.
+For ID MS, `PATCH /intentSpecification/draft/{draftId}` uses TMF-compatible partial-update semantics on the platform-extension DRAFT-candidate route, while `PUT /intentSpecification/draft/{draftId}` is an accepted platform extension for deterministic full replacement of mutable DRAFT candidates.
 TMF `/hub` routing is the strict subscription route form, while `/intentSpecification/hub` is an accepted domain-scoped platform extension when deliberately used.
 
 ---

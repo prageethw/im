@@ -179,7 +179,7 @@ Important:
 | `GET /intentSpecification` | Response should include list-level `ETag` |
 | `PUT /intentSpecification/draft/{draftId}` | Request must include `If-Match` |
 | `PATCH /intentSpecification/draft/{draftId}` | Request must include `If-Match` |
-| `DELETE /intentSpecification/{id}` and `DELETE /intentSpecification/draft/{draftId}` | Request must include `If-Match` where applicable |
+| `DELETE /intentSpecification/{id}` and `DELETE /intentSpecification/draft/{draftId}` | Official delete/retire and draft-candidate delete both require `If-Match` where applicable; `/draft/{draftId}` applies only to mutable draft candidates. |
 | `POST /intentSpecification/hub` | Response must include `ETag` |
 | `DELETE /intentSpecification/hub/{id}` | Request must include `If-Match` |
 
@@ -408,7 +408,7 @@ Do not expose:
 POST /intentManagement/v5/intentSpecification/{id}/activate
 ```
 
-Use `PATCH /intentManagement/v5/intentSpecification/draft/{draftId}` for strict TMF-compatible lifecycle update, or `PUT /intentManagement/v5/intentSpecification/draft/{draftId}` as the preferred platform extension when the caller sends the full DRAFT candidate representation.
+Use `PATCH /intentManagement/v5/intentSpecification/draft/{draftId}` for TMF-compatible partial-update semantics on the platform-extension DRAFT-candidate route, or `PUT /intentManagement/v5/intentSpecification/draft/{draftId}` as the preferred platform extension when the caller sends the full DRAFT candidate representation.
 Although `PATCH` is discouraged as a general update method, it is acceptable for this tightly controlled TMF-compatible lifecycle transition.
 
 Rules:
