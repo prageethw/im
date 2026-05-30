@@ -12,16 +12,17 @@
 
 - [1. Proposal summary](#1-proposal-summary)
 - [2. Scope and terminology](#2-scope-and-terminology)
-- [3. Consumer-submitted DRAFT creation profile](#3-consumer-submitted-draft-creation-profile)
-- [4. Consumer-submitted ACTIVE publication profile](#4-consumer-submitted-active-publication-profile)
-- [5. Server-managed and prohibited consumer fields](#5-server-managed-and-prohibited-consumer-fields)
-- [6. Field classification summary](#6-field-classification-summary)
-- [7. Minimal DRAFT create example](#7-minimal-draft-create-example)
-- [8. Strongly recommended DRAFT create example](#8-strongly-recommended-draft-create-example)
-- [9. ACTIVE publication example](#9-active-publication-example)
-- [10. Consequences if accepted](#10-consequences-if-accepted)
-- [11. References](#11-references)
-- [12. Follow-up work if accepted](#12-follow-up-work-if-accepted)
+- [3. Consumer identity submission model](#3-consumer-identity-submission-model)
+- [4. Consumer-submitted DRAFT creation profile](#4-consumer-submitted-draft-creation-profile)
+- [5. Consumer-submitted ACTIVE publication profile](#5-consumer-submitted-active-publication-profile)
+- [6. Server-managed and prohibited consumer fields](#6-server-managed-and-prohibited-consumer-fields)
+- [7. Field classification summary](#7-field-classification-summary)
+- [8. Minimal DRAFT create example](#8-minimal-draft-create-example)
+- [9. Strongly recommended DRAFT create example](#9-strongly-recommended-draft-create-example)
+- [10. ACTIVE publication example](#10-active-publication-example)
+- [11. Consequences if accepted](#11-consequences-if-accepted)
+- [12. References](#12-references)
+- [13. Follow-up work if accepted](#13-follow-up-work-if-accepted)
 
 ## 1. Proposal summary:
 
@@ -52,20 +53,43 @@ This proposal uses these terms:
 
 This proposal is about `IntentSpecification` consumer submissions, not runtime `Intent` admission requests.
 
-## 3. Consumer-submitted DRAFT creation profile:
+## 3. Consumer identity submission model:
+
+For `POST /intentSpecification`, consumers submit `specKey`; they do not submit `id`, `draftId`, or official `version`.
+
+The proposed model is:
+
+| **Identifier** | **Owner** | **Purpose** |
+| --- | --- | --- |
+| `specKey` | Consumer-submitted | Logical specification key used by the consumer to create or evolve a specification family. |
+| `id` | Server-assigned by ID MS | Stable official `IntentSpecification` lineage key. Consumers must not provide it in `POST /intentSpecification`. |
+| `draftId` | Server-assigned by ID MS | Mutable DRAFT candidate key. Consumers must not provide it in `POST /intentSpecification`. |
+| `version` | Server-assigned by ID MS on ACTIVE publication | Official public contract version. Consumers must not provide an official version in DRAFT creation. |
+
+When a consumer creates a DRAFT candidate:
+
+- if the submitted `specKey` has an existing ACTIVE lineage, ID MS assigns the new DRAFT candidate to that existing server-generated `id`;
+- if the submitted `specKey` has no ACTIVE lineage, ID MS creates a new server-generated `id`;
+- if only RETIRED versions exist for the submitted `specKey`, ID MS creates a new `id` by default unless explicit governance allows lineage reuse.
+
+ID MS assigns a new `draftId` for the mutable candidate. ID MS assigns the official public `version` only when the DRAFT candidate is published as ACTIVE.
+
+This keeps the consumer-submitted create profile simple while preserving server control of official identity, draft candidate identity, and published version identity.
+
+## 4. Consumer-submitted DRAFT creation profile:
 
 A DRAFT creation request should be lightweight. It only needs enough information for ID MS to create, identify, and govern the editable candidate.
 
-### 3.1 Minimum mandatory fields for DRAFT creation:
+### 4.1 Minimum mandatory fields for DRAFT creation:
 
 | **Field** | **Requirement** | **Reason** |
 | --- | --- | --- |
-| `specKey` | Minimum mandatory | Groups related specification versions under a governed definition key. |
+| `specKey` | Minimum mandatory | Consumer-submitted logical key used to create or evolve a specification family. |
 | `name` | Minimum mandatory | Provides a human-readable catalogue name. |
 | `@type` | Minimum mandatory | Identifies the TMF polymorphic resource type. |
 | `@baseType` | Minimum mandatory | Preserves TMF base type alignment. |
 
-### 3.2 Strongly recommended fields for DRAFT creation:
+### 4.2 Strongly recommended fields for DRAFT creation:
 
 | **Field** | **Classification** | **Reason** |
 | --- | --- | --- |
@@ -77,7 +101,7 @@ A DRAFT creation request should be lightweight. It only needs enough information
 | `targetEntitySchema` | Strongly recommended | Allows early review of the runtime expression validation contract. |
 | `specCharacteristic` | Strongly recommended | Allows early catalogue and governance review. |
 
-### 3.3 Optional fields for DRAFT creation:
+### 4.3 Optional fields for DRAFT creation:
 
 | **Field** | **Classification** | **Reason** |
 | --- | --- | --- |
@@ -89,11 +113,11 @@ A DRAFT creation request should be lightweight. It only needs enough information
 
 DRAFT candidates do not expose or guarantee any official version identifier. Any version indicator during authoring is non-authoritative. Draft revision is represented by the entity tag and draft governance model defined in the ID MS Specification.
 
-## 4. Consumer-submitted ACTIVE publication profile:
+## 5. Consumer-submitted ACTIVE publication profile:
 
 Before an `IntentSpecification` can be published as ACTIVE, the consumer-submitted candidate must contain a complete contract profile.
 
-### 4.1 Minimum mandatory fields for ACTIVE publication:
+### 5.1 Minimum mandatory fields for ACTIVE publication:
 
 | **Field** | **Requirement** | **Reason** |
 | --- | --- | --- |
@@ -110,7 +134,7 @@ Before an `IntentSpecification` can be published as ACTIVE, the consumer-submitt
 | `@type` | Minimum mandatory | Identifies the TMF polymorphic resource type. |
 | `@baseType` | Minimum mandatory | Preserves TMF base type alignment. |
 
-### 4.2 Strongly recommended fields for ACTIVE publication:
+### 5.2 Strongly recommended fields for ACTIVE publication:
 
 | **Field** | **Classification** | **Reason** |
 | --- | --- | --- |
@@ -121,7 +145,7 @@ Before an `IntentSpecification` can be published as ACTIVE, the consumer-submitt
 | `schemaHash` inside `targetEntitySchema` | Strongly recommended | Supports schema integrity checking where schema governance supports it. |
 | `@schemaLocation` | Strongly recommended | Points to the resource representation schema where published. |
 
-### 4.3 Optional fields for ACTIVE publication:
+### 5.3 Optional fields for ACTIVE publication:
 
 | **Field** | **Classification** | **Reason** |
 | --- | --- | --- |
@@ -131,16 +155,16 @@ Before an `IntentSpecification` can be published as ACTIVE, the consumer-submitt
 | `entitySpecRelationship` | Optional | Useful for relationships to other entity specifications where required. |
 | `intentSpecRelationship` | Optional | Useful for relationships to other intent specifications where required. |
 
-## 5. Server-managed and prohibited consumer fields:
+## 6. Server-managed and prohibited consumer fields:
 
 Consumers must not provide server-managed fields in DRAFT create requests.
 
 | **Field** | **Rule** |
 | --- | --- |
-| `id` | Server-assigned by ID MS. Consumer must not provide it on create. |
+| `id` | Server-assigned official lineage key. Consumer must not provide it on create. ID MS resolves or creates it from the submitted `specKey` according to platform governance. |
 | `href` | Server-generated canonical URL. Consumer must not provide it on create. |
 | `draftId` | Server-assigned DRAFT candidate identifier. Consumer must not provide it on create. |
-| `version` | Official public version is assigned by ID MS only on ACTIVE publication. Consumer must not provide an official version in DRAFT create. |
+| `version` | Official public version is assigned by ID MS only on ACTIVE publication. Consumer must not provide an official version in DRAFT create. Any version indicator during authoring is non-authoritative. |
 | `lifecycleStatus` | Server-managed lifecycle state. Consumer must not set it on create. |
 | `creationDate` | Server-managed timestamp. |
 | `lastUpdate` | Server-managed timestamp. |
@@ -149,7 +173,7 @@ Consumers must not provide server-managed fields in DRAFT create requests.
 | `ETag` | Response header, not a request body field. |
 | `Location` | Response header, not a request body field. |
 
-## 6. Field classification summary:
+## 7. Field classification summary:
 
 | **Field** | **DRAFT create** | **ACTIVE publication** |
 | --- | --- | --- |
@@ -173,7 +197,7 @@ Consumers must not provide server-managed fields in DRAFT create requests.
 | `validFor.endDateTime` | Optional | Optional |
 | `@schemaLocation` | Optional | Strongly recommended |
 
-## 7. Minimal DRAFT create example:
+## 8. Minimal DRAFT create example:
 
 ```json
 {
@@ -184,7 +208,7 @@ Consumers must not provide server-managed fields in DRAFT create requests.
 }
 ```
 
-## 8. Strongly recommended DRAFT create example:
+## 9. Strongly recommended DRAFT create example:
 
 ```json
 {
@@ -233,7 +257,7 @@ Consumers must not provide server-managed fields in DRAFT create requests.
 }
 ```
 
-## 9. ACTIVE publication example:
+## 10. ACTIVE publication example:
 
 ```json
 {
@@ -292,7 +316,7 @@ Consumers must not provide server-managed fields in DRAFT create requests.
 }
 ```
 
-## 10. Consequences if accepted:
+## 11. Consequences if accepted:
 
 Positive consequences:
 
@@ -309,7 +333,7 @@ Trade-offs:
 - consumers may need to supply more complete metadata before publication
 - the proposal requires lifecycle-aware validation in ID MS if accepted
 
-## 11. References:
+## 12. References:
 
 | **Reference** | **URL** | **Relevance** |
 | --- | --- | --- |
@@ -319,7 +343,7 @@ Trade-offs:
 | TR292 TM Forum Intent Ontology v3.6.0 | https://www.tmforum.org/resources/standard/tr292-intent-ontology-tio-v3-6-0/ | Provides intent ontology context behind semantic and expression contract identifiers. |
 | Intent architecture baseline repository | https://github.com/prageethw/im/tree/main/baseline/intent | Holds the project baseline artifacts. |
 
-## 12. Follow-up work if accepted:
+## 13. Follow-up work if accepted:
 
 If accepted, update or confirm the ID MS Specification and ID MS Design Brief so they:
 
