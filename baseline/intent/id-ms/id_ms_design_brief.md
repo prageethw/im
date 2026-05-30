@@ -614,6 +614,8 @@ id: hospital-surgical-slice-spec, version: 1.20
 
 Only one version with that `specKey` should be `ACTIVE` for new runtime intent creation.
 
+Lineage reuse across retired-only specifications is not assumed by default. Reintroduction or reuse of a prior lineage requires explicit governance.
+
 ### Mutability rules:
 
 | **Lifecycle status** | **Mutable?** | **Reason** |
@@ -622,13 +624,16 @@ Only one version with that `specKey` should be `ACTIVE` for new runtime intent c
 | `ACTIVE` | No | Active contract must be stable for runtime clients and IC MS validation |
 | `RETIRED` | No | Retired contract must remain stable for audit and existing runtime references |
 
-### Runtime compatibility rules:
+### Runtime compatibility and Intent immutability rules:
 
 - IC MS must validate new runtime `Intent` creation only against an `ACTIVE` `IntentSpecification`.
 - If a submitted intent references a `DRAFT` specification, IC MS rejects it.
 - If a submitted intent references a `RETIRED` specification for new creation, IC MS rejects it.
-- Existing intents that were created against a now-retired specification may continue temporarily if platform policy allows.
-- Existing intents should be migrated to the new active specification version only through a controlled intent update/recreate flow.
+- Runtime Intent instances created using an `ACTIVE` `IntentSpecification` remain tied to the specification identity and version used at admission.
+- Existing runtime Intent instances referencing a `RETIRED` specification may continue where platform policy allows.
+- A change in intent requirements should be handled through a controlled runtime Intent update or recreate flow owned by IC MS.
+- ID MS does not mutate runtime Intent instances.
+- `ACTIVE` and `RETIRED` `IntentSpecification` versions remain immutable for material contract changes.
 
 ### Activation governance rules:
 
@@ -1412,7 +1417,21 @@ ID MS does not own semantic validation, policy validation, candidate and resourc
 
 ## Optional IntentSpecification behaviour metadata:
 
-`intentBehaviour` and `intentLayer` are optional definition-time metadata fields on `IntentSpecification`. They support catalogue discovery, governance, and future platform reasoning. They are not required for DRAFT creation, activation, or runtime Intent admission in the current baseline. If omitted, ID MS does not infer or default these values unless an explicit platform policy is later introduced.
+`intentBehaviour` and `intentLayer` are optional definition-time metadata fields on `IntentSpecification`.
+
+They are intended for:
+
+- catalogue classification
+- governance visibility
+- external consumer understanding
+
+They are not used by ID MS for:
+
+- behavioural enforcement
+- runtime decisioning
+- validation or admission control
+
+They are not required for DRAFT creation, activation, or runtime Intent admission in the current baseline. If omitted, ID MS does not infer or default these values unless an explicit platform policy is later introduced.
 
 Example optional metadata for the hospital surgical slice specification:
 
@@ -1433,14 +1452,23 @@ Controlled values:
 | **Field** | **Allowed values** | **Meaning** |
 |---|---|---|
 | `intentBehaviour.category` | `REALTIME`, `BATCH`, `OPTIMISATION`, `ASSURANCE` | Broad behavioural type of intents created from the specification. |
-| `intentBehaviour.constraintMode` | `STRICT`, `FLEXIBLE` | Whether constraints are normally mandatory or may be relaxed by governed policy/negotiation. |
+| `intentBehaviour.constraintMode` | `STRICT`, `FLEXIBLE` | Whether constraints are normally mandatory or may be relaxed by governed policy or negotiation. |
 | `intentBehaviour.objectiveType` | `SLA`, `COST`, `ENERGY`, `BALANCED` | Main decision or optimisation objective. |
-| `intentBehaviour.fulfilmentMode` | `IMMEDIATE`, `LONGRUNNING`, `CONTINUOUS` | Fulfilment behaviour. `CONTINUOUS` means the system adopts a closed loop for the intent. |
+| `intentBehaviour.fulfilmentMode` | `IMMEDIATE`, `LONGRUNNING`, `CONTINUOUS` | Fulfilment behaviour. |
 | `intentLayer` | `BUSINESS`, `SERVICE`, `RESOURCE` | Abstraction layer of the intent. |
 
-`IMMEDIATE` and `LONGRUNNING` describe fulfilment timing. `CONTINUOUS` describes whether the system is closed-looped for the intent.
+`fulfilmentMode` values mean:
+
+| **Value** | **Meaning** |
+|---|---|
+| `IMMEDIATE` | Fulfilment is expected to complete in a short-lived operation. |
+| `LONGRUNNING` | Fulfilment spans a longer-running workflow with delayed completion feedback. |
+| `CONTINUOUS` | Downstream systems may operate in a closed-loop manner to maintain the intent objective over time. |
+
+`IMMEDIATE` and `LONGRUNNING` describe fulfilment timing. `CONTINUOUS` describes whether downstream systems are closed-looped for the intent. `CONTINUOUS` does not imply modification of the submitted runtime Intent instance. Runtime Intent instances remain immutable once accepted.
 
 These fields do not replace `expressionSpecification.iri`, `targetEntitySchema`, `specCharacteristic`, or request-specific `serviceType`, `serviceClass`, `priority`, targets, constraints, and preferences inside the governed expression schema.
+
 
 ## Callback URL baseline:
 

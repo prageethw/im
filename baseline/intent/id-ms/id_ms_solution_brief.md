@@ -242,7 +242,21 @@ Baseline:
 
 ## Optional IntentSpecification behaviour metadata:
 
-`intentBehaviour` and `intentLayer` are optional definition-time metadata fields on `IntentSpecification`. They support catalogue discovery, governance, and future platform reasoning. They are not required for DRAFT creation, activation, or runtime Intent admission in the current baseline. If omitted, ID MS does not infer or default these values unless an explicit platform policy is later introduced.
+`intentBehaviour` and `intentLayer` are optional definition-time metadata fields on `IntentSpecification`.
+
+They are intended for:
+
+- catalogue classification
+- governance visibility
+- external consumer understanding
+
+They are not used by ID MS for:
+
+- behavioural enforcement
+- runtime decisioning
+- validation or admission control
+
+They are not required for DRAFT creation, activation, or runtime Intent admission in the current baseline. If omitted, ID MS does not infer or default these values unless an explicit platform policy is later introduced.
 
 Example optional metadata for the hospital surgical slice specification:
 
@@ -263,14 +277,23 @@ Controlled values:
 | **Field** | **Allowed values** | **Meaning** |
 |---|---|---|
 | `intentBehaviour.category` | `REALTIME`, `BATCH`, `OPTIMISATION`, `ASSURANCE` | Broad behavioural type of intents created from the specification. |
-| `intentBehaviour.constraintMode` | `STRICT`, `FLEXIBLE` | Whether constraints are normally mandatory or may be relaxed by governed policy/negotiation. |
+| `intentBehaviour.constraintMode` | `STRICT`, `FLEXIBLE` | Whether constraints are normally mandatory or may be relaxed by governed policy or negotiation. |
 | `intentBehaviour.objectiveType` | `SLA`, `COST`, `ENERGY`, `BALANCED` | Main decision or optimisation objective. |
-| `intentBehaviour.fulfilmentMode` | `IMMEDIATE`, `LONGRUNNING`, `CONTINUOUS` | Fulfilment behaviour. `CONTINUOUS` means the system adopts a closed loop for the intent. |
+| `intentBehaviour.fulfilmentMode` | `IMMEDIATE`, `LONGRUNNING`, `CONTINUOUS` | Fulfilment behaviour. |
 | `intentLayer` | `BUSINESS`, `SERVICE`, `RESOURCE` | Abstraction layer of the intent. |
 
-`IMMEDIATE` and `LONGRUNNING` describe fulfilment timing. `CONTINUOUS` describes whether the system is closed-looped for the intent.
+`fulfilmentMode` values mean:
+
+| **Value** | **Meaning** |
+|---|---|
+| `IMMEDIATE` | Fulfilment is expected to complete in a short-lived operation. |
+| `LONGRUNNING` | Fulfilment spans a longer-running workflow with delayed completion feedback. |
+| `CONTINUOUS` | Downstream systems may operate in a closed-loop manner to maintain the intent objective over time. |
+
+`IMMEDIATE` and `LONGRUNNING` describe fulfilment timing. `CONTINUOUS` describes whether downstream systems are closed-looped for the intent. `CONTINUOUS` does not imply modification of the submitted runtime Intent instance. Runtime Intent instances remain immutable once accepted.
 
 These fields do not replace `expressionSpecification.iri`, `targetEntitySchema`, `specCharacteristic`, or request-specific `serviceType`, `serviceClass`, `priority`, targets, constraints, and preferences inside the governed expression schema.
+
 
 ## Field specification:
 
