@@ -1,6 +1,12 @@
 # ID MS Design Brief
 
-## ID MS API contract:
+| **Document status** | **Value** |
+| --- | --- |
+| Status | Current baseline |
+| Scope | Intent Definition MS design brief |
+| Source of truth after commit | GitHub `baseline/intent/id-ms/id_ms_design_brief.md` |
+
+## 1. ID MS API contract:
 
 ID MS owns the definition-time `IntentSpecification` resource and related hub subscriptions.
 
@@ -16,14 +22,14 @@ ID MS owns definition-time `IntentSpecification` contracts and subscription mana
 It validates syntax and resource shape, enforces specification lifecycle and version governance, and delivers external specification lifecycle notifications to subscribed REST webhook listener callbacks.
 ID MS does not validate runtime semantic feasibility, policy fulfilment, network topology, optimisation, assurance, telemetry, change-execution callbacks, or runtime intent lifecycle truth.
 
-## TMF compliance and platform extension:
+## 2. TMF compliance and platform extension:
 
 
-## Response locale:
+## 3. Response locale:
 
 `Content-Language: en-AU` is the platform default response locale used in examples. It does not change field names, enum values, identifiers, or JSON payload semantics.
 
-## Response classification headers:
+## 4. Response classification headers:
 
 The service returns response classification headers on external REST API responses so callers can distinguish strict TMF-native behaviour from documented platform-extension behaviour.
 
@@ -88,7 +94,7 @@ External `IntentSpecificationCreateEvent`, `IntentSpecificationAttributeValueCha
 
 `IntentSpecificationStatusChangeEvent` carries the current `intentSpecification.lifecycleStatus` snapshot. It does not carry separate `previousLifecycleStatus` or `newLifecycleStatus` fields in the external event payload.
 
-## IntentSpecification resource APIs:
+## 5. IntentSpecification resource APIs:
 
 | **Purpose** | **Method** | **Endpoint** |
 |---|---:|---|
@@ -104,7 +110,7 @@ External `IntentSpecificationCreateEvent`, `IntentSpecificationAttributeValueCha
 `PUT /intentSpecification/draft/{draftId}` is an intentional platform extension for deterministic full replacement of editable DRAFT candidates.
 `PATCH /intentSpecification/draft/{draftId}` remains supported for TMF-compatible partial-update semantics on the platform-extension DRAFT-candidate route, but is discouraged as a general update method.
 
-## Hub subscription APIs:
+## 6. Hub subscription APIs:
 
 ID MS intentionally uses domain-scoped hub routes for `IntentSpecification` event subscriptions.
 Strict TMF exposure may use the generic root `/hub` route at the gateway layer; `/intentSpecification/hub` and `GET /intentSpecification/hub/{id}` are approved platform extensions for domain-owned operational clarity.
@@ -118,7 +124,7 @@ Strict TMF exposure may use the generic root `/hub` route at the gateway layer; 
 Hub subscriptions are for external `IntentSpecification` event notifications only. ID MS delivers those notifications by HTTP `POST` to the subscriber-owned REST webhook listener callback URL. Kafka is not used for external hub notification delivery.
 They must not expose internal workflow events, KP details, runtime assurance state, telemetry, callback payloads, optimiser decisions, or candidate and resource scoring details.
 
-## Query conventions:
+## 7. Query conventions:
 
 List endpoint:
 
@@ -146,7 +152,7 @@ ETag: "list-etag-value"
 Cache-Control: private, max-age=60
 ```
 
-## Lifecycle rules:
+## 8. Lifecycle rules:
 
 Allowed lifecycle states:
 
@@ -174,7 +180,7 @@ Important:
 - Activation is a lifecycle update on `/intentSpecification/draft/{draftId}`, not a custom `/activate` endpoint.
 - When a new version becomes `ACTIVE`, the previous `ACTIVE` version in the same `specKey` becomes `RETIRED`.
 
-## ETag / If-Match rules:
+## 9. ETag / If-Match rules:
 
 | **Operation** | **ETag / If-Match rule** |
 |---|---|
@@ -223,7 +229,7 @@ Content-Type: application/json
 }
 ```
 
-## Create IntentSpecification:
+## 10. Create IntentSpecification:
 
 ```http
 POST /intentManagement/v5/intentSpecification?fields=id,href,specKey,draftId,name,lifecycleStatus,isBundle,validFor,relatedParty,specCharacteristic,expressionSpecification,targetEntitySchema,intentBehaviour,intentLayer,@type,@baseType
@@ -267,7 +273,7 @@ Notes:
 - DRAFT candidate revision is represented by `ETag`.
 - Official `version` is assigned only when the selected DRAFT candidate is activated.
 
-## Retrieve IntentSpecification:
+## 11. Retrieve IntentSpecification:
 
 ```http
 GET /intentManagement/v5/intentSpecification/ispec-hss-001?fields=id,href,specKey,name,description,version,lifecycleStatus,isBundle,validFor,relatedParty,specCharacteristic,expressionSpecification,targetEntitySchema,@type,@baseType
@@ -292,7 +298,7 @@ Notes:
 - IC MS may use this to validate incoming runtime `Intent` requests.
 - The returned resource includes full `specKey`, `isBundle`, `validFor`, `relatedParty`, `specCharacteristic`, `expressionSpecification`, `targetEntitySchema`, lifecycle status, and `_links`.
 
-## List IntentSpecifications:
+## 12. List IntentSpecifications:
 
 The list operation returns a lightweight summary by default.
 
@@ -313,7 +319,7 @@ Default list representation includes:
 
 The list operation does not include full `specCharacteristic`, `expressionSpecification`, or `targetEntitySchema` by default unless requested through `fields`.
 
-## Full update IntentSpecification:
+## 13. Full update IntentSpecification:
 
 ```http
 PUT /intentManagement/v5/intentSpecification/draft/id-draft-hospital-surgical-slice-a?fields=id,href,specKey,name,description,version,lifecycleStatus,isBundle,validFor,relatedParty,specCharacteristic,expressionSpecification,targetEntitySchema,@type,@baseType
@@ -357,7 +363,7 @@ Content-Type: application/json
 }
 ```
 
-## Partial update IntentSpecification:
+## 14. Partial update IntentSpecification:
 
 ```http
 PATCH /intentManagement/v5/intentSpecification/draft/id-draft-hospital-surgical-slice-a
@@ -376,7 +382,7 @@ Rules:
 - Prefer `PUT` for deterministic full replacement.
 - Must not normally be used for material replacement of `specKey`, `version`, `specCharacteristic`, `expressionSpecification`, `targetEntitySchema`, or major lifecycle and version contract identity.
 
-## Delete unused DRAFT IntentSpecification candidate:
+## 15. Delete unused DRAFT IntentSpecification candidate:
 
 ```http
 DELETE /intentManagement/v5/intentSpecification/draft/id-draft-hospital-surgical-slice-a
@@ -402,7 +408,7 @@ Rules:
 - Delete emits `IntentSpecificationDeleteEvent` only after successful delete.
 - Physical versus logical removal is an implementation detail.
 
-## Activation response traceability:
+## 16. Activation response traceability:
 
 `previousActiveSpecification` is included when a previous ACTIVE version was retired during the activation transaction. Example:
 
@@ -422,7 +428,7 @@ Rules:
 }
 ```
 
-## Activate IntentSpecification:
+## 17. Activate IntentSpecification:
 
 Activation is a lifecycle update, not a custom action endpoint.
 
@@ -468,7 +474,7 @@ X-Platform-Extension: false
 
 If the specification is already `RETIRED`, ID MS returns `409 Conflict` because only `ACTIVE` official specifications can be retired.
 
-## Hub create subscription:
+## 18. Hub create subscription:
 
 ```http
 POST /intentManagement/v5/intentSpecification/hub
@@ -533,7 +539,7 @@ Hub notification delivery baseline:
 - Kafka topics are not used for external hub notification delivery because ID MS is both the event originator and the delivery owner.
 - Delivery reliability is handled by an ID MS-owned local webhook delivery outbox and retry relay.
 
-## Hub retrieve subscription:
+## 19. Hub retrieve subscription:
 
 ```http
 GET /intentManagement/v5/intentSpecification/hub/sub-001
@@ -569,7 +575,7 @@ Cache-Control: private, max-age=300
 }
 ```
 
-## Hub delete subscription:
+## 20. Hub delete subscription:
 
 ```http
 DELETE /intentManagement/v5/intentSpecification/hub/sub-001
@@ -584,7 +590,7 @@ HTTP/1.1 204 No Content
 Content-Language: en-AU
 ```
 
-## Standard error body:
+## 21. Standard error body:
 
 All ID MS errors use the common cross-MS error shape:
 
@@ -613,13 +619,13 @@ Common errors:
 | `503` | `SERVICE_UNAVAILABLE` | Source-of-truth DB unavailable |
 | `500` | `INTERNAL_ERROR` | Unexpected server error |
 
-## ID MS API boundary statement:
+## 22. ID MS API boundary statement:
 
 **ID MS owns definition-time `IntentSpecification` contracts and subscription management for specification events.
 It validates syntax and resource shape, enforces specification lifecycle and version governance, and delivers external specification lifecycle notifications to subscribed REST webhook listener callbacks.
 It does not validate runtime semantic feasibility, policy fulfilment, network topology, optimisation, assurance, telemetry, change-execution callbacks, or callback ingestion.**
 
-## Lifecycle and versioning rules:
+## 23. Lifecycle and versioning rules:
 
 ### Lifecycle state model:
 
@@ -722,7 +728,7 @@ Delete is blocked when:
 
 Delete success returns `204 No Content` and does not create `lifecycleStatus = DELETED`.
 
-## Caching, ETag, and dependency-specific circuit-breaker baseline:
+## 24. Caching, ETag, and dependency-specific circuit-breaker baseline:
 
 ### Caching scope:
 
@@ -1017,7 +1023,7 @@ Database failure is hard fail-fast and returns `503 Service Unavailable`.
 Cache failure is handled silently and gracefully by bypassing cache or ignoring cache writes where safe.
 Webhook delivery failure is handled through the ID MS local delivery outbox. Each failed delivery attempt fails fast, is retried later, and does not affect the original resource API response.**
 
-## Deployment and persistence strategy:
+## 25. Deployment and persistence strategy:
 
 ### Runtime model:
 
@@ -1197,7 +1203,7 @@ The source of truth for `IntentSpecification`, hub subscriptions, lifecycle and 
 JSONB may be used for document-shaped resource bodies and event snapshots, while relational columns support governance queries, lifecycle and versioning, ETag handling, and operational reporting.
 ID MS readiness depends on DB and source-of-truth availability, but cache and webhook delivery failures are handled gracefully through cache bypass and the local delivery outbox where possible.
 
-## Security and access-control baseline:
+## 26. Security and access-control baseline:
 
 ### Authentication:
 
@@ -1259,7 +1265,7 @@ NGW performs system-to-system authentication using mTLS and OAuth2 token validat
 Business and user-level authorisation is owned by the OEX layer and should not be implemented as operation-level authorisation inside ID MS.
 ID MS trusts authenticated platform and system callers and enforces technical resource integrity, lifecycle and version governance, validation, ETag and If-Match concurrency rules, and state-machine constraints for `IntentSpecification` resources.**
 
-## Observability and audit baseline:
+## 27. Observability and audit baseline:
 
 ### Observability purpose:
 
@@ -1432,7 +1438,7 @@ Trace data must not include secrets or sensitive token contents.
 **ID MS must log and propagate correlation context, emit structured operational telemetry, and audit technical/governance-changing operations.
 Business and user authorisation audit remains with OEX, while ID MS audit focuses on specification creation, update, activation, retirement, deletion, hub subscription changes, technical validation failures, ETag and If-Match integrity decisions, immutable-resource enforcement, and dependency failure signals.**
 
-## ID MS consistency sweep:
+## 28. ID MS consistency sweep:
 
 ### Sweep date:
 
@@ -1477,7 +1483,7 @@ The design keeps ID MS focused on definition-time `IntentSpecification` resource
 ID MS does not own semantic validation, policy validation, candidate and resource feasibility, optimisation, runtime assurance, telemetry, or callback ingestion.
 
 
-## Optional IntentSpecification behaviour metadata:
+## 29. Optional IntentSpecification behaviour metadata:
 
 `intentBehaviour` and `intentLayer` are optional classification metadata fields on `IntentSpecification`. Refer to the ID MS specification for the full `intentBehaviour` and `intentLayer` definition, allowed values, and constraints.
 
@@ -1487,22 +1493,22 @@ If omitted, ID MS does not infer or default these values unless an explicit plat
 
 These fields do not replace `expressionSpecification.iri`, `targetEntitySchema`, `specCharacteristic`, or request-specific `serviceType`, `serviceClass`, `priority`, targets, constraints, and preferences inside the governed expression schema.
 
-## specKey lineage note:
+## 30. specKey lineage note:
 
 `specKey` represents logical grouping across specification versions. If only `RETIRED` versions exist for a `specKey`, ID MS creates a new `id` by default. Lineage reuse of retired specifications is not assumed and requires explicit governance if introduced later.
 
 
-## draftId provenance lookup rule:
+## 31. draftId provenance lookup rule:
 
 Before activation, `GET /intentSpecification/draft/{draftId}` returns the mutable DRAFT candidate. After activation, the same GET route remains valid as a read-only provenance lookup for the official `IntentSpecification` version produced from that DRAFT candidate.
 
 For produced official versions, the response must show the official `id`, official `version`, carried-forward `draftId`, and lifecycle status. DRAFT mutation links must not be returned after activation. Runtime Intent admission must still reference a concrete ACTIVE `IntentSpecification.id`; `draftId` must not be used for runtime contract selection.
 
-## Runtime admission guardrail:
+## 32. Runtime admission guardrail:
 
 Runtime Intent admission must reference a concrete ACTIVE `IntentSpecification.id`. `specKey` and `draftId` must not be used for runtime contract selection. DRAFT candidates and RETIRED specifications must not be used for new runtime Intent admission.
 
-## Callback URL baseline:
+## 33. Callback URL baseline:
 
 Callback URLs are subscriber-owned listener endpoints.
 Do not imply TM Forum owns subscriber callback URLs. Callback URLs are subscriber-owned, while notification payloads follow TMF-aligned event patterns.
@@ -1513,7 +1519,7 @@ https://consumer.example.com/listener/intentSpecification/events
 ```
 
 
-## PATCH semantics:
+## 34. PATCH semantics:
 
 `PATCH` uses JSON Merge Patch semantics across the service's external REST API.
 
@@ -1527,7 +1533,7 @@ Content-Type: application/merge-patch+json
 
 
 
-## IntentSpecification versioning clarification:
+## 35. IntentSpecification versioning clarification:
 
 `IntentSpecification.version` is a design-time contract version and is separate from runtime `Intent.version`.
 
@@ -1543,7 +1549,7 @@ Baseline:
 
 
 
-## Expression schema alignment:
+## 36. Expression schema alignment:
 
 Intent domain expression schemas should align with the TMF Intent Ontology direction and use a scalable JSON-LD-style structure.
 

@@ -1,10 +1,9 @@
-# IntentSpecification profile decision
+# TAF - Decision Proposal IntentSpecification, Minimum data requirements.
 
 | **Document status** | **Value** |
 | --- | --- |
-| Status | Proposed decision paper |
-| Scope | Intent Definition MS `IntentSpecification` definition profile |
-| Primary focus | `specKey`, `draftId`, DRAFT candidate creation, activation, official version assignment, ACTIVE and RETIRED immutability |
+| Status | Current baseline decision paper |
+| Scope | IntentSpecification profile and definition-candidate model |
 | Source of truth after commit | GitHub `baseline/intent/id-ms/id_ms_spec_profile_decision.md` |
 
 ## 1. Decision summary:

@@ -1,5 +1,11 @@
 # ID MS Specification
 
+| **Document status** | **Value** |
+| --- | --- |
+| Status | Current baseline |
+| Scope | Intent Definition MS API and behaviour specification |
+| Source of truth after commit | GitHub `baseline/intent/id-ms/id_ms_specification.md` |
+
 ### Service identity
 
 | **Item** | **Baseline** |
@@ -2259,7 +2265,7 @@ TMF921 examples contain the misspelled `timeOcurred`; this baseline intentionall
 
 ---
 
-## TMF compliance and platform extension baseline
+## 22. TMF compliance and platform extension baseline
 
 ### Strict TMF-compliant baseline
 
