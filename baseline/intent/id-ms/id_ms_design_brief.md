@@ -449,6 +449,25 @@ Rules:
   - one event carrying the new version snapshot with `lifecycleStatus: ACTIVE`
   - one event carrying the previous active version snapshot with `lifecycleStatus: RETIRED`
 
+
+
+Retire current ACTIVE specification example:
+
+```http
+DELETE /intentManagement/v5/intentSpecification/ispec-hss-001
+If-Match: "intent-spec-ispec-hss-001-v1.20-r1"
+Accept: application/json
+```
+
+```http
+HTTP/1.1 204 No Content
+Content-Language: en-AU
+X-TMF-Native: true
+X-Platform-Extension: false
+```
+
+If the specification is already `RETIRED`, ID MS returns `409 Conflict` because only `ACTIVE` official specifications can be retired.
+
 ## Hub create subscription:
 
 ```http
@@ -572,7 +591,6 @@ Common errors:
 | `412` | `PRECONDITION_FAILED` | Stale or mismatched `If-Match` |
 | `422` | `VALIDATION_FAILED` | Fails expression/spec schema constraints |
 | `428` | `PRECONDITION_REQUIRED` | Missing required `If-Match` |
-| `503` | `SERVICE_UNAVAILABLE` | Source-of-truth DB unavailable |
 | `500` | `INTERNAL_ERROR` | Unexpected server error |
 
 ## ID MS API boundary statement:
@@ -636,7 +654,7 @@ id: hospital-surgical-slice-spec, version: 1.19
 id: hospital-surgical-slice-spec, version: 1.20
 ```
 
-Only one ACTIVE version is allowed for a given specKey.
+Only one version with that `specKey` should be `ACTIVE` for new runtime intent creation.
 
 Lineage reuse across retired-only specifications is not assumed by default. Reintroduction or reuse of a prior lineage requires explicit governance.
 

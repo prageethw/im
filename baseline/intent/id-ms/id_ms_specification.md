@@ -1196,6 +1196,66 @@ Cache-Control: no-store
 
 ---
 
+### Retire current ACTIVE specification
+
+`DELETE /intentSpecification/{id}` retires the current ACTIVE official specification. It does not physically delete the official resource.
+
+#### Request
+
+```http
+DELETE /intentManagement/v5/intentSpecification/ispec-hss-001
+If-Match: "intent-spec-ispec-hss-001-v1.20-r1"
+Accept: application/json
+```
+
+#### Success response
+
+```http
+HTTP/1.1 204 No Content
+Content-Language: en-AU
+X-TMF-Native: true
+X-Platform-Extension: false
+```
+
+No response body is returned.
+
+#### Retire rules
+
+| **Rule** | **Baseline** |
+|---|---|
+| Allowed lifecycle | `ACTIVE` only |
+| Outcome | Current official version becomes `RETIRED` |
+| Runtime references | Existing runtime Intent instances referencing a RETIRED specification may continue under external platform governance policy |
+| ETag required | `If-Match` is required |
+| Missing `If-Match` | `428 Precondition Required` |
+| Stale or mismatched `If-Match` | `412 Precondition Failed` |
+| Already retired | `409 Conflict` |
+| Event emitted | `IntentSpecificationStatusChangeEvent` after successful retirement |
+
+#### Already retired response
+
+```http
+HTTP/1.1 409 Conflict
+Content-Type: application/json
+Content-Language: en-AU
+X-TMF-Native: true
+X-Platform-Extension: false
+Cache-Control: no-store
+```
+
+```json
+{
+  "code": "INVALID_LIFECYCLE_TRANSITION",
+  "reason": "INTENT_SPECIFICATION_RETIREMENT_NOT_ALLOWED",
+  "message": "Only ACTIVE IntentSpecification resources can be retired.",
+  "status": 409,
+  "referenceError": "https://mycsp.com.au/errors/INVALID_LIFECYCLE_TRANSITION",
+  "@type": "Error"
+}
+```
+
+---
+
 ## 10. Activate IntentSpecification through lifecycle update
 
 Activation is not exposed through a custom action endpoint. Do not use:
@@ -1222,6 +1282,8 @@ Although `PATCH` is discouraged as a general update method, this is an acceptabl
 
 ### PATCH activation request
 
+The following activation example assumes a second DRAFT candidate, `id-draft-hospital-surgical-slice-b`, was created for the next official version after earlier draft work on `id-draft-hospital-surgical-slice-a`.
+
 ```http
 PATCH /intentManagement/v5/intentSpecification/draft/id-draft-hospital-surgical-slice-b?fields=id,href,specKey,name,version,lifecycleStatus,previousActiveSpecification,@type,@baseType
 Content-Type: application/merge-patch+json
@@ -1241,6 +1303,8 @@ If-Match: "id-draft-hospital-surgical-slice-b-r3"
 
 ### Success response
 
+Activation returns the full promoted ACTIVE `IntentSpecification` resource representation. `previousActiveSpecification` is included as an activation governance projection when a previous ACTIVE version was retired during the same transaction.
+
 ```http
 HTTP/1.1 200 OK
 Content-Type: application/json
@@ -1256,11 +1320,56 @@ Last-Modified: Sat, 18 Apr 2026 03:30:00 GMT
 {
   "id": "ispec-hss-001",
   "href": "/intentManagement/v5/intentSpecification/ispec-hss-001",
-  "draftId": "id-draft-hospital-surgical-slice-b",
   "specKey": "hospital-surgical-slice-spec",
   "name": "Hospital Surgical Slice Intent Specification",
+  "description": "Definition-time specification for hospital surgical slice intents. This specification defines the allowed request shape for surgical connectivity intents. ID MS performs syntax and structure validation only. II MS and the knowledge plane validate semantic meaning, policy, and fulfilment feasibility.",
   "version": "1.20",
   "lifecycleStatus": "ACTIVE",
+  "isBundle": false,
+  "validFor": {
+    "startDateTime": "2026-04-18T12:00:00+10:00"
+  },
+  "relatedParty": [
+    {
+      "@type": "RelatedPartyRefOrPartyRoleRef",
+      "role": "Provider",
+      "partyOrPartyRole": {
+        "@type": "PartyRoleRef",
+        "id": "mycsp",
+        "name": "MyCSP",
+        "@referredType": "Provider"
+      }
+    }
+  ],
+  "intentBehaviour": {
+    "category": "REALTIME",
+    "constraintMode": "STRICT",
+    "objectiveType": "SLA",
+    "fulfilmentMode": "CONTINUOUS"
+  },
+  "intentLayer": "SERVICE",
+  "specCharacteristic": [
+    {
+      "@type": "CharacteristicSpecification",
+      "id": "context",
+      "name": "context",
+      "valueType": "object",
+      "configurable": true,
+      "minCardinality": 1,
+      "maxCardinality": 1
+    }
+  ],
+  "expressionSpecification": {
+    "@type": "ExpressionSpecification",
+    "expressionLanguage": "JSON-LD",
+    "iri": "https://mycsp.com.au/tio/hospital-surgical-slice/v1.0"
+  },
+  "targetEntitySchema": {
+    "@type": "TargetEntitySchema",
+    "@schemaLocation": "https://mycsp.com.au/schemas/intentManagement/v5/intentExpression/hospital-surgical-slice-spec-v1.20.expression.schema.json",
+    "schemaVersion": "1.20",
+    "schemaHash": "sha256:REPLACE_WITH_PUBLISHED_SCHEMA_HASH"
+  },
   "previousActiveSpecification": {
     "id": "ispec-hss-001",
     "href": "/intentManagement/v5/intentSpecification/ispec-hss-001?version=1.19",
