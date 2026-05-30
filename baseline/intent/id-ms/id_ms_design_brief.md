@@ -96,7 +96,7 @@ External `IntentSpecificationCreateEvent`, `IntentSpecificationAttributeValueCha
 | List specifications | `GET` | `/intentSpecification` |
 | Retrieve official ACTIVE and RETIRED specification by ID | `GET` | `/intentSpecification/{id}` |
 | Retire current ACTIVE specification | `DELETE` | `/intentSpecification/{id}` |
-| Retrieve DRAFT candidate | `GET` | `/intentSpecification/draft/{draftId}` |
+| Retrieve DRAFT candidate or produced version by draftId | `GET` | `/intentSpecification/draft/{draftId}` |
 | Full replace DRAFT candidate | `PUT` | `/intentSpecification/draft/{draftId}` |
 | Partial update or activate DRAFT candidate | `PATCH` | `/intentSpecification/draft/{draftId}` |
 | Delete unused DRAFT candidate | `DELETE` | `/intentSpecification/draft/{draftId}` |
@@ -1490,6 +1490,13 @@ These fields do not replace `expressionSpecification.iri`, `targetEntitySchema`,
 ## specKey lineage note:
 
 `specKey` represents logical grouping across specification versions. If only `RETIRED` versions exist for a `specKey`, ID MS creates a new `id` by default. Lineage reuse of retired specifications is not assumed and requires explicit governance if introduced later.
+
+
+## draftId provenance lookup rule:
+
+Before activation, `GET /intentSpecification/draft/{draftId}` returns the mutable DRAFT candidate. After activation, the same GET route remains valid as a read-only provenance lookup for the official `IntentSpecification` version produced from that DRAFT candidate.
+
+For produced official versions, the response must show the official `id`, official `version`, carried-forward `draftId`, and lifecycle status. DRAFT mutation links must not be returned after activation. Runtime Intent admission must still reference a concrete ACTIVE `IntentSpecification.id`; `draftId` must not be used for runtime contract selection.
 
 ## Runtime admission guardrail:
 

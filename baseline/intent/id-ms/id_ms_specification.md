@@ -35,7 +35,7 @@ A strict TMF deployment may expose the same API through `/tmf-api/intentManageme
 | List specifications | `GET` | `/intentManagement/v5/intentSpecification` |
 | Retrieve official ACTIVE and RETIRED specification by ID | `GET` | `/intentManagement/v5/intentSpecification/{id}` |
 | Retire current ACTIVE specification | `DELETE` | `/intentManagement/v5/intentSpecification/{id}` |
-| Retrieve DRAFT candidate | `GET` | `/intentManagement/v5/intentSpecification/draft/{draftId}` |
+| Retrieve DRAFT candidate or produced version by draftId | `GET` | `/intentManagement/v5/intentSpecification/draft/{draftId}` |
 | Full replace DRAFT candidate | `PUT` | `/intentManagement/v5/intentSpecification/draft/{draftId}` |
 | Partial update or activate DRAFT candidate | `PATCH` | `/intentManagement/v5/intentSpecification/draft/{draftId}` |
 | Delete unused DRAFT candidate | `DELETE` | `/intentManagement/v5/intentSpecification/draft/{draftId}` |
@@ -98,7 +98,7 @@ Baseline rules:
 - `POST /intentSpecification` always creates a mutable DRAFT candidate.
 - The caller must provide `specKey` on create and must not provide `id`, `draftId`, `version`, `href`, `lifecycleStatus`, server timestamps, or `_links`.
 - ID MS resolves the stable server-assigned `IntentSpecification.id` from `specKey` when the DRAFT candidate is created. The server-assigned `id` must not be assumed to equal `specKey`. If a current ACTIVE specification exists for the same `specKey`, the DRAFT candidate is assigned to that existing `id`; otherwise ID MS creates a new `id`. If only RETIRED versions exist for the same `specKey`, ID MS creates a new `id` unless governed lineage reuse is explicitly introduced later.
-- ID MS assigns a new `draftId` for each mutable DRAFT candidate. DRAFT candidate retrieval, update, activation, and deletion use `/intentSpecification/draft/{draftId}`.
+- ID MS assigns a new `draftId` for each mutable DRAFT candidate. Before activation, DRAFT candidate retrieval, update, activation, and deletion use `/intentSpecification/draft/{draftId}`. After activation, `GET /intentSpecification/draft/{draftId}` remains valid as a read-only provenance lookup for the official version produced from that DRAFT candidate.
 - DRAFT candidates do not expose an official public `version`; draft revision is represented by `ETag`.
 - DRAFT candidates do not expose or guarantee any version identifier. Any version indicator during authoring is non-authoritative.
 - When a DRAFT candidate is activated, ID MS assigns the official `version`, carries the selected `draftId` forward as provenance, and transactionally retires the previous ACTIVE version for the same resolved `id`.
@@ -185,12 +185,12 @@ ID MS follows the definition-candidate model used by the optimiser definition ba
 
 ```text
 specKey -> resolves the stable server-assigned IntentSpecification.id
-draftId -> selects the mutable DRAFT candidate
+draftId -> selects the mutable DRAFT candidate before activation and acts as provenance lookup after activation
 id -> selects the official ACTIVE and RETIRED lineage
 version -> official version assigned only on activation
 ```
 
-Runtime Intent admission must reference a concrete ACTIVE `IntentSpecification.id`. `specKey` and `draftId` must not be used for runtime contract selection. Runtime IC MS admission must still reject DRAFT candidates and RETIRED specifications for new runtime Intent creation.
+Runtime Intent admission must reference a concrete ACTIVE `IntentSpecification.id`. `specKey` and `draftId` must not be used for runtime contract selection. Runtime IC MS admission must still reject DRAFT candidates and RETIRED specifications for new runtime Intent creation. `draftId` provenance lookup is for definition governance and traceability only, not runtime admission.
 
 Lineage reuse across retired-only specifications is not assumed by default. Reintroduction or reuse of a prior lineage requires explicit governance.
 
@@ -741,6 +741,8 @@ Accept: application/json
 
 DRAFT candidate retrieval returns the mutable DRAFT candidate selected by `draftId`. DRAFT responses include `draftId`, omit official public `version`, and expose DRAFT action links such as `patch`, `replace`, `delete`, and `activate` using `/intentSpecification/draft/{draftId}`.
 
+After activation, the same `GET /intentSpecification/draft/{draftId}` route may be used as a provenance lookup. In that case, ID MS returns the official read-only `IntentSpecification` version produced from the DRAFT candidate. The response shows the official `id`, official `version`, carried-forward `draftId`, and `lifecycleStatus` of `ACTIVE` or `RETIRED`. DRAFT mutation links such as `patch`, `replace`, `delete`, and `activate` must not be returned for the produced official version.
+
 ```http
 HTTP/1.1 200 OK
 Content-Type: application/json
@@ -821,6 +823,67 @@ Cache-Control: private, max-age=300
 }
 ```
 
+
+
+
+### Produced version retrieval by draftId
+
+After activation, `draftId` remains valid as a provenance lookup key. The lookup returns the official read-only version produced from the DRAFT candidate and removes DRAFT mutation links.
+
+```http
+GET /intentManagement/v5/intentSpecification/draft/id-draft-hospital-surgical-slice-b
+Accept: application/json
+```
+
+```http
+HTTP/1.1 200 OK
+Content-Type: application/json
+Content-Language: en-AU
+X-TMF-Native: false
+X-Platform-Extension: true
+Content-Location: /intentManagement/v5/intentSpecification/ispec-hss-001?version=1.20
+ETag: "intent-spec-ispec-hss-001-v1.20-r1"
+Cache-Control: private, max-age=300
+```
+
+```json
+{
+  "id": "ispec-hss-001",
+  "href": "/intentManagement/v5/intentSpecification/ispec-hss-001?version=1.20",
+  "specKey": "hospital-surgical-slice-spec",
+  "draftId": "id-draft-hospital-surgical-slice-b",
+  "name": "Hospital Surgical Slice Intent Specification",
+  "description": "Definition-time specification for hospital surgical slice intents. This specification defines the allowed request shape for surgical connectivity intents. ID MS performs syntax and structure validation only; II MS and the knowledge plane validate semantic meaning, policy, and fulfilment feasibility.",
+  "version": "1.20",
+  "lifecycleStatus": "ACTIVE",
+  "isBundle": false,
+  "validFor": {
+    "startDateTime": "2026-04-18T12:00:00+10:00"
+  },
+  "intentBehaviour": {
+    "category": "REALTIME",
+    "constraintMode": "STRICT",
+    "objectiveType": "SLA",
+    "fulfilmentMode": "CONTINUOUS"
+  },
+  "intentLayer": "SERVICE",
+  "@type": "IntentSpecification",
+  "@baseType": "EntitySpecification",
+  "_links": {
+    "self": {
+      "href": "/intentManagement/v5/intentSpecification/ispec-hss-001?version=1.20",
+      "method": "GET"
+    },
+    "provenance": {
+      "href": "/intentManagement/v5/intentSpecification/draft/id-draft-hospital-surgical-slice-b",
+      "method": "GET"
+    },
+    "collection": {
+      "href": "/intentManagement/v5/intentSpecification"
+    }
+  }
+}
+```
 
 ### Not found response
 

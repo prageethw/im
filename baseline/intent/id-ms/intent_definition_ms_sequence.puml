@@ -230,4 +230,13 @@ else If-Match valid:
   GW --> Client : 204 No Content
 end
 
+
+
+note over IDMS
+After activation, GET /intentSpecification/draft/{draftId}
+remains a read-only provenance lookup for the
+official version produced from that draft.
+Runtime admission still uses official ACTIVE id, not draftId.
+end note
+
 @enduml

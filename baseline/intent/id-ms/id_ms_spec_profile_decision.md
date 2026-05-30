@@ -104,7 +104,7 @@ Rules:
 
 ## 5. DRAFT candidate operations:
 
-DRAFT candidate retrieval and mutation use `draftId`:
+DRAFT candidate retrieval, mutation before activation, and provenance lookup after activation use `draftId`:
 
 ```http
 GET /intentManagement/v5/intentSpecification/draft/{draftId}
@@ -112,6 +112,8 @@ PUT /intentManagement/v5/intentSpecification/draft/{draftId}
 PATCH /intentManagement/v5/intentSpecification/draft/{draftId}
 DELETE /intentManagement/v5/intentSpecification/draft/{draftId}
 ```
+
+Before activation, `GET /intentSpecification/draft/{draftId}` returns the mutable DRAFT candidate. After activation, GET by `draftId` remains valid as a read-only provenance lookup for the official version produced from that DRAFT candidate. The produced official version must not expose DRAFT mutation links.
 
 Unsafe DRAFT operations require `If-Match`. `PUT` performs deterministic full replacement of a mutable DRAFT candidate. `PATCH` performs TMF-compatible JSON Merge Patch and may activate the selected DRAFT candidate by setting `lifecycleStatus` to `ACTIVE`.
 
@@ -162,7 +164,7 @@ Activation rules:
 - Only `DRAFT` candidates can be activated.
 - Activation validates the full resulting `IntentSpecification` candidate before committing.
 - ID MS assigns the official `version` during activation.
-- ID MS carries the selected `draftId` forward as immutable provenance.
+- ID MS carries the selected `draftId` forward as immutable provenance and read-only lookup key.
 - ID MS transactionally retires the previous ACTIVE version for the same resolved `id`.
 - Activation must also enforce the `specKey` active-lineage uniqueness invariant.
 
@@ -237,7 +239,7 @@ These fields do not replace `expressionSpecification.iri`, `targetEntitySchema`,
 
 ## 10. Runtime admission guardrail:
 
-IC MS runtime admission must reference a concrete ACTIVE `intentSpecification.id`. Runtime admission must not use `specKey` or `draftId` as the contract-selection key. DRAFT candidates are not valid for new runtime Intent admission.
+IC MS runtime admission must reference a concrete ACTIVE `intentSpecification.id`. Runtime admission must not use `specKey` or `draftId` as the contract-selection key. `draftId` provenance lookup is for definition governance and traceability only. DRAFT candidates are not valid for new runtime Intent admission.
 
 ## 11. Intent immutability clarification:
 

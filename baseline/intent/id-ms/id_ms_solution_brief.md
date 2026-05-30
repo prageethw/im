@@ -165,6 +165,7 @@ A strict TMF-compatible gateway may map deployment-specific external prefixes to
 | Create mutable DRAFT candidate | `POST` | `/intentManagement/v5/intentSpecification` |
 | List specifications | `GET` | `/intentManagement/v5/intentSpecification` |
 | Retrieve official ACTIVE and RETIRED specification by ID | `GET` | `/intentManagement/v5/intentSpecification/{id}` |
+| Retrieve DRAFT candidate or produced version by draftId | `GET` | `/intentManagement/v5/intentSpecification/draft/{draftId}` |
 | Full replace DRAFT candidate | `PUT` | `/intentManagement/v5/intentSpecification/draft/{draftId}` |
 | Partial update or activate DRAFT candidate | `PATCH` | `/intentManagement/v5/intentSpecification/draft/{draftId}` |
 | Delete unused DRAFT candidate | `DELETE` | `/intentManagement/v5/intentSpecification/draft/{draftId}` |
@@ -240,7 +241,7 @@ Baseline:
 - `POST /intentSpecification` creates a mutable DRAFT candidate.
 - `specKey` is mandatory on create and is used by ID MS to resolve the stable server-assigned `IntentSpecification.id`.
 - ID MS assigns a new `draftId` for each mutable DRAFT candidate.
-- DRAFT candidate retrieval, update, activation, and deletion use `/intentSpecification/draft/{draftId}`.
+- Before activation, DRAFT candidate retrieval, update, activation, and deletion use `/intentSpecification/draft/{draftId}`. After activation, GET by `draftId` remains available as read-only provenance lookup for the produced official version.
 - Material change after activation requires a new mutable DRAFT candidate.
 - `ACTIVE` and `RETIRED` specifications are immutable for material contract changes.
 - Runtime `Intent.version` and `IntentSpecification.version` are separate concepts.
@@ -299,7 +300,7 @@ These fields do not replace `expressionSpecification.iri`, `targetEntitySchema`,
 | `id` | Server-generated unique specification identifier. |
 | `href` | Server-generated resource URI. |
 | `specKey` | Mandatory create-time key used to resolve the stable server-assigned `IntentSpecification.id` and group related official versions. |
-| `draftId` | Server-assigned mutable DRAFT candidate selector; carried forward as immutable provenance after activation where retained. |
+| `draftId` | Server-assigned mutable DRAFT candidate selector before activation; carried forward as immutable provenance and read-only lookup key after activation where retained. |
 | `name` | Human-readable specification name. |
 | `description` | Definition-time description of the specification purpose. |
 | `version` | Official public specification version, assigned only when a selected DRAFT candidate is activated. |
@@ -610,6 +611,13 @@ ID MS configuration should include:
 ## specKey lineage note:
 
 `specKey` represents logical grouping across specification versions. If only `RETIRED` versions exist for a `specKey`, ID MS creates a new `id` by default. Lineage reuse of retired specifications is not assumed and requires explicit governance if introduced later.
+
+
+## draftId provenance lookup rule:
+
+Before activation, `GET /intentSpecification/draft/{draftId}` returns the mutable DRAFT candidate. After activation, the same GET route remains valid as a read-only provenance lookup for the official `IntentSpecification` version produced from that DRAFT candidate.
+
+For produced official versions, the response shows the official `id`, official `version`, carried-forward `draftId`, and lifecycle status. DRAFT mutation links are removed after activation. Runtime Intent admission must still reference a concrete ACTIVE `IntentSpecification.id`; `draftId` must not be used for runtime contract selection.
 
 ## Runtime admission guardrail:
 

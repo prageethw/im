@@ -67,4 +67,13 @@ It does not imply mutation of the submitted
 runtime Intent instance.
 end note
 
+
+
+note over IDMS
+After activation, GET /intentSpecification/draft/{draftId}
+remains a read-only provenance lookup for the
+official version produced from that draft.
+Runtime admission still uses official ACTIVE id, not draftId.
+end note
+
 @enduml
