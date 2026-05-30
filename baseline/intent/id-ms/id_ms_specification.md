@@ -106,7 +106,7 @@ Baseline rules:
 - `ACTIVE` and `RETIRED` `IntentSpecification` resources are immutable for material contract changes.
 - Runtime `Intent.version` identifies the admitted runtime request/projection version and must not be confused with `IntentSpecification.version`.
 
-### PATCH semantics:### PATCH semantics:
+### PATCH semantics:
 
 `PATCH` uses JSON Merge Patch semantics.
 
@@ -1122,7 +1122,7 @@ POST /intentManagement/v5/intentSpecification/{id}/activate  (not exposed)
 
 Use the existing resource update endpoint instead.
 
-For strict TMF-compatible lifecycle update, use:
+For TMF-compatible partial-update semantics on the platform-extension DRAFT-candidate route, use:
 
 ```http
 PATCH /intentManagement/v5/intentSpecification/draft/{draftId}
@@ -1884,7 +1884,7 @@ For strict TMF alignment, ID MS supports the TMF-aligned `IntentSpecification` o
 | Create | `POST /intentManagement/v5/intentSpecification` | TMF-aligned |
 | List | `GET /intentManagement/v5/intentSpecification` | TMF-aligned |
 | Retrieve | `GET /intentManagement/v5/intentSpecification/{id}` | TMF-aligned |
-| Partial update | `PATCH /intentManagement/v5/intentSpecification/draft/{draftId}` | TMF-aligned |
+| Partial update DRAFT candidate | `PATCH /intentManagement/v5/intentSpecification/draft/{draftId}` | TMF-compatible partial-update semantics on a platform-extension DRAFT-candidate route |
 | Delete | `DELETE /intentManagement/v5/intentSpecification/{id}` | TMF-aligned |
 | Event subscription | `POST /hub`, `DELETE /hub/{id}` | Strict TMF route form where required |
 
@@ -1922,7 +1922,7 @@ Use:
 PATCH /intentManagement/v5/intentSpecification/draft/{draftId}
 ```
 
-for strict TMF compatibility.
+for TMF-compatible partial-update semantics on the platform-extension DRAFT-candidate route.
 
 Use:
 

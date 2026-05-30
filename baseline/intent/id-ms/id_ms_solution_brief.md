@@ -153,10 +153,10 @@ The platform base path is:
 A strict TMF deployment may expose the same API through:
 
 ```http
-/tmf-api/intentManagement/v5
+/intentManagement/v5
 ```
 
-The gateway may map the strict deployment prefix to the platform-owned service path without changing resource semantics.
+A strict TMF-compatible gateway may map deployment-specific external prefixes to the platform-owned service path without changing resource semantics.
 
 ## Request shape / event shape:
 
@@ -164,12 +164,13 @@ The gateway may map the strict deployment prefix to the platform-owned service p
 
 | Purpose | Method | Endpoint |
 |---|---:|---|
-| Create specification | `POST` | `/intentManagement/v5/intentSpecification` |
+| Create mutable DRAFT candidate | `POST` | `/intentManagement/v5/intentSpecification` |
 | List specifications | `GET` | `/intentManagement/v5/intentSpecification` |
-| Retrieve specification by ID | `GET` | `/intentManagement/v5/intentSpecification/{id}` |
-| Full replace specification | `PUT` | `/intentManagement/v5/intentSpecification/{id}` |
-| Partial update specification | `PATCH` | `/intentManagement/v5/intentSpecification/{id}` |
-| Delete specification | `DELETE` | `/intentManagement/v5/intentSpecification/{id}` |
+| Retrieve official ACTIVE/RETIRED specification by ID | `GET` | `/intentManagement/v5/intentSpecification/{id}` |
+| Full replace DRAFT candidate | `PUT` | `/intentManagement/v5/intentSpecification/draft/{draftId}` |
+| Partial update or activate DRAFT candidate | `PATCH` | `/intentManagement/v5/intentSpecification/draft/{draftId}` |
+| Delete unused DRAFT candidate | `DELETE` | `/intentManagement/v5/intentSpecification/draft/{draftId}` |
+| Retire current ACTIVE specification | `DELETE` | `/intentManagement/v5/intentSpecification/{id}` |
 
 ### Hub subscription API:
 
@@ -198,14 +199,16 @@ Content-Type: application/merge-patch+json
 
 `IntentSpecification.version` is a design-time contract version and is separate from runtime `Intent.version`.
 
-A Draft `IntentSpecification` may carry its intended specification `version` while being authored. This is different from a Draft runtime `Intent`, which is not assigned a permanent runtime `version` until admission is accepted.
+A mutable DRAFT `IntentSpecification` candidate does not expose an official public `version`. Draft revision is represented by `ETag`. ID MS assigns the official design-time contract `version` only when the selected DRAFT candidate is activated.
 
 Baseline:
 
-- Draft `IntentSpecification` resources may carry `version`.
-- Material change after activation requires a new Draft `IntentSpecification` version.
+- `POST /intentSpecification` creates a mutable DRAFT candidate.
+- `specKey` is mandatory on create and is used by ID MS to resolve the stable server-assigned `IntentSpecification.id`.
+- ID MS assigns a new `draftId` for each mutable DRAFT candidate.
+- DRAFT candidate retrieval, update, activation, and deletion use `/intentSpecification/draft/{draftId}`.
+- Material change after activation requires a new mutable DRAFT candidate.
 - `ACTIVE` and `RETIRED` specifications are immutable for material contract changes.
-- `specKey` is optional/governed; where used, it groups related specification versions.
 - Runtime `Intent.version` and `IntentSpecification.version` are separate concepts.
 
 
@@ -283,10 +286,11 @@ These fields do not replace `expressionSpecification.iri`, `targetEntitySchema`,
 |---|---|
 | `id` | Server-generated unique specification identifier. |
 | `href` | Server-generated resource URI. |
-| `specKey` | Groups related versions of the same specification key. |
+| `specKey` | Mandatory create-time key used to resolve the stable server-assigned `IntentSpecification.id` and group related official versions. |
+| `draftId` | Server-assigned mutable DRAFT candidate selector; carried forward as immutable provenance after activation where retained. |
 | `name` | Human-readable specification name. |
 | `description` | Definition-time description of the specification purpose. |
-| `version` | Specification version within the specification key. |
+| `version` | Official public specification version, assigned only when a selected DRAFT candidate is activated. |
 | `lifecycleStatus` | One of `DRAFT`, `ACTIVE`, or `RETIRED`. |
 | `isBundle` | Indicates whether the specification is a bundle. |
 | `validFor` | Validity period metadata. |
@@ -324,10 +328,16 @@ There is no `DELETED` lifecycle state. Delete is an operation/outcome, not a lif
 
 ## Fields not accepted:
 
-Clients must not provide server-generated values on create:
+Clients must not provide server-generated, lifecycle, or official-version values on create:
 
 - `id`
 - `href`
+- `draftId`
+- official `version`
+- `lifecycleStatus`
+- `creationDate`
+- `lastUpdate`
+- `statusChangeDate`
 - `Location`
 - `ETag`
 - `_links`
@@ -485,10 +495,10 @@ Delete events are emitted only after successful delete and show the last known l
 
 ### Create behaviour:
 
-- Create normally produces a `DRAFT` specification.
+- Create produces a mutable `DRAFT` candidate and assigns a `draftId`.
 - ID MS validates resource shape and required syntax/schema references.
-- ID MS generates `id`, `href`, `Location`, `ETag`, and `_links`.
-- Successful create returns `201 Created` with the full created resource.
+- ID MS resolves `id` from `specKey` and generates `draftId`, DRAFT `href`, `Location`, `ETag`, and `_links`.
+- Successful create returns `201 Created` with the full created DRAFT candidate resource.
 - Successful create emits `IntentSpecificationCreateEvent`.
 
 ### List behaviour:
@@ -522,7 +532,7 @@ Delete events are emitted only after successful delete and show the last known l
 
 ### Activation behaviour:
 
-- Activation is a lifecycle update on `/intentSpecification/{id}`.
+- Activation is a lifecycle update on `/intentSpecification/draft/{draftId}`.
 - Only `DRAFT` can be activated.
 - The activated version becomes `ACTIVE`.
 - The previous `ACTIVE` version in the same `specKey` becomes `RETIRED`.

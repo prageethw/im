@@ -88,15 +88,17 @@ External `IntentSpecificationCreateEvent`, `IntentSpecificationAttributeValueCha
 
 | **Purpose** | **Method** | **Endpoint** |
 |---|---:|---|
-| Create specification | `POST` | `/intentSpecification` |
+| Create mutable DRAFT candidate | `POST` | `/intentSpecification` |
 | List specifications | `GET` | `/intentSpecification` |
-| Retrieve specification by ID | `GET` | `/intentSpecification/{id}` |
-| Full replace specification | `PUT` | `/intentSpecification/{id}` |
-| Partial update specification | `PATCH` | `/intentSpecification/{id}` |
-| Delete / remove specification | `DELETE` | `/intentSpecification/{id}` |
+| Retrieve official ACTIVE/RETIRED specification by ID | `GET` | `/intentSpecification/{id}` |
+| Retire current ACTIVE specification | `DELETE` | `/intentSpecification/{id}` |
+| Retrieve DRAFT candidate | `GET` | `/intentSpecification/draft/{draftId}` |
+| Full replace DRAFT candidate | `PUT` | `/intentSpecification/draft/{draftId}` |
+| Partial update or activate DRAFT candidate | `PATCH` | `/intentSpecification/draft/{draftId}` |
+| Delete unused DRAFT candidate | `DELETE` | `/intentSpecification/draft/{draftId}` |
 
-`PUT /intentSpecification/{id}` is an intentional platform extension for deterministic full replacement.
-`PATCH /intentSpecification/{id}` remains supported for TMF compatibility, but is discouraged as a general update method.
+`PUT /intentSpecification/draft/{draftId}` is an intentional platform extension for deterministic full replacement of editable DRAFT candidates.
+`PATCH /intentSpecification/draft/{draftId}` remains supported for TMF-compatible partial-update semantics on the platform-extension DRAFT-candidate route, but is discouraged as a general update method.
 
 ## Hub subscription APIs:
 
@@ -165,7 +167,7 @@ Important:
 - Meaningful change after activation requires a new versioned `IntentSpecification`.
 - `PATCH` is supported for TMF compatibility but discouraged as a general update method.
 - `PUT` is preferred for deterministic full replacement of editable `DRAFT` specifications.
-- Activation is a lifecycle update on `/intentSpecification/{id}`, not a custom `/activate` endpoint.
+- Activation is a lifecycle update on `/intentSpecification/draft/{draftId}`, not a custom `/activate` endpoint.
 - When a new version becomes `ACTIVE`, the previous `ACTIVE` version in the same `specKey` becomes `RETIRED`.
 
 ## ETag / If-Match rules:
@@ -175,9 +177,9 @@ Important:
 | `POST /intentSpecification` | Response must include `ETag` |
 | `GET /intentSpecification/{id}` | Response must include `ETag` |
 | `GET /intentSpecification` | Response should include list-level `ETag` |
-| `PUT /intentSpecification/{id}` | Request must include `If-Match` |
-| `PATCH /intentSpecification/{id}` | Request must include `If-Match` |
-| `DELETE /intentSpecification/{id}` | Request must include `If-Match` |
+| `PUT /intentSpecification/draft/{draftId}` | Request must include `If-Match` |
+| `PATCH /intentSpecification/draft/{draftId}` | Request must include `If-Match` |
+| `DELETE /intentSpecification/{id}` and `DELETE /intentSpecification/draft/{draftId}` | Official delete/retire and draft-candidate delete both require `If-Match` where applicable; `/draft/{draftId}` applies only to mutable draft candidates. |
 | `POST /intentSpecification/hub` | Response must include `ETag` |
 | `DELETE /intentSpecification/hub/{id}` | Request must include `If-Match` |
 
@@ -220,52 +222,51 @@ Content-Type: application/json
 ## Create IntentSpecification:
 
 ```http
-POST /intentManagement/v5/intentSpecification?fields=id,href,specKey,name,version,lifecycleStatus,isBundle,validFor,relatedParty,specCharacteristic,expressionSpecification,targetEntitySchema,@type,@baseType
+POST /intentManagement/v5/intentSpecification?fields=id,href,specKey,draftId,name,lifecycleStatus,isBundle,validFor,relatedParty,specCharacteristic,expressionSpecification,targetEntitySchema,intentBehaviour,intentLayer,@type,@baseType
 Content-Type: application/json
 Accept: application/json
 ```
 
 Create request baseline includes:
 
-- `specKey` where supplied as the governed specification key
+- mandatory `specKey`, used by ID MS to resolve the stable server-assigned `IntentSpecification.id`
 - `name`
 - `description`
-- `version`
 - `validFor`
 - `relatedParty`
 - `specCharacteristic`
 - `expressionSpecification`
 - `targetEntitySchema`
 
-ID MS creates the resource as `DRAFT`. `lifecycleStatus` is not accepted in the create request. `isBundle` is optional on create and defaults to `false` when omitted.
+ID MS creates a mutable `DRAFT` candidate. `lifecycleStatus`, `id`, `href`, `draftId`, official `version`, server timestamps, `Location`, `ETag`, and `_links` are not accepted in the create request. `isBundle` is optional on create and defaults to `false` when omitted.
 - `@type: IntentSpecification`
 - `@baseType: EntitySpecification`
-
-Create clients must not supply server-generated `_links`.
 
 Success:
 
 ```http
 HTTP/1.1 201 Created
-Location: /intentManagement/v5/intentSpecification/hospital-surgical-slice-spec-v1.19
+Location: /intentManagement/v5/intentSpecification/draft/id-draft-hospital-surgical-slice-a
 Content-Type: application/json
 Content-Language: en-AU
-ETag: "intent-spec-hospital-surgical-slice-spec-v1.19-v1"
+ETag: "id-draft-hospital-surgical-slice-a-r1"
 Last-Modified: Sat, 18 Apr 2026 02:00:00 GMT
 ```
 
 Notes:
 
-- Create normally creates a `DRAFT` specification.
-- Response returns the full created `IntentSpecification`.
-- Response includes server-assigned `id`, `href`, `Location`, `ETag`, and `_links`.
-- `Location` points to the new resource.
-- `ETag` is mandatory.
+- Create creates a mutable `DRAFT` candidate, not an official public version.
+- ID MS resolves `id` from `specKey` and assigns `draftId`.
+- Response returns the created DRAFT candidate representation.
+- Response includes server-assigned `draftId`, DRAFT `href`, `Location`, `ETag`, and `_links`.
+- `Location` points to `/intentSpecification/draft/{draftId}`.
+- DRAFT candidate revision is represented by `ETag`.
+- Official `version` is assigned only when the selected DRAFT candidate is activated.
 
 ## Retrieve IntentSpecification:
 
 ```http
-GET /intentManagement/v5/intentSpecification/hospital-surgical-slice-spec-v1.19?fields=id,href,specKey,name,description,version,lifecycleStatus,isBundle,validFor,relatedParty,specCharacteristic,expressionSpecification,targetEntitySchema,@type,@baseType
+GET /intentManagement/v5/intentSpecification/hospital-surgical-slice-spec?fields=id,href,specKey,name,description,version,lifecycleStatus,isBundle,validFor,relatedParty,specCharacteristic,expressionSpecification,targetEntitySchema,@type,@baseType
 Accept: application/json
 ```
 
@@ -275,8 +276,8 @@ Success:
 HTTP/1.1 200 OK
 Content-Type: application/json
 Content-Language: en-AU
-Content-Location: /intentManagement/v5/intentSpecification/hospital-surgical-slice-spec-v1.19
-ETag: "intent-spec-hospital-surgical-slice-spec-v1.19-v1"
+Content-Location: /intentManagement/v5/intentSpecification/draft/id-draft-hospital-surgical-slice-a
+ETag: "id-draft-hospital-surgical-slice-a-r1"
 Last-Modified: Sat, 18 Apr 2026 02:00:00 GMT
 Cache-Control: private, max-age=300
 ```
@@ -314,7 +315,7 @@ The list operation does not include full `specCharacteristic`, `expressionSpecif
 PUT /intentManagement/v5/intentSpecification/draft/id-draft-hospital-surgical-slice-a?fields=id,href,specKey,name,description,version,lifecycleStatus,isBundle,validFor,relatedParty,specCharacteristic,expressionSpecification,targetEntitySchema,@type,@baseType
 Content-Type: application/json
 Accept: application/json
-If-Match: "intent-spec-hospital-surgical-slice-spec-v1.19-v1"
+If-Match: "intent-spec-hospital-surgical-slice-spec-version-1.19-r1"
 ```
 
 Success:
@@ -322,8 +323,8 @@ Success:
 ```http
 HTTP/1.1 200 OK
 Content-Type: application/json
-Content-Location: /intentManagement/v5/intentSpecification/hospital-surgical-slice-spec-v1.19
-ETag: "intent-spec-hospital-surgical-slice-spec-v1.19-v2"
+Content-Location: /intentManagement/v5/intentSpecification/draft/id-draft-hospital-surgical-slice-a
+ETag: "intent-spec-hospital-surgical-slice-spec-version-1.19-v2"
 ```
 
 Rules:
@@ -358,7 +359,7 @@ Content-Type: application/json
 PATCH /intentManagement/v5/intentSpecification/draft/id-draft-hospital-surgical-slice-a
 Content-Type: application/merge-patch+json
 Accept: application/json
-If-Match: "intent-spec-hospital-surgical-slice-spec-v1.19-v1"
+If-Match: "intent-spec-hospital-surgical-slice-spec-version-1.19-r1"
 ```
 
 Rules:
@@ -374,8 +375,8 @@ Rules:
 ## Delete IntentSpecification:
 
 ```http
-DELETE /intentManagement/v5/intentSpecification/hospital-surgical-slice-spec-v1.19
-If-Match: "intent-spec-hospital-surgical-slice-spec-v1.19-v1"
+DELETE /intentManagement/v5/intentSpecification/hospital-surgical-slice-spec
+If-Match: "intent-spec-hospital-surgical-slice-spec-version-1.19-r1"
 Accept: application/json
 ```
 
@@ -675,7 +676,7 @@ No caching strategy is baselined for non-GET operations.
 For a single `IntentSpecification`:
 
 ```http
-GET /intentManagement/v5/intentSpecification/hospital-surgical-slice-spec-v1.19
+GET /intentManagement/v5/intentSpecification/hospital-surgical-slice-spec
 ```
 
 ID MS may return:
@@ -683,7 +684,7 @@ ID MS may return:
 ```http
 HTTP/1.1 200 OK
 Content-Type: application/json
-ETag: "intent-spec-hospital-surgical-slice-spec-v1.19-v1"
+ETag: "id-draft-hospital-surgical-slice-a-r1"
 Cache-Control: private, max-age=300
 ```
 
@@ -730,7 +731,7 @@ Cache-Control: no-cache
 Example:
 
 ```http
-GET /intentManagement/v5/intentSpecification/hospital-surgical-slice-spec-v1.19
+GET /intentManagement/v5/intentSpecification/hospital-surgical-slice-spec
 Cache-Control: no-cache
 ```
 
@@ -1006,7 +1007,7 @@ For `intent_specification`:
 
 | **Column** | **Purpose** |
 |---|---|
-| `id` | Stable specification ID, for example `hospital-surgical-slice-spec-v1.19` |
+| `id` | Stable specification ID, for example `hospital-surgical-slice-spec` |
 | `spec_key` | Logical specification key, for example `hospital-surgical-slice-spec` |
 | `name` | Human-readable name |
 | `version` | Version string |
@@ -1474,10 +1475,10 @@ A Draft `IntentSpecification` may carry its intended specification `version` whi
 
 Baseline:
 
-- Draft `IntentSpecification` resources may carry `version`.
+- DRAFT candidates do not expose an official public `version`; draft revision is represented by `ETag`.
 - Material change after activation requires a new Draft `IntentSpecification` version.
 - `ACTIVE` and `RETIRED` specifications are immutable for material contract changes.
-- `specKey` is optional/governed; where used, it groups related specification versions.
+- `specKey` is mandatory on create and is used by ID MS to resolve the stable server-assigned `IntentSpecification.id`.
 - Runtime `Intent.version` and `IntentSpecification.version` are separate concepts.
 
 
