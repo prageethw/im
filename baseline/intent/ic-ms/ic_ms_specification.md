@@ -352,7 +352,7 @@ Response/projection fields such as `href`, `version`, `lifecycleStatus`, `status
 
 `isBundle` is optional in create and update request bodies. If omitted on create, IC MS defaults `isBundle` to `false`. Persisted Intent responses include the server-resolved `isBundle` value.
 
-Once an Intent leaves `Draft`, general attribute update on that submitted version is not allowed. Material changes after submission require creating a new Draft version, editing that Draft version, and explicitly submitting it with `submit: true`.
+Once an Intent leaves `Draft`, general attribute update on that submitted version is not allowed. Material changes after submission require creating a new Draft authoring record, editing that Draft version, and explicitly submitting it with `submit: true`.
 
 Draft Intents are authoring records only. They are not admitted, optimised, assured, sent to downstream change execution, or used to drive `activeVersion`.
 
@@ -453,7 +453,7 @@ Do not use string placeholders for array/object fields.
 | `422` | `VALIDATION_FAILED` | Runtime Intent fails request-shape/spec validation, misses mandatory `intentSpecification.id`, misses mandatory `expression.iri`, or has an IRI/specification mismatch |
 | `422` | `INTENT_SPECIFICATION_NOT_ACTIVE` | Referenced IntentSpecification is not active |
 | `428` | `PRECONDITION_REQUIRED` | Required `If-Match` header is missing for an unsafe operation |
-| `503` | `SERVICE_UNAVAILABLE` | IC MS DB unavailable or ACTIVE spec cannot be confirmed |
+| `503` | `SERVICE_UNAVAILABLE` | IC MS DB unavailable or active spec cannot be confirmed |
 | `500` | `INTERNAL_ERROR` | Unexpected server error |
 
 ### Missing If-Match response:
@@ -1023,6 +1023,7 @@ ETag: "intent-INT-HOSP-2026-001-v4"
   "description": "Updated surgical connection request with lower latency target.",
   "humanExpression": "I need a surgical connection in Sydney Hospital with latency less than or equal to 8 ms and availability at least 99.99%.",
   "submit": false,
+  "version": "v4",
   "lifecycleStatus": "Draft",
   "statusReason": "Draft intent updated and not submitted for admission.",
   "statusChangeDate": "2026-04-18T12:00:00+10:00",
@@ -1091,7 +1092,7 @@ ETag: "intent-INT-HOSP-2026-001-v4"
 
 `PUT` is a platform extension for deterministic full replacement.
 
-`PUT` is allowed only while the current Intent/Draft projection is in `Draft`.
+`PUT` is allowed only while the current Intent version is in `Draft`.
 
 For a Draft Intent, all attributes accepted by the `PUT` request contract are mutable. The request contract does not expose `lifecycleStatus` as writable.
 
@@ -1101,7 +1102,7 @@ If `submit: false` is supplied or `submit` is omitted on an existing Draft Inten
 
 If `submit: true` is supplied, IC MS validates the runtime admission profile and, if accepted, moves the projected lifecycle to `Acknowledged`.
 
-Once an Intent leaves `Draft`, full replacement on that submitted version is not allowed. Material changes require creating a new Draft version.
+Once an Intent leaves `Draft`, full replacement on that submitted version is not allowed. Material changes require creating a new Draft authoring record.
 
 ---
 
@@ -1175,6 +1176,7 @@ ETag: "intent-INT-HOSP-2026-001-v5"
   "description": "Patched surgical connection request with lower latency target.",
   "humanExpression": "I need a surgical connection in Sydney Hospital with latency less than or equal to 10 ms and availability at least 99.99%.",
   "submit": false,
+  "version": "v5",
   "lifecycleStatus": "Draft",
   "statusReason": "Draft intent patched and not submitted for admission.",
   "statusChangeDate": "2026-04-18T12:00:00+10:00",
@@ -1243,7 +1245,7 @@ ETag: "intent-INT-HOSP-2026-001-v5"
 
 `PATCH` is supported for TMF compatibility but is not encouraged for ordinary edits where deterministic full replacement through `PUT` is available.
 
-`PATCH` is allowed only while the current Intent/Draft projection is in `Draft`.
+`PATCH` is allowed only while the current Intent version is in `Draft`.
 
 For a Draft Intent, all attributes accepted by the `PATCH` request contract are mutable. The request contract does not expose `id` or `lifecycleStatus` as writable patch attributes.
 
@@ -1251,12 +1253,12 @@ If `submit: false` is supplied or `submit` is omitted on an existing Draft Inten
 
 If `submit: true` is supplied, IC MS validates the runtime admission profile and, if accepted, moves the projected lifecycle to `Acknowledged`.
 
-Once an Intent leaves `Draft`, partial update on that submitted version is not allowed. Material changes require creating a new Draft version.
+Once an Intent leaves `Draft`, partial update on that submitted version is not allowed. Material changes require creating a new Draft authoring record.
 
 
-### New Draft version after submission:
+### New Draft authoring record after submission:
 
-Material changes after a submitted Intent version require a new Draft version. The exact platform extension route or operation for creating that new Draft version is reserved and will be finalised in the IC MS API design. `PUT` and `PATCH` must not mutate an admitted runtime version.
+Material changes after a submitted Intent version require a new Draft authoring record. The exact platform extension route or operation for creating that new Draft authoring record is reserved and will be finalised in the IC MS API design. `PUT` and `PATCH` must not mutate an admitted runtime version.
 
 ---
 
@@ -1834,7 +1836,7 @@ Retry-After: 30
 {
   "code": "SERVICE_UNAVAILABLE",
   "reason": "INTENT_SPECIFICATION_LOOKUP_UNAVAILABLE",
-  "message": "Intent creation or update cannot be accepted because the applicable ACTIVE IntentSpecification could not be confirmed.",
+  "message": "Intent creation or update cannot be accepted because the applicable active IntentSpecification could not be confirmed.",
   "status": 503,
   "referenceError": "https://mycsp.com.au/errors/SERVICE_UNAVAILABLE",
   "@type": "Error"
@@ -1876,7 +1878,7 @@ X-Platform-Extension: false
 {
   "code": "INVALID_STATE_TRANSITION",
   "reason": "INTENT_NOT_DRAFT",
-  "message": "Intent attributes can be updated only while the Intent is in Draft. Create a new Draft version for material changes after submission.",
+  "message": "Intent attributes can be updated only while the Intent is in Draft. Create a new Draft authoring record for material changes after submission.",
   "status": 409,
   "referenceError": "https://mycsp.com.au/errors/INVALID_STATE_TRANSITION",
   "@type": "Error"
@@ -2261,9 +2263,9 @@ Baseline:
 - If an Intent is already persisted with `submit: false`, later omission of `submit` preserves Draft handling and must not automatically submit the Intent.
 - External consumers must not set or patch `lifecycleStatus`; lifecycle is assigned, transitioned, and projected by the intent management entity.
 - `isBundle` is optional in create and update requests; omitted create requests default to `false`, and persisted responses include the server-resolved value.
-- `PUT /intent/{id}` is a platform extension for deterministic full replacement and is allowed only while the current Intent/Draft projection is in `Draft`.
-- `PATCH /intent/{id}` is supported for TMF compatibility and is allowed only while the current Intent/Draft projection is in `Draft`.
-- Once an Intent leaves `Draft`, material changes require creating a new Draft version.
+- `PUT /intent/{id}` is a platform extension for deterministic full replacement and is allowed only while the current Intent version is in `Draft`.
+- `PATCH /intent/{id}` is supported for TMF compatibility and is allowed only while the current Intent version is in `Draft`.
+- Once an Intent leaves `Draft`, material changes require creating a new Draft authoring record.
 - ETag is used for unsafe-operation concurrency through `If-Match`.
 - GET responses may use bounded private caching.
 - Clients may request a fresh GET using `Cache-Control: no-cache`.

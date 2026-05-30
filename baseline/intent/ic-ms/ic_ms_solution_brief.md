@@ -36,7 +36,7 @@ IC MS -> webhook_delivery_outbox -> HTTP POST -> external subscriber listener ca
 | External event subscribers | Receive TMF-aligned `Intent` and `IntentReport` events through REST webhook subscriber listener callbacks registered via the IC MS hub subscription model. |
 | External notification path | Uses `webhook_delivery_outbox` and HTTP `POST`; Kafka is not used for external hub notification delivery. |
 
-IC MS owns the externally visible runtime projection, not the full internal fulfilment state machine. The external `Intent` record is the current consumer-facing state of the runtime intent. Draft versions are authoring records only and do not drive `activeVersion`. Draft Intents are not assigned a permanent runtime version; Draft authoring revision is represented by ETag, and a permanent runtime version is assigned only when the Draft is submitted and admitted. Historical versions, standby states, rollback candidates, internal resource candidates, optimiser scoring, and raw assurance detail remain internal unless projected through `IntentReport` or another documented platform extension.
+IC MS owns the externally visible runtime projection, not the full internal fulfilment state machine. The external `Intent` record is the current consumer-facing state of the runtime intent. Draft authoring records are pre-admission authoring records only and do not drive `activeVersion`. Draft Intents are not assigned a permanent runtime version; Draft authoring revision is represented by ETag, and a permanent runtime version is assigned only when the Draft is submitted and admitted. Historical versions, standby states, rollback candidates, internal resource candidates, optimiser scoring, and raw assurance detail remain internal unless projected through `IntentReport` or another documented platform extension.
 
 ## Process View:
 
@@ -60,7 +60,7 @@ IC MS owns the externally visible runtime projection, not the full internal fulf
 
 ### Runtime intent Draft update and submitted-version change:
 
-1. A consumer may update an existing runtime intent using `PUT` or `PATCH` only while the current version is in `Draft`.
+1. A consumer may update an existing Draft projection using `PUT` or `PATCH` only while the current Intent/Draft projection is in `Draft`.
 2. Unsafe update operations require `If-Match`.
 3. IC MS applies optimistic concurrency using the current ETag.
 4. For a Draft Intent, all attributes accepted by the `PUT` / `PATCH` request contract are mutable.
@@ -69,10 +69,10 @@ IC MS owns the externally visible runtime projection, not the full internal fulf
 7. If `submit` is omitted while the current Intent is already Draft, the Intent remains Draft.
 8. If `submit: true` is supplied, IC MS validates the runtime admission profile and, if accepted, moves the projected lifecycle to `Acknowledged`.
 9. Once an Intent leaves Draft, general attribute update on that submitted version is not allowed.
-10. Material changes after submission require creating a new Draft version, editing that Draft version, and explicitly submitting it.
+10. Material changes after submission require creating a new Draft authoring record, editing that Draft version, and explicitly submitting it.
 11. IC MS projects the current runtime version externally while retaining internal version history for audit and traceability.
 
-A new runtime version must not be created while there is already a newer candidate version in `Acknowledged` or `InProgress`. Draft versions are not admitted runtime candidates and do not drive `activeVersion`.
+A new runtime version must not be created while there is already a newer candidate version in `Acknowledged` or `InProgress`. Draft authoring records are not admitted runtime candidates and do not drive `activeVersion`.
 
 When a newer version becomes `activeVersion`, the previous version transition rule is:
 
@@ -150,7 +150,7 @@ IC MS is responsible for:
 | Initial admission | Persist schema and request-shape valid submitted requests and project `Acknowledged`. |
 | Internal progress publication | Emit `IntentValidatedEvent` after schema and request-shape validation succeeds. |
 | External lifecycle projection | Own consumer-facing `Intent.lifecycleStatus`, `statusReason`, and `statusChangeDate`; external consumers cannot set or patch these fields. |
-| Runtime version projection | Return the current projected runtime version externally while retaining internal version history; Draft versions do not drive `activeVersion`. |
+| Runtime version projection | Return the current projected runtime version externally while retaining internal version history; Draft authoring records do not drive `activeVersion`. |
 | `IntentReport` projection | Expose read-only curated report/projection history derived from assurance outcomes. |
 | Event subscription | Support strict TMF `/hub` and domain-scoped `/intent/hub` subscription routes. |
 | External event delivery | Deliver consumer-safe TMF-aligned `Intent` and `IntentReport` event notifications by REST webhook callback to subscriber listener URLs. |
@@ -429,14 +429,14 @@ External `GET /intent/{id}` returns the current projected `Intent` state. It doe
 | Immutable identity | `id` is immutable; if included in `PUT`, it must match the path `id`. |
 | Lifecycle ownership | `lifecycleStatus` is not writable through create and update contracts; it is assigned and projected by the intent management entity. |
 | Bundle defaulting | `isBundle` is optional in request bodies and defaults to `false` when omitted on create; persisted responses include the server-resolved value. |
-| Submitted-version update | Once an Intent leaves Draft, general attribute update on that submitted version is not allowed. Material changes require a new Draft version. |
+| Submitted-version update | Once an Intent leaves Draft, general attribute update on that submitted version is not allowed. Material changes require a new Draft authoring record. |
 
 ### Intent-version lifecycle rules:
 
 | Rule | Baseline |
 |---|---|
 | New version gating | Do not create another newer version while there is already a newer candidate version in `Acknowledged` or `InProgress`. |
-| Draft version behaviour | Draft versions are editable authoring records and do not drive `activeVersion`. |
+| Draft version behaviour | Draft authoring records are editable pre-admission authoring records and do not drive `activeVersion`. |
 | New version becomes `activeVersion` after previous `Active` / `Degraded` / `Paused` | Previous version moves to `Standby`. |
 | New version becomes `activeVersion` after previous `Rejected` / `Failed` | Previous version moves to `Terminated`. |
 | Standby reactivation | `Standby -> Acknowledged -> InProgress -> Active`. |
@@ -502,7 +502,7 @@ IC MS persists external runtime intent projections, runtime version metadata, hu
 | State item | Purpose |
 |---|---|
 | Runtime intent record | External canonical `Intent` projection, including Draft authoring records where `submit: false` is used. |
-| Current projected version | Version returned by standard `GET /intent/{id}`; Draft versions do not drive `activeVersion`. |
+| Current projected version | Version returned by standard `GET /intent/{id}`; Draft authoring records do not drive `activeVersion`. |
 | Lifecycle/status fields | `lifecycleStatus`, `statusReason`, `statusChangeDate`, assigned and projected by the intent management entity. |
 | ETag/version token | Optimistic concurrency for unsafe operations. |
 | Internal version history | Audit and traceability; not returned by default external GET. |
@@ -770,8 +770,8 @@ Webhook notifications use HTTP headers, not Kafka CloudEvents headers.
 |---|---|
 | Unsafe operation missing required `If-Match` | Return `428 PRECONDITION_REQUIRED` with reason `IF_MATCH_REQUIRED`. |
 | Stale or mismatched ETag | Return `412 PRECONDITION_FAILED` with reason `ETAG_MISMATCH`. |
-| Draft PUT/PATCH | Allowed while the current version is `Draft`; all request-contract attributes are mutable. |
-| Submitted-version PUT/PATCH | Not allowed for general attribute update; material change requires a new Draft version. |
+| Draft PUT/PATCH | Allowed while the current Intent/Draft projection is `Draft`; all request-contract attributes are mutable. |
+| Submitted-version PUT/PATCH | Not allowed for general attribute update; material change requires a new Draft authoring record. |
 | Newer candidate already exists | Reject/defer another newer version while the existing candidate is `Acknowledged` or `InProgress`. |
 | `PATCH` usage | Supported for TMF compatibility while Draft, but `PUT` is preferred for deterministic full update. |
 
@@ -830,7 +830,7 @@ External consumers can rely on IC MS to provide:
 | Report read model | `IntentReport` is a read-only curated projection/audit resource for ordinary consumers. |
 | Hypermedia links | Responses include links for valid next actions where applicable. |
 | Optimistic concurrency | Unsafe operations use `If-Match` and ETag. |
-| Submitted-version immutability | Once an Intent leaves Draft, consumers cannot patch arbitrary attributes on that submitted version; material change requires a new Draft version. |
+| Submitted-version immutability | Once an Intent leaves Draft, consumers cannot patch arbitrary attributes on that submitted version; material change requires a new Draft authoring record. |
 | External events | Subscribers receive consumer-safe TMF-aligned resource events through REST webhook callbacks. |
 | No internal leakage | Raw telemetry, optimiser decisions, callback payloads, candidate scoring, and KP internals are not exposed in external events. |
 
@@ -844,7 +844,7 @@ Internal consumers can rely on `IntentValidatedEvent` as the admitted runtime in
 | Public exposure posture for TMF strict `/hub` versus domain-scoped `/intent/hub` | Both are baselined; gateway product exposure can choose supported route set. |
 | Optional internal/admin `IntentReport` purge API details | Governed capability is allowed, but ordinary external consumer delete remains not exposed by default. |
 | Full internal version-history retrieval API | Not exposed by default; can be defined later as a documented platform extension if needed. |
-| Draft version creation route/detail | New submitted-version changes are represented by a new Draft version using a documented platform extension route or operation to be finalised. `PUT` and `PATCH` must not mutate an admitted runtime version. |
+| Draft authoring record creation route/detail | New submitted-version changes are represented by a new Draft authoring record using a documented platform extension route or operation to be finalised. `PUT` and `PATCH` must not mutate an admitted runtime version. |
 
 ## Closed items:
 
