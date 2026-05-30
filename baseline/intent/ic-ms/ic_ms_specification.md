@@ -1091,7 +1091,7 @@ ETag: "intent-INT-HOSP-2026-001-v4"
 
 `PUT` is a platform extension for deterministic full replacement.
 
-`PUT` is allowed only while the current Intent version is in `Draft`.
+`PUT` is allowed only while the current Intent/Draft projection is in `Draft`.
 
 For a Draft Intent, all attributes accepted by the `PUT` request contract are mutable. The request contract does not expose `lifecycleStatus` as writable.
 
@@ -1243,7 +1243,7 @@ ETag: "intent-INT-HOSP-2026-001-v5"
 
 `PATCH` is supported for TMF compatibility but is not encouraged for ordinary edits where deterministic full replacement through `PUT` is available.
 
-`PATCH` is allowed only while the current Intent version is in `Draft`.
+`PATCH` is allowed only while the current Intent/Draft projection is in `Draft`.
 
 For a Draft Intent, all attributes accepted by the `PATCH` request contract are mutable. The request contract does not expose `id` or `lifecycleStatus` as writable patch attributes.
 
@@ -1965,8 +1965,7 @@ They must not expose raw telemetry, raw optimiser decisions, raw `t7.knowledge p
       "id": "INT-HOSP-2026-001",
       "href": "/intentManagement/v5/intent/INT-HOSP-2026-001",
       "name": "Sydney Hospital Surgical Connection Intent",
-      "version": "v4",
-      "lifecycleStatus": "Acknowledged",
+          "lifecycleStatus": "Acknowledged",
       "@type": "Intent",
       "@baseType": "Entity"
     },
@@ -2050,8 +2049,7 @@ They must not expose raw telemetry, raw optimiser decisions, raw `t7.knowledge p
       "id": "INT-HOSP-2026-001",
       "href": "/intentManagement/v5/intent/INT-HOSP-2026-001",
       "name": "Sydney Hospital Surgical Connection Intent",
-      "version": "v4",
-      "lifecycleStatus": "Terminated",
+          "lifecycleStatus": "Terminated",
       "@type": "Intent",
       "@baseType": "Entity"
     }
@@ -2261,8 +2259,8 @@ Baseline:
 - If an Intent is already persisted with `submit: false`, later omission of `submit` preserves Draft handling and must not automatically submit the Intent.
 - External consumers must not set or patch `lifecycleStatus`; lifecycle is assigned, transitioned, and projected by the intent management entity.
 - `isBundle` is optional in create and update requests; omitted create requests default to `false`, and persisted responses include the server-resolved value.
-- `PUT /intent/{id}` is a platform extension for deterministic full replacement and is allowed only while the current Intent version is in `Draft`.
-- `PATCH /intent/{id}` is supported for TMF compatibility and is allowed only while the current Intent version is in `Draft`.
+- `PUT /intent/{id}` is a platform extension for deterministic full replacement and is allowed only while the current Intent/Draft projection is in `Draft`.
+- `PATCH /intent/{id}` is supported for TMF compatibility and is allowed only while the current Intent/Draft projection is in `Draft`.
 - Once an Intent leaves `Draft`, material changes require creating a new Draft authoring record.
 - ETag is used for unsafe-operation concurrency through `If-Match`.
 - GET responses may use bounded private caching.
