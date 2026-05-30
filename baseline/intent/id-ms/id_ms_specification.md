@@ -1,6 +1,4 @@
-# ID MS Specfication
-
-## ID MS Specification
+# ID MS Specification
 
 ### Service identity
 
@@ -12,12 +10,12 @@
 | Domain | Intent Domain |
 | Base path | `/intentManagement/v5` |
 | Primary resource | `IntentSpecification` |
-| Primary responsibility | Definition-time `IntentSpecification` catalogue, lifecycle/version governance, syntax contract, and external specification events |
+| Primary responsibility | Definition-time `IntentSpecification` catalogue, lifecycle and version governance, syntax contract, and external specification events |
 
 ### Boundary statement
 
 ID MS owns definition-time `IntentSpecification` contracts and subscription management for specification events.
-ID MS validates syntax/resource shape and enforces specification lifecycle/version governance.
+ID MS validates syntax and resource shape and enforces specification lifecycle and version governance.
 ID MS does not own runtime `Intent`, `IntentReport`, semantic validation, policy validation, network/resource feasibility, optimisation, runtime assurance, telemetry, or callback ingestion.
 
 ### TMF deployment path note
@@ -35,7 +33,7 @@ A strict TMF deployment may expose the same API through `/tmf-api/intentManageme
 |---|---:|---|
 | Create mutable DRAFT candidate | `POST` | `/intentManagement/v5/intentSpecification` |
 | List specifications | `GET` | `/intentManagement/v5/intentSpecification` |
-| Retrieve official ACTIVE/RETIRED specification by ID | `GET` | `/intentManagement/v5/intentSpecification/{id}` |
+| Retrieve official ACTIVE and RETIRED specification by ID | `GET` | `/intentManagement/v5/intentSpecification/{id}` |
 | Retire current ACTIVE specification | `DELETE` | `/intentManagement/v5/intentSpecification/{id}` |
 | Retrieve DRAFT candidate | `GET` | `/intentManagement/v5/intentSpecification/draft/{draftId}` |
 | Full replace DRAFT candidate | `PUT` | `/intentManagement/v5/intentSpecification/draft/{draftId}` |
@@ -129,8 +127,8 @@ These are response headers only. Clients do not send these headers in requests.
 
 | **Response header** | **Meaning** |
 |---|---|
-| `X-TMF-Native: true` | The response is for a TMF-native operation/behaviour. |
-| `X-TMF-Native: false` | The response is for an operation/behaviour that includes platform-specific semantics. |
+| `X-TMF-Native: true` | The response is for a TMF-native operation or behaviour. |
+| `X-TMF-Native: false` | The response is for an operation or behaviour that includes platform-specific semantics. |
 | `X-Platform-Extension: true` | The route, method, response, or behaviour includes a documented platform extension. |
 | `X-Platform-Extension: false` | No platform extension is used for the response. |
 
@@ -142,7 +140,7 @@ Header classification guidance:
 | `GET /intentSpecification/draft/{draftId}`, `PUT /intentSpecification/draft/{draftId}`, `PATCH /intentSpecification/draft/{draftId}`, and `DELETE /intentSpecification/draft/{draftId}` | `false` | `true` | DRAFT-candidate route family is a platform extension used to retrieve, edit, activate, or delete mutable draft candidates before activation. |
 | `PATCH /intentSpecification/draft/{draftId}` used for tightly controlled activation | `false` | `true` | Uses TMF-compatible partial-update semantics on the platform-extension DRAFT-candidate route. |
 | `PUT /intentSpecification/draft/{draftId}` used for full-resource finalisation/activation | `false` | `true` | Full-resource finalisation through PUT on the DRAFT-candidate route is a platform extension. |
-| Strict `/hub` create/delete responses | `true` | `false` | Strict TMF hub route family. |
+| Strict `/hub` create and delete responses | `true` | `false` | Strict TMF hub route family. |
 | Domain-scoped `/intentSpecification/hub` responses | `false` | `true` | Domain-owned hub route family is a platform extension. |
 | `GET /intentSpecification/hub/{id}` | `false` | `true` | Subscription retrieval is an operational convenience extension. |
 
@@ -169,7 +167,7 @@ ACTIVE
 RETIRED
 ```
 
-There is no `DELETED` lifecycle status. Delete is an operation/outcome, not a normal lifecycle state.
+There is no `DELETED` lifecycle status. Delete is an operation outcome, not a normal lifecycle state.
 
 
 ### Draft candidate identity model
@@ -179,7 +177,7 @@ ID MS follows the definition-candidate model used by the optimiser definition ba
 ```text
 specKey -> resolves the stable server-assigned IntentSpecification.id
 draftId -> selects the mutable DRAFT candidate
-id -> selects the official ACTIVE/RETIRED lineage
+id -> selects the official ACTIVE and RETIRED lineage
 version -> official version assigned only on activation
 ```
 
@@ -932,7 +930,7 @@ Cache-Control: no-store
 Prefer `PUT` for deterministic full replacement of editable `DRAFT` specifications.
 Use `PATCH` only where a TMF-compatible client cannot use `PUT` or where a tightly controlled, small targeted compatibility update is required.
 
-`PATCH` must not normally be used for material contract replacement, including `specKey`, `version`, `specCharacteristic`, `expressionSpecification`, `targetEntitySchema`, or major lifecycle/version contract identity.
+`PATCH` must not normally be used for material contract replacement, including `specKey`, `version`, `specCharacteristic`, `expressionSpecification`, `targetEntitySchema`, or major lifecycle and version contract identity.
 
 ### Request
 
@@ -1039,7 +1037,7 @@ No response body is returned.
 | Audit/history dependency | Delete is blocked if retention is required for audit/history |
 | ETag required | `If-Match` is required |
 | Missing `If-Match` | `428 Precondition Required` |
-| Stale/mismatched `If-Match` | `412 Precondition Failed` |
+| Stale or mismatched `If-Match` | `412 Precondition Failed` |
 | Delete outcome | Physical or logical removal is an implementation detail |
 | Resource lifecycle | Do not set `lifecycleStatus = DELETED` |
 | Event emitted | `IntentSpecificationDeleteEvent` after successful delete only |
@@ -1212,7 +1210,7 @@ Last-Modified: Sat, 18 Apr 2026 03:30:00 GMT
 | Material update after activation | Not allowed; create a new mutable DRAFT candidate |
 | ETag required | `If-Match` is required |
 | Missing `If-Match` | `428 Precondition Required` |
-| Stale/mismatched `If-Match` | `412 Precondition Failed` |
+| Stale or mismatched `If-Match` | `412 Precondition Failed` |
 | Invalid lifecycle transition | `409 Conflict` |
 
 ### Events emitted by activation
@@ -1493,7 +1491,7 @@ Cache-Control: no-store
 | Retrieve | Supported intentionally |
 | Delete | Requires `If-Match` |
 | Missing `If-Match` | `428 Precondition Required` |
-| Stale/mismatched `If-Match` | `412 Precondition Failed` |
+| Stale or mismatched `If-Match` | `412 Precondition Failed` |
 | Create response | `201 Created` with `Location`, `ETag`, body, and `_links` |
 | Retrieve response | `200 OK` with `ETag` and GET-only private caching |
 | Delete response | `204 No Content` |
@@ -1535,13 +1533,14 @@ ID MS emits external TMF-aligned resource events for `IntentSpecification` chang
 | `IntentSpecificationStatusChangeEvent` | Lifecycle status changes, such as activation to `ACTIVE` or retirement to `RETIRED` |
 | `IntentSpecificationDeleteEvent` | Unused draft specification deleted after delete succeeds |
 
-These are external subscription events for the `IntentSpecification` resource. They are not internal fulfilment events and must not expose II MS semantic validation details, lightweight II MS KP details, `t7.knowledge plane` data, optimiser decisions, runtime assurance state, telemetry, callback payloads, or internal candidate/resource scoring details.
+These are external subscription events for the `IntentSpecification` resource. They are not internal fulfilment events and must not expose II MS semantic validation details, lightweight II MS KP details, `t7.knowledge plane` data, optimiser decisions, runtime assurance state, telemetry, callback payloads, or internal candidate and resource scoring details.
 
 Event resource snapshots should carry consistent resource metadata:
 
 - `id`
 - `href`
 - `specKey`
+- `draftId` where the event carries a DRAFT candidate snapshot
 - `name`
 - `version`
 - `lifecycleStatus`
@@ -1636,10 +1635,10 @@ TMF921 examples contain the misspelled `timeOcurred`; this baseline intentionall
   "event": {
     "intentSpecification": {
       "id": "hospital-surgical-slice-spec",
-      "href": "/intentManagement/v5/intentSpecification/hospital-surgical-slice-spec?version=1.19",
+      "href": "/intentManagement/v5/intentSpecification/draft/id-draft-hospital-surgical-slice-a",
       "specKey": "hospital-surgical-slice-spec",
+      "draftId": "id-draft-hospital-surgical-slice-a",
       "name": "Hospital Surgical Slice Intent Specification",
-      "version": "1.19",
       "lifecycleStatus": "DRAFT",
       "isBundle": false,
       "validFor": {
@@ -1690,10 +1689,10 @@ TMF921 examples contain the misspelled `timeOcurred`; this baseline intentionall
   "event": {
     "intentSpecification": {
       "id": "hospital-surgical-slice-spec",
-      "href": "/intentManagement/v5/intentSpecification/hospital-surgical-slice-spec?version=1.19",
+      "href": "/intentManagement/v5/intentSpecification/draft/id-draft-hospital-surgical-slice-a",
       "specKey": "hospital-surgical-slice-spec",
+      "draftId": "id-draft-hospital-surgical-slice-a",
       "name": "Hospital Surgical Slice Intent Specification",
-      "version": "1.19",
       "lifecycleStatus": "DRAFT",
       "isBundle": false,
       "validFor": {
@@ -1804,11 +1803,11 @@ TMF921 examples contain the misspelled `timeOcurred`; this baseline intentionall
   "title": "IntentSpecification deleted",
   "event": {
     "intentSpecification": {
-      "id": "hospital-surgical-slice-spec-v1.18-draft",
-      "href": "/intentManagement/v5/intentSpecification/hospital-surgical-slice-spec-v1.18-draft",
+      "id": "hospital-surgical-slice-spec",
+      "href": "/intentManagement/v5/intentSpecification/draft/id-draft-hospital-surgical-slice-old",
       "specKey": "hospital-surgical-slice-spec",
+      "draftId": "id-draft-hospital-surgical-slice-old",
       "name": "Hospital Surgical Slice Intent Specification",
-      "version": "1.18-draft",
       "lifecycleStatus": "DRAFT",
       "isBundle": false,
       "validFor": {
@@ -1914,7 +1913,7 @@ For ID MS, accepted platform extensions are:
 
 ### Lifecycle activation rule
 
-Activation/retirement is represented as a resource update to `IntentSpecification.lifecycleStatus`.
+Activation and retirement are represented as resource updates to `IntentSpecification.lifecycleStatus`.
 
 Use:
 

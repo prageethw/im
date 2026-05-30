@@ -23,13 +23,13 @@ participant "Outbox Dispatcher\n(background worker)" as DISPATCHER
 actor "External Subscriber\nSystem" as SUB
 
 note over GW, IDMS
-  NGW forwards trusted system/service context downstream.
+  NGW forwards trusted system identity context downstream.
   End-user context does not propagate past NGW.
 end note
 
 == 1. Create New Draft IntentSpecification: ==
 Client -> GW : POST /intentManagement/v5/intentSpecification\nTMF-compliant IntentSpecification request\n{ specKey, name, ... }
-GW -> IDMS : Forward request using system/service identity
+GW -> IDMS : Forward request using system identity
 
 group Atomic DB transaction:
   IDMS -> CAT : Persist new DRAFT IntentSpecification
@@ -57,7 +57,7 @@ end
 
 == 2. Retrieve / List IntentSpecifications: ==
 Client -> GW : GET /intentManagement/v5/intentSpecification\nor GET /intentManagement/v5/intentSpecification/{id}
-GW -> IDMS : Forward request using system/service identity
+GW -> IDMS : Forward request using system identity
 IDMS -> CAT : Query catalogue for discovery / validation support
 CAT --> IDMS : IntentSpecification list or single resource
 IDMS --> GW : 200 OK\nETag + TMF-compliant IntentSpecification representation
@@ -71,7 +71,7 @@ note over Client, IDMS
   If-Match is required.
 end note
 Client -> GW : PUT /intentManagement/v5/intentSpecification/draft/{draftId}\nIf-Match: "<draft-etag>"\n{ complete DRAFT candidate resource }
-GW -> IDMS : Forward request using system/service identity
+GW -> IDMS : Forward request using system identity
 alt Missing If-Match:
   IDMS --> GW : 428 Precondition Required\n{ code: PRECONDITION_REQUIRED, reason: IF_MATCH_REQUIRED }
   GW --> Client : 428 Precondition Required
@@ -103,7 +103,7 @@ note over Client, IDMS
   If-Match is required.
 end note
 Client -> GW : PATCH /intentManagement/v5/intentSpecification/draft/{draftId}\nIf-Match: "<draft-etag>"\n{ partial DRAFT fields }
-GW -> IDMS : Forward request using system/service identity
+GW -> IDMS : Forward request using system identity
 alt Missing If-Match:
   IDMS --> GW : 428 Precondition Required\n{ code: PRECONDITION_REQUIRED, reason: IF_MATCH_REQUIRED }
   GW --> Client : 428 Precondition Required
@@ -127,7 +127,7 @@ note over Client, IDMS
   DELETED is not an IntentSpecification lifecycleStatus.
 end note
 Client -> GW : PUT or PATCH /intentManagement/v5/intentSpecification/draft/{draftId}\nIf-Match: "<draft-etag>"\n{ lifecycleStatus: "ACTIVE" }
-GW -> IDMS : Forward request using system/service identity
+GW -> IDMS : Forward request using system identity
 alt Missing If-Match:
   IDMS --> GW : 428 Precondition Required
   GW --> Client : 428 Precondition Required
@@ -158,12 +158,12 @@ DISPATCHER -> OUTBOX : Mark both events DELIVERED
 
 == 5. Delete Unused Draft IntentSpecification: ==
 note over Client, IDMS
-  Delete is an operation/outcome, not a DELETED lifecycle state.
+  Delete is an operation outcome, not a DELETED lifecycle state.
   Allowed only for DRAFT resources when retention and runtime-reference rules permit.
   If-Match is required.
 end note
 Client -> GW : DELETE /intentManagement/v5/intentSpecification/{id}\nIf-Match: "<etag>"
-GW -> IDMS : Forward request using system/service identity
+GW -> IDMS : Forward request using system identity
 alt Missing If-Match:
   IDMS --> GW : 428 Precondition Required\n{ code: PRECONDITION_REQUIRED, reason: IF_MATCH_REQUIRED }
   GW --> Client : 428 Precondition Required
@@ -200,7 +200,7 @@ note over Client, SUBREG
   Hub notifications are delivered as REST webhooks, not Kafka.
 end note
 Client -> GW : POST /intentManagement/v5/intentSpecification/hub\n{ callback: "https://subscriber.example/notify",\n  query: "eventType=IntentSpecificationCreateEvent" }
-GW -> IDMS : Forward request using system/service identity
+GW -> IDMS : Forward request using system identity
 IDMS -> SUBREG : Persist { subscriptionId, callbackUrl, filter, deliveryMetadata }
 SUBREG --> IDMS : Created subscription
 IDMS --> GW : 201 Created\nLocation + ETag + subscription representation
@@ -208,7 +208,7 @@ GW --> Client : 201 Created\nLocation + ETag + subscription representation
 
 == 6b. Retrieve External Event Subscription: ==
 Client -> GW : GET /intentManagement/v5/intentSpecification/hub/{id}
-GW -> IDMS : Forward request using system/service identity
+GW -> IDMS : Forward request using system identity
 IDMS -> SUBREG : Lookup subscription record
 SUBREG --> IDMS : Subscription
 IDMS --> GW : 200 OK\nETag + subscription representation
@@ -216,7 +216,7 @@ GW --> Client : 200 OK\nETag + subscription representation
 
 == 6c. Delete External Event Subscription: ==
 Client -> GW : DELETE /intentManagement/v5/intentSpecification/hub/{id}\nIf-Match: "<etag>"
-GW -> IDMS : Forward request using system/service identity
+GW -> IDMS : Forward request using system identity
 alt Missing If-Match:
   IDMS --> GW : 428 Precondition Required\n{ code: PRECONDITION_REQUIRED, reason: IF_MATCH_REQUIRED }
   GW --> Client : 428 Precondition Required

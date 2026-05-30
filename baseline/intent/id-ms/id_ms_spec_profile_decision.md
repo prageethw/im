@@ -4,7 +4,7 @@
 | --- | --- |
 | Status | Proposed decision paper |
 | Scope | Intent Definition MS `IntentSpecification` definition profile |
-| Primary focus | `specKey`, `draftId`, DRAFT candidate creation, activation, official version assignment, ACTIVE/RETIRED immutability |
+| Primary focus | `specKey`, `draftId`, DRAFT candidate creation, activation, official version assignment, ACTIVE and RETIRED immutability |
 | Source of truth after commit | GitHub `baseline/intent/id-ms/id_ms_spec_profile_decision.md` |
 
 ## 1. Decision summary:

@@ -4,7 +4,7 @@
 
 Intent Definition MS (ID MS) is the definition-time microservice responsible for the `IntentSpecification` catalogue, version governance, lifecycle governance, syntax contract publication, and external `IntentSpecification` event subscription model. ID MS is the authoritative owner of `IntentSpecification` resources under `/intentManagement/v5/intentSpecification`.
 
-It defines what runtime intent expressions are allowed to look like, which specification versions are available for new runtime intent creation, and which lifecycle/version rules protect active and retired specifications. ID MS is deliberately not the runtime intent owner. It does not own runtime `Intent`, `IntentReport`, semantic validation, policy validation, network feasibility, optimisation, runtime assurance, telemetry, or callback ingestion.
+It defines what runtime intent expressions are allowed to look like, which specification versions are available for new runtime intent creation, and which lifecycle and version rules protect active and retired specifications. ID MS is deliberately not the runtime intent owner. It does not own runtime `Intent`, `IntentReport`, semantic validation, policy validation, network feasibility, optimisation, runtime assurance, telemetry, or callback ingestion.
 
 Those responsibilities remain with IC MS, II MS, IA MS, ICB MS, optimiser components, and knowledge/assurance services as applicable. The service follows the TMF921 `IntentSpecification` responsibility boundary while retaining documented platform extensions for deterministic full update, domain-scoped hub routes, spec-key version governance, HATEOAS links, optimistic concurrency, and explicit missing-precondition errors.
 
@@ -70,7 +70,7 @@ The baseline surgical hospital slice specification uses:
 - `priority` values of `critical`, `high`, and `standard`
 - canonical `context.targets`, `context.constraints`, and `context.preferences` semantics in the expression model
 
-ID MS validates resource structure, required fields, lifecycle rules, and syntax/schema references. It does not decide whether a submitted runtime intent is semantically feasible or fulfillable in the network. Semantic and policy validation belongs to II MS and the knowledge plane. Runtime assurance belongs to IA MS.
+ID MS validates resource structure, required fields, lifecycle rules, and syntax and schema references. It does not decide whether a submitted runtime intent is semantically feasible or fulfillable in the network. Semantic and policy validation belongs to II MS and the knowledge plane. Runtime assurance belongs to IA MS.
 
 ## Responsibilities:
 
@@ -113,8 +113,8 @@ These are response headers only. Clients do not send these headers in requests.
 
 | **Response header** | **Meaning** |
 |---|---|
-| `X-TMF-Native: true` | The response is for a TMF-native operation/behaviour. |
-| `X-TMF-Native: false` | The response is for an operation/behaviour that includes platform-specific semantics. |
+| `X-TMF-Native: true` | The response is for a TMF-native operation or behaviour. |
+| `X-TMF-Native: false` | The response is for an operation or behaviour that includes platform-specific semantics. |
 | `X-Platform-Extension: true` | The route, method, response, or behaviour includes a documented platform extension. |
 | `X-Platform-Extension: false` | No platform extension is used for the response. |
 
@@ -166,7 +166,7 @@ A strict TMF-compatible gateway may map deployment-specific external prefixes to
 |---|---:|---|
 | Create mutable DRAFT candidate | `POST` | `/intentManagement/v5/intentSpecification` |
 | List specifications | `GET` | `/intentManagement/v5/intentSpecification` |
-| Retrieve official ACTIVE/RETIRED specification by ID | `GET` | `/intentManagement/v5/intentSpecification/{id}` |
+| Retrieve official ACTIVE and RETIRED specification by ID | `GET` | `/intentManagement/v5/intentSpecification/{id}` |
 | Full replace DRAFT candidate | `PUT` | `/intentManagement/v5/intentSpecification/draft/{draftId}` |
 | Partial update or activate DRAFT candidate | `PATCH` | `/intentManagement/v5/intentSpecification/draft/{draftId}` |
 | Delete unused DRAFT candidate | `DELETE` | `/intentManagement/v5/intentSpecification/draft/{draftId}` |
@@ -313,7 +313,7 @@ ACTIVE
 RETIRED
 ```
 
-There is no `DELETED` lifecycle state. Delete is an operation/outcome, not a lifecycle status.
+There is no `DELETED` lifecycle state. Delete is an operation outcome, not a lifecycle status.
 
 ### Query parameters:
 
@@ -351,7 +351,7 @@ Clients must not use or submit `DELETED` as a lifecycle status.
 - `specCharacteristic`
 - `expressionSpecification`
 - `targetEntitySchema`
-- major lifecycle/version contract identity
+- major lifecycle and version contract identity
 
 ## Authorisation:
 
@@ -387,7 +387,7 @@ ID MS uses `/intentSpecification/hub` as a REST webhook subscription mechanism. 
 
 The delivery model is a TMF-aligned subscriber listener callback. Kafka is not used for ID MS hub notification delivery. There is no ID MS self-publish/self-consume Kafka loop and no dedicated Kafka topic for these external hub notifications. ID MS is both the event originator and the delivery owner.
 
-Events are external subscription notifications for specification-resource changes. They must not expose internal fulfilment, KP, optimiser, assurance, telemetry, callback, or candidate/resource scoring details.
+Events are external subscription notifications for specification-resource changes. They must not expose internal fulfilment, KP, optimiser, assurance, telemetry, callback, or candidate and resource scoring details.
 
 Supported external event types are:
 
@@ -496,7 +496,7 @@ Delete events are emitted only after successful delete and show the last known l
 ### Create behaviour:
 
 - Create produces a mutable `DRAFT` candidate and assigns a `draftId`.
-- ID MS validates resource shape and required syntax/schema references.
+- ID MS validates resource shape and required syntax and schema references.
 - ID MS resolves `id` from `specKey` and generates `draftId`, DRAFT `href`, `Location`, `ETag`, and `_links`.
 - Successful create returns `201 Created` with the full created DRAFT candidate resource.
 - Successful create emits `IntentSpecificationCreateEvent`.
@@ -600,7 +600,7 @@ Consumers of ID MS should rely on these behaviours:
 |---|---|
 | ID MS owns `IntentSpecification` only | Closed. Runtime `Intent` and `IntentReport` are IC MS concerns. |
 | Lifecycle values | Closed: `DRAFT`, `ACTIVE`, `RETIRED`. |
-| No `DELETED` lifecycle state | Closed. Delete is operation/outcome only. |
+| No `DELETED` lifecycle state | Closed. Delete is operation outcome only. |
 | `PUT` support | Closed. `PUT` is an approved platform extension for deterministic full replacement of editable drafts. |
 | `PATCH` position | Closed. Supported for TMF compatibility but discouraged generally. |
 | Activation endpoint | Closed. No custom `/activate`; use lifecycle update through `PUT` or `PATCH`. |
@@ -621,4 +621,4 @@ Consumers of ID MS should rely on these behaviours:
 | Domain | Intent Domain |
 | Base path | `/intentManagement/v5` |
 | Primary resource | `IntentSpecification` |
-| Primary responsibility | Definition-time `IntentSpecification` catalogue, lifecycle/version governance, syntax contract, and external REST webhook specification-event notifications. |
+| Primary responsibility | Definition-time `IntentSpecification` catalogue, lifecycle and version governance, syntax contract, and external REST webhook specification-event notifications. |
