@@ -165,6 +165,7 @@ A strict TMF-compatible gateway may map deployment-specific external prefixes to
 | Create mutable DRAFT candidate | `POST` | `/intentManagement/v5/intentSpecification` |
 | List specifications | `GET` | `/intentManagement/v5/intentSpecification` |
 | Retrieve official ACTIVE and RETIRED specification by ID | `GET` | `/intentManagement/v5/intentSpecification/{id}` |
+| Retrieve DRAFT candidate | `GET` | `/intentManagement/v5/intentSpecification/draft/{draftId}` |
 | Full replace DRAFT candidate | `PUT` | `/intentManagement/v5/intentSpecification/draft/{draftId}` |
 | Partial update or activate DRAFT candidate | `PATCH` | `/intentManagement/v5/intentSpecification/draft/{draftId}` |
 | Delete unused DRAFT candidate | `DELETE` | `/intentManagement/v5/intentSpecification/draft/{draftId}` |

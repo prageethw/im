@@ -572,6 +572,7 @@ Common errors:
 | `412` | `PRECONDITION_FAILED` | Stale or mismatched `If-Match` |
 | `422` | `VALIDATION_FAILED` | Fails expression/spec schema constraints |
 | `428` | `PRECONDITION_REQUIRED` | Missing required `If-Match` |
+| `503` | `SERVICE_UNAVAILABLE` | Source-of-truth DB unavailable |
 | `500` | `INTERNAL_ERROR` | Unexpected server error |
 
 ## ID MS API boundary statement:
