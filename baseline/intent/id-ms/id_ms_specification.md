@@ -295,7 +295,7 @@ These fields do not replace `expressionSpecification.iri`, `targetEntitySchema`,
 Runtime Intent instances created using an `ACTIVE` `IntentSpecification` remain tied to the specification identity and version used at admission.
 
 - `IntentSpecification` lifecycle may evolve from `DRAFT` to `ACTIVE` to `RETIRED`.
-- Existing runtime Intent instances referencing a `RETIRED` specification may continue where platform policy allows.
+- Existing runtime Intent instances referencing a `RETIRED` specification may continue under external platform governance policy.
 - A change in intent requirements must result in submission of a new Intent instance. Runtime mutation of admitted Intent instances is not supported.
 - ID MS does not mutate runtime Intent instances.
 - `ACTIVE` and `RETIRED` `IntentSpecification` versions remain immutable for material contract changes.

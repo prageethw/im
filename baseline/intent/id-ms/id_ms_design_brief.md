@@ -365,7 +365,7 @@ The list operation does not include full `specCharacteristic`, `expressionSpecif
 ## 13. Full update IntentSpecification:
 
 ```http
-PUT /intentManagement/v5/intentSpecification/draft/id-draft-hospital-surgical-slice-a?fields=id,href,specKey,name,description,version,lifecycleStatus,isBundle,validFor,relatedParty,specCharacteristic,expressionSpecification,targetEntitySchema,@type,@baseType
+PUT /intentManagement/v5/intentSpecification/draft/id-draft-hospital-surgical-slice-a?fields=id,href,specKey,name,description,lifecycleStatus,isBundle,validFor,relatedParty,specCharacteristic,expressionSpecification,targetEntitySchema,@type,@baseType
 Content-Type: application/json
 Accept: application/json
 If-Match: "id-draft-hospital-surgical-slice-a-r1"
@@ -741,7 +741,7 @@ Lineage reuse across retired-only specifications is not assumed by default. Rein
 - If a submitted intent references a `DRAFT` specification, IC MS rejects it.
 - If a submitted intent references a `RETIRED` specification for new creation, IC MS rejects it.
 - Runtime Intent instances created using an `ACTIVE` `IntentSpecification` remain tied to the specification identity and version used at admission.
-- Existing runtime Intent instances referencing a `RETIRED` specification may continue where platform policy allows.
+- Existing runtime Intent instances referencing a `RETIRED` specification may continue under external platform governance policy.
 - A change in intent requirements must result in submission of a new Intent instance. Runtime mutation of admitted Intent instances is not supported.
 - ID MS does not mutate runtime Intent instances.
 - `ACTIVE` and `RETIRED` `IntentSpecification` versions remain immutable for material contract changes.

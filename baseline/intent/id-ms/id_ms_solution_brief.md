@@ -88,7 +88,7 @@ The primary ID MS process flows are:
 1. Create a new draft `IntentSpecification`.
 2. Retrieve or list specifications for discovery and runtime validation support.
 3. Update an editable draft specification using preferred full replacement or tightly controlled partial update.
-4. Activate a draft specification version through lifecycle update.
+4. Activate a DRAFT candidate through lifecycle update.
 5. Retire the previous active specification in the same `specKey` during activation.
 6. Delete an unused draft specification where retention and runtime-reference rules allow it.
 7. Create, retrieve, and delete external event subscriptions.
