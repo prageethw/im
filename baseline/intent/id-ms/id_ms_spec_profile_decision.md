@@ -165,21 +165,31 @@ Activation rules:
 
 ## 8. Optional behaviour metadata:
 
-`intentBehaviour` and `intentLayer` are optional definition-time metadata fields.
+`intentBehaviour` and `intentLayer` are optional classification metadata fields.
 
-They are intended for:
+They support:
 
-- catalogue classification
+- catalogue visibility
 - governance visibility
 - external consumer understanding
 
 They are not used by ID MS for:
 
-- behavioural enforcement
 - runtime decisioning
-- validation or admission control
+- runtime validation
+- admission control
+- behavioural enforcement
 
-They are not required for DRAFT creation, activation, or runtime Intent admission in the current baseline. If omitted, ID MS does not infer or default these values unless an explicit platform policy is later introduced.
+They are not part of the minimum mandatory profile and are not required for DRAFT creation, activation, or runtime Intent admission in the current baseline. If omitted, ID MS does not infer or default these values unless an explicit platform policy is later introduced.
+
+The only ID MS-level `intentBehaviour` fields defined in this baseline are:
+
+- `category`
+- `constraintMode`
+- `objectiveType`
+- `fulfilmentMode`
+
+No additional behaviour fields are defined at ID MS level.
 
 Allowed values:
 
@@ -213,15 +223,19 @@ For the hospital surgical slice example, the recommended optional metadata is:
 }
 ```
 
-`IMMEDIATE` and `LONGRUNNING` describe fulfilment timing. `CONTINUOUS` describes whether downstream systems are closed-looped for the intent. `CONTINUOUS` does not imply modification of the submitted runtime Intent instance. Runtime Intent instances remain immutable once accepted.
+`IMMEDIATE` and `LONGRUNNING` describe fulfilment timing. `CONTINUOUS` refers to downstream closed-loop system behaviour only. It indicates that downstream systems may monitor, assure, adapt, re-optimise, or reselect resources to maintain the intent objective over time. It does not imply mutation or update of the submitted runtime Intent instance.
 
 These fields do not replace `expressionSpecification.iri`, `targetEntitySchema`, `specCharacteristic`, or request-specific `serviceType`, `serviceClass`, `priority`, targets, constraints, and preferences inside the governed expression schema.
 
-## 9. Runtime admission guardrail:
+## 9. specKey lineage note:
+
+`specKey` represents logical grouping across specification versions. If only `RETIRED` versions exist for a `specKey`, ID MS creates a new `id` by default. Lineage reuse of retired specifications is not assumed and requires explicit governance if introduced later.
+
+## 10. Runtime admission guardrail:
 
 IC MS runtime admission must reference a concrete ACTIVE `intentSpecification.id`. Runtime admission must not use `specKey` or `draftId` as the contract-selection key. DRAFT candidates are not valid for new runtime Intent admission.
 
-## 10. Intent immutability clarification:
+## 11. Intent immutability clarification:
 
 Runtime Intent instances created using an `ACTIVE` `IntentSpecification` remain tied to the specification identity and version used at admission.
 

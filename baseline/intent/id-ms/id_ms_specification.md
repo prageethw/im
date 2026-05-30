@@ -181,29 +181,53 @@ id -> selects the official ACTIVE and RETIRED lineage
 version -> official version assigned only on activation
 ```
 
-Runtime IC MS admission must still reference a concrete ACTIVE `intentSpecification.id`. Runtime admission must not use `specKey` or `draftId` as the contract-selection key.
+Runtime Intent admission must reference a concrete ACTIVE `IntentSpecification.id`. `specKey` and `draftId` must not be used for runtime contract selection. Runtime IC MS admission must still reject DRAFT candidates and RETIRED specifications for new runtime Intent creation.
 
 Lineage reuse across retired-only specifications is not assumed by default. Reintroduction or reuse of a prior lineage requires explicit governance.
 
 ### Optional IntentSpecification behaviour metadata
 
-`intentBehaviour` and `intentLayer` are optional definition-time metadata fields on `IntentSpecification`.
+`intentBehaviour` and `intentLayer` are optional classification metadata fields on `IntentSpecification`.
 
-They are intended for:
+They support:
 
-- catalogue classification
+- catalogue visibility
 - governance visibility
 - external consumer understanding
 
 They are not used by ID MS for:
 
-- behavioural enforcement
 - runtime decisioning
-- validation or admission control
+- runtime validation
+- admission control
+- behavioural enforcement
 
 They are not required for DRAFT creation, activation, or runtime Intent admission in the current baseline. If omitted, ID MS does not infer or default these values unless an explicit platform policy is later introduced.
 
-Allowed values:
+The only ID MS-level `intentBehaviour` fields defined in this baseline are:
+
+- `category`
+- `constraintMode`
+- `objectiveType`
+- `fulfilmentMode`
+
+No additional behaviour fields are defined at ID MS level.
+
+Example optional metadata for the hospital surgical slice specification:
+
+```json
+{
+  "intentBehaviour": {
+    "category": "REALTIME",
+    "constraintMode": "STRICT",
+    "objectiveType": "SLA",
+    "fulfilmentMode": "CONTINUOUS"
+  },
+  "intentLayer": "SERVICE"
+}
+```
+
+Controlled values:
 
 | **Field** | **Allowed values** | **Meaning** |
 |---|---|---|
@@ -221,7 +245,7 @@ Allowed values:
 | `LONGRUNNING` | Fulfilment spans a longer-running workflow with delayed completion feedback. |
 | `CONTINUOUS` | Downstream systems may operate in a closed-loop manner to maintain the intent objective over time. |
 
-`IMMEDIATE` and `LONGRUNNING` describe fulfilment timing. `CONTINUOUS` describes whether downstream systems are closed-looped for the intent. `CONTINUOUS` does not imply modification of the submitted runtime Intent instance. Runtime Intent instances remain immutable once accepted.
+`IMMEDIATE` and `LONGRUNNING` describe fulfilment timing. `CONTINUOUS` refers to downstream closed-loop system behaviour only. It indicates that downstream systems may monitor, assure, adapt, re-optimise, or reselect resources to maintain the intent objective over time. It does not imply mutation or update of the submitted runtime Intent instance.
 
 These fields do not replace `expressionSpecification.iri`, `targetEntitySchema`, `specCharacteristic`, or request-specific `serviceType`, `serviceClass`, `priority`, targets, constraints, and preferences inside the governed expression schema.
 
@@ -900,7 +924,7 @@ Last-Modified: Sat, 18 Apr 2026 03:00:00 GMT
     "partialUpdate": {
       "href": "/intentManagement/v5/intentSpecification/draft/id-draft-hospital-surgical-slice-a",
       "method": "PATCH",
-      "warning": "PATCH is supported for compatibility but discouraged as a general update method. Prefer PUT for deterministic full replacement."
+      "warning": "PATCH is supported for TMF compatibility but discouraged as a general update method. Prefer PUT for deterministic full replacement of editable DRAFT specifications."
     },
     "delete": {
       "href": "/intentManagement/v5/intentSpecification/draft/id-draft-hospital-surgical-slice-a",
@@ -1052,7 +1076,7 @@ Last-Modified: Sat, 18 Apr 2026 03:00:00 GMT
     "partialUpdate": {
       "href": "/intentManagement/v5/intentSpecification/draft/id-draft-hospital-surgical-slice-a",
       "method": "PATCH",
-      "warning": "PATCH is supported for compatibility but discouraged as a general update method. Prefer PUT for deterministic full replacement."
+      "warning": "PATCH is supported for TMF compatibility but discouraged as a general update method. Prefer PUT for deterministic full replacement of editable DRAFT specifications."
     }
   }
 }
@@ -1911,7 +1935,7 @@ TMF921 examples contain the misspelled `timeOcurred`; this baseline intentionall
 - `priority` values are `critical`, `high`, and `standard`.
 - `intentBehaviour` and `intentLayer` are optional definition-time metadata fields for catalogue classification, governance visibility, and external consumer understanding.
 - `intentBehaviour` and `intentLayer` are not used by ID MS for behavioural enforcement, runtime decisioning, validation, or admission control.
-- `intentBehaviour.fulfilmentMode` values are `IMMEDIATE`, `LONGRUNNING`, and `CONTINUOUS`; `CONTINUOUS` means downstream systems may operate in a closed-loop manner to maintain the intent objective over time.
+- `intentBehaviour.fulfilmentMode` values are `IMMEDIATE`, `LONGRUNNING`, and `CONTINUOUS`; `CONTINUOUS` means downstream systems may operate in a closed-loop manner to maintain the intent objective over time and does not imply mutation of the submitted runtime Intent instance.
 - `CONTINUOUS` does not imply modification of the submitted runtime Intent instance.
 - Use `priority`, not `priority_level`.
 - Do not use `DELETED` as an `IntentSpecification.lifecycleStatus`.
