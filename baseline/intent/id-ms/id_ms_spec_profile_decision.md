@@ -1,4 +1,4 @@
-# IntentSpecification profile decision
+# TAF - Decision Proposal IntentSpecification, Minimum data requirements
 
 | **Document status** | **Value** |
 | --- | --- |
