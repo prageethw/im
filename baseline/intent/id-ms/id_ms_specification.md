@@ -1336,7 +1336,7 @@ Cache-Control: no-store
 ```
 
 
-#### Missing If-Match response
+#### Retire missing If-Match response
 
 ```http
 HTTP/1.1 428 Precondition Required
@@ -1358,7 +1358,7 @@ Cache-Control: no-store
 }
 ```
 
-#### ETag mismatch response
+#### Retire ETag mismatch response
 
 ```http
 HTTP/1.1 412 Precondition Failed
@@ -1441,6 +1441,8 @@ Content-Location: /intentManagement/v5/intentSpecification/ispec-hss-001
 ETag: "intent-spec-hospital-surgical-slice-r4"
 Last-Modified: Sat, 18 Apr 2026 03:30:00 GMT
 ```
+
+Activation full response body example:
 
 ```json
 {
