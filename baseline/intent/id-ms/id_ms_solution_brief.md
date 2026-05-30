@@ -551,7 +551,7 @@ Delete events are emitted only after successful delete and show the last known l
 - The previous `ACTIVE` version in the same `specKey` becomes `RETIRED`.
 - New runtime intent creation must use the new active specification.
 - Existing runtime Intent instances referencing a RETIRED specification may continue under external platform governance policy.
-- Activation responses may include this platform governance projection:
+- When a previous ACTIVE version is retired during activation, activation responses include this platform governance projection:
 
 ```json
 {

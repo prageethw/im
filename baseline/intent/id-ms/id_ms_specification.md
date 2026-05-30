@@ -741,6 +741,87 @@ Accept: application/json
 
 DRAFT candidate retrieval returns the mutable DRAFT candidate selected by `draftId`. DRAFT responses include `draftId`, omit official public `version`, and expose DRAFT action links such as `patch`, `replace`, `delete`, and `activate` using `/intentSpecification/draft/{draftId}`.
 
+```http
+HTTP/1.1 200 OK
+Content-Type: application/json
+Content-Language: en-AU
+X-TMF-Native: false
+X-Platform-Extension: true
+Content-Location: /intentManagement/v5/intentSpecification/draft/id-draft-hospital-surgical-slice-a
+ETag: "id-draft-hospital-surgical-slice-a-r1"
+Cache-Control: private, max-age=300
+```
+
+```json
+{
+  "id": "ispec-hss-001",
+  "href": "/intentManagement/v5/intentSpecification/draft/id-draft-hospital-surgical-slice-a",
+  "specKey": "hospital-surgical-slice-spec",
+  "draftId": "id-draft-hospital-surgical-slice-a",
+  "name": "Hospital Surgical Slice Intent Specification",
+  "description": "Definition-time specification for hospital surgical slice intents. This specification defines the allowed request shape for surgical connectivity intents. ID MS performs syntax and structure validation only. II MS and the knowledge plane validate semantic meaning, policy, and fulfilment feasibility.",
+  "lifecycleStatus": "DRAFT",
+  "isBundle": false,
+  "validFor": {
+    "startDateTime": "2026-04-18T12:00:00+10:00"
+  },
+  "relatedParty": [
+    {
+      "@type": "RelatedPartyRefOrPartyRoleRef",
+      "role": "Provider",
+      "partyOrPartyRole": {
+        "@type": "PartyRoleRef",
+        "id": "mycsp",
+        "name": "MyCSP",
+        "@referredType": "Provider"
+      }
+    }
+  ],
+  "intentBehaviour": {
+    "category": "REALTIME",
+    "constraintMode": "STRICT",
+    "objectiveType": "SLA",
+    "fulfilmentMode": "CONTINUOUS"
+  },
+  "intentLayer": "SERVICE",
+  "expressionSpecification": {
+    "@type": "ExpressionSpecification",
+    "expressionLanguage": "JSON-LD",
+    "iri": "https://mycsp.com.au/tio/hospital-surgical-slice/v1.0"
+  },
+  "targetEntitySchema": {
+    "@type": "TargetEntitySchema",
+    "@schemaLocation": "https://mycsp.com.au/schemas/intentManagement/v5/intentExpression/hospital-surgical-slice.expression.schema.json",
+    "schemaHash": "sha256:REPLACE_WITH_PUBLISHED_SCHEMA_HASH"
+  },
+  "@type": "IntentSpecification",
+  "@baseType": "EntitySpecification",
+  "_links": {
+    "self": {
+      "href": "/intentManagement/v5/intentSpecification/draft/id-draft-hospital-surgical-slice-a",
+      "method": "GET"
+    },
+    "patch": {
+      "href": "/intentManagement/v5/intentSpecification/draft/id-draft-hospital-surgical-slice-a",
+      "method": "PATCH"
+    },
+    "replace": {
+      "href": "/intentManagement/v5/intentSpecification/draft/id-draft-hospital-surgical-slice-a",
+      "method": "PUT"
+    },
+    "delete": {
+      "href": "/intentManagement/v5/intentSpecification/draft/id-draft-hospital-surgical-slice-a",
+      "method": "DELETE"
+    },
+    "activate": {
+      "href": "/intentManagement/v5/intentSpecification/draft/id-draft-hospital-surgical-slice-a",
+      "method": "PATCH"
+    }
+  }
+}
+```
+
+
 ### Not found response
 
 ```http
@@ -1250,6 +1331,51 @@ Cache-Control: no-store
   "message": "Only ACTIVE IntentSpecification resources can be retired.",
   "status": 409,
   "referenceError": "https://mycsp.com.au/errors/INVALID_LIFECYCLE_TRANSITION",
+  "@type": "Error"
+}
+```
+
+
+#### Missing If-Match response
+
+```http
+HTTP/1.1 428 Precondition Required
+Content-Type: application/json
+Content-Language: en-AU
+X-TMF-Native: true
+X-Platform-Extension: false
+Cache-Control: no-store
+```
+
+```json
+{
+  "code": "PRECONDITION_REQUIRED",
+  "reason": "IF_MATCH_REQUIRED",
+  "message": "The If-Match header is required for this operation.",
+  "status": 428,
+  "referenceError": "https://mycsp.com.au/errors/PRECONDITION_REQUIRED",
+  "@type": "Error"
+}
+```
+
+#### ETag mismatch response
+
+```http
+HTTP/1.1 412 Precondition Failed
+Content-Type: application/json
+Content-Language: en-AU
+X-TMF-Native: true
+X-Platform-Extension: false
+Cache-Control: no-store
+```
+
+```json
+{
+  "code": "PRECONDITION_FAILED",
+  "reason": "ETAG_MISMATCH",
+  "message": "The supplied ETag does not match the current resource version.",
+  "status": 412,
+  "referenceError": "https://mycsp.com.au/errors/PRECONDITION_FAILED",
   "@type": "Error"
 }
 ```

@@ -404,7 +404,7 @@ Rules:
 
 ## Activation response traceability:
 
-Activation responses may include `previousActiveSpecification` as a platform governance projection showing the official version retired during activation. Example:
+`previousActiveSpecification` is included when a previous ACTIVE version was retired during the activation transaction. Example:
 
 ```json
 {
@@ -610,6 +610,7 @@ Common errors:
 | `412` | `PRECONDITION_FAILED` | Stale or mismatched `If-Match` |
 | `422` | `VALIDATION_FAILED` | Fails expression/spec schema constraints |
 | `428` | `PRECONDITION_REQUIRED` | Missing required `If-Match` |
+| `503` | `SERVICE_UNAVAILABLE` | Source-of-truth DB unavailable |
 | `500` | `INTERNAL_ERROR` | Unexpected server error |
 
 ## ID MS API boundary statement:
@@ -668,12 +669,12 @@ hospital-surgical-slice-spec
 Example official versions for the same stable specification id:
 
 ```text
-id: hospital-surgical-slice-spec, version: 1.18
-id: hospital-surgical-slice-spec, version: 1.19
-id: hospital-surgical-slice-spec, version: 1.20
+id: ispec-hss-001, specKey: hospital-surgical-slice-spec, version: 1.18
+id: ispec-hss-001, specKey: hospital-surgical-slice-spec, version: 1.19
+id: ispec-hss-001, specKey: hospital-surgical-slice-spec, version: 1.20
 ```
 
-Only one version with that `specKey` should be `ACTIVE` for new runtime intent creation.
+Only one ACTIVE version is allowed for a given specKey.
 
 Lineage reuse across retired-only specifications is not assumed by default. Reintroduction or reuse of a prior lineage requires explicit governance.
 
