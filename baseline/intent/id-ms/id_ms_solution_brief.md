@@ -150,12 +150,6 @@ The platform base path is:
 /intentManagement/v5
 ```
 
-A strict TMF deployment may expose the same API through:
-
-```http
-/intentManagement/v5
-```
-
 A strict TMF-compatible gateway may map deployment-specific external prefixes to the platform-owned service path without changing resource semantics.
 
 ## Request shape / event shape:

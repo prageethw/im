@@ -379,6 +379,8 @@ Last-Modified: Sat, 18 Apr 2026 02:00:00 GMT
 
 ```json
 {
+  "id": "hospital-surgical-slice-spec",
+  "href": "/intentManagement/v5/intentSpecification/draft/id-draft-hospital-surgical-slice-a",
   "specKey": "hospital-surgical-slice-spec",
   "draftId": "id-draft-hospital-surgical-slice-a",
   "name": "Hospital Surgical Slice Intent Specification",
@@ -746,8 +748,8 @@ If-Match: "id-draft-hospital-surgical-slice-a-r1"
 HTTP/1.1 200 OK
 Content-Type: application/json
 Content-Language: en-AU
-X-TMF-Native: true
-X-Platform-Extension: false
+X-TMF-Native: false
+X-Platform-Extension: true
 Content-Location: /intentManagement/v5/intentSpecification/draft/id-draft-hospital-surgical-slice-a
 ETag: "id-draft-hospital-surgical-slice-a-r2"
 Last-Modified: Sat, 18 Apr 2026 03:00:00 GMT
@@ -862,8 +864,8 @@ Last-Modified: Sat, 18 Apr 2026 03:00:00 GMT
 HTTP/1.1 409 Conflict
 Content-Type: application/json
 Content-Language: en-AU
-X-TMF-Native: true
-X-Platform-Extension: false
+X-TMF-Native: false
+X-Platform-Extension: true
 Cache-Control: no-store
 ```
 
@@ -884,8 +886,8 @@ Cache-Control: no-store
 HTTP/1.1 428 Precondition Required
 Content-Type: application/json
 Content-Language: en-AU
-X-TMF-Native: true
-X-Platform-Extension: false
+X-TMF-Native: false
+X-Platform-Extension: true
 Cache-Control: no-store
 ```
 
@@ -906,8 +908,8 @@ Cache-Control: no-store
 HTTP/1.1 412 Precondition Failed
 Content-Type: application/json
 Content-Language: en-AU
-X-TMF-Native: true
-X-Platform-Extension: false
+X-TMF-Native: false
+X-Platform-Extension: true
 Cache-Control: no-store
 ```
 
@@ -953,8 +955,8 @@ If-Match: "id-draft-hospital-surgical-slice-a-r1"
 HTTP/1.1 200 OK
 Content-Type: application/json
 Content-Language: en-AU
-X-TMF-Native: true
-X-Platform-Extension: false
+X-TMF-Native: false
+X-Platform-Extension: true
 Content-Location: /intentManagement/v5/intentSpecification/draft/id-draft-hospital-surgical-slice-a
 ETag: "id-draft-hospital-surgical-slice-a-r2"
 Last-Modified: Sat, 18 Apr 2026 03:00:00 GMT
@@ -1006,7 +1008,7 @@ Last-Modified: Sat, 18 Apr 2026 03:00:00 GMT
 
 ---
 
-## 9. Delete IntentSpecification
+## 9. Delete unused DRAFT IntentSpecification candidate
 
 ### Request
 
@@ -1021,8 +1023,8 @@ Accept: application/json
 ```http
 HTTP/1.1 204 No Content
 Content-Language: en-AU
-X-TMF-Native: true
-X-Platform-Extension: false
+X-TMF-Native: false
+X-Platform-Extension: true
 ```
 
 No response body is returned.
@@ -1048,8 +1050,8 @@ No response body is returned.
 HTTP/1.1 409 Conflict
 Content-Type: application/json
 Content-Language: en-AU
-X-TMF-Native: true
-X-Platform-Extension: false
+X-TMF-Native: false
+X-Platform-Extension: true
 Cache-Control: no-store
 ```
 
@@ -1070,8 +1072,8 @@ Cache-Control: no-store
 HTTP/1.1 428 Precondition Required
 Content-Type: application/json
 Content-Language: en-AU
-X-TMF-Native: true
-X-Platform-Extension: false
+X-TMF-Native: false
+X-Platform-Extension: true
 Cache-Control: no-store
 ```
 
@@ -1092,8 +1094,8 @@ Cache-Control: no-store
 HTTP/1.1 412 Precondition Failed
 Content-Type: application/json
 Content-Language: en-AU
-X-TMF-Native: true
-X-Platform-Extension: false
+X-TMF-Native: false
+X-Platform-Extension: true
 Cache-Control: no-store
 ```
 
@@ -1159,8 +1161,8 @@ If-Match: "id-draft-hospital-surgical-slice-b-r3"
 HTTP/1.1 200 OK
 Content-Type: application/json
 Content-Language: en-AU
-X-TMF-Native: true
-X-Platform-Extension: false
+X-TMF-Native: false
+X-Platform-Extension: true
 Content-Location: /intentManagement/v5/intentSpecification/hospital-surgical-slice-spec
 ETag: "intent-spec-hospital-surgical-slice-r4"
 Last-Modified: Sat, 18 Apr 2026 03:30:00 GMT
@@ -1228,8 +1230,8 @@ The status-change event type identifies that the lifecycle status changed. The e
 HTTP/1.1 409 Conflict
 Content-Type: application/json
 Content-Language: en-AU
-X-TMF-Native: true
-X-Platform-Extension: false
+X-TMF-Native: false
+X-Platform-Extension: true
 Cache-Control: no-store
 ```
 
@@ -1250,8 +1252,8 @@ Cache-Control: no-store
 HTTP/1.1 428 Precondition Required
 Content-Type: application/json
 Content-Language: en-AU
-X-TMF-Native: true
-X-Platform-Extension: false
+X-TMF-Native: false
+X-Platform-Extension: true
 Cache-Control: no-store
 ```
 
@@ -1272,8 +1274,8 @@ Cache-Control: no-store
 HTTP/1.1 412 Precondition Failed
 Content-Type: application/json
 Content-Language: en-AU
-X-TMF-Native: true
-X-Platform-Extension: false
+X-TMF-Native: false
+X-Platform-Extension: true
 Cache-Control: no-store
 ```
 
@@ -1331,8 +1333,8 @@ HTTP/1.1 201 Created
 Location: /intentManagement/v5/intentSpecification/hub/sub-001
 Content-Type: application/json
 Content-Language: en-AU
-X-TMF-Native: true
-X-Platform-Extension: false
+X-TMF-Native: false
+X-Platform-Extension: true
 ETag: "subscription-sub-001-v1"
 ```
 
@@ -1385,8 +1387,8 @@ Accept: application/json
 HTTP/1.1 200 OK
 Content-Type: application/json
 Content-Language: en-AU
-X-TMF-Native: true
-X-Platform-Extension: false
+X-TMF-Native: false
+X-Platform-Extension: true
 ETag: "subscription-sub-001-v1"
 Cache-Control: private, max-age=300
 ```
@@ -1427,8 +1429,8 @@ Accept: application/json
 ```http
 HTTP/1.1 204 No Content
 Content-Language: en-AU
-X-TMF-Native: true
-X-Platform-Extension: false
+X-TMF-Native: false
+X-Platform-Extension: true
 ```
 
 No response body is returned.
@@ -1439,8 +1441,8 @@ No response body is returned.
 HTTP/1.1 428 Precondition Required
 Content-Type: application/json
 Content-Language: en-AU
-X-TMF-Native: true
-X-Platform-Extension: false
+X-TMF-Native: false
+X-Platform-Extension: true
 Cache-Control: no-store
 ```
 
@@ -1461,8 +1463,8 @@ Cache-Control: no-store
 HTTP/1.1 412 Precondition Failed
 Content-Type: application/json
 Content-Language: en-AU
-X-TMF-Native: true
-X-Platform-Extension: false
+X-TMF-Native: false
+X-Platform-Extension: true
 Cache-Control: no-store
 ```
 
@@ -1895,7 +1897,8 @@ For ID MS, accepted platform extensions are:
 
 | **Extension** | **Purpose** | **Rule** |
 |---|---|---|
-| `PUT /intentManagement/v5/intentSpecification/draft/{draftId}` | Deterministic full replacement | Preferred platform update method where supported |
+| `PUT /intentManagement/v5/intentSpecification/draft/{draftId}` | Deterministic full replacement of mutable draft candidates | Preferred platform update method where supported |
+| `GET`, `PATCH`, and `DELETE /intentManagement/v5/intentSpecification/draft/{draftId}` | Draft-candidate route family | Platform route family for draft retrieval, editing, activation, and deletion before official activation |
 | `/intentManagement/v5/intentSpecification/hub` | Domain-scoped event subscription route | Allowed as a clearer domain-owned route when deliberately chosen |
 | `GET /intentManagement/v5/intentSpecification/hub/{id}` | Subscription inspection | Platform convenience operation; not required by strict TMF generic hub shape |
 | `DELETE /intentManagement/v5/intentSpecification/hub/{id}` | Domain-scoped subscription removal | Allowed as a clearer domain-owned route when deliberately chosen |

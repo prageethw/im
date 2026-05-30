@@ -315,7 +315,7 @@ The list operation does not include full `specCharacteristic`, `expressionSpecif
 PUT /intentManagement/v5/intentSpecification/draft/id-draft-hospital-surgical-slice-a?fields=id,href,specKey,name,description,version,lifecycleStatus,isBundle,validFor,relatedParty,specCharacteristic,expressionSpecification,targetEntitySchema,@type,@baseType
 Content-Type: application/json
 Accept: application/json
-If-Match: "intent-spec-hospital-surgical-slice-spec-version-1.19-r1"
+If-Match: "id-draft-hospital-surgical-slice-a-r1"
 ```
 
 Success:
@@ -324,7 +324,7 @@ Success:
 HTTP/1.1 200 OK
 Content-Type: application/json
 Content-Location: /intentManagement/v5/intentSpecification/draft/id-draft-hospital-surgical-slice-a
-ETag: "intent-spec-hospital-surgical-slice-spec-version-1.19-v2"
+ETag: "id-draft-hospital-surgical-slice-a-r2"
 ```
 
 Rules:
@@ -359,7 +359,7 @@ Content-Type: application/json
 PATCH /intentManagement/v5/intentSpecification/draft/id-draft-hospital-surgical-slice-a
 Content-Type: application/merge-patch+json
 Accept: application/json
-If-Match: "intent-spec-hospital-surgical-slice-spec-version-1.19-r1"
+If-Match: "id-draft-hospital-surgical-slice-a-r1"
 ```
 
 Rules:
@@ -372,11 +372,11 @@ Rules:
 - Prefer `PUT` for deterministic full replacement.
 - Must not normally be used for material replacement of `specKey`, `version`, `specCharacteristic`, `expressionSpecification`, `targetEntitySchema`, or major lifecycle and version contract identity.
 
-## Delete IntentSpecification:
+## Delete unused DRAFT IntentSpecification candidate:
 
 ```http
-DELETE /intentManagement/v5/intentSpecification/hospital-surgical-slice-spec
-If-Match: "intent-spec-hospital-surgical-slice-spec-version-1.19-r1"
+DELETE /intentManagement/v5/intentSpecification/draft/id-draft-hospital-surgical-slice-a
+If-Match: "id-draft-hospital-surgical-slice-a-r1"
 Accept: application/json
 ```
 
@@ -389,9 +389,9 @@ Content-Language: en-AU
 
 Rules:
 
-- Allowed only for unused `DRAFT` specifications.
-- Not allowed for `ACTIVE`.
-- Not allowed for `RETIRED`.
+- Allowed only for unused mutable `DRAFT` candidates.
+- `ACTIVE` and `RETIRED` official specifications are not deleted through this route.
+- Retiring an official `ACTIVE` specification uses `DELETE /intentSpecification/{id}` where supported by governance.
 - Delete is blocked if existing runtime intents reference the specification.
 - Delete is blocked if audit/retention policy requires preservation.
 - Delete does not create `lifecycleStatus = DELETED`.
