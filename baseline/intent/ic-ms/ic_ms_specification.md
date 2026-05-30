@@ -576,8 +576,8 @@ HTTP/1.1 201 Created
 Location: /intentManagement/v5/intent/INT-HOSP-2026-001
 Content-Type: application/json
 Content-Language: en-AU
-X-TMF-Native: true
-X-Platform-Extension: false
+X-TMF-Native: false
+X-Platform-Extension: true
 ETag: "intent-INT-HOSP-2026-001-v1"
 Last-Modified: Sat, 18 Apr 2026 02:00:00 GMT
 ```
