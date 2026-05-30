@@ -95,6 +95,28 @@ Accepted domain-scoped platform extension:
 
 Strict TMF hub routes are rooted at `/intentManagement/v5/hub`.
 
+### Strict root hub create response example:
+
+```http
+HTTP/1.1 201 Created
+Location: /intentManagement/v5/hub/sub-intent-001
+Content-Type: application/json
+Content-Language: en-AU
+X-TMF-Native: true
+X-Platform-Extension: false
+ETag: "subscription-sub-intent-001-v1"
+```
+
+```json
+{
+  "id": "sub-intent-001",
+  "callback": "https://consumer.example.com/listener/intent/events",
+  "query": "eventType=IntentStatusChangeEvent",
+  "@type": "EventSubscription"
+}
+```
+
+
 IC MS also supports the domain-scoped `/intentManagement/v5/intent/hub` route family as an approved platform extension for Intent and IntentReport event subscriptions. `GET /intentManagement/v5/intent/hub/{id}` is an operational convenience extension and is not part of the strict minimum TMF hub operation set.
 
 ## IC MS validation responsibility:
@@ -202,6 +224,7 @@ IC MS externally exposes lifecycle/status using:
 ### Lifecycle values:
 
 ```text
+Draft
 Acknowledged
 InProgress
 Active
@@ -398,6 +421,7 @@ Platform preference:
 The overall external Intent lifecycle remains:
 
 ```text
+Draft
 Acknowledged
 InProgress
 Active
@@ -664,6 +688,7 @@ Important rule: `Standby` and `Retired` are version-level states, not overall In
 ### Intent-level lifecycle states:
 
 ```text
+Draft
 Acknowledged
 InProgress
 Active

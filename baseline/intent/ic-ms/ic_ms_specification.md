@@ -450,6 +450,8 @@ Do not use string placeholders for array/object fields.
 | `503` | `SERVICE_UNAVAILABLE` / `INTENT_SPECIFICATION_LOOKUP_UNAVAILABLE` | Referenced ACTIVE IntentSpecification cannot be confirmed |
 | `500` | `INTERNAL_ERROR` | Unexpected server error |
 
+For `503 SERVICE_UNAVAILABLE` responses, include `Retry-After` where the platform can provide retry guidance. The baseline worked examples use `Retry-After: 30`.
+
 ### Missing If-Match response:
 
 ```http
@@ -1883,6 +1885,7 @@ Retry-After: 30
 ```http
 HTTP/1.1 503 Service Unavailable
 Content-Type: application/json
+Content-Language: en-AU
 X-TMF-Native: true
 X-Platform-Extension: false
 Retry-After: 30
@@ -1940,6 +1943,8 @@ X-Platform-Extension: false
   "@type": "Error"
 }
 ```
+
+The same `INTENT_NOT_DRAFT` rule applies to both `PUT` and `PATCH` attempts on submitted Intents.
 
 ### Submitted Intent PUT not allowed:
 
