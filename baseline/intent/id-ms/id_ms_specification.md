@@ -6,6 +6,32 @@
 | Scope | Intent Definition MS API and behaviour specification |
 | Source of truth after commit | GitHub `baseline/intent/id-ms/id_ms_specification.md` |
 
+## Table of contents:
+
+- [1. API endpoints](#1-api-endpoints)
+- [2. Common conventions](#2-common-conventions)
+- [3. Common error body](#3-common-error-body)
+- [4. Create IntentSpecification](#4-create-intentspecification)
+- [5. List IntentSpecifications](#5-list-intentspecifications)
+- [6. Retrieve IntentSpecification](#6-retrieve-intentspecification)
+- [7. Full replace DRAFT IntentSpecification candidate](#7-full-replace-draft-intentspecification-candidate)
+- [8. Partial update DRAFT IntentSpecification candidate](#8-partial-update-draft-intentspecification-candidate)
+- [9. Delete unused DRAFT IntentSpecification candidate](#9-delete-unused-draft-intentspecification-candidate)
+- [10. Activate IntentSpecification through lifecycle update](#10-activate-intentspecification-through-lifecycle-update)
+- [11. Hub create subscription](#11-hub-create-subscription)
+- [12. Hub retrieve subscription](#12-hub-retrieve-subscription)
+- [13. Hub delete subscription](#13-hub-delete-subscription)
+- [14. DB unavailable response](#14-db-unavailable-response)
+- [15. External event family](#15-external-event-family)
+- [16. Event envelope pattern](#16-event-envelope-pattern)
+- [17. IntentSpecificationCreateEvent](#17-intentspecificationcreateevent)
+- [18. IntentSpecificationAttributeValueChangeEvent](#18-intentspecificationattributevaluechangeevent)
+- [19. IntentSpecificationStatusChangeEvent](#19-intentspecificationstatuschangeevent)
+- [20. IntentSpecificationDeleteEvent](#20-intentspecificationdeleteevent)
+- [21. Final specification notes](#21-final-specification-notes)
+- [22. TMF compliance and platform extension baseline](#22-tmf-compliance-and-platform-extension-baseline)
+- [Appendix A — External expression-value schema artefact](#appendix-a-external-expression-value-schema-artefact)
+
 ### Service identity
 
 | **Item** | **Baseline** |

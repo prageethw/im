@@ -6,6 +6,42 @@
 | Scope | Intent Definition MS solution brief |
 | Source of truth after commit | GitHub `baseline/intent/id-ms/id_ms_solution_brief.md` |
 
+## Table of contents:
+
+- [1. Summary](#1-summary)
+- [2. Logical View](#2-logical-view)
+- [3. Process View](#3-process-view)
+- [4. Solution Elaboration](#4-solution-elaboration)
+- [5. Responsibilities](#5-responsibilities)
+- [6. ID MS does not](#6-id-ms-does-not)
+- [7. Response locale](#7-response-locale)
+- [8. Response classification headers](#8-response-classification-headers)
+- [9. Contracts](#9-contracts)
+- [10. Request shape / event shape](#10-request-shape-event-shape)
+- [11. PATCH semantics](#11-patch-semantics)
+- [12. IntentSpecification versioning clarification](#12-intentspecification-versioning-clarification)
+- [13. Expression schema alignment](#13-expression-schema-alignment)
+- [14. Optional IntentSpecification behaviour metadata](#14-optional-intentspecification-behaviour-metadata)
+- [15. Field specification](#15-field-specification)
+- [16. Fields not accepted](#16-fields-not-accepted)
+- [17. Authorisation](#17-authorisation)
+- [18. Persistence / state / outbox model](#18-persistence-state-outbox-model)
+- [19. Hub notification delivery](#19-hub-notification-delivery)
+- [20. Delivery reliability](#20-delivery-reliability)
+- [21. Event identity](#21-event-identity)
+- [22. Webhook HTTP request](#22-webhook-http-request)
+- [23. Webhook HTTP headers](#23-webhook-http-headers)
+- [24. Webhook request body](#24-webhook-request-body)
+- [25. Behaviour](#25-behaviour)
+- [26. Configuration](#26-configuration)
+- [27. specKey lineage note](#27-speckey-lineage-note)
+- [28. draftId provenance lookup rule](#28-draftid-provenance-lookup-rule)
+- [29. Runtime admission guardrail](#29-runtime-admission-guardrail)
+- [30. Consumer contract](#30-consumer-contract)
+- [31. Open items](#31-open-items)
+- [32. Closed items](#32-closed-items)
+- [33. MS identity](#33-ms-identity)
+
 ## 1. Summary:
 
 Intent Definition MS (ID MS) is the definition-time microservice responsible for the `IntentSpecification` catalogue, version governance, lifecycle governance, syntax contract publication, and external `IntentSpecification` event subscription model. ID MS is the authoritative owner of `IntentSpecification` resources under `/intentManagement/v5/intentSpecification`.

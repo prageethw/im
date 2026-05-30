@@ -6,6 +6,45 @@
 | Scope | Intent Definition MS design brief |
 | Source of truth after commit | GitHub `baseline/intent/id-ms/id_ms_design_brief.md` |
 
+## Table of contents:
+
+- [1. ID MS API contract](#1-id-ms-api-contract)
+- [2. TMF compliance and platform extension](#2-tmf-compliance-and-platform-extension)
+- [3. Response locale](#3-response-locale)
+- [4. Response classification headers](#4-response-classification-headers)
+- [5. IntentSpecification resource APIs](#5-intentspecification-resource-apis)
+- [6. Hub subscription APIs](#6-hub-subscription-apis)
+- [7. Query conventions](#7-query-conventions)
+- [8. Lifecycle rules](#8-lifecycle-rules)
+- [9. ETag / If-Match rules](#9-etag-if-match-rules)
+- [10. Create IntentSpecification](#10-create-intentspecification)
+- [11. Retrieve IntentSpecification](#11-retrieve-intentspecification)
+- [12. List IntentSpecifications](#12-list-intentspecifications)
+- [13. Full update IntentSpecification](#13-full-update-intentspecification)
+- [14. Partial update IntentSpecification](#14-partial-update-intentspecification)
+- [15. Delete unused DRAFT IntentSpecification candidate](#15-delete-unused-draft-intentspecification-candidate)
+- [16. Activation response traceability](#16-activation-response-traceability)
+- [17. Activate IntentSpecification](#17-activate-intentspecification)
+- [18. Hub create subscription](#18-hub-create-subscription)
+- [19. Hub retrieve subscription](#19-hub-retrieve-subscription)
+- [20. Hub delete subscription](#20-hub-delete-subscription)
+- [21. Standard error body](#21-standard-error-body)
+- [22. ID MS API boundary statement](#22-id-ms-api-boundary-statement)
+- [23. Lifecycle and versioning rules](#23-lifecycle-and-versioning-rules)
+- [24. Caching, ETag, and dependency-specific circuit-breaker baseline](#24-caching-etag-and-dependency-specific-circuit-breaker-baseline)
+- [25. Deployment and persistence strategy](#25-deployment-and-persistence-strategy)
+- [26. Security and access-control baseline](#26-security-and-access-control-baseline)
+- [27. Observability and audit baseline](#27-observability-and-audit-baseline)
+- [28. ID MS consistency sweep](#28-id-ms-consistency-sweep)
+- [29. Optional IntentSpecification behaviour metadata](#29-optional-intentspecification-behaviour-metadata)
+- [30. specKey lineage note](#30-speckey-lineage-note)
+- [31. draftId provenance lookup rule](#31-draftid-provenance-lookup-rule)
+- [32. Runtime admission guardrail](#32-runtime-admission-guardrail)
+- [33. Callback URL baseline](#33-callback-url-baseline)
+- [34. PATCH semantics](#34-patch-semantics)
+- [35. IntentSpecification versioning clarification](#35-intentspecification-versioning-clarification)
+- [36. Expression schema alignment](#36-expression-schema-alignment)
+
 ## 1. ID MS API contract:
 
 ID MS owns the definition-time `IntentSpecification` resource and related hub subscriptions.

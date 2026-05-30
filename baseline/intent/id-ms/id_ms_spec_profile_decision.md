@@ -1,10 +1,24 @@
-# TAF - Decision Proposal IntentSpecification, Minimum data requirements.
+# IntentSpecification profile decision
 
 | **Document status** | **Value** |
 | --- | --- |
 | Status | Current baseline decision paper |
 | Scope | IntentSpecification profile and definition-candidate model |
 | Source of truth after commit | GitHub `baseline/intent/id-ms/id_ms_spec_profile_decision.md` |
+
+## Table of contents:
+
+- [1. Decision summary](#1-decision-summary)
+- [2. Create request profile](#2-create-request-profile)
+- [3. DRAFT candidate response profile](#3-draft-candidate-response-profile)
+- [4. specKey and id resolution rule](#4-speckey-and-id-resolution-rule)
+- [5. DRAFT candidate operations](#5-draft-candidate-operations)
+- [6. ACTIVE and RETIRED official profile](#6-active-and-retired-official-profile)
+- [7. Activation rule](#7-activation-rule)
+- [8. Optional behaviour metadata](#8-optional-behaviour-metadata)
+- [9. specKey lineage note](#9-speckey-lineage-note)
+- [10. Runtime admission guardrail](#10-runtime-admission-guardrail)
+- [11. Intent immutability clarification](#11-intent-immutability-clarification)
 
 ## 1. Decision summary:
 
