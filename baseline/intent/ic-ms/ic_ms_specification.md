@@ -671,7 +671,7 @@ Last-Modified: Sat, 18 Apr 2026 02:00:00 GMT
 A caller can create an Intent as a draft by setting `submit: false`. A Draft Intent is persisted for authoring only and is not admitted, optimised, assured, or sent to downstream change execution.
 
 ```http
-POST /intentManagement/v5/intent?fields=id,href,name,humanExpression,submit,version,lifecycleStatus,statusReason,statusChangeDate,@type,@baseType
+POST /intentManagement/v5/intent?fields=id,href,name,humanExpression,submit,lifecycleStatus,statusReason,statusChangeDate,isBundle,@type,@baseType
 Content-Type: application/json
 Accept: application/json
 ```
@@ -691,8 +691,8 @@ HTTP/1.1 201 Created
 Location: /intentManagement/v5/intent/INT-HOSP-2026-001
 Content-Type: application/json
 Content-Language: en-AU
-X-TMF-Native: true
-X-Platform-Extension: false
+X-TMF-Native: false
+X-Platform-Extension: true
 ETag: "intent-INT-HOSP-2026-001-v1"
 ```
 
@@ -703,10 +703,10 @@ ETag: "intent-INT-HOSP-2026-001-v1"
   "name": "Sydney Hospital Surgical Connection Intent",
   "humanExpression": "I need a surgical connection in Sydney Hospital with latency less than or equal to 10 ms.",
   "submit": false,
-  "version": "v1",
   "lifecycleStatus": "Draft",
   "statusReason": "Intent saved as draft and not submitted for admission.",
   "statusChangeDate": "2026-04-18T12:00:00+10:00",
+  "isBundle": false,
   "@type": "Intent",
   "@baseType": "Entity"
 }
@@ -998,8 +998,8 @@ If-Match: "intent-INT-HOSP-2026-001-v3"
 ```http
 HTTP/1.1 200 OK
 Content-Type: application/json
-X-TMF-Native: true
-X-Platform-Extension: false
+X-TMF-Native: false
+X-Platform-Extension: true
 Content-Location: /intentManagement/v5/intent/INT-HOSP-2026-001
 ETag: "intent-INT-HOSP-2026-001-v4"
 ```
@@ -1148,8 +1148,8 @@ If-Match: "intent-INT-HOSP-2026-001-v4"
 ```http
 HTTP/1.1 200 OK
 Content-Type: application/json
-X-TMF-Native: true
-X-Platform-Extension: false
+X-TMF-Native: false
+X-Platform-Extension: true
 Content-Location: /intentManagement/v5/intent/INT-HOSP-2026-001
 ETag: "intent-INT-HOSP-2026-001-v5"
 ```
@@ -1257,8 +1257,8 @@ If-Match: "intent-INT-HOSP-2026-001-v5"
 HTTP/1.1 202 Accepted
 Content-Type: application/json
 Content-Language: en-AU
-X-TMF-Native: true
-X-Platform-Extension: false
+X-TMF-Native: false
+X-Platform-Extension: true
 Location: /intentManagement/v5/intent/INT-HOSP-2026-001
 ETag: "intent-INT-HOSP-2026-001-v6"
 ```
@@ -1563,8 +1563,8 @@ Accept: application/json
 HTTP/1.1 201 Created
 Location: /intentManagement/v5/intent/hub/sub-intent-001
 Content-Type: application/json
-X-TMF-Native: true
-X-Platform-Extension: false
+X-TMF-Native: false
+X-Platform-Extension: true
 ETag: "subscription-sub-intent-001-v1"
 ```
 
@@ -1646,8 +1646,8 @@ X-Correlation-Id: corr-intent-status-001
 ### Subscriber listener success response:
 
 ```http
-X-TMF-Native: true
-X-Platform-Extension: false
+X-TMF-Native: false
+X-Platform-Extension: true
 HTTP/1.1 204 No Content
 ```
 
@@ -1675,8 +1675,8 @@ Cache-Control: no-cache
 ```http
 HTTP/1.1 200 OK
 Content-Type: application/json
-X-TMF-Native: true
-X-Platform-Extension: false
+X-TMF-Native: false
+X-Platform-Extension: true
 ETag: "subscription-sub-intent-001-v1"
 Cache-Control: private, max-age=300
 ```
@@ -1709,8 +1709,8 @@ If-Match: "subscription-sub-intent-001-v1"
 ### Success response:
 
 ```http
-X-TMF-Native: true
-X-Platform-Extension: false
+X-TMF-Native: false
+X-Platform-Extension: true
 HTTP/1.1 204 No Content
 ```
 
@@ -2263,6 +2263,7 @@ Baseline:
 - If `submit` is omitted on initial create, IC MS treats the request as submitted for admission.
 - If an Intent is already persisted with `submit: false`, later omission of `submit` preserves Draft handling and must not automatically submit the Intent.
 - External consumers must not set or patch `lifecycleStatus`; lifecycle is assigned, transitioned, and projected by the intent management entity.
+- `isBundle` is optional in create and update requests; omitted create requests default to `false`, and persisted responses include the server-resolved value.
 - `PUT /intent/{id}` is a platform extension for deterministic full replacement and is allowed only while the current Intent/Draft projection is in `Draft`.
 - `PATCH /intent/{id}` is supported for TMF compatibility and is allowed only while the current Intent/Draft projection is in `Draft`.
 - Once an Intent leaves `Draft`, material changes require creating a new Draft authoring record.
@@ -2365,6 +2366,7 @@ IC MS accepts and projects runtime Intent resources using the external runtime e
       "version": "1.20"
     },
     "expression": {
+      "iri": "https://mycsp.com.au/tio/hospital-surgical-slice/v1.0",
       "context": {
         "targets": {
           "maxLatencyMs": 10,
@@ -2413,5 +2415,5 @@ IC MS accepts and projects runtime Intent resources using the external runtime e
 - `context` contains only `targets`, `constraints`, and `preferences`.
 - `location`, `serviceType`, and `serviceClass` sit under `context.constraints`.
 - `IntentValidatedEvent.body.expression` carries the same canonical semantic buckets internally without the external TMF expression wrapper.
-- IC MS validates syntactic shape against the active ID MS `expressionSpecification` and `targetEntitySchema`.
+- IC MS validates schema and request shape against the active ID MS `expressionSpecification` and `targetEntitySchema`.
 - IC MS does not perform semantic/KP validation, optimisation, change execution, or assurance.
