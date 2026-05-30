@@ -2481,7 +2481,7 @@ IC MS accepts and projects runtime Intent resources using the external runtime e
 {
   "body": {
     "intentId": "INT-HOSP-2026-001",
-    "version": "v1",
+    "intentVersion": "v1",
     "lifecycleStatus": "Acknowledged",
     "statusReason": "Intent request passed IC MS admission validation and was admitted for downstream processing.",
     "intentSpecification": {

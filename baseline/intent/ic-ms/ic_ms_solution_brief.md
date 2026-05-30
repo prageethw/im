@@ -846,7 +846,7 @@ Internal consumers can rely on `IntentValidatedEvent` as the admitted runtime in
 | Public exposure posture for TMF strict `/hub` versus domain-scoped `/intent/hub` | Both are baselined; gateway product exposure can choose supported route set. |
 | Optional internal/admin `IntentReport` purge API details | Governed capability is allowed, but ordinary external consumer delete remains not exposed by default. |
 | Full internal version-history retrieval API | Not exposed by default; can be defined later as a documented platform extension if needed. |
-| Draft authoring record creation route/detail | New submitted-version changes are represented by a new Draft authoring record using a documented platform extension route or operation to be finalised. `PUT` and `PATCH` must not mutate an admitted runtime version. |
+| New Draft authoring record after submission | Future scope. New submitted-version changes require a new Draft authoring record. The route or operation for creating that record is intentionally deferred as future scope. `PUT` and `PATCH` must not mutate an admitted runtime version. |
 
 ## Closed items:
 
