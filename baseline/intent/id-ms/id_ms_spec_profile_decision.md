@@ -1,4 +1,4 @@
-# TAF - Decision Proposal IntentSpecification, Minimum data requirements.
+# IntentSpecification consumer profile proposal
 
 | **Document status** | **Value** |
 | --- | --- |
@@ -13,22 +13,25 @@
 - [1. Proposal summary](#1-proposal-summary)
 - [2. Scope and terminology](#2-scope-and-terminology)
 - [3. Consumer identity submission model](#3-consumer-identity-submission-model)
-- [4. Consumer-submitted DRAFT creation profile](#4-consumer-submitted-draft-creation-profile)
-- [5. Consumer-submitted ACTIVE publication profile](#5-consumer-submitted-active-publication-profile)
-- [6. Server-managed and prohibited consumer fields](#6-server-managed-and-prohibited-consumer-fields)
-- [7. Field classification summary](#7-field-classification-summary)
-- [8. Minimal DRAFT create example](#8-minimal-draft-create-example)
-- [9. Strongly recommended DRAFT create example](#9-strongly-recommended-draft-create-example)
-- [10. ACTIVE publication example](#10-active-publication-example)
-- [11. Consequences if accepted](#11-consequences-if-accepted)
-- [12. References](#12-references)
-- [13. Follow-up work if accepted](#13-follow-up-work-if-accepted)
+- [4. Base and extended attribute classification](#4-base-and-extended-attribute-classification)
+- [5. Consumer-submitted DRAFT creation profile](#5-consumer-submitted-draft-creation-profile)
+- [6. Consumer-submitted ACTIVE publication profile](#6-consumer-submitted-active-publication-profile)
+- [7. Server-managed and prohibited consumer fields](#7-server-managed-and-prohibited-consumer-fields)
+- [8. Field classification summary](#8-field-classification-summary)
+- [9. Minimal DRAFT create example](#9-minimal-draft-create-example)
+- [10. Strongly recommended DRAFT create example](#10-strongly-recommended-draft-create-example)
+- [11. ACTIVE publication example](#11-active-publication-example)
+- [12. Consequences if accepted](#12-consequences-if-accepted)
+- [13. References](#13-references)
+- [14. Follow-up work if accepted](#14-follow-up-work-if-accepted)
 
 ## 1. Proposal summary:
 
 This document proposes the consumer-submitted profile for `IntentSpecification` resources in ID MS.
 
 The purpose is deliberately narrow: define which values consumers should provide when creating a DRAFT candidate and which values must be present before the candidate can be published as an ACTIVE `IntentSpecification` contract.
+
+This proposal also calls out which consumer-visible attributes are TMF-aligned base attributes and which are ID MS extended attributes.
 
 This proposal does not define API routing, activation mechanics, retire behaviour, hub subscription behaviour, runtime Intent admission, or `draftId` provenance lookup. Those details belong in the ID MS Specification and ID MS Design Brief.
 
@@ -76,11 +79,45 @@ ID MS assigns a new `draftId` for the mutable candidate. ID MS assigns the offic
 
 This keeps the consumer-submitted create profile simple while preserving server control of official identity, draft candidate identity, and published version identity.
 
-## 4. Consumer-submitted DRAFT creation profile:
+## 4. Base and extended attribute classification:
+
+This proposal separates TMF-aligned base attributes from ID MS platform extended attributes. Extended attributes are allowed only where they add ID MS governance, authoring, classification, or provenance value. They must not leak runtime fulfilment, optimisation, assurance, or callback behaviour into the definition contract.
+
+| **Attribute** | **Classification** | **Consumer-submitted?** | **Purpose** |
+| --- | --- | --- | --- |
+| `name` | TMF-aligned base attribute | Yes | Human-readable specification name. |
+| `description` | TMF-aligned base attribute | Yes | Human-readable purpose and scope. |
+| `isBundle` | TMF-aligned base attribute | Yes | Indicates whether the specification is a bundle. |
+| `validFor` | TMF-aligned base attribute | Yes | Defines intended validity period. |
+| `relatedParty` | TMF-aligned base attribute | Yes | Captures owner, provider, or governance party context. |
+| `specCharacteristic` | TMF-aligned base attribute | Yes | Catalogue and governance view of supported characteristics. |
+| `expressionSpecification` | TMF-aligned base attribute | Yes | Expression contract metadata, including language and IRI. |
+| `targetEntitySchema` | TMF-aligned base attribute | Yes | Machine-readable expression validation contract reference. |
+| `@type` | TMF polymorphic metadata | Yes | Resource type marker, normally `IntentSpecification`. |
+| `@baseType` | TMF polymorphic metadata | Yes | Base type marker, normally `EntitySpecification`. |
+| `@schemaLocation` | TMF polymorphic metadata | Yes, optional | Resource representation schema location where published. |
+| `specKey` | ID MS extended attribute | Yes | Consumer-submitted logical specification key used to create or evolve a specification family. |
+| `intentBehaviour` | ID MS extended attribute | Yes, optional | Classification metadata for catalogue visibility, governance visibility, and external consumer understanding. |
+| `intentLayer` | ID MS extended attribute | Yes, optional | Classification metadata identifying whether the specification is business, service, or resource level. |
+| `schemaHash` inside `targetEntitySchema` | ID MS extended attribute | Yes, optional | Schema integrity metadata where schema governance supports it. |
+| `id` | Server-managed ID MS attribute | No | Server-assigned official `IntentSpecification` lineage key. |
+| `draftId` | Server-managed ID MS attribute | No | Server-assigned mutable DRAFT candidate key and later provenance key. |
+| `version` | Server-managed ID MS attribute | No for DRAFT create | Official public contract version assigned by ID MS on ACTIVE publication. |
+| `href`, `_links`, timestamps, `lifecycleStatus` | Server-managed attributes | No for DRAFT create | Generated or controlled by ID MS. |
+
+The extended attributes in this proposal are intentionally small:
+
+- `specKey` supports consumer-driven specification authoring and version evolution without allowing consumers to control the official `id`.
+- `intentBehaviour` and `intentLayer` support catalogue classification and external understanding only.
+- `schemaHash` supports optional schema integrity governance where available.
+
+No additional behaviour fields are proposed at ID MS level.
+
+## 5. Consumer-submitted DRAFT creation profile:
 
 A DRAFT creation request should be lightweight. It only needs enough information for ID MS to create, identify, and govern the editable candidate.
 
-### 4.1 Minimum mandatory fields for DRAFT creation:
+### 5.1 Minimum mandatory fields for DRAFT creation:
 
 | **Field** | **Requirement** | **Reason** |
 | --- | --- | --- |
@@ -89,7 +126,7 @@ A DRAFT creation request should be lightweight. It only needs enough information
 | `@type` | Minimum mandatory | Identifies the TMF polymorphic resource type. |
 | `@baseType` | Minimum mandatory | Preserves TMF base type alignment. |
 
-### 4.2 Strongly recommended fields for DRAFT creation:
+### 5.2 Strongly recommended fields for DRAFT creation:
 
 | **Field** | **Classification** | **Reason** |
 | --- | --- | --- |
@@ -101,7 +138,7 @@ A DRAFT creation request should be lightweight. It only needs enough information
 | `targetEntitySchema` | Strongly recommended | Allows early review of the runtime expression validation contract. |
 | `specCharacteristic` | Strongly recommended | Allows early catalogue and governance review. |
 
-### 4.3 Optional fields for DRAFT creation:
+### 5.3 Optional fields for DRAFT creation:
 
 | **Field** | **Classification** | **Reason** |
 | --- | --- | --- |
@@ -113,11 +150,11 @@ A DRAFT creation request should be lightweight. It only needs enough information
 
 DRAFT candidates do not expose or guarantee any official version identifier. Any version indicator during authoring is non-authoritative. Draft revision is represented by the entity tag and draft governance model defined in the ID MS Specification.
 
-## 5. Consumer-submitted ACTIVE publication profile:
+## 6. Consumer-submitted ACTIVE publication profile:
 
 Before an `IntentSpecification` can be published as ACTIVE, the consumer-submitted candidate must contain a complete contract profile.
 
-### 5.1 Minimum mandatory fields for ACTIVE publication:
+### 6.1 Minimum mandatory fields for ACTIVE publication:
 
 | **Field** | **Requirement** | **Reason** |
 | --- | --- | --- |
@@ -134,7 +171,7 @@ Before an `IntentSpecification` can be published as ACTIVE, the consumer-submitt
 | `@type` | Minimum mandatory | Identifies the TMF polymorphic resource type. |
 | `@baseType` | Minimum mandatory | Preserves TMF base type alignment. |
 
-### 5.2 Strongly recommended fields for ACTIVE publication:
+### 6.2 Strongly recommended fields for ACTIVE publication:
 
 | **Field** | **Classification** | **Reason** |
 | --- | --- | --- |
@@ -145,7 +182,7 @@ Before an `IntentSpecification` can be published as ACTIVE, the consumer-submitt
 | `schemaHash` inside `targetEntitySchema` | Strongly recommended | Supports schema integrity checking where schema governance supports it. |
 | `@schemaLocation` | Strongly recommended | Points to the resource representation schema where published. |
 
-### 5.3 Optional fields for ACTIVE publication:
+### 6.3 Optional fields for ACTIVE publication:
 
 | **Field** | **Classification** | **Reason** |
 | --- | --- | --- |
@@ -155,7 +192,7 @@ Before an `IntentSpecification` can be published as ACTIVE, the consumer-submitt
 | `entitySpecRelationship` | Optional | Useful for relationships to other entity specifications where required. |
 | `intentSpecRelationship` | Optional | Useful for relationships to other intent specifications where required. |
 
-## 6. Server-managed and prohibited consumer fields:
+## 7. Server-managed and prohibited consumer fields:
 
 Consumers must not provide server-managed fields in DRAFT create requests.
 
@@ -173,7 +210,7 @@ Consumers must not provide server-managed fields in DRAFT create requests.
 | `ETag` | Response header, not a request body field. |
 | `Location` | Response header, not a request body field. |
 
-## 7. Field classification summary:
+## 8. Field classification summary:
 
 | **Field** | **DRAFT create** | **ACTIVE publication** |
 | --- | --- | --- |
@@ -197,7 +234,7 @@ Consumers must not provide server-managed fields in DRAFT create requests.
 | `validFor.endDateTime` | Optional | Optional |
 | `@schemaLocation` | Optional | Strongly recommended |
 
-## 8. Minimal DRAFT create example:
+## 9. Minimal DRAFT create example:
 
 ```json
 {
@@ -208,7 +245,7 @@ Consumers must not provide server-managed fields in DRAFT create requests.
 }
 ```
 
-## 9. Strongly recommended DRAFT create example:
+## 10. Strongly recommended DRAFT create example:
 
 ```json
 {
@@ -257,7 +294,7 @@ Consumers must not provide server-managed fields in DRAFT create requests.
 }
 ```
 
-## 10. ACTIVE publication example:
+## 11. ACTIVE publication example:
 
 ```json
 {
@@ -316,7 +353,7 @@ Consumers must not provide server-managed fields in DRAFT create requests.
 }
 ```
 
-## 11. Consequences if accepted:
+## 12. Consequences if accepted:
 
 Positive consequences:
 
@@ -333,7 +370,7 @@ Trade-offs:
 - consumers may need to supply more complete metadata before publication
 - the proposal requires lifecycle-aware validation in ID MS if accepted
 
-## 12. References:
+## 13. References:
 
 | **Reference** | **URL** | **Relevance** |
 | --- | --- | --- |
@@ -343,7 +380,7 @@ Trade-offs:
 | TR292 TM Forum Intent Ontology v3.6.0 | https://www.tmforum.org/resources/standard/tr292-intent-ontology-tio-v3-6-0/ | Provides intent ontology context behind semantic and expression contract identifiers. |
 | Intent architecture baseline repository | https://github.com/prageethw/im/tree/main/baseline/intent | Holds the project baseline artifacts. |
 
-## 13. Follow-up work if accepted:
+## 14. Follow-up work if accepted:
 
 If accepted, update or confirm the ID MS Specification and ID MS Design Brief so they:
 

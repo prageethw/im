@@ -1,5 +1,5 @@
 @startuml
-title IntentSpecification specKey, draftId, and optional metadata profile
+title IntentSpecification consumer-submitted profile proposal
 
 skinparam shadowing false
 skinparam defaultTextAlignment center
@@ -9,71 +9,87 @@ skinparam RectangleBorderColor #424242
 
 rectangle "TMF921 IntentSpecification\nbase resource model" as TMF #EEF2FF
 
-rectangle "ID MS governed profile\n\nTMF-aligned, not TMF-minimal" as PROFILE #E8F5E9
+rectangle "ID MS proposed consumer profile\n\nTMF-aligned, not TMF-minimal" as PROFILE #E8F5E9
 
-TMF --> PROFILE : ID MS applies governed\nminimum profile and extensions
+TMF --> PROFILE : proposed stricter profile\nfor ID MS consumers
 
-rectangle "Create mutable DRAFT candidate" as CREATE #FFF8E1 {
-  rectangle "Create request minimum\n\n- specKey\n- name\n- @type\n- @baseType\n\nClient must not send:\n- id\n- draftId\n- official version\n- lifecycleStatus\n- href\n- _links" as CREATE_REQ
-  rectangle "Server response\n\n- id resolved from specKey\n- draftId assigned\n- href uses /draft/{draftId}\n- lifecycleStatus = DRAFT\n- ETag returned" as CREATE_RESP
+
+rectangle "Attribute classification
+
+TMF-aligned base attributes
+- name
+- description
+- isBundle
+- validFor
+- relatedParty
+- specCharacteristic
+- expressionSpecification
+- targetEntitySchema
+- @type, @baseType, @schemaLocation
+
+ID MS extended attributes
+- specKey
+- intentBehaviour
+- intentLayer
+- schemaHash where governed" as EXT_ATTR #F3E5F5
+
+PROFILE --> EXT_ATTR : calls out base and
+extended attributes
+
+rectangle "Consumer-submitted DRAFT create profile" as DRAFT_CREATE #FFF8E1 {
+  rectangle "Minimum mandatory\n\n- specKey\n- name\n- @type\n- @baseType" as DRAFT_MIN
+  rectangle "Strongly recommended\n\n- description\n- isBundle\n- validFor.startDateTime\n- relatedParty\n- specCharacteristic\n- expressionSpecification\n- targetEntitySchema" as DRAFT_REC
+  rectangle "Optional classification\n\n- intentBehaviour\n- intentLayer\n\nClassification only.\nNot used by ID MS for runtime\ndecisioning, validation, admission\ncontrol, or behavioural enforcement." as DRAFT_OPT
 }
 
-rectangle "DRAFT candidate operations" as DRAFT #FFE0B2 {
-  rectangle "DRAFT route family\n\nGET /intentSpecification/draft/{draftId}\nPUT /intentSpecification/draft/{draftId}\nPATCH /intentSpecification/draft/{draftId}\nDELETE /intentSpecification/draft/{draftId}" as DRAFT_ROUTES
-  rectangle "DRAFT rules\n\n- editable\n- no official public version\n- revision tracked by ETag\n- not valid for runtime admission" as DRAFT_RULES
+rectangle "Server-managed identity\nand version fields" as SERVER #E3F2FD {
+  rectangle "Consumer must not send\nin POST request\n\n- id\n- href\n- draftId\n- official version\n- lifecycleStatus\n- timestamps\n- _links\n- ETag\n- Location" as PROHIBITED
+  rectangle "ID MS assigns\n\nspecKey = consumer-submitted logical key\nid = server-assigned official lineage key\ndraftId = server-assigned DRAFT candidate key\nversion = server-assigned on ACTIVE publication" as SERVER_ASSIGN
 }
 
-rectangle "Activation gate" as GATE #FFECB3 {
-  rectangle "Validate ACTIVE profile\n\n- expressionSpecification\n- expressionSpecification.iri\n- expressionSpecification.expressionLanguage\n- targetEntitySchema\n- specCharacteristic\n- validFor.startDateTime\n\nReject with 422 if incomplete" as VALIDATE
+rectangle "New version handling" as VERSIONING #E0F2F1 {
+  rectangle "Consumer submits same specKey\nfor a new version of an existing specification" as SAME_KEY
+  rectangle "ID MS resolution rule\n\nExisting ACTIVE lineage for specKey:\nattach new DRAFT candidate to existing id\n\nNo ACTIVE lineage:\ncreate new server-generated id\n\nOnly RETIRED versions:\ncreate new id by default unless\ngovernance allows lineage reuse" as ID_RESOLUTION
 }
 
-rectangle "Official ACTIVE and RETIRED resources" as OFFICIAL #E0F2F1 {
-  rectangle "Official route family\n\nGET /intentSpecification/{id}\nDELETE /intentSpecification/{id}\n\nDELETE retires ACTIVE where allowed" as OFFICIAL_ROUTES
-  rectangle "Official rules\n\n- ACTIVE and RETIRED are immutable\n- version assigned on activation\n- selected draftId retained as provenance\n- previous ACTIVE for same id is RETIRED" as OFFICIAL_RULES
+rectangle "Consumer-submitted ACTIVE publication profile" as ACTIVE_PROFILE #FFECB3 {
+  rectangle "Minimum mandatory before ACTIVE\n\n- name\n- @type\n- @baseType\n- validFor.startDateTime\n- expressionSpecification\n- expressionSpecification.iri\n- expressionSpecification.expressionLanguage\n- targetEntitySchema\n- specCharacteristic" as ACTIVE_MIN
+  rectangle "Strongly recommended\n\n- description\n- isBundle\n- relatedParty\n- schemaHash where available\n- intentBehaviour\n- intentLayer" as ACTIVE_REC
+  rectangle "Optional\n\n- validFor.endDateTime\n- additional relatedParty entries\n- schema metadata\n- lifecycle-aware _links in responses" as ACTIVE_OPT
 }
 
-rectangle "Optional classification metadata" as OPTIONAL #F3E5F5 {
-  rectangle "intentBehaviour\n\n- category\n- constraintMode\n- objectiveType\n- fulfilmentMode" as BEHAVIOUR
-  rectangle "intentLayer\n\nBUSINESS\nSERVICE\nRESOURCE" as LAYER
-  rectangle "Classification only\n\nSupports catalogue visibility,\ngovernance visibility, and\nexternal consumer understanding.\n\nNot used by ID MS for runtime\ndecisioning, validation, admission\ncontrol, or behavioural enforcement." as OPTIONAL_RULES
+rectangle "Out of scope for this proposal" as OUT #FFEBEE {
+  rectangle "Operation routing\nActivation mechanics\nRetire behaviour\nHub subscriptions\nRuntime Intent admission\nDraftId provenance lookup" as OUT_ITEMS
 }
 
-rectangle "Runtime Intent admission\nowned by IC MS" as RUNTIME #ECEFF1 {
-  rectangle "Runtime admission rule\n\nMust reference a concrete ACTIVE\nintentSpecification.id.\n\nspecKey and draftId must not be used\nfor runtime contract selection." as RUNTIME_RULE
-}
+PROFILE --> DRAFT_CREATE : defines what consumers send\nfor DRAFT creation
+DRAFT_CREATE --> SERVER : server fills identity,\nstate, and response metadata
+DRAFT_CREATE --> VERSIONING : specKey supports\nnew version authoring
+PROFILE --> ACTIVE_PROFILE : defines what must be supplied\nbefore ACTIVE publication
+PROFILE -[#gray,dashed]-> OUT : intentionally excluded
 
-PROFILE --> CREATE : create DRAFT candidate
-CREATE --> DRAFT : manage by draftId
-DRAFT --> GATE : request activation
-GATE --> OFFICIAL : ACTIVE profile satisfied
-GATE -[#red,dashed]-> DRAFT : required ACTIVE fields missing
-OFFICIAL --> RUNTIME : provides active semantic\nand validation contract
-PROFILE --> OPTIONAL : may include optional\nclassification metadata
+note bottom of DRAFT_OPT
+intentBehaviour fields:
+category, constraintMode, objectiveType, fulfilmentMode
 
-note right of OFFICIAL
-specKey represents logical grouping
-across specification versions.
-
-If only RETIRED versions exist for a specKey,
-ID MS creates a new id by default.
-Lineage reuse requires explicit governance
-if introduced later.
+intentLayer values:
+BUSINESS, SERVICE, RESOURCE
 end note
 
-note bottom of OPTIONAL
-CONTINUOUS fulfilmentMode means downstream
-systems may operate in a closed-loop manner.
-It does not imply mutation of the submitted
-runtime Intent instance.
+note bottom of ACTIVE_PROFILE
+CONTINUOUS fulfilmentMode indicates downstream systems
+may operate in a closed-loop manner to maintain the
+intent objective over time. It does not imply mutation
+of the submitted runtime Intent instance.
 end note
 
-
-
-note over IDMS
-After activation, GET /intentSpecification/draft/{draftId}
-remains a read-only provenance lookup for the
-official version produced from that draft.
-Runtime admission still uses official ACTIVE id, not draftId.
+note right of EXT_ATTR
+Extended attributes are part of the ID MS
+profile proposal, not TMF-native fields.
+They support governance, authoring,
+classification, and schema integrity only.
+They do not add runtime fulfilment logic
+to ID MS.
 end note
 
 @enduml
