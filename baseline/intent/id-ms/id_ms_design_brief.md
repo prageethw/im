@@ -126,28 +126,24 @@ ID MS does not validate runtime semantic feasibility, policy fulfilment, network
 
 ## 4. Response classification headers:
 
-The service returns response classification headers on external REST API responses so callers can distinguish strict TMF-native behaviour from documented platform-extension behaviour.
+The service returns a response classification header on external REST API responses so callers can distinguish strict TMF-compatible behaviour from documented platform-extension behaviour.
 
-These are response headers only. Clients do not send these headers in requests.
+This is a response header only. Clients do not send this header in requests.
 
 | **Response header** | **Meaning** |
 |---|---|
-| `X-TMF-Native: true` | The response is for a TMF-native operation or behaviour. |
-| `X-TMF-Native: false` | The response is for an operation or behaviour that includes platform-specific semantics. |
 | `X-Platform-Extension: true` | The route, method, response, or behaviour includes a documented platform extension. |
 | `X-Platform-Extension: false` | No platform extension is used for the response. |
 
 Use canonical header casing in examples:
 
 ```http
-X-TMF-Native: true
 X-Platform-Extension: false
 ```
 
 or:
 
 ```http
-X-TMF-Native: false
 X-Platform-Extension: true
 ```
 
@@ -569,7 +565,6 @@ Accept: application/json
 ```http
 HTTP/1.1 204 No Content
 Content-Language: en-AU
-X-TMF-Native: true
 X-Platform-Extension: false
 ```
 
