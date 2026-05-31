@@ -878,7 +878,7 @@ Accept: application/json
   "intentSpecification": {
     "id": "ispec-hss-001",
     "specKey": "hospital-surgical-slice-spec",
-    "href": "/intentManagement/v5/intentSpecification/ispec-hss-001-v1.20"
+    "href": "/intentManagement/v5/intentSpecification/ispec-hss-001?version=1.20"
   },
   "@type": "Intent",
   "@baseType": "Entity"
@@ -1065,7 +1065,7 @@ Retry-After: 30
 {
   "code": "SERVICE_UNAVAILABLE",
   "reason": "INTENT_SPECIFICATION_LOOKUP_UNAVAILABLE",
-  "message": "Intent creation or update cannot be accepted because the referenced active IntentSpecification could not be confirmed.",
+  "message": "Intent creation or update cannot be accepted because the referenced ACTIVE IntentSpecification could not be confirmed.",
   "status": 503,
   "referenceError": "https://mycsp.com.au/errors/SERVICE_UNAVAILABLE",
   "@type": "Error"
