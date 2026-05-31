@@ -8,31 +8,109 @@
 
 ## Table of contents:
 
-- [1. API endpoints](#1-api-endpoints)
-- [2. Common conventions](#2-common-conventions)
-- [3. Common error body](#3-common-error-body)
-- [4. Create IntentSpecification](#4-create-intentspecification)
-- [5. List IntentSpecifications](#5-list-intentspecifications)
-- [6. Retrieve IntentSpecification](#6-retrieve-intentspecification)
-- [7. Full replace DRAFT IntentSpecification candidate](#7-full-replace-draft-intentspecification-candidate)
-- [8. Partial update DRAFT IntentSpecification candidate](#8-partial-update-draft-intentspecification-candidate)
-- [9. Delete unused DRAFT IntentSpecification candidate](#9-delete-unused-draft-intentspecification-candidate)
-- [10. Activate IntentSpecification through lifecycle update](#10-activate-intentspecification-through-lifecycle-update)
-- [11. Hub create subscription](#11-hub-create-subscription)
-- [12. Hub retrieve subscription](#12-hub-retrieve-subscription)
-- [13. Hub delete subscription](#13-hub-delete-subscription)
-- [14. DB unavailable response](#14-db-unavailable-response)
-- [15. External event family](#15-external-event-family)
-- [16. Event envelope pattern](#16-event-envelope-pattern)
-- [17. IntentSpecificationCreateEvent](#17-intentspecificationcreateevent)
-- [18. IntentSpecificationAttributeValueChangeEvent](#18-intentspecificationattributevaluechangeevent)
-- [19. IntentSpecificationStatusChangeEvent](#19-intentspecificationstatuschangeevent)
-- [20. IntentSpecificationDeleteEvent](#20-intentspecificationdeleteevent)
-- [21. Final specification notes](#21-final-specification-notes)
-- [22. TMF compliance and platform extension baseline](#22-tmf-compliance-and-platform-extension-baseline)
-- [Appendix A — External expression-value schema artefact](#appendix-a-external-expression-value-schema-artefact)
+- [1. Service identity:](#1-service-identity)
+  - [1.1 Boundary statement:](#11-boundary-statement)
+  - [1.2 TMF deployment path note:](#12-tmf-deployment-path-note)
+- [2. API endpoints:](#2-api-endpoints)
+  - [2.1 IntentSpecification resource APIs:](#21-intentspecification-resource-apis)
+  - [2.2 Hub subscription APIs:](#22-hub-subscription-apis)
+- [3. Common conventions:](#3-common-conventions)
+  - [3.1 Expression schema alignment:](#31-expression-schema-alignment)
+  - [3.2 IntentSpecification draft, identity, and versioning clarification:](#32-intentspecification-draft-identity-and-versioning-clarification)
+  - [3.3 PATCH semantics:](#33-patch-semantics)
+  - [3.4 Response locale:](#34-response-locale)
+  - [3.5 Schema hash rule:](#35-schema-hash-rule)
+  - [3.6 Response classification headers:](#36-response-classification-headers)
+  - [3.7 Lifecycle values:](#37-lifecycle-values)
+  - [3.8 Draft candidate identity model:](#38-draft-candidate-identity-model)
+  - [3.9 Optional IntentSpecification behaviour metadata:](#39-optional-intentspecification-behaviour-metadata)
+  - [3.10 Intent immutability clarification:](#310-intent-immutability-clarification)
+  - [3.11 Versioning rules:](#311-versioning-rules)
+  - [3.12 Caching and ETag rules:](#312-caching-and-etag-rules)
+  - [3.13 Query parameter conventions:](#313-query-parameter-conventions)
+- [4. Common error body:](#4-common-error-body)
+  - [4.1 Common errors:](#41-common-errors)
+  - [4.2 Missing If-Match response:](#42-missing-if-match-response)
+  - [4.3 ETag mismatch response:](#43-etag-mismatch-response)
+  - [4.4 Internal error response:](#44-internal-error-response)
+- [5. Create IntentSpecification:](#5-create-intentspecification)
+  - [5.1 Request:](#51-request)
+  - [5.2 Success response:](#52-success-response)
+- [6. List IntentSpecifications:](#6-list-intentspecifications)
+  - [6.1 Request:](#61-request)
+  - [6.2 Success response:](#62-success-response)
+- [7. Retrieve IntentSpecification:](#7-retrieve-intentspecification)
+  - [7.1 Request:](#71-request)
+  - [7.2 Request with cache override:](#72-request-with-cache-override)
+  - [7.3 Success response:](#73-success-response)
+  - [7.4 DRAFT candidate retrieval:](#74-draft-candidate-retrieval)
+  - [7.5 Produced version retrieval by draftId:](#75-produced-version-retrieval-by-draftid)
+  - [7.6 Not found response:](#76-not-found-response)
+- [8. Full replace DRAFT IntentSpecification candidate:](#8-full-replace-draft-intentspecification-candidate)
+  - [8.1 Request:](#81-request)
+  - [8.2 Success response:](#82-success-response)
+  - [8.3 Immutable resource response:](#83-immutable-resource-response)
+  - [8.4 Missing If-Match response:](#84-missing-if-match-response)
+  - [8.5 ETag mismatch response:](#85-etag-mismatch-response)
+- [9. Partial update DRAFT IntentSpecification candidate:](#9-partial-update-draft-intentspecification-candidate)
+  - [9.1 Request:](#91-request)
+  - [9.2 Success response:](#92-success-response)
+- [10. Delete unused DRAFT IntentSpecification candidate:](#10-delete-unused-draft-intentspecification-candidate)
+  - [10.1 Request:](#101-request)
+  - [10.2 Success response:](#102-success-response)
+  - [10.3 Delete rules:](#103-delete-rules)
+  - [10.4 Delete blocked response:](#104-delete-blocked-response)
+  - [10.5 Missing If-Match response:](#105-missing-if-match-response)
+  - [10.6 ETag mismatch response:](#106-etag-mismatch-response)
+  - [10.7 Retire current ACTIVE specification:](#107-retire-current-active-specification)
+    - [10.7.1 Request:](#1071-request)
+    - [10.7.2 Success response:](#1072-success-response)
+    - [10.7.3 Retire rules:](#1073-retire-rules)
+    - [10.7.4 Already retired response:](#1074-already-retired-response)
+    - [10.7.5 Retire missing If-Match response:](#1075-retire-missing-if-match-response)
+    - [10.7.6 Retire ETag mismatch response:](#1076-retire-etag-mismatch-response)
+- [11. Activate IntentSpecification through lifecycle update:](#11-activate-intentspecification-through-lifecycle-update)
+  - [11.1 PATCH activation request:](#111-patch-activation-request)
+  - [11.2 PUT activation option:](#112-put-activation-option)
+  - [11.3 Success response:](#113-success-response)
+  - [11.4 Activation rules:](#114-activation-rules)
+  - [11.5 Events emitted by activation:](#115-events-emitted-by-activation)
+  - [11.6 Invalid lifecycle transition response:](#116-invalid-lifecycle-transition-response)
+  - [11.7 Missing If-Match response:](#117-missing-if-match-response)
+  - [11.8 ETag mismatch response:](#118-etag-mismatch-response)
+- [12. Hub create subscription:](#12-hub-create-subscription)
+  - [12.1 Request:](#121-request)
+  - [12.2 Success response:](#122-success-response)
+  - [12.3 Hub create rules:](#123-hub-create-rules)
+- [13. Hub retrieve subscription:](#13-hub-retrieve-subscription)
+  - [13.1 Request:](#131-request)
+  - [13.2 Success response:](#132-success-response)
+- [14. Hub delete subscription:](#14-hub-delete-subscription)
+  - [14.1 Request:](#141-request)
+  - [14.2 Success response:](#142-success-response)
+  - [14.3 Missing If-Match response:](#143-missing-if-match-response)
+  - [14.4 ETag mismatch response:](#144-etag-mismatch-response)
+  - [14.5 Hub route and event scope rules:](#145-hub-route-and-event-scope-rules)
+- [15. DB unavailable response:](#15-db-unavailable-response)
+- [16. External event family:](#16-external-event-family)
+- [17. Event envelope pattern:](#17-event-envelope-pattern)
+- [18. IntentSpecificationCreateEvent:](#18-intentspecificationcreateevent)
+- [19. IntentSpecificationAttributeValueChangeEvent:](#19-intentspecificationattributevaluechangeevent)
+- [20. IntentSpecificationStatusChangeEvent:](#20-intentspecificationstatuschangeevent)
+- [21. IntentSpecificationDeleteEvent:](#21-intentspecificationdeleteevent)
+- [22. Final specification notes:](#22-final-specification-notes)
+- [23. TMF compliance and platform extension baseline:](#23-tmf-compliance-and-platform-extension-baseline)
+  - [23.1 Strict TMF-compliant baseline:](#231-strict-tmf-compliant-baseline)
+  - [23.2 Accepted platform extensions:](#232-accepted-platform-extensions)
+  - [23.3 Update method rule:](#233-update-method-rule)
+  - [23.4 Lifecycle activation rule:](#234-lifecycle-activation-rule)
+  - [23.5 Hub route rule:](#235-hub-route-rule)
+  - [23.6 External event timestamp rule:](#236-external-event-timestamp-rule)
+  - [23.7 Route prefix rule:](#237-route-prefix-rule)
+  - [23.8 Baseline statement:](#238-baseline-statement)
+- [24. Appendix A — External expression-value schema artefact:](#24-appendix-a-—-external-expression-value-schema-artefact)
 
-### Service identity
+## 1. Service identity:
 
 | **Item** | **Baseline** |
 |---|---|
@@ -44,22 +122,22 @@
 | Primary resource | `IntentSpecification` |
 | Primary responsibility | Definition-time `IntentSpecification` catalogue, lifecycle and version governance, syntax contract, and external specification events |
 
-### Boundary statement
+### 1.1 Boundary statement:
 
 ID MS owns definition-time `IntentSpecification` contracts and subscription management for specification events.
 ID MS validates syntax and resource shape and enforces specification lifecycle and version governance.
 ID MS does not own runtime `Intent`, `IntentReport`, semantic validation, policy validation, network/resource feasibility, optimisation, runtime assurance, telemetry, or callback ingestion.
 
-### TMF deployment path note
+### 1.2 TMF deployment path note:
 
 The examples in this specification use the platform base path `/intentManagement/v5`.
 A strict TMF deployment may expose the same API through `/tmf-api/intentManagement/v5`; the API gateway may map between the deployment prefix and the platform-owned service path without changing resource semantics.
 
 ---
 
-## 1. API endpoints
+## 2. API endpoints:
 
-### IntentSpecification resource APIs
+### 2.1 IntentSpecification resource APIs:
 
 | **Purpose** | **Method** | **Endpoint** |
 |---|---:|---|
@@ -72,7 +150,7 @@ A strict TMF deployment may expose the same API through `/tmf-api/intentManageme
 | Partial update or activate DRAFT candidate | `PATCH` | `/intentManagement/v5/intentSpecification/draft/{draftId}` |
 | Delete unused DRAFT candidate | `DELETE` | `/intentManagement/v5/intentSpecification/draft/{draftId}` |
 
-### Hub subscription APIs
+### 2.2 Hub subscription APIs:
 
 | **Purpose** | **Method** | **Endpoint** |
 |---|---:|---|
@@ -82,9 +160,9 @@ A strict TMF deployment may expose the same API through `/tmf-api/intentManageme
 
 ---
 
-## 2. Common conventions
+## 3. Common conventions:
 
-### Expression schema alignment:
+### 3.1 Expression schema alignment:
 
 The long-term canonical expression-value schema pattern for the Intent domain should align with the TMF Intent Ontology direction and use a scalable JSON-LD-style structure.
 
@@ -121,7 +199,7 @@ Simplified object-map payloads may still appear in minimum-data explanation exam
 
 
 
-### IntentSpecification draft, identity, and versioning clarification:
+### 3.2 IntentSpecification draft, identity, and versioning clarification:
 
 `IntentSpecification.version` is an official design-time contract version. It is assigned by ID MS only when a selected DRAFT candidate is activated. It is separate from runtime `Intent.version`.
 
@@ -137,7 +215,7 @@ Baseline rules:
 - `ACTIVE` and `RETIRED` `IntentSpecification` resources are immutable for material contract changes.
 - Runtime `Intent.version` identifies the admitted runtime request/projection version and must not be confused with `IntentSpecification.version`.
 
-### PATCH semantics:
+### 3.3 PATCH semantics:
 
 `PATCH` uses JSON Merge Patch semantics.
 
@@ -152,15 +230,15 @@ Content-Type: application/merge-patch+json
 
 
 
-### Response locale:
+### 3.4 Response locale:
 
 `Content-Language: en-AU` is the platform default response locale used in examples. It does not change field names, enum values, identifiers, or JSON payload semantics.
 
-### Schema hash rule:
+### 3.5 Schema hash rule:
 
 Where `targetEntitySchema.schemaHash` is supplied, real values must use the `sha256:<hex>` form. The placeholder `sha256:REPLACE_WITH_PUBLISHED_SCHEMA_HASH` is illustrative only and must not be used in deployed resources. Verification against a schema registry is an implementation detail unless a stronger registry integration rule is introduced later.
 
-### Response classification headers:
+### 3.6 Response classification headers:
 
 ID MS returns response classification headers on external REST API responses so callers can distinguish strict TMF-native behaviour from documented platform-extension behaviour.
 
@@ -200,7 +278,7 @@ X-Platform-Extension: true
 ```
 
 
-### Lifecycle values
+### 3.7 Lifecycle values:
 
 ```text
 DRAFT
@@ -211,7 +289,7 @@ RETIRED
 There is no `DELETED` lifecycle status. Delete is an operation outcome, not a normal lifecycle state.
 
 
-### Draft candidate identity model
+### 3.8 Draft candidate identity model:
 
 ID MS follows the definition-candidate model used by the optimiser definition baseline:
 
@@ -226,7 +304,7 @@ Runtime Intent admission must reference a concrete ACTIVE `IntentSpecification.i
 
 Lineage reuse across retired-only specifications is not assumed by default. Reintroduction or reuse of a prior lineage requires explicit governance.
 
-### Optional IntentSpecification behaviour metadata
+### 3.9 Optional IntentSpecification behaviour metadata:
 
 `intentBehaviour` and `intentLayer` are optional classification metadata fields on `IntentSpecification`.
 
@@ -290,7 +368,7 @@ Controlled values:
 
 These fields do not replace `expressionSpecification.iri`, `targetEntitySchema`, `specCharacteristic`, or request-specific `serviceType`, `serviceClass`, `priority`, targets, constraints, and preferences inside the governed expression schema.
 
-### Intent immutability clarification
+### 3.10 Intent immutability clarification:
 
 Runtime Intent instances created using an `ACTIVE` `IntentSpecification` remain tied to the specification identity and version used at admission.
 
@@ -300,7 +378,7 @@ Runtime Intent instances created using an `ACTIVE` `IntentSpecification` remain 
 - ID MS does not mutate runtime Intent instances.
 - `ACTIVE` and `RETIRED` `IntentSpecification` versions remain immutable for material contract changes.
 
-### Versioning rules
+### 3.11 Versioning rules:
 
 - New specifications are normally created as `DRAFT`.
 - `DRAFT` specifications are editable.
@@ -312,7 +390,7 @@ Runtime Intent instances created using an `ACTIVE` `IntentSpecification` remain 
 - Retired specifications must not be used for new runtime `Intent` creation.
 - Existing runtime Intent instances referencing a RETIRED specification may continue under external platform governance policy.
 
-### Caching and ETag rules
+### 3.12 Caching and ETag rules:
 
 - Caching applies only to GET responses.
 - Single-resource GET responses may use private cache with bounded TTL.
@@ -323,7 +401,7 @@ Runtime Intent instances created using an `ACTIVE` `IntentSpecification` remain 
 - ETag is used only for unsafe operation concurrency through `If-Match`.
 - No caching strategy is baselined for non-GET operations.
 
-### Query parameter conventions
+### 3.13 Query parameter conventions:
 
 The following query parameters are supported where applicable:
 
@@ -340,7 +418,7 @@ The following query parameters are supported where applicable:
 
 ---
 
-## 3. Common error body
+## 4. Common error body:
 
 ```json
 {
@@ -353,7 +431,7 @@ The following query parameters are supported where applicable:
 }
 ```
 
-### Common errors
+### 4.1 Common errors:
 
 | **HTTP** | **Code** | **Scenario** |
 |---:|---|---|
@@ -367,7 +445,7 @@ The following query parameters are supported where applicable:
 | `503` | `SERVICE_UNAVAILABLE` | Source-of-truth DB unavailable |
 | `500` | `INTERNAL_ERROR` | Unexpected server error |
 
-### Missing If-Match response
+### 4.2 Missing If-Match response:
 
 ```http
 HTTP/1.1 428 Precondition Required
@@ -389,7 +467,7 @@ Cache-Control: no-store
 }
 ```
 
-### ETag mismatch response
+### 4.3 ETag mismatch response:
 
 ```http
 HTTP/1.1 412 Precondition Failed
@@ -411,7 +489,7 @@ Cache-Control: no-store
 }
 ```
 
-### Internal error response
+### 4.4 Internal error response:
 
 ```http
 HTTP/1.1 500 Internal Server Error
@@ -435,11 +513,11 @@ Cache-Control: no-store
 
 ---
 
-## 4. Create IntentSpecification
+## 5. Create IntentSpecification:
 
 `POST /intentSpecification` creates a mutable DRAFT candidate only. The request must include `specKey`; ID MS resolves the stable server-assigned `IntentSpecification.id` from `specKey` and assigns a new `draftId`. The DRAFT candidate has no official public `version`; draft revision is represented by the returned `ETag`. Any version indicator during draft authoring is non-authoritative and must not be relied on. DRAFT candidates do not expose or guarantee any version identifier.
 
-### Request
+### 5.1 Request:
 
 ```http
 POST /intentManagement/v5/intentSpecification?fields=id,href,specKey,draftId,name,lifecycleStatus,isBundle,validFor,relatedParty,specCharacteristic,expressionSpecification,targetEntitySchema,intentBehaviour,intentLayer,@type,@baseType
@@ -507,7 +585,7 @@ Client create requests must not provide `id`, `href`, `draftId`, official `versi
 
 If a current ACTIVE specification exists for the same `specKey`, the DRAFT candidate is assigned to that existing `id`. If no current ACTIVE specification exists for the `specKey`, ID MS creates a new `id`. If only RETIRED versions exist for the `specKey`, ID MS creates a new `id` unless governed lineage reuse is introduced later.
 
-### Success response
+### 5.2 Success response:
 
 ```http
 HTTP/1.1 201 Created
@@ -575,16 +653,16 @@ The response is classified as TMF-native because `POST /intentSpecification` is 
 }
 ```
 
-## 5. List IntentSpecifications
+## 6. List IntentSpecifications:
 
-### Request
+### 6.1 Request:
 
 ```http
 GET /intentManagement/v5/intentSpecification?offset=0&limit=10&lifecycleStatus=ACTIVE&fields=id,href,specKey,name,version,lifecycleStatus,isBundle,validFor,relatedParty,@type,@baseType
 Accept: application/json
 ```
 
-### Success response
+### 6.2 Success response:
 
 ```http
 HTTP/1.1 200 OK
@@ -649,18 +727,18 @@ The list operation returns a lightweight summary by default. For `ACTIVE` and `R
 
 ---
 
-## 6. Retrieve IntentSpecification
+## 7. Retrieve IntentSpecification:
 
 This operation retrieves the current official `ACTIVE` version by `id` by default. Historical `ACTIVE` or `RETIRED` versions are selected by `id` plus an explicit `version` query parameter. Mutable DRAFT candidates are retrieved through `GET /intentSpecification/draft/{draftId}`.
 
-### Request
+### 7.1 Request:
 
 ```http
 GET /intentManagement/v5/intentSpecification/ispec-hss-001?fields=id,href,specKey,draftId,name,description,version,lifecycleStatus,isBundle,validFor,relatedParty,specCharacteristic,expressionSpecification,targetEntitySchema,@type,@baseType
 Accept: application/json
 ```
 
-### Request with cache override
+### 7.2 Request with cache override:
 
 ```http
 GET /intentManagement/v5/intentSpecification/ispec-hss-001?fields=id,href,specKey,draftId,name,description,version,lifecycleStatus,isBundle,validFor,relatedParty,specCharacteristic,expressionSpecification,targetEntitySchema,@type,@baseType
@@ -668,7 +746,7 @@ Accept: application/json
 Cache-Control: no-cache
 ```
 
-### Success response
+### 7.3 Success response:
 
 ```http
 HTTP/1.1 200 OK
@@ -792,7 +870,7 @@ Cache-Control: private, max-age=300
 }
 ```
 
-### DRAFT candidate retrieval
+### 7.4 DRAFT candidate retrieval:
 
 ```http
 GET /intentManagement/v5/intentSpecification/draft/id-draft-hospital-surgical-slice-a
@@ -886,7 +964,7 @@ Cache-Control: private, max-age=300
 
 
 
-### Produced version retrieval by draftId
+### 7.5 Produced version retrieval by draftId:
 
 After activation, `draftId` remains valid as a provenance lookup key. The lookup returns the official read-only version produced from the DRAFT candidate and removes DRAFT mutation links.
 
@@ -945,7 +1023,7 @@ Cache-Control: private, max-age=300
 }
 ```
 
-### Not found response
+### 7.6 Not found response:
 
 ```http
 HTTP/1.1 404 Not Found
@@ -968,11 +1046,11 @@ X-Platform-Extension: false
 
 ---
 
-## 7. Full replace DRAFT IntentSpecification candidate
+## 8. Full replace DRAFT IntentSpecification candidate:
 
 `PUT` is the preferred platform extension for deterministic full replacement of an editable `DRAFT` specification.
 
-### Request
+### 8.1 Request:
 
 ```http
 PUT /intentManagement/v5/intentSpecification/draft/id-draft-hospital-surgical-slice-a?fields=id,href,specKey,draftId,name,description,lifecycleStatus,isBundle,validFor,relatedParty,specCharacteristic,expressionSpecification,targetEntitySchema,@type,@baseType
@@ -1030,7 +1108,7 @@ If-Match: "id-draft-hospital-surgical-slice-a-r1"
 }
 ```
 
-### Success response
+### 8.2 Success response:
 
 ```http
 HTTP/1.1 200 OK
@@ -1145,7 +1223,7 @@ Last-Modified: Sat, 18 Apr 2026 03:00:00 GMT
 }
 ```
 
-### Immutable resource response
+### 8.3 Immutable resource response:
 
 ```http
 HTTP/1.1 409 Conflict
@@ -1167,7 +1245,7 @@ Cache-Control: no-store
 }
 ```
 
-### Missing If-Match response
+### 8.4 Missing If-Match response:
 
 ```http
 HTTP/1.1 428 Precondition Required
@@ -1189,7 +1267,7 @@ Cache-Control: no-store
 }
 ```
 
-### ETag mismatch response
+### 8.5 ETag mismatch response:
 
 ```http
 HTTP/1.1 412 Precondition Failed
@@ -1213,7 +1291,7 @@ Cache-Control: no-store
 
 ---
 
-## 8. Partial update DRAFT IntentSpecification candidate
+## 9. Partial update DRAFT IntentSpecification candidate:
 
 `PATCH` remains supported for TMF compatibility, but it is discouraged as a general update method.
 Prefer `PUT` for deterministic full replacement of editable `DRAFT` specifications.
@@ -1221,7 +1299,7 @@ Use `PATCH` only where a TMF-compatible client cannot use `PUT` or where a tight
 
 `PATCH` must not normally be used for material contract replacement, including `specKey`, `version`, `specCharacteristic`, `expressionSpecification`, `targetEntitySchema`, or major lifecycle and version contract identity.
 
-### Request
+### 9.1 Request:
 
 ```http
 PATCH /intentManagement/v5/intentSpecification/draft/id-draft-hospital-surgical-slice-a?fields=id,href,specKey,name,description,lifecycleStatus,isBundle,validFor,relatedParty,@type,@baseType
@@ -1236,7 +1314,7 @@ If-Match: "id-draft-hospital-surgical-slice-a-r1"
 }
 ```
 
-### Success response
+### 9.2 Success response:
 
 ```http
 HTTP/1.1 200 OK
@@ -1294,9 +1372,9 @@ Last-Modified: Sat, 18 Apr 2026 03:00:00 GMT
 
 ---
 
-## 9. Delete unused DRAFT IntentSpecification candidate
+## 10. Delete unused DRAFT IntentSpecification candidate:
 
-### Request
+### 10.1 Request:
 
 ```http
 DELETE /intentManagement/v5/intentSpecification/draft/id-draft-hospital-surgical-slice-a
@@ -1304,7 +1382,7 @@ If-Match: "id-draft-hospital-surgical-slice-a-r1"
 Accept: application/json
 ```
 
-### Success response
+### 10.2 Success response:
 
 ```http
 HTTP/1.1 204 No Content
@@ -1315,7 +1393,7 @@ X-Platform-Extension: true
 
 No response body is returned.
 
-### Delete rules
+### 10.3 Delete rules:
 
 | **Rule** | **Baseline** |
 |---|---|
@@ -1330,7 +1408,7 @@ No response body is returned.
 | Resource lifecycle | Do not set `lifecycleStatus = DELETED` |
 | Event emitted | `IntentSpecificationDeleteEvent` after successful delete only |
 
-### Delete blocked response
+### 10.4 Delete blocked response:
 
 ```http
 HTTP/1.1 409 Conflict
@@ -1352,7 +1430,7 @@ Cache-Control: no-store
 }
 ```
 
-### Missing If-Match response
+### 10.5 Missing If-Match response:
 
 ```http
 HTTP/1.1 428 Precondition Required
@@ -1374,7 +1452,7 @@ Cache-Control: no-store
 }
 ```
 
-### ETag mismatch response
+### 10.6 ETag mismatch response:
 
 ```http
 HTTP/1.1 412 Precondition Failed
@@ -1398,11 +1476,11 @@ Cache-Control: no-store
 
 ---
 
-### Retire current ACTIVE specification
+### 10.7 Retire current ACTIVE specification:
 
 `DELETE /intentSpecification/{id}` retires the current ACTIVE official specification. It does not physically delete the official resource.
 
-#### Request
+#### 10.7.1 Request:
 
 ```http
 DELETE /intentManagement/v5/intentSpecification/ispec-hss-001
@@ -1410,7 +1488,7 @@ If-Match: "intent-spec-ispec-hss-001-v1.20-r1"
 Accept: application/json
 ```
 
-#### Success response
+#### 10.7.2 Success response:
 
 ```http
 HTTP/1.1 204 No Content
@@ -1421,7 +1499,7 @@ X-Platform-Extension: false
 
 No response body is returned.
 
-#### Retire rules
+#### 10.7.3 Retire rules:
 
 | **Rule** | **Baseline** |
 |---|---|
@@ -1434,7 +1512,7 @@ No response body is returned.
 | Already retired | `409 Conflict` |
 | Event emitted | `IntentSpecificationStatusChangeEvent` after successful retirement |
 
-#### Already retired response
+#### 10.7.4 Already retired response:
 
 ```http
 HTTP/1.1 409 Conflict
@@ -1457,7 +1535,7 @@ Cache-Control: no-store
 ```
 
 
-#### Retire missing If-Match response
+#### 10.7.5 Retire missing If-Match response:
 
 ```http
 HTTP/1.1 428 Precondition Required
@@ -1479,7 +1557,7 @@ Cache-Control: no-store
 }
 ```
 
-#### Retire ETag mismatch response
+#### 10.7.6 Retire ETag mismatch response:
 
 ```http
 HTTP/1.1 412 Precondition Failed
@@ -1503,7 +1581,7 @@ Cache-Control: no-store
 
 ---
 
-## 10. Activate IntentSpecification through lifecycle update
+## 11. Activate IntentSpecification through lifecycle update:
 
 Activation is not exposed through a custom action endpoint. Do not use:
 
@@ -1527,7 +1605,7 @@ PUT /intentManagement/v5/intentSpecification/draft/{draftId}
 
 Although `PATCH` is discouraged as a general update method, this is an acceptable tightly controlled TMF-compatible case because activation is a small lifecycle-status update.
 
-### PATCH activation request
+### 11.1 PATCH activation request:
 
 The following activation example assumes a second DRAFT candidate, `id-draft-hospital-surgical-slice-b`, was created for the next official version after earlier draft work on `id-draft-hospital-surgical-slice-a`.
 
@@ -1544,11 +1622,11 @@ If-Match: "id-draft-hospital-surgical-slice-b-r3"
 }
 ```
 
-### PUT activation option
+### 11.2 PUT activation option:
 
 `PUT` may also be used when the caller sends the full replacement representation with `lifecycleStatus: ACTIVE` as part of the complete `IntentSpecification` resource. In this case, ID MS treats `lifecycleStatus: ACTIVE` as a governed activation instruction for the selected DRAFT candidate, not as a free-form mutation of a server-managed field. The activation request still requires `If-Match` and must satisfy the ACTIVE profile before ID MS promotes the candidate.
 
-### Success response
+### 11.3 Success response:
 
 Activation returns the full promoted ACTIVE `IntentSpecification` resource representation. `previousActiveSpecification` is included as an activation governance projection when a previous ACTIVE version was retired during the same transaction.
 
@@ -1642,7 +1720,7 @@ Activation full response body example:
 }
 ```
 
-### Activation rules
+### 11.4 Activation rules:
 
 | **Rule** | **Baseline** |
 |---|---|
@@ -1657,7 +1735,7 @@ Activation full response body example:
 | Stale or mismatched `If-Match` | `412 Precondition Failed` |
 | Invalid lifecycle transition | `409 Conflict` |
 
-### Events emitted by activation
+### 11.5 Events emitted by activation:
 
 Activation emits two `IntentSpecificationStatusChangeEvent` events:
 
@@ -1666,7 +1744,7 @@ Activation emits two `IntentSpecificationStatusChangeEvent` events:
 
 The status-change event type identifies that the lifecycle status changed. The event body carries the current `IntentSpecification` resource snapshot and does not carry separate `previousLifecycleStatus` or `newLifecycleStatus` fields.
 
-### Invalid lifecycle transition response
+### 11.6 Invalid lifecycle transition response:
 
 ```http
 HTTP/1.1 409 Conflict
@@ -1688,7 +1766,7 @@ Cache-Control: no-store
 }
 ```
 
-### Missing If-Match response
+### 11.7 Missing If-Match response:
 
 ```http
 HTTP/1.1 428 Precondition Required
@@ -1710,7 +1788,7 @@ Cache-Control: no-store
 }
 ```
 
-### ETag mismatch response
+### 11.8 ETag mismatch response:
 
 ```http
 HTTP/1.1 412 Precondition Failed
@@ -1734,7 +1812,7 @@ Cache-Control: no-store
 
 ---
 
-## 11. Hub create subscription
+## 12. Hub create subscription:
 
 ID MS intentionally uses the domain-scoped hub route for `IntentSpecification` event subscriptions.
 Strict TMF hub compatibility is based on the generic `/hub` subscription model; the `/intentSpecification/hub` route family is an approved platform extension that keeps subscription ownership explicit for the `IntentSpecification` domain.
@@ -1752,7 +1830,7 @@ ID MS stores the subscriber callback registration and, when a subscribed `Intent
 Kafka is not used for external hub notification delivery because ID MS is both the event originator and the delivery owner, and no independent internal consumer requires a topic for these external notifications.
 Delivery reliability is handled by an ID MS-owned local delivery outbox and retry relay.
 
-### Request
+### 12.1 Request:
 
 ```http
 POST /intentManagement/v5/intentSpecification/hub
@@ -1768,7 +1846,7 @@ Accept: application/json
 }
 ```
 
-### Success response
+### 12.2 Success response:
 
 ```http
 HTTP/1.1 201 Created
@@ -1799,7 +1877,7 @@ ETag: "subscription-sub-001-v1"
 }
 ```
 
-### Hub create rules
+### 12.3 Hub create rules:
 
 - The subscription callback is an external listener endpoint owned by the consuming system.
 - The `query` field filters delivered events.
@@ -1811,19 +1889,19 @@ ETag: "subscription-sub-001-v1"
 
 ---
 
-## 12. Hub retrieve subscription
+## 13. Hub retrieve subscription:
 
 `GET /intentManagement/v5/intentSpecification/hub/{id}` is a platform extension for operational convenience.
 It is not required by the strict TMF generic hub route shape, but is retained because it gives operators and consumers a safe way to inspect an ID MS-owned subscription without exposing internal workflow state.
 
-### Request
+### 13.1 Request:
 
 ```http
 GET /intentManagement/v5/intentSpecification/hub/sub-001
 Accept: application/json
 ```
 
-### Success response
+### 13.2 Success response:
 
 ```http
 HTTP/1.1 200 OK
@@ -1856,9 +1934,9 @@ Cache-Control: private, max-age=300
 
 ---
 
-## 13. Hub delete subscription
+## 14. Hub delete subscription:
 
-### Request
+### 14.1 Request:
 
 ```http
 DELETE /intentManagement/v5/intentSpecification/hub/sub-001
@@ -1866,7 +1944,7 @@ If-Match: "subscription-sub-001-v1"
 Accept: application/json
 ```
 
-### Success response
+### 14.2 Success response:
 
 ```http
 HTTP/1.1 204 No Content
@@ -1877,7 +1955,7 @@ X-Platform-Extension: true
 
 No response body is returned.
 
-### Missing If-Match response
+### 14.3 Missing If-Match response:
 
 ```http
 HTTP/1.1 428 Precondition Required
@@ -1899,7 +1977,7 @@ Cache-Control: no-store
 }
 ```
 
-### ETag mismatch response
+### 14.4 ETag mismatch response:
 
 ```http
 HTTP/1.1 412 Precondition Failed
@@ -1921,7 +1999,7 @@ Cache-Control: no-store
 }
 ```
 
-### Hub route and event scope rules
+### 14.5 Hub route and event scope rules:
 
 | **Rule** | **Baseline** |
 |---|---|
@@ -1943,7 +2021,7 @@ Cache-Control: no-store
 
 ---
 
-## 14. DB unavailable response
+## 15. DB unavailable response:
 
 ```http
 HTTP/1.1 503 Service Unavailable
@@ -1967,7 +2045,7 @@ Retry-After: 30
 
 ---
 
-## 15. External event family
+## 16. External event family:
 
 ID MS emits external TMF-aligned resource events for `IntentSpecification` changes.
 
@@ -2007,7 +2085,7 @@ Delete events are emitted only after successful delete and show the last known l
 
 ---
 
-## 16. Event envelope pattern
+## 17. Event envelope pattern:
 
 External TMF-aligned event examples populate both `eventTime` and `timeOccurred` with the same canonical event occurrence timestamp.
 `timeOccurred` is the platform-corrected spelling used consistently across ID MS and IC MS external event examples.
@@ -2065,7 +2143,7 @@ TMF921 examples contain the misspelled `timeOcurred`; this baseline intentionall
 
 ---
 
-## 17. IntentSpecificationCreateEvent
+## 18. IntentSpecificationCreateEvent:
 
 ```json
 {
@@ -2119,7 +2197,7 @@ TMF921 examples contain the misspelled `timeOcurred`; this baseline intentionall
 
 ---
 
-## 18. IntentSpecificationAttributeValueChangeEvent
+## 19. IntentSpecificationAttributeValueChangeEvent:
 
 ```json
 {
@@ -2180,7 +2258,7 @@ TMF921 examples contain the misspelled `timeOcurred`; this baseline intentionall
 
 ---
 
-## 19. IntentSpecificationStatusChangeEvent
+## 20. IntentSpecificationStatusChangeEvent:
 
 ```json
 {
@@ -2234,7 +2312,7 @@ TMF921 examples contain the misspelled `timeOcurred`; this baseline intentionall
 
 ---
 
-## 20. IntentSpecificationDeleteEvent
+## 21. IntentSpecificationDeleteEvent:
 
 ```json
 {
@@ -2288,7 +2366,7 @@ TMF921 examples contain the misspelled `timeOcurred`; this baseline intentionall
 
 ---
 
-## 21. Final specification notes
+## 22. Final specification notes:
 
 - `@baseType` is `EntitySpecification`, not `ResourceSpecification`.
 - `specCharacteristic` is the high-level characteristic catalogue.
@@ -2318,9 +2396,9 @@ TMF921 examples contain the misspelled `timeOcurred`; this baseline intentionall
 
 ---
 
-## 22. TMF compliance and platform extension baseline
+## 23. TMF compliance and platform extension baseline:
 
-### Strict TMF-compliant baseline
+### 23.1 Strict TMF-compliant baseline:
 
 For strict TMF alignment, ID MS supports the TMF-aligned `IntentSpecification` operations:
 
@@ -2333,7 +2411,7 @@ For strict TMF alignment, ID MS supports the TMF-aligned `IntentSpecification` o
 | Delete | `DELETE /intentManagement/v5/intentSpecification/{id}` | TMF-aligned |
 | Event subscription | `POST /hub`, `DELETE /hub/{id}` | Strict TMF route form where required |
 
-### Accepted platform extensions
+### 23.2 Accepted platform extensions:
 
 Controlled platform extensions are acceptable when they are documented, non-breaking, and do not conflict with TMF semantics.
 
@@ -2352,13 +2430,13 @@ For ID MS, accepted platform extensions are:
 | Strong `ETag` / `If-Match` governance | Unsafe-operation concurrency control | Platform concurrency policy applied consistently to mutable operations |
 | `428 Precondition Required` | Missing precondition response | Platform concurrency policy for unsafe operations that require `If-Match` |
 
-### Update method rule
+### 23.3 Update method rule:
 
 `PATCH` is the strict TMF-compatible update operation.
 `PUT` is the platform extension for deterministic full replacement and is preferred from the platform engineering perspective where clients support it.
 `PATCH` remains supported for TMF compatibility but is not encouraged for ordinary edits when deterministic full replacement is available.
 
-### Lifecycle activation rule
+### 23.4 Lifecycle activation rule:
 
 Activation and retirement are represented as resource updates to `IntentSpecification.lifecycleStatus`.
 
@@ -2384,7 +2462,7 @@ Do not expose custom lifecycle action endpoints such as:
 POST /intentManagement/v5/intentSpecification/{id}/activate  (not exposed)
 ```
 
-### Hub route rule
+### 23.5 Hub route rule:
 
 For strict TMF route compatibility, use:
 
@@ -2406,19 +2484,19 @@ Hub notification delivery remains REST webhook delivery to the subscriber listen
 ID MS may use a local delivery outbox and retry relay for reliable webhook delivery, but that outbox is an ID MS implementation detail and not a subscriber-facing contract.
 `GET /intentManagement/v5/intentSpecification/hub/{id}` is also a platform extension for safe subscription inspection and is not part of the strict TMF generic hub route minimum.
 
-### External event timestamp rule
+### 23.6 External event timestamp rule:
 
 For external TMF-aligned resource events, ID MS populates both `eventTime` and `timeOccurred` with the same canonical event occurrence timestamp.
 `timeOccurred` is the platform-corrected spelling used consistently across ID MS and IC MS external event examples.
 TMF921 examples contain the misspelled `timeOcurred`; this baseline intentionally uses the corrected spelling while preserving the same timestamp semantics.
 Internal events remain separate and continue to use the platform CloudEvents/header model plus the relevant internal body timestamp fields.
 
-### Route prefix rule
+### 23.7 Route prefix rule:
 
 The examples in this specification use `/intentManagement/v5` as the platform service base path.
 A strict TMF-compatible API gateway may map deployment-specific external prefixes to the platform-owned service path; this is a deployment concern and must not change resource ownership, payload semantics, or lifecycle governance.
 
-### Baseline statement
+### 23.8 Baseline statement:
 
 ID MS and IC MS remain TMF-aligned at the external contract level.
 Controlled platform extensions are allowed when documented, non-breaking, and semantically compatible with TMF.
@@ -2428,7 +2506,7 @@ TMF `/hub` routing is the strict subscription route form, while `/intentSpecific
 
 ---
 
-## Appendix A — External expression-value schema artefact
+## 24. Appendix A — External expression-value schema artefact:
 
 The following JSON Schema is the external validation artefact referenced by `targetEntitySchema.@schemaLocation`.
 It is shown here as implementation guidance only. It is not embedded inside `IntentSpecification.expressionSpecification`, `Intent.expression`, or `IntentReport.expression`.

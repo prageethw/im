@@ -8,39 +8,54 @@
 
 ## Table of contents:
 
-- [1. Summary](#1-summary)
-- [2. Logical View](#2-logical-view)
-- [3. Process View](#3-process-view)
-- [4. Solution Elaboration](#4-solution-elaboration)
-- [5. Responsibilities](#5-responsibilities)
-- [6. ID MS does not](#6-id-ms-does-not)
-- [7. Response locale](#7-response-locale)
-- [8. Response classification headers](#8-response-classification-headers)
-- [9. Contracts](#9-contracts)
-- [10. Request shape / event shape](#10-request-shape-event-shape)
-- [11. PATCH semantics](#11-patch-semantics)
-- [12. IntentSpecification versioning clarification](#12-intentspecification-versioning-clarification)
-- [13. Expression schema alignment](#13-expression-schema-alignment)
-- [14. Optional IntentSpecification behaviour metadata](#14-optional-intentspecification-behaviour-metadata)
-- [15. Field specification](#15-field-specification)
-- [16. Fields not accepted](#16-fields-not-accepted)
-- [17. Authorisation](#17-authorisation)
-- [18. Persistence / state / outbox model](#18-persistence-state-outbox-model)
-- [19. Hub notification delivery](#19-hub-notification-delivery)
-- [20. Delivery reliability](#20-delivery-reliability)
-- [21. Event identity](#21-event-identity)
-- [22. Webhook HTTP request](#22-webhook-http-request)
-- [23. Webhook HTTP headers](#23-webhook-http-headers)
-- [24. Webhook request body](#24-webhook-request-body)
-- [25. Behaviour](#25-behaviour)
-- [26. Configuration](#26-configuration)
-- [27. specKey lineage note](#27-speckey-lineage-note)
-- [28. draftId provenance lookup rule](#28-draftid-provenance-lookup-rule)
-- [29. Runtime admission guardrail](#29-runtime-admission-guardrail)
-- [30. Consumer contract](#30-consumer-contract)
-- [31. Open items](#31-open-items)
-- [32. Closed items](#32-closed-items)
-- [33. MS identity](#33-ms-identity)
+- [1. Summary:](#1-summary)
+- [2. Logical View:](#2-logical-view)
+- [3. Process View:](#3-process-view)
+- [4. Solution Elaboration:](#4-solution-elaboration)
+- [5. Responsibilities:](#5-responsibilities)
+- [6. ID MS does not:](#6-id-ms-does-not)
+- [7. Response locale:](#7-response-locale)
+- [8. Response classification headers:](#8-response-classification-headers)
+- [9. Contracts:](#9-contracts)
+- [10. Request shape / event shape:](#10-request-shape-event-shape)
+  - [10.1 IntentSpecification resource API:](#101-intentspecification-resource-api)
+  - [10.2 Hub subscription API:](#102-hub-subscription-api)
+  - [10.3 Hub retrieve subscription example:](#103-hub-retrieve-subscription-example)
+- [11. PATCH semantics:](#11-patch-semantics)
+- [12. IntentSpecification versioning clarification:](#12-intentspecification-versioning-clarification)
+- [13. Expression schema alignment:](#13-expression-schema-alignment)
+- [14. Optional IntentSpecification behaviour metadata:](#14-optional-intentspecification-behaviour-metadata)
+- [15. Field specification:](#15-field-specification)
+  - [15.1 IntentSpecification fields:](#151-intentspecification-fields)
+  - [15.2 Lifecycle values:](#152-lifecycle-values)
+  - [15.3 Query parameters:](#153-query-parameters)
+- [16. Fields not accepted:](#16-fields-not-accepted)
+- [17. Authorisation:](#17-authorisation)
+- [18. Persistence / state / outbox model:](#18-persistence-state-outbox-model)
+- [19. Hub notification delivery:](#19-hub-notification-delivery)
+- [20. Delivery reliability:](#20-delivery-reliability)
+- [21. Event identity:](#21-event-identity)
+- [22. Webhook HTTP request:](#22-webhook-http-request)
+- [23. Webhook HTTP headers:](#23-webhook-http-headers)
+- [24. Webhook request body:](#24-webhook-request-body)
+- [25. Behaviour:](#25-behaviour)
+  - [25.1 Create behaviour:](#251-create-behaviour)
+  - [25.2 List behaviour:](#252-list-behaviour)
+  - [25.3 Retrieve behaviour:](#253-retrieve-behaviour)
+  - [25.4 Full update behaviour:](#254-full-update-behaviour)
+  - [25.5 Partial update behaviour:](#255-partial-update-behaviour)
+  - [25.6 Activation behaviour:](#256-activation-behaviour)
+  - [25.7 Delete behaviour:](#257-delete-behaviour)
+  - [25.8 Hub notification behaviour:](#258-hub-notification-behaviour)
+- [26. Configuration:](#26-configuration)
+- [27. specKey lineage note:](#27-speckey-lineage-note)
+- [28. draftId provenance lookup rule:](#28-draftid-provenance-lookup-rule)
+- [29. Runtime admission guardrail:](#29-runtime-admission-guardrail)
+- [30. Consumer contract:](#30-consumer-contract)
+- [31. Open items:](#31-open-items)
+- [32. Closed items:](#32-closed-items)
+- [33. MS identity:](#33-ms-identity)
+- [34. Error-code coverage note:](#34-error-code-coverage-note)
 
 ## 1. Summary:
 
@@ -200,7 +215,7 @@ A strict TMF-compatible gateway may map deployment-specific external prefixes to
 
 ## 10. Request shape / event shape:
 
-### IntentSpecification resource API:
+### 10.1 IntentSpecification resource API:
 
 | Purpose | Method | Endpoint |
 |---|---:|---|
@@ -213,7 +228,7 @@ A strict TMF-compatible gateway may map deployment-specific external prefixes to
 | Delete unused DRAFT candidate | `DELETE` | `/intentManagement/v5/intentSpecification/draft/{draftId}` |
 | Retire current ACTIVE specification | `DELETE` | `/intentManagement/v5/intentSpecification/{id}` |
 
-### Hub subscription API:
+### 10.2 Hub subscription API:
 
 | Purpose | Method | Endpoint |
 |---|---:|---|
@@ -223,7 +238,7 @@ A strict TMF-compatible gateway may map deployment-specific external prefixes to
 
 Domain-scoped hub routes are intentional platform extensions. Strict TMF exposure may use a generic root `/hub` route at the gateway layer where required.
 
-### Hub retrieve subscription example:
+### 10.3 Hub retrieve subscription example:
 
 ```http
 GET /intentManagement/v5/intentSpecification/hub/sub-001
@@ -335,7 +350,7 @@ These fields do not replace `expressionSpecification.iri`, `targetEntitySchema`,
 
 ## 15. Field specification:
 
-### IntentSpecification fields:
+### 15.1 IntentSpecification fields:
 
 | Field | Baseline use |
 |---|---|
@@ -360,7 +375,7 @@ These fields do not replace `expressionSpecification.iri`, `targetEntitySchema`,
 | `@schemaLocation` | Schema location for the specification resource, where supplied. |
 | `_links` | Server-generated lifecycle-aware navigation/action affordances. |
 
-### Lifecycle values:
+### 15.2 Lifecycle values:
 
 ```text
 DRAFT
@@ -370,7 +385,7 @@ RETIRED
 
 There is no `DELETED` lifecycle state. Delete is an operation outcome, not a lifecycle status.
 
-### Query parameters:
+### 15.3 Query parameters:
 
 | Parameter | Applies to | Purpose |
 |---|---|---|
@@ -548,7 +563,7 @@ Delete events are emitted only after successful delete and show the last known l
 
 ## 25. Behaviour:
 
-### Create behaviour:
+### 25.1 Create behaviour:
 
 - Create produces a mutable `DRAFT` candidate and assigns a `draftId`.
 - ID MS validates resource shape and required syntax and schema references.
@@ -556,21 +571,21 @@ Delete events are emitted only after successful delete and show the last known l
 - Successful create returns `201 Created` with the full created DRAFT candidate resource.
 - Successful create emits `IntentSpecificationCreateEvent`.
 
-### List behaviour:
+### 25.2 List behaviour:
 
 - List supports pagination, lifecycle filtering, name filtering, version filtering, and `fields` projection.
 - The default list response is lightweight.
 - Full `specCharacteristic`, `expressionSpecification`, and `targetEntitySchema` are omitted by default unless requested through `fields`.
 - List GET may use short private caching.
 
-### Retrieve behaviour:
+### 25.3 Retrieve behaviour:
 
 - Retrieve returns the full single-resource representation by default.
 - Retrieve includes full contract metadata, lifecycle state, schema references, and `_links`.
 - Retrieve GET may use private caching.
 - Clients may request a fresh response with `Cache-Control: no-cache`.
 
-### Full update behaviour:
+### 25.4 Full update behaviour:
 
 - `PUT` is the preferred platform extension for deterministic full replacement of an editable `DRAFT` specification.
 - `PUT` requires `If-Match`.
@@ -578,14 +593,14 @@ Delete events are emitted only after successful delete and show the last known l
 - Missing `If-Match` returns `428 Precondition Required`.
 - Stale or mismatched `If-Match` returns `412 Precondition Failed`.
 
-### Partial update behaviour:
+### 25.5 Partial update behaviour:
 
 - `PATCH` remains available for TMF compatibility.
 - `PATCH` is discouraged as a general update method.
 - `PATCH` should be used only for tightly controlled small compatibility updates.
 - `PATCH` must not normally replace material contract fields.
 
-### Activation behaviour:
+### 25.6 Activation behaviour:
 
 - Activation is a lifecycle update on `/intentSpecification/draft/{draftId}`.
 - PUT activation semantics: when a full DRAFT candidate representation includes `lifecycleStatus: ACTIVE`, ID MS treats that value as a governed activation instruction, not as free-form mutation of a server-managed field.
@@ -616,7 +631,7 @@ Activation emits two `IntentSpecificationStatusChangeEvent` events:
   - one for the newly activated specification version with `lifecycleStatus: ACTIVE`;
   - one for the previous active specification version with `lifecycleStatus: RETIRED`.
 
-### Delete behaviour:
+### 25.7 Delete behaviour:
 
 - Delete is allowed only for unused `DRAFT` specifications.
 - Delete is blocked for `ACTIVE` and `RETIRED` specifications.
@@ -625,7 +640,7 @@ Activation emits two `IntentSpecificationStatusChangeEvent` events:
 - Successful delete returns `204 No Content`.
 - Delete emits `IntentSpecificationDeleteEvent` only after successful delete.
 
-### Hub notification behaviour:
+### 25.8 Hub notification behaviour:
 
 - `/intentSpecification/hub` creates, retrieves, and deletes REST webhook subscriptions.
 - ID MS stores subscriber callback URLs and subscription filters in its own subscription store.
@@ -714,7 +729,7 @@ Consumers of ID MS should rely on these behaviours:
 | Primary resource | `IntentSpecification` |
 | Primary responsibility | Definition-time `IntentSpecification` catalogue, lifecycle and version governance, syntax contract, and external REST webhook specification-event notifications. |
 
-## Error-code coverage note:
+## 34. Error-code coverage note:
 
 | HTTP | Code | Meaning |
 |---:|---|---|
