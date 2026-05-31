@@ -44,17 +44,18 @@
   - [24.2 Single-resource GET caching:](#242-single-resource-get-caching)
   - [24.3 List GET caching:](#243-list-get-caching)
   - [24.4 Client cache override:](#244-client-cache-override)
-  - [24.5 ETag rule:](#245-etag-rule)
-  - [24.6 No non-GET caching strategy:](#246-no-non-get-caching-strategy)
-  - [24.7 ID MS internal cache refresh on active-version promotion:](#247-id-ms-internal-cache-refresh-on-active-version-promotion)
-  - [24.8 IC MS cache behaviour:](#248-ic-ms-cache-behaviour)
-  - [24.9 IC MS fail-closed response:](#249-ic-ms-fail-closed-response)
-  - [24.10 Dependency-specific circuit-breaker behaviour:](#2410-dependency-specific-circuit-breaker-behaviour)
-  - [24.11 DB failure:](#2411-db-failure)
-  - [24.12 Cache failure:](#2412-cache-failure)
-  - [24.13 Webhook delivery outbox failure:](#2413-webhook-delivery-outbox-failure)
-  - [24.14 External callback webhook failure:](#2414-external-callback-webhook-failure)
-  - [24.15 Final combined baseline statement:](#2415-final-combined-baseline-statement)
+  - [24.5 GET response cache lookup and refresh behaviour:](#245-get-response-cache-lookup-and-refresh-behaviour)
+  - [24.6 ETag rule:](#246-etag-rule)
+  - [24.7 No non-GET caching strategy:](#247-no-non-get-caching-strategy)
+  - [24.8 ID MS internal cache refresh on active-version promotion:](#248-id-ms-internal-cache-refresh-on-active-version-promotion)
+  - [24.9 IC MS cache behaviour:](#249-ic-ms-cache-behaviour)
+  - [24.10 IC MS fail-closed response:](#2410-ic-ms-fail-closed-response)
+  - [24.11 Dependency-specific circuit-breaker behaviour:](#2411-dependency-specific-circuit-breaker-behaviour)
+  - [24.12 DB failure:](#2412-db-failure)
+  - [24.13 Cache failure:](#2413-cache-failure)
+  - [24.14 Webhook delivery outbox failure:](#2414-webhook-delivery-outbox-failure)
+  - [24.15 External callback webhook failure:](#2415-external-callback-webhook-failure)
+  - [24.16 Final combined baseline statement:](#2416-final-combined-baseline-statement)
 - [25. Deployment and persistence strategy:](#25-deployment-and-persistence-strategy)
   - [25.1 Runtime model:](#251-runtime-model)
   - [25.2 Source of truth:](#252-source-of-truth)
@@ -126,24 +127,28 @@ ID MS does not validate runtime semantic feasibility, policy fulfilment, network
 
 ## 4. Response classification headers:
 
-The service returns a response classification header on external REST API responses so callers can distinguish strict TMF-compatible behaviour from documented platform-extension behaviour.
+The service returns response classification headers on external REST API responses so callers can distinguish strict TMF-native behaviour from documented platform-extension behaviour.
 
-This is a response header only. Clients do not send this header in requests.
+These are response headers only. Clients do not send these headers in requests.
 
 | **Response header** | **Meaning** |
 |---|---|
+| `X-TMF-Native: true` | The response is for a TMF-native operation or behaviour. |
+| `X-TMF-Native: false` | The response is for an operation or behaviour that includes platform-specific semantics. |
 | `X-Platform-Extension: true` | The route, method, response, or behaviour includes a documented platform extension. |
 | `X-Platform-Extension: false` | No platform extension is used for the response. |
 
 Use canonical header casing in examples:
 
 ```http
+X-TMF-Native: true
 X-Platform-Extension: false
 ```
 
 or:
 
 ```http
+X-TMF-Native: false
 X-Platform-Extension: true
 ```
 
@@ -565,6 +570,7 @@ Accept: application/json
 ```http
 HTTP/1.1 204 No Content
 Content-Language: en-AU
+X-TMF-Native: true
 X-Platform-Extension: false
 ```
 
@@ -911,7 +917,29 @@ Meaning:
 - `If-None-Match` is not baselined
 - `304 Not Modified` is not baselined
 
-### 24.5 ETag rule:
+
+### 24.5 GET response cache lookup and refresh behaviour:
+
+For cacheable GET operations, ID MS uses a deterministic cache key derived from the effective request shape. The cache key includes the request path, query parameters, selected `fields` projection, caller-safe response context where applicable, and any other input that can change the returned representation. The implementation may hash this cache key internally, but the architecture baseline is based on the deterministic cache key, not on an externally visible request hash.
+
+When a cacheable GET request is received:
+
+1. ID MS builds the cache key for the effective request.
+2. If the request does not include `Cache-Control: no-cache`, ID MS checks whether a valid, unexpired response exists for that cache key.
+3. If a valid cache entry exists, ID MS may serve the response directly from cache with the configured `Cache-Control` response header and the remaining cache lifetime represented according to the platform cache-header convention.
+4. If no valid cache entry exists, ID MS compiles the response from the source-of-truth store, stores the response in cache with the configured TTL where safe, and returns the response with normal cache-control headers.
+
+When a consumer sends:
+
+```http
+Cache-Control: no-cache
+```
+
+ID MS must bypass any existing cached response for that request, compile the response from the source-of-truth store, refresh the cache entry for the derived cache key where safe, and return the fresh response with normal cache-control headers.
+
+ID MS may also invalidate or refresh affected cache entries on write paths or lifecycle transitions when it knows cached responses have become stale. For example, IntentSpecification activation or retirement must invalidate or refresh affected active-version, retrieve-by-id, draft-provenance, and list cache entries so future GET requests do not return a previous active version as current.
+
+### 24.6 ETag rule:
 
 ETag is not used for GET revalidation in this baseline.
 
@@ -944,7 +972,7 @@ DELETE /intentManagement/v5/intentSpecification/hub/{id}
 
 and any activation/state-changing operation where stale updates could overwrite newer resource state.
 
-### 24.6 No non-GET caching strategy:
+### 24.7 No non-GET caching strategy:
 
 No caching strategy is baselined for non-GET operations.
 
@@ -953,7 +981,7 @@ Current rule:
 - caching strategy is only discussed for GET responses
 - non-GET operations do not have a caching strategy baseline
 
-### 24.7 ID MS internal cache refresh on active-version promotion:
+### 24.8 ID MS internal cache refresh on active-version promotion:
 
 When a new `IntentSpecification` version is promoted to `ACTIVE`, ID MS must refresh its own active-specification cache.
 
@@ -972,7 +1000,7 @@ Baseline statement:
 
 **On active-version promotion, ID MS must refresh its own active-specification cache using a no-cache/internal refresh path so the newly active version becomes the cached active copy and the previous active version is no longer returned as active.**
 
-### 24.8 IC MS cache behaviour:
+### 24.9 IC MS cache behaviour:
 
 IC MS may use a cached `ACTIVE` `IntentSpecification` for runtime `Intent` schema and request-shape validation only when:
 
@@ -986,7 +1014,7 @@ IC MS may use a cached `ACTIVE` `IntentSpecification` for runtime `Intent` schem
 
 If ID MS is unavailable and IC MS has no valid fresh cached `ACTIVE` specification, IC MS must fail closed for new runtime intent creation.
 
-### 24.9 IC MS fail-closed response:
+### 24.10 IC MS fail-closed response:
 
 If active specification cannot be confirmed from ID MS or a valid fresh cache:
 
@@ -1008,7 +1036,7 @@ Retry-After: 30
 }
 ```
 
-### 24.10 Dependency-specific circuit-breaker behaviour:
+### 24.11 Dependency-specific circuit-breaker behaviour:
 
 ID MS has multiple circuit-breaker trigger points.
 Different dependency failures have different behaviours.
@@ -1020,7 +1048,7 @@ Different dependency failures have different behaviours.
 | ID MS -> external callback webhook | Async fail-fast per attempt | Delivery attempt fails fast, retries later; original API unaffected |
 | IC MS -> ID MS | Cached fallback then fail-closed | IC MS may use fresh cached active spec fallback; otherwise fail closed |
 
-### 24.11 DB failure:
+### 24.12 DB failure:
 
 DB is a hard dependency.
 
@@ -1050,7 +1078,7 @@ Rules:
 - ID MS cannot safely create, update, retrieve, activate, retire, or delete specifications without DB access.
 - Consumer must retry later.
 
-### 24.12 Cache failure:
+### 24.13 Cache failure:
 
 Cache is not source of truth.
 
@@ -1069,7 +1097,7 @@ Rules:
 - do not return `503` only because cache is unavailable
 - cache failure must not block create, update, or read when DB is available
 
-### 24.13 Webhook delivery outbox failure:
+### 24.14 Webhook delivery outbox failure:
 
 External hub notification delivery is not on the synchronous critical path after the ID MS resource transaction commits.
 
@@ -1088,7 +1116,7 @@ Rules:
 - webhook delivery failure is operationally visible through retry metrics and alerts
 - if DB and outbox commit fails, API operation fails because durable notification delivery cannot be guaranteed
 
-### 24.14 External callback webhook failure:
+### 24.15 External callback webhook failure:
 
 External subscriber callback delivery is asynchronous.
 
@@ -1106,11 +1134,13 @@ Rules:
 - webhook failure must not roll back specification create, update, status-change, or delete operations
 - webhook delivery is not a synchronous dependency for the API write path
 
-### 24.15 Final combined baseline statement:
+### 24.16 Final combined baseline statement:
 
 **ID MS caching applies only to GET responses.
 GET responses may use bounded private caching, with longer TTL for single-resource GETs and shorter TTL for list GETs.
+ID MS uses a deterministic cache key derived from the effective GET request shape.
 Clients either use the cached response within TTL or request a fresh copy using `Cache-Control: no-cache`.
+A no-cache request bypasses cached serving, reads from the source-of-truth store, and refreshes the cache entry where safe.
 ETag is not used for GET revalidation; `If-None-Match` and `304 Not Modified` are not baselined.
 ETag is used only for unsafe operation concurrency through `If-Match`.**
 

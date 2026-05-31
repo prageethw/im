@@ -42,11 +42,12 @@
   - [25.1 Create behaviour:](#251-create-behaviour)
   - [25.2 List behaviour:](#252-list-behaviour)
   - [25.3 Retrieve behaviour:](#253-retrieve-behaviour)
-  - [25.4 Full update behaviour:](#254-full-update-behaviour)
-  - [25.5 Partial update behaviour:](#255-partial-update-behaviour)
-  - [25.6 Activation behaviour:](#256-activation-behaviour)
-  - [25.7 Delete behaviour:](#257-delete-behaviour)
-  - [25.8 Hub notification behaviour:](#258-hub-notification-behaviour)
+  - [25.4 GET response caching behaviour:](#254-get-response-caching-behaviour)
+  - [25.5 Full update behaviour:](#255-full-update-behaviour)
+  - [25.6 Partial update behaviour:](#256-partial-update-behaviour)
+  - [25.7 Activation behaviour:](#257-activation-behaviour)
+  - [25.8 Delete behaviour:](#258-delete-behaviour)
+  - [25.9 Hub notification behaviour:](#259-hub-notification-behaviour)
 - [26. Configuration:](#26-configuration)
 - [27. specKey lineage note:](#27-speckey-lineage-note)
 - [28. draftId provenance lookup rule:](#28-draftid-provenance-lookup-rule)
@@ -170,24 +171,28 @@ ID MS does not:
 
 ## 8. Response classification headers:
 
-The service returns a response classification header on external REST API responses so callers can distinguish strict TMF-compatible behaviour from documented platform-extension behaviour.
+The service returns response classification headers on external REST API responses so callers can distinguish strict TMF-native behaviour from documented platform-extension behaviour.
 
-This is a response header only. Clients do not send this header in requests.
+These are response headers only. Clients do not send these headers in requests.
 
 | **Response header** | **Meaning** |
 |---|---|
+| `X-TMF-Native: true` | The response is for a TMF-native operation or behaviour. |
+| `X-TMF-Native: false` | The response is for an operation or behaviour that includes platform-specific semantics. |
 | `X-Platform-Extension: true` | The route, method, response, or behaviour includes a documented platform extension. |
 | `X-Platform-Extension: false` | No platform extension is used for the response. |
 
 Use canonical header casing in examples:
 
 ```http
+X-TMF-Native: true
 X-Platform-Extension: false
 ```
 
 or:
 
 ```http
+X-TMF-Native: false
 X-Platform-Extension: true
 ```
 
@@ -247,6 +252,7 @@ Accept: application/json
 HTTP/1.1 200 OK
 Content-Type: application/json
 Content-Language: en-AU
+X-TMF-Native: false
 X-Platform-Extension: true
 ETag: "subscription-sub-001-v1"
 Cache-Control: private, max-age=300
@@ -582,7 +588,18 @@ Delete events are emitted only after successful delete and show the last known l
 - Retrieve GET may use private caching.
 - Clients may request a fresh response with `Cache-Control: no-cache`.
 
-### 25.4 Full update behaviour:
+
+### 25.4 GET response caching behaviour:
+
+For cacheable GET operations, ID MS builds a deterministic cache key from the effective request shape, including the path, query parameters, selected `fields` projection, and other inputs that can change the returned representation.
+
+If a valid unexpired cache entry exists and the request does not include `Cache-Control: no-cache`, ID MS may return the cached response with the configured cache-control headers.
+
+If no valid cache entry exists, or if the consumer sends `Cache-Control: no-cache`, ID MS reads from the source-of-truth store, refreshes the cache entry where safe, and returns the fresh response with normal cache-control headers.
+
+ID MS may also invalidate or refresh affected cache entries on write paths or lifecycle transitions. IntentSpecification activation or retirement must refresh affected active-version and list cache entries so subsequent GET requests reflect the new current specification state.
+
+### 25.5 Full update behaviour:
 
 - `PUT` is the preferred platform extension for deterministic full replacement of an editable `DRAFT` specification.
 - `PUT` requires `If-Match`.
@@ -590,14 +607,14 @@ Delete events are emitted only after successful delete and show the last known l
 - Missing `If-Match` returns `428 Precondition Required`.
 - Stale or mismatched `If-Match` returns `412 Precondition Failed`.
 
-### 25.5 Partial update behaviour:
+### 25.6 Partial update behaviour:
 
 - `PATCH` remains available for TMF compatibility.
 - `PATCH` is discouraged as a general update method.
 - `PATCH` should be used only for tightly controlled small compatibility updates.
 - `PATCH` must not normally replace material contract fields.
 
-### 25.6 Activation behaviour:
+### 25.7 Activation behaviour:
 
 - Activation is a lifecycle update on `/intentSpecification/draft/{draftId}`.
 - PUT activation semantics: when a full DRAFT candidate representation includes `lifecycleStatus: ACTIVE`, ID MS treats that value as a governed activation instruction, not as free-form mutation of a server-managed field.
@@ -628,7 +645,7 @@ Activation emits two `IntentSpecificationStatusChangeEvent` events:
   - one for the newly activated specification version with `lifecycleStatus: ACTIVE`;
   - one for the previous active specification version with `lifecycleStatus: RETIRED`.
 
-### 25.7 Delete behaviour:
+### 25.8 Delete behaviour:
 
 - Delete is allowed only for unused `DRAFT` specifications.
 - Delete is blocked for `ACTIVE` and `RETIRED` specifications.
@@ -637,7 +654,7 @@ Activation emits two `IntentSpecificationStatusChangeEvent` events:
 - Successful delete returns `204 No Content`.
 - Delete emits `IntentSpecificationDeleteEvent` only after successful delete.
 
-### 25.8 Hub notification behaviour:
+### 25.9 Hub notification behaviour:
 
 - `/intentSpecification/hub` creates, retrieves, and deletes REST webhook subscriptions.
 - ID MS stores subscriber callback URLs and subscription filters in its own subscription store.
