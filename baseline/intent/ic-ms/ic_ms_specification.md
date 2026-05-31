@@ -970,8 +970,8 @@ If-Match: "intent-INT-HOSP-2026-001-v3"
 ```http
 HTTP/1.1 200 OK
 Content-Type: application/json
-X-TMF-Native: true
-X-Platform-Extension: false
+X-TMF-Native: false
+X-Platform-Extension: true
 Content-Location: /intentManagement/v5/intent/INT-HOSP-2026-001
 ETag: "intent-INT-HOSP-2026-001-v4"
 ```
@@ -1120,8 +1120,8 @@ If-Match: "intent-INT-HOSP-2026-001-v4"
 ```http
 HTTP/1.1 200 OK
 Content-Type: application/json
-X-TMF-Native: true
-X-Platform-Extension: false
+X-TMF-Native: false
+X-Platform-Extension: true
 Content-Location: /intentManagement/v5/intent/INT-HOSP-2026-001
 ETag: "intent-INT-HOSP-2026-001-v5"
 ```
@@ -1620,7 +1620,6 @@ X-Correlation-Id: corr-intent-status-001
 
 ```http
 HTTP/1.1 204 No Content
-Content-Language: en-AU
 ```
 
 ---
@@ -2342,8 +2341,8 @@ IC MS accepts and projects runtime Intent resources using the external runtime e
 - `context` contains only `targets`, `constraints`, and `preferences`.
 - `location`, `serviceType`, and `serviceClass` sit under `context.constraints`.
 - `IntentValidatedEvent.body.expression` carries the same canonical semantic buckets internally without the external TMF expression wrapper.
-- IC MS validates schema and request shape against the active ID MS `expressionSpecification` and `targetEntitySchema`.
-- IC MS does not perform semantic/KP validation, optimisation, change execution, or assurance.
+- IC MS validates schema and request shape against the `ACTIVE` ID MS `expressionSpecification` and `targetEntitySchema`.
+- IC MS does not perform semantic and KP validation, optimisation, change execution, or assurance.
 
 
 ## IntentSpecification draft-candidate guardrail:

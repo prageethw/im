@@ -29,7 +29,7 @@ IC MS -> webhook_delivery_outbox -> HTTP POST -> external subscriber listener ca
 | External API boundary | Owns `/intentManagement/v5/intent`, `/intentManagement/v5/intent/{id}`, nested `IntentReport` read APIs, and intent event hub subscription APIs. |
 | Primary resource | `Intent`. |
 | Secondary resource | `IntentReport`. |
-| Upstream dependency | ID MS for active `IntentSpecification` validation using mandatory `intentSpecification.id`, with mandatory `expression.iri` checked against the selected specification's `expressionSpecification.iri`. |
+| Upstream dependency | ID MS for `ACTIVE` `IntentSpecification` validation using mandatory `intentSpecification.id`, with mandatory `expression.iri` checked against the selected specification's `expressionSpecification.iri`. |
 | Internal event path | Emits admitted runtime intent state through `IntentValidatedEvent` using the IC MS internal event outbox and Kafka relay. |
 | Downstream event consumers | II MS consumes admitted runtime intent state through `IntentValidatedEvent`. |
 | Downstream status inputs | II MS rejection outcomes and IA MS assurance outcomes drive IC MS external lifecycle/status projection. |
@@ -50,8 +50,8 @@ IC MS owns the externally visible runtime projection, not the full internal fulf
 4. A Draft Intent is an authoring record only; it is not admitted, optimised, assured, sent to downstream change execution, or used to drive `activeVersion`.
 5. If `submit` is omitted on initial create, IC MS treats the request as `submit: true`.
 6. If `submit: true` is supplied or defaulted, IC MS checks that the request carries both mandatory `intentSpecification.id` and mandatory `expression.iri`.
-7. IC MS resolves the exact active `IntentSpecification` using mandatory `intentSpecification.id`.
-8. IC MS confirms the request `expression.iri` matches the selected specification's `expressionSpecification.iri`, then validates the runtime expression/request shape against the resolved active definition owned by ID MS.
+7. IC MS resolves the exact `ACTIVE` `IntentSpecification` using mandatory `intentSpecification.id`.
+8. IC MS confirms the request `expression.iri` matches the selected specification's `expressionSpecification.iri`, then validates the runtime expression/request shape against the resolved `ACTIVE` definition owned by ID MS.
 9. If validation fails, IC MS returns a structured error such as `422 VALIDATION_FAILED`.
 10. If validation succeeds, IC MS persists the external `Intent` projection and sets the initial projected lifecycle state to `Acknowledged`.
 11. IC MS emits `IntentValidatedEvent` as an internal state/progress event.
@@ -60,7 +60,7 @@ IC MS owns the externally visible runtime projection, not the full internal fulf
 
 ### Runtime intent Draft update and submitted-version change:
 
-1. A consumer may update an existing runtime intent using `PUT` or `PATCH` only while the current version is in `Draft`.
+1. A consumer may update an existing runtime intent using `PUT` or `PATCH` only while the current Intent/Draft projection is in `Draft`.
 2. Unsafe update operations require `If-Match`.
 3. IC MS applies optimistic concurrency using the current ETag.
 4. For a Draft Intent, all attributes accepted by the `PUT` / `PATCH` request contract are mutable.
@@ -118,7 +118,7 @@ IC MS does not create a self-publish/self-consume Kafka loop for hub notificatio
 
 ## Solution Elaboration:
 
-IC MS is the runtime equivalent of a controlled authoring, admission, and projection layer. It can persist Draft Intents for authoring when `submit: false` is supplied. It accepts submitted runtime intent requests only when the incoming payload is structurally valid, carries mandatory `intentSpecification.id`, carries mandatory `expression.iri`, and passes the consistency check against the selected active `IntentSpecification`.
+IC MS is the runtime equivalent of a controlled authoring, admission, and projection layer. It can persist Draft Intents for authoring when `submit: false` is supplied. It accepts submitted runtime intent requests only when the incoming payload is structurally valid, carries mandatory `intentSpecification.id`, carries mandatory `expression.iri`, and passes the consistency check against the selected `ACTIVE` `IntentSpecification`.
 
 It does not interpret whether the intent is semantically achievable, feasible, optimal, policy-compliant, or currently assured.
 

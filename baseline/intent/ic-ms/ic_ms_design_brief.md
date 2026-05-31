@@ -104,14 +104,14 @@ On `POST /intentManagement/v5/intent`, IC MS:
 1. receives the external runtime intent request
 2. validates basic TMF/resource shape
 3. resolves the referenced `IntentSpecification`
-4. validates the request against the active `IntentSpecification`
+4. validates the request against the `ACTIVE` `IntentSpecification`
 5. rejects schema and request-shape invalid requests
 6. accepts schema and request-shape valid requests
 7. creates/persists the external `Intent` projection
 8. sets initial `lifecycleStatus = Acknowledged`
 9. emits `IntentValidatedEvent` to the internal Kafka event backbone after schema and request-shape validation succeeds
 
-IC MS validates syntax and contract shape only.
+IC MS validates schema and request shape against the selected `ACTIVE` IntentSpecification contract only.
 
 It does not decide semantic meaning, network feasibility, policy allowability, resource candidates, optimisation, apply result, or runtime assurance truth.
 
@@ -220,7 +220,7 @@ IC MS owns the external lifecycle/status projection, but not the runtime truth.
 | **Lifecycle/status source** | **IC MS action** |
 |---|---|
 | IC MS schema and request-shape validation succeeds | Project `Acknowledged` |
-| II MS semantic/policy rejection | Project `Rejected` |
+| II MS semantic and policy rejection | Project `Rejected` |
 | IA MS apply success / active assurance | Project `Active` |
 | IA MS degraded assurance | Project `Degraded` |
 | IA MS paused/failed/terminated outcome | Project `Paused`, `Failed`, or `Terminated` |
@@ -397,6 +397,7 @@ Platform preference:
 The overall external Intent lifecycle remains:
 
 ```text
+Draft
 Acknowledged
 InProgress
 Active
