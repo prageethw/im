@@ -58,31 +58,130 @@ from requests.adapters import HTTPAdapter
 from urllib3.util.retry import Retry
 
 # ---------------------------------------------------------------------------
-# Optional system-trust-store integration
+# System-trust-store integration (self-healing)
 # ---------------------------------------------------------------------------
 # Corporate networks (Zscaler, Netskope, etc.) terminate TLS with an internal
 # CA. Python's `requests` library uses `certifi` by default, which doesn't
-# include corporate CAs — leading to CERTIFICATE_VERIFY_FAILED errors.
+# include corporate CAs — leading to CERTIFICATE_VERIFY_FAILED errors with
+# messages like "self-signed certificate in certificate chain".
 #
 # `truststore` (PEP 543) delegates verification to the operating system, which
 # already trusts the corp CA (because IT installed it system-wide). It also
 # tolerates legacy CAs without a `keyUsage` extension that OpenSSL 3.x rejects.
 #
-# We call inject_into_ssl() if it's available; the call is a no-op if the
-# library is missing. Set CONFLUENCE_USE_SYSTEM_TRUST=0 to opt out.
-def _enable_system_trust() -> bool:
-    if os.environ.get("CONFLUENCE_USE_SYSTEM_TRUST", "1") == "0":
-        return False
-    try:
-        import truststore  # type: ignore
-        truststore.inject_into_ssl()
-        return True
-    except ImportError:
-        return False
+# Self-healing strategy:
+#   1. Try `import truststore` + `inject_into_ssl()` at module load.
+#   2. If the import fails AND auto-install is allowed, pip-install
+#      `truststore` automatically (same pattern as the mdformat installer).
+#   3. If installation succeeds, retry the injection.
+#   4. If everything fails, the script continues with stdlib SSL — the
+#      `ConfluenceClient` will then catch SSLError at runtime and surface
+#      a clear remediation message instead of an opaque urllib3 retry loop.
+#
+# Opt out with CONFLUENCE_USE_SYSTEM_TRUST=0.
+# Opt out of auto-install with CONFLUENCE_NO_AUTO_INSTALL=1.
 
-_SYSTEM_TRUST_ACTIVE = _enable_system_trust()
+_SYSTEM_TRUST_ACTIVE = False
+_SYSTEM_TRUST_REASON = "not attempted"
+
+
+def _bootstrap_pip_install(packages: List[str], stage: str) -> bool:
+    """
+    Install `packages` via pip during module bootstrap. Self-contained
+    (does NOT depend on LOG — logging isn't configured yet at import time)
+    and short-circuits cleanly when offline.
+
+    `stage` is a short human label used only for stderr messages.
+    """
+    if os.environ.get("CONFLUENCE_NO_AUTO_INSTALL", "0") == "1":
+        sys.stderr.write(
+            f"[md2confluence] {stage}: auto-install disabled by "
+            "CONFLUENCE_NO_AUTO_INSTALL=1\n"
+        )
+        return False
+    cmd = [sys.executable, "-m", "pip", "install", "--quiet",
+           "--disable-pip-version-check", *packages]
+    sys.stderr.write(
+        f"[md2confluence] {stage}: installing {' '.join(packages)} via pip ...\n"
+    )
+    try:
+        proc = subprocess.run(
+            cmd, capture_output=True, text=True, check=False, timeout=180,
+        )
+    except (FileNotFoundError, subprocess.TimeoutExpired) as exc:
+        sys.stderr.write(
+            f"[md2confluence] {stage}: pip install failed ({exc}); continuing\n"
+        )
+        return False
+    if proc.returncode != 0:
+        tail = (proc.stderr or proc.stdout or "").strip().splitlines()[-3:]
+        sys.stderr.write(
+            f"[md2confluence] {stage}: pip install exit {proc.returncode}; "
+            "last output:\n  " + "\n  ".join(tail) + "\n"
+        )
+        return False
+    sys.stderr.write(
+        f"[md2confluence] {stage}: pip install succeeded\n"
+    )
+    return True
+
+
+def _enable_system_trust() -> Tuple[bool, str]:
+    """
+    Best-effort attempt to make the script's HTTPS stack honour the system
+    trust store. Returns (active, reason) where `reason` is a human-readable
+    explanation for the chosen state (useful for the --check probe output).
+    """
+    if os.environ.get("CONFLUENCE_USE_SYSTEM_TRUST", "1") == "0":
+        return False, "opt-out (CONFLUENCE_USE_SYSTEM_TRUST=0)"
+
+    def _try_inject() -> Tuple[bool, str]:
+        try:
+            import truststore  # type: ignore
+        except ImportError as exc:
+            return False, f"truststore not importable: {exc}"
+        try:
+            truststore.inject_into_ssl()
+        except Exception as exc:  # noqa: BLE001 — surface any setup failure
+            return False, f"truststore.inject_into_ssl() failed: {exc}"
+        return True, "truststore active (OS keychain)"
+
+    ok, reason = _try_inject()
+    if ok:
+        return True, reason
+
+    # truststore is missing. Try to auto-install it.
+    if _bootstrap_pip_install(["truststore"], stage="TLS"):
+        ok, reason = _try_inject()
+        if ok:
+            return True, reason + " (auto-installed)"
+    return False, reason
+
+
+_SYSTEM_TRUST_ACTIVE, _SYSTEM_TRUST_REASON = _enable_system_trust()
 
 LOG = logging.getLogger("md2confluence")
+
+
+def _retry_system_trust() -> bool:
+    """
+    Re-attempt truststore injection at runtime. Used by ConfluenceClient
+    after the first SSLError, in case truststore was installed by an
+    earlier dependency bootstrap (e.g. mdformat) and the global flag is
+    stale, or the module was imported but inject_into_ssl() failed the
+    first time around.
+    """
+    global _SYSTEM_TRUST_ACTIVE, _SYSTEM_TRUST_REASON
+    if _SYSTEM_TRUST_ACTIVE:
+        return True
+    active, reason = _enable_system_trust()
+    _SYSTEM_TRUST_ACTIVE = active
+    _SYSTEM_TRUST_REASON = reason
+    if active:
+        LOG.info("TLS self-heal: system trust store now active (%s)", reason)
+    else:
+        LOG.warning("TLS self-heal failed: %s", reason)
+    return active
 
 # ---------------------------------------------------------------------------
 # Language map: fenced-block info string -> Confluence code-macro `language`
@@ -1160,6 +1259,28 @@ def validate_publish_payload(
 # ---------------------------------------------------------------------------
 # Confluence REST client
 # ---------------------------------------------------------------------------
+def _short_ssl_error(exc: BaseException) -> str:
+    """
+    Compress a verbose nested SSL exception (which can be 200+ chars of
+    `MaxRetryError`/`ProtocolError`/etc. wrapping) down to the single most
+    informative line for log messages and user-facing diagnostics.
+    """
+    text = str(exc)
+    for marker in ("CERTIFICATE_VERIFY_FAILED", "SSL: ",
+                    "self-signed certificate", "certificate verify failed"):
+        idx = text.find(marker)
+        if idx >= 0:
+            tail = text[idx:idx + 160]
+            # Trim at first closing paren/bracket for readability.
+            for stop in ("')", "\"]", "\")"):
+                cut = tail.find(stop)
+                if cut > 0:
+                    tail = tail[:cut]
+                    break
+            return tail.strip()
+    return text[:200]
+
+
 class ConfluenceClient:
     """Thin wrapper around Confluence REST API v1 (storage format)."""
 
@@ -1176,8 +1297,12 @@ class ConfluenceClient:
             "Accept": "application/json",
             "User-Agent": "md-to-confluence/1.0 (+vscode)",
         })
+        # Note: retries are bounded so a TLS failure surfaces in <5s rather
+        # than getting buried under 30s of opaque urllib3 backoff. SSL
+        # errors are not status-code retryable anyway, and the request
+        # layer below adds its own one-shot self-heal retry on SSLError.
         retry = Retry(
-            total=4, backoff_factor=1.5,
+            total=2, connect=1, read=1, backoff_factor=0.5,
             status_forcelist=(429, 500, 502, 503, 504),
             allowed_methods=("GET", "POST", "PUT"),
         )
@@ -1187,6 +1312,84 @@ class ConfluenceClient:
     # --- low level ---------------------------------------------------------
     def _url(self, path: str) -> str:
         return urljoin(self.base_url + "/", path.lstrip("/"))
+
+    def _request(self, method: str, url: str, **kwargs: Any) -> requests.Response:
+        """
+        Wrapper around session.request() that self-heals corporate-TLS
+        failures: if a CERTIFICATE_VERIFY_FAILED is raised, attempt to
+        install/activate `truststore` and retry exactly once. If the
+        retry still fails, raise a RuntimeError with a clear remediation
+        message instead of letting urllib3 hammer the endpoint.
+
+        This means a user behind Zscaler/Netskope/etc. gets a working
+        publish on the FIRST run — the script bootstraps its own TLS.
+        """
+        kwargs.setdefault("timeout", self.timeout)
+        try:
+            return self.session.request(method, url, **kwargs)
+        except requests.exceptions.SSLError as ssl_exc:
+            LOG.warning(
+                "TLS verification failed (%s); attempting self-heal via "
+                "truststore (current state: %s)",
+                _short_ssl_error(ssl_exc), _SYSTEM_TRUST_REASON,
+            )
+            healed = _retry_system_trust()
+            if not healed:
+                raise RuntimeError(
+                    "Confluence TLS handshake failed AND the script could "
+                    "not self-heal.\n"
+                    f"  Original error : {_short_ssl_error(ssl_exc)}\n"
+                    f"  Trust store    : {_SYSTEM_TRUST_REASON}\n"
+                    "  Likely cause   : your network terminates TLS with a "
+                    "corporate CA (Zscaler, Netskope, etc.) and Python "
+                    "cannot reach PyPI to install `truststore`.\n"
+                    "  Fixes (any one):\n"
+                    "    1. pip install truststore   # then re-run\n"
+                    "    2. Set REQUESTS_CA_BUNDLE=/path/to/corp-ca.pem\n"
+                    "    3. Run from a machine that can reach PyPI\n"
+                    "    4. As a last resort, re-run with --insecure "
+                    "(disables verification — NOT recommended)"
+                ) from ssl_exc
+
+            # truststore is now active. The existing session's underlying
+            # urllib3 PoolManager was built before injection, so its SSL
+            # context still references the certifi store. Build a fresh
+            # session-equivalent so the next request picks up the new
+            # injected ssl.SSLContext.
+            self._rebuild_session()
+            LOG.info("TLS self-heal successful, retrying request once...")
+            try:
+                return self.session.request(method, url, **kwargs)
+            except requests.exceptions.SSLError as ssl_exc2:
+                raise RuntimeError(
+                    "Confluence TLS handshake still fails after activating "
+                    "system trust store. The OS keychain may not contain "
+                    "the intercepting corporate CA either.\n"
+                    f"  Error: {_short_ssl_error(ssl_exc2)}\n"
+                    "  Ask your IT team for the corporate root CA and "
+                    "install it into the OS keychain, then re-run."
+                ) from ssl_exc2
+
+    def _rebuild_session(self) -> None:
+        """
+        Construct a fresh `requests.Session` with the same auth/headers/
+        retry config as the original. Called by `_request` after a
+        successful TLS self-heal so that subsequent calls pick up the
+        newly-injected SSL context. The auth header is preserved verbatim
+        from the existing session, so no creds are re-derived.
+        """
+        old = self.session
+        new = requests.Session()
+        new.verify = old.verify
+        new.headers.update(old.headers)
+        retry = Retry(
+            total=2, connect=1, read=1, backoff_factor=0.5,
+            status_forcelist=(429, 500, 502, 503, 504),
+            allowed_methods=("GET", "POST", "PUT"),
+        )
+        new.mount("https://", HTTPAdapter(max_retries=retry))
+        new.mount("http://", HTTPAdapter(max_retries=retry))
+        self.session = new
 
     def _check(self, r: requests.Response) -> Dict[str, Any]:
         if not r.ok:
@@ -1198,8 +1401,8 @@ class ConfluenceClient:
 
     # --- pages -------------------------------------------------------------
     def find_page(self, space_key: str, title: str) -> Optional[Dict[str, Any]]:
-        r = self.session.get(
-            self._url("rest/api/content"),
+        r = self._request(
+            "GET", self._url("rest/api/content"),
             params={
                 "spaceKey": space_key, "title": title,
                 "expand": "version,space,ancestors",
@@ -1220,8 +1423,8 @@ class ConfluenceClient:
         }
         if parent_id:
             payload["ancestors"] = [{"id": str(parent_id)}]
-        r = self.session.post(
-            self._url("rest/api/content"),
+        r = self._request(
+            "POST", self._url("rest/api/content"),
             headers={"Content-Type": "application/json"},
             data=json.dumps(payload),
             timeout=self.timeout,
@@ -1239,8 +1442,8 @@ class ConfluenceClient:
         }
         if parent_id:
             payload["ancestors"] = [{"id": str(parent_id)}]
-        r = self.session.put(
-            self._url(f"rest/api/content/{page_id}"),
+        r = self._request(
+            "PUT", self._url(f"rest/api/content/{page_id}"),
             headers={"Content-Type": "application/json"},
             data=json.dumps(payload),
             timeout=self.timeout,
@@ -1254,7 +1457,8 @@ class ConfluenceClient:
         start = 0
         limit = 50
         while True:
-            r = self.session.get(
+            r = self._request(
+                "GET",
                 self._url(f"rest/api/content/{page_id}/child/attachment"),
                 params={"start": start, "limit": limit},
                 timeout=self.timeout,
@@ -1283,12 +1487,12 @@ class ConfluenceClient:
                 url = self._url(
                     f"rest/api/content/{page_id}/child/attachment/{existing_id}/data"
                 )
-                r = self.session.post(url, files=files, data=data,
-                                      headers=headers, timeout=self.timeout)
+                r = self._request("POST", url, files=files, data=data,
+                                  headers=headers, timeout=self.timeout)
             else:
                 url = self._url(f"rest/api/content/{page_id}/child/attachment")
-                r = self.session.post(url, files=files, data=data,
-                                      headers=headers, timeout=self.timeout)
+                r = self._request("POST", url, files=files, data=data,
+                                  headers=headers, timeout=self.timeout)
         result = self._check(r)
         # Single-attachment upload returns {"results":[{...}]}
         if "results" in result and result["results"]:
