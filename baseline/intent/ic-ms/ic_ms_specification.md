@@ -1,5 +1,113 @@
 # IC MS Specification:
 
+| **Document status** | **Value** |
+| --- | --- |
+| Status | Accepted baseline specification |
+| Scope | IC MS runtime Intent and IntentReport API specification |
+| Source of truth after commit | GitHub `baseline/intent/ic-ms/ic_ms_specification.md` |
+
+## Table of contents:
+
+- [1. API endpoints:](#1-api-endpoints)
+  - [1.1. Intent resource APIs:](#11-intent-resource-apis)
+  - [1.2. IntentReport APIs:](#12-intentreport-apis)
+  - [1.3. Hub subscription APIs:](#13-hub-subscription-apis)
+  - [1.4. TMF compliance and platform extension baseline:](#14-tmf-compliance-and-platform-extension-baseline)
+- [2. Common conventions:](#2-common-conventions)
+  - [2.1. Expression schema alignment:](#21-expression-schema-alignment)
+  - [2.2. PATCH semantics:](#22-patch-semantics)
+  - [2.3. Runtime IntentSpecification and expression IRI resolution rule:](#23-runtime-intentspecification-and-expression-iri-resolution-rule)
+  - [2.4. Intent-level lifecycleStatus values:](#24-intent-level-lifecyclestatus-values)
+  - [2.5. Intent-version lifecycleStatus values after admission:](#25-intent-version-lifecyclestatus-values-after-admission)
+  - [2.6. LifecycleStatus purpose and projection rule:](#26-lifecyclestatus-purpose-and-projection-rule)
+  - [2.7. Draft, submit, and external update rule:](#27-draft-submit-and-external-update-rule)
+  - [2.8. Intent version transition rules:](#28-intent-version-transition-rules)
+  - [2.9. Termination rule:](#29-termination-rule)
+  - [2.10. Caching and ETag rules:](#210-caching-and-etag-rules)
+  - [2.11. Typed placeholder rule:](#211-typed-placeholder-rule)
+- [3. Common error body:](#3-common-error-body)
+  - [3.1. Common errors:](#31-common-errors)
+  - [3.2. Missing If-Match response:](#32-missing-if-match-response)
+  - [3.3. ETag mismatch response:](#33-etag-mismatch-response)
+- [4. Create Intent:](#4-create-intent)
+  - [4.1. Request:](#41-request)
+  - [4.2. Success response:](#42-success-response)
+  - [4.3. Create as Draft example:](#43-create-as-draft-example)
+  - [4.4. Create validation rule:](#44-create-validation-rule)
+- [5. List Intents:](#5-list-intents)
+  - [5.1. Request:](#51-request)
+  - [5.2. Request with fresh-read override:](#52-request-with-fresh-read-override)
+  - [5.3. Success response:](#53-success-response)
+  - [5.4. Query parameters:](#54-query-parameters)
+- [6. Retrieve Intent:](#6-retrieve-intent)
+  - [6.1. Request:](#61-request)
+  - [6.2. Request with fresh-read override:](#62-request-with-fresh-read-override)
+  - [6.3. Success response:](#63-success-response)
+  - [6.4. Not found response:](#64-not-found-response)
+- [7. Full replace Intent:](#7-full-replace-intent)
+  - [7.1. Request:](#71-request)
+  - [7.2. Success response:](#72-success-response)
+  - [7.3. Rule:](#73-rule)
+- [8. Partial update Intent:](#8-partial-update-intent)
+  - [8.1. Request:](#81-request)
+  - [8.2. Success response:](#82-success-response)
+  - [8.3. Rule:](#83-rule)
+- [9. Terminate Intent:](#9-terminate-intent)
+  - [9.1. Request:](#91-request)
+  - [9.2. Success response:](#92-success-response)
+  - [9.3. Rule:](#93-rule)
+- [10. List IntentReports:](#10-list-intentreports)
+  - [10.1. Request:](#101-request)
+  - [10.2. Request with fresh-read override:](#102-request-with-fresh-read-override)
+  - [10.3. Success response:](#103-success-response)
+- [11. Retrieve IntentReport:](#11-retrieve-intentreport)
+  - [11.1. Request:](#111-request)
+  - [11.2. Request with fresh-read override:](#112-request-with-fresh-read-override)
+  - [11.3. Success response:](#113-success-response)
+  - [11.4. IntentReport delete posture:](#114-intentreport-delete-posture)
+  - [11.5. TMF posture:](#115-tmf-posture)
+  - [11.6. Event posture:](#116-event-posture)
+- [12. Hub create subscription:](#12-hub-create-subscription)
+  - [12.1. Strict TMF route request:](#121-strict-tmf-route-request)
+  - [12.2. Strict TMF route success response:](#122-strict-tmf-route-success-response)
+  - [12.3. Domain-scoped platform extension request:](#123-domain-scoped-platform-extension-request)
+  - [12.4. Domain-scoped platform extension success response:](#124-domain-scoped-platform-extension-success-response)
+  - [12.5. Supported event filters:](#125-supported-event-filters)
+  - [12.6. Hub notification delivery rule:](#126-hub-notification-delivery-rule)
+  - [12.7. Example subscriber listener callback:](#127-example-subscriber-listener-callback)
+  - [12.8. Subscriber listener success response:](#128-subscriber-listener-success-response)
+- [13. Hub retrieve subscription:](#13-hub-retrieve-subscription)
+  - [13.1. Request:](#131-request)
+  - [13.2. Request with fresh-read override:](#132-request-with-fresh-read-override)
+  - [13.3. Success response:](#133-success-response)
+- [14. Hub delete subscription:](#14-hub-delete-subscription)
+  - [14.1. Request:](#141-request)
+  - [14.2. Success response:](#142-success-response)
+- [15. Validation and dependency error examples:](#15-validation-and-dependency-error-examples)
+  - [15.1. Missing expression IRI:](#151-missing-expression-iri)
+  - [15.2. Missing IntentSpecification ID:](#152-missing-intentspecification-id)
+  - [15.3. Referenced specification not active:](#153-referenced-specification-not-active)
+  - [15.4. IntentSpecification lookup unavailable:](#154-intentspecification-lookup-unavailable)
+  - [15.5. ETag mismatch:](#155-etag-mismatch)
+  - [15.6. Submitted Intent update not allowed:](#156-submitted-intent-update-not-allowed)
+  - [15.7. External event timestamp rule:](#157-external-event-timestamp-rule)
+- [16. External Intent event family:](#16-external-intent-event-family)
+- [17. IntentCreateEvent:](#17-intentcreateevent)
+- [18. IntentAttributeValueChangeEvent:](#18-intentattributevaluechangeevent)
+- [19. IntentStatusChangeEvent:](#19-intentstatuschangeevent)
+- [20. IntentDeleteEvent:](#20-intentdeleteevent)
+- [21. External IntentReport event family:](#21-external-intentreport-event-family)
+- [22. IntentReportCreateEvent:](#22-intentreportcreateevent)
+- [23. IntentReportAttributeValueChangeEvent:](#23-intentreportattributevaluechangeevent)
+- [24. IntentReportDeleteEvent:](#24-intentreportdeleteevent)
+- [25. Internal Kafka event publication note:](#25-internal-kafka-event-publication-note)
+- [26. Final specification notes:](#26-final-specification-notes)
+- [27. Shared semantic bucket baseline:](#27-shared-semantic-bucket-baseline)
+  - [27.1. Runtime Intent expression:](#271-runtime-intent-expression)
+  - [27.2. Complete POST /intent request body example:](#272-complete-post-intent-request-body-example)
+  - [27.3. Complete IntentValidatedEvent body example:](#273-complete-intentvalidatedevent-body-example)
+  - [27.4. Baseline rules:](#274-baseline-rules)
+
 **Service identity:**
 
 | **Item** | **Baseline** |
@@ -42,7 +150,7 @@ Network or platform change execution is owned by the downstream change execution
 
 ## 1. API endpoints:
 
-### Intent resource APIs:
+### 1.1. Intent resource APIs:
 
 | **Purpose** | **Method** | **Endpoint** | **Position** |
 |---|---:|---|---|
@@ -53,14 +161,14 @@ Network or platform change execution is owned by the downstream change execution
 | Partial update runtime intent | `PATCH` | `/intentManagement/v5/intent/{id}` | TMF-aligned |
 | Terminate runtime intent | `DELETE` | `/intentManagement/v5/intent/{id}` | TMF-aligned delete verb, platform behaviour is termination not physical deletion |
 
-### IntentReport APIs:
+### 1.2. IntentReport APIs:
 
 | **Purpose** | **Method** | **Endpoint** | **Position** |
 |---|---:|---|---|
 | List reports for intent | `GET` | `/intentManagement/v5/intent/{intentId}/intentReport` | Platform/TMF-aligned nested report projection |
 | Retrieve report by ID | `GET` | `/intentManagement/v5/intent/{intentId}/intentReport/{id}` | Platform/TMF-aligned nested report projection |
 
-### Hub subscription APIs:
+### 1.3. Hub subscription APIs:
 
 Strict TMF route form:
 
@@ -88,11 +196,11 @@ IC MS therefore has two separate event-delivery paths:
 
 ---
 
-### TMF compliance and platform extension baseline:
+### 1.4. TMF compliance and platform extension baseline:
 
 IC MS exposes response classification headers and maintains a documented set of strict TMF-compatible operations and approved platform extensions.
 
-#### Response classification headers:
+#### 1.4.1. Response classification headers:
 
 IC MS returns response classification headers on external REST API responses so callers can distinguish strict TMF-native behaviour from documented platform-extension behaviour.
 
@@ -134,7 +242,7 @@ X-Platform-Extension: true
 
 IC MS keeps the external `Intent` and `IntentReport` contract TMF-aligned while documenting controlled platform extensions explicitly.
 
-#### Strict TMF-compatible operations:
+#### 1.4.2. Strict TMF-compatible operations:
 
 | **Capability** | **Route family** | **Position** |
 |---|---|---|
@@ -144,7 +252,7 @@ IC MS keeps the external `Intent` and `IntentReport` contract TMF-aligned while 
 | IntentReport list/retrieve | `GET /intent/{intentId}/intentReport`, `GET /intent/{intentId}/intentReport/{id}` | TMF-aligned nested report projection |
 | Hub subscription create/delete | `POST /hub`, `DELETE /hub/{id}` | Strict TMF route family |
 
-#### Accepted platform extensions:
+#### 1.4.3. Accepted platform extensions:
 
 | **Extension** | **Reason** |
 |---|---|
@@ -163,7 +271,7 @@ Hub notification delivery is REST webhook delivery to subscriber listener callba
 
 ## 2. Common conventions:
 
-### Expression schema alignment:
+### 2.1. Expression schema alignment:
 
 The long-term canonical expression-value schema pattern for the Intent domain should align with the TMF Intent Ontology direction and use a scalable JSON-LD-style structure.
 
@@ -200,7 +308,7 @@ Simplified object-map payloads may still appear in minimum-data explanation exam
 
 
 
-### PATCH semantics:
+### 2.2. PATCH semantics:
 
 `PATCH` uses JSON Merge Patch semantics.
 
@@ -214,7 +322,7 @@ Content-Type: application/merge-patch+json
 
 
 
-### Runtime IntentSpecification and expression IRI resolution rule:
+### 2.3. Runtime IntentSpecification and expression IRI resolution rule:
 
 Submitted runtime `Intent` admission requests must carry both `intentSpecification.id` and `expression.iri`.
 
@@ -266,7 +374,7 @@ Baseline:
 - `intentSpecification.specKey` and `intentSpecification.name` are optional hints only
 
 
-### Intent-level lifecycleStatus values:
+### 2.4. Intent-level lifecycleStatus values:
 
 ```text
 Draft
@@ -280,7 +388,7 @@ Failed
 Terminated
 ```
 
-### Intent-version lifecycleStatus values after admission:
+### 2.5. Intent-version lifecycleStatus values after admission:
 
 ```text
 Acknowledged
@@ -295,7 +403,7 @@ Terminated
 Retired
 ```
 
-### LifecycleStatus purpose and projection rule:
+### 2.6. LifecycleStatus purpose and projection rule:
 
 `Intent.lifecycleStatus` is the externally visible lifecycle projection for the `Intent` resource. It keeps TMF-facing clients simple by exposing the current public state of the Intent rather than every historical or candidate version state.
 
@@ -307,7 +415,7 @@ Each internal Intent version also has its own version-level `lifecycleStatus`. V
 
 Historical version state such as `Standby`, `Retired`, rollback candidates, and previous versions remains internal unless exposed through `IntentReport` or a documented platform extension.
 
-### Draft, submit, and external update rule:
+### 2.7. Draft, submit, and external update rule:
 
 External consumers must not set or patch `lifecycleStatus`. `lifecycleStatus` is assigned, transitioned, and projected by the intent management entity. IA MS determines assurance/runtime meaning and IC MS exposes the projected TMF-facing lifecycle state.
 
@@ -327,7 +435,7 @@ Once an Intent leaves `Draft`, general attribute update on that submitted versio
 
 Draft Intents are authoring records only. They are not admitted, optimised, assured, sent to downstream change execution, or used to drive `activeVersion`.
 
-### Intent version transition rules:
+### 2.8. Intent version transition rules:
 
 IC MS must not create another newer version while there is already a newer candidate version in `Acknowledged` or `InProgress`. These states represent an admitted version change that has not yet resolved.
 
@@ -345,20 +453,20 @@ When a newer version becomes the `activeVersion`, previous versions transition a
 
 `Retired` is an administrative/version-governance archival state. It is reachable only from `Terminated`; it is not a runtime/network operational state and is not exposed as an ordinary external API action.
 
-### Termination rule:
+### 2.9. Termination rule:
 
 `DELETE /intent/{id}` is treated as termination, not physical deletion.
 
 Runtime `Intent` records are retained for audit, reporting, lifecycle history, and traceability.
 
-### Caching and ETag rules:
+### 2.10. Caching and ETag rules:
 
 - Caching applies only to GET responses.
 - Clients may request a fresh GET response with `Cache-Control: no-cache`.
 - ETag is used for unsafe-operation concurrency through `If-Match`.
 - No caching strategy is baselined for non-GET operations.
 
-### Typed placeholder rule:
+### 2.11. Typed placeholder rule:
 
 When examples abbreviate large repeated sections, keep the field’s real JSON type.
 
@@ -410,7 +518,7 @@ Do not use string placeholders for array/object fields.
 }
 ```
 
-### Common errors:
+### 3.1. Common errors:
 
 | **HTTP** | **Code** | **Scenario** |
 |---:|---|---|
@@ -425,7 +533,7 @@ Do not use string placeholders for array/object fields.
 | `503` | `SERVICE_UNAVAILABLE` | IC MS DB unavailable or active spec cannot be confirmed |
 | `500` | `INTERNAL_ERROR` | Unexpected server error |
 
-### Missing If-Match response:
+### 3.2. Missing If-Match response:
 
 ```http
 HTTP/1.1 428 Precondition Required
@@ -447,7 +555,7 @@ Cache-Control: no-store
 }
 ```
 
-### ETag mismatch response:
+### 3.3. ETag mismatch response:
 
 ```http
 HTTP/1.1 412 Precondition Failed
@@ -473,7 +581,7 @@ Cache-Control: no-store
 
 ## 4. Create Intent:
 
-### Request:
+### 4.1. Request:
 
 ```http
 POST /intentManagement/v5/intent?fields=id,href,name,version,lifecycleStatus,statusReason,statusChangeDate,intentSpecification,expression,validFor,isBundle,priority,relatedParty,@type,@baseType
@@ -544,7 +652,7 @@ Accept: application/json
 }
 ```
 
-### Success response:
+### 4.2. Success response:
 
 ```http
 HTTP/1.1 201 Created
@@ -640,7 +748,7 @@ Last-Modified: Sat, 18 Apr 2026 02:00:00 GMT
 }
 ```
 
-### Create as Draft example:
+### 4.3. Create as Draft example:
 
 A caller can create an Intent as a draft by setting `submit: false`. A Draft Intent is persisted for authoring only and is not admitted, optimised, assured, or sent to downstream change execution.
 
@@ -686,7 +794,7 @@ ETag: "intent-INT-HOSP-2026-001-v1"
 }
 ```
 
-### Create validation rule:
+### 4.4. Create validation rule:
 
 If `submit` is omitted on create, IC MS treats the request as submitted for admission.
 
@@ -702,14 +810,14 @@ If `isBundle` is omitted on create, IC MS defaults it to `false`. If supplied, i
 
 ## 5. List Intents:
 
-### Request:
+### 5.1. Request:
 
 ```http
 GET /intentManagement/v5/intent?offset=0&limit=10&lifecycleStatus=Active&fields=id,href,name,version,lifecycleStatus,statusReason,statusChangeDate,intentSpecification,@type,@baseType
 Accept: application/json
 ```
 
-### Request with fresh-read override:
+### 5.2. Request with fresh-read override:
 
 ```http
 GET /intentManagement/v5/intent?offset=0&limit=10&lifecycleStatus=Active&fields=id,href,name,version,lifecycleStatus,statusReason,statusChangeDate,intentSpecification,@type,@baseType
@@ -717,7 +825,7 @@ Accept: application/json
 Cache-Control: no-cache
 ```
 
-### Success response:
+### 5.3. Success response:
 
 ```http
 HTTP/1.1 200 OK
@@ -751,7 +859,7 @@ Cache-Control: private, max-age=60
 ]
 ```
 
-### Query parameters:
+### 5.4. Query parameters:
 
 | **Parameter** | **Meaning** |
 |---|---|
@@ -766,14 +874,14 @@ Cache-Control: private, max-age=60
 
 ## 6. Retrieve Intent:
 
-### Request:
+### 6.1. Request:
 
 ```http
 GET /intentManagement/v5/intent/INT-HOSP-2026-001?fields=id,href,name,description,humanExpression,version,lifecycleStatus,statusReason,statusChangeDate,intentSpecification,expression,validFor,isBundle,priority,relatedParty,@type,@baseType
 Accept: application/json
 ```
 
-### Request with fresh-read override:
+### 6.2. Request with fresh-read override:
 
 ```http
 GET /intentManagement/v5/intent/INT-HOSP-2026-001?fields=id,href,name,description,humanExpression,version,lifecycleStatus,statusReason,statusChangeDate,intentSpecification,expression,validFor,isBundle,priority,relatedParty,@type,@baseType
@@ -781,7 +889,7 @@ Accept: application/json
 Cache-Control: no-cache
 ```
 
-### Success response:
+### 6.3. Success response:
 
 ```http
 HTTP/1.1 200 OK
@@ -873,7 +981,7 @@ Cache-Control: private, max-age=300
 }
 ```
 
-### Not found response:
+### 6.4. Not found response:
 
 ```http
 HTTP/1.1 404 Not Found
@@ -899,7 +1007,7 @@ Cache-Control: no-store
 
 ## 7. Full replace Intent:
 
-### Request:
+### 7.1. Request:
 
 ```http
 PUT /intentManagement/v5/intent/INT-HOSP-2026-001?fields=id,href,name,description,humanExpression,submit,intentSpecification,expression,validFor,isBundle,priority,relatedParty,@type,@baseType
@@ -969,7 +1077,7 @@ If-Match: "intent-INT-HOSP-2026-001-v3"
 }
 ```
 
-### Success response:
+### 7.2. Success response:
 
 ```http
 HTTP/1.1 200 OK
@@ -1051,7 +1159,7 @@ ETag: "intent-INT-HOSP-2026-001-v4"
 }
 ```
 
-### Rule:
+### 7.3. Rule:
 
 `PUT` is a platform extension for deterministic full replacement.
 
@@ -1071,7 +1179,7 @@ Once an Intent leaves `Draft`, full replacement on that submitted version is not
 
 ## 8. Partial update Intent:
 
-### Request:
+### 8.1. Request:
 
 ```http
 PATCH /intentManagement/v5/intent/INT-HOSP-2026-001?fields=id,href,name,submit,intentSpecification,expression,validFor,isBundle,priority,@type,@baseType
@@ -1119,7 +1227,7 @@ If-Match: "intent-INT-HOSP-2026-001-v4"
 }
 ```
 
-### Success response:
+### 8.2. Success response:
 
 ```http
 HTTP/1.1 200 OK
@@ -1201,7 +1309,7 @@ ETag: "intent-INT-HOSP-2026-001-v5"
 }
 ```
 
-### Rule:
+### 8.3. Rule:
 
 `PATCH` is supported for TMF compatibility but is not encouraged for ordinary edits where deterministic full replacement through `PUT` is available.
 
@@ -1219,7 +1327,7 @@ Once an Intent leaves `Draft`, partial update on that submitted version is not a
 
 ## 9. Terminate Intent:
 
-### Request:
+### 9.1. Request:
 
 ```http
 DELETE /intentManagement/v5/intent/INT-HOSP-2026-001
@@ -1227,7 +1335,7 @@ Accept: application/json
 If-Match: "intent-INT-HOSP-2026-001-v5"
 ```
 
-### Success response:
+### 9.2. Success response:
 
 ```http
 HTTP/1.1 202 Accepted
@@ -1251,7 +1359,7 @@ ETag: "intent-INT-HOSP-2026-001-v6"
 }
 ```
 
-### Rule:
+### 9.3. Rule:
 
 `DELETE /intent/{id}` is treated as termination, not physical deletion.
 
@@ -1263,14 +1371,14 @@ The retained Intent record remains available for audit, reporting, lifecycle his
 
 ## 10. List IntentReports:
 
-### Request:
+### 10.1. Request:
 
 ```http
 GET /intentManagement/v5/intent/INT-HOSP-2026-001/intentReport?fields=id,href,creationDate,name,intent,expression,@type,@baseType
 Accept: application/json
 ```
 
-### Request with fresh-read override:
+### 10.2. Request with fresh-read override:
 
 ```http
 GET /intentManagement/v5/intent/INT-HOSP-2026-001/intentReport?fields=id,href,creationDate,name,intent,expression,@type,@baseType
@@ -1278,7 +1386,7 @@ Accept: application/json
 Cache-Control: no-cache
 ```
 
-### Success response:
+### 10.3. Success response:
 
 ```http
 HTTP/1.1 200 OK
@@ -1345,14 +1453,14 @@ Cache-Control: private, max-age=60
 
 ## 11. Retrieve IntentReport:
 
-### Request:
+### 11.1. Request:
 
 ```http
 GET /intentManagement/v5/intent/INT-HOSP-2026-001/intentReport/IR-INT-HOSP-2026-001-003?fields=id,href,creationDate,name,intent,expression,@type,@baseType
 Accept: application/json
 ```
 
-### Request with fresh-read override:
+### 11.2. Request with fresh-read override:
 
 ```http
 GET /intentManagement/v5/intent/INT-HOSP-2026-001/intentReport/IR-INT-HOSP-2026-001-003?fields=id,href,creationDate,name,intent,expression,@type,@baseType
@@ -1360,7 +1468,7 @@ Accept: application/json
 Cache-Control: no-cache
 ```
 
-### Success response:
+### 11.3. Success response:
 
 ```http
 HTTP/1.1 200 OK
@@ -1444,7 +1552,7 @@ Cache-Control: private, max-age=300
 
 ---
 
-### IntentReport delete posture:
+### 11.4. IntentReport delete posture:
 
 IC MS does not expose ordinary external `DELETE /intentManagement/v5/intent/{intentId}/intentReport/{id}` through NGW or public TMF-compliant consumer APIs by default.
 
@@ -1452,7 +1560,7 @@ External consumers can list and retrieve `IntentReport` records only. `IntentRep
 
 IC MS may provide an internal-only governed delete/purge capability for `IntentReport` records. This internal capability is not routed through NGW, not advertised as a public consumer API, and not available to normal external consumers. It is restricted to retention purge, legal deletion, platform administration, approved data-correction workflows, or policy-governed cleanup.
 
-### TMF posture:
+### 11.5. TMF posture:
 
 TMF921 includes an `IntentReport` delete operation and `IntentReportDeleteEvent` in the API/event model. IC MS intentionally does not expose the delete operation to ordinary external consumers because deleting reports as a normal consumer action would remove audit/projection history and would require introducing a separate report lifecycle such as `Archived` or `Deleted`.
 
@@ -1460,7 +1568,7 @@ No separate `IntentReport` lifecycle is baselined for ordinary consumer use. Del
 
 If an implementation must expose the TMF report delete route for compatibility, it must be restricted/admin-only or return a policy error such as `403 Forbidden` or `405 Method Not Allowed` for ordinary consumers, depending on gateway/API policy.
 
-### Event posture:
+### 11.6. Event posture:
 
 `IntentReportDeleteEvent` remains part of the external TMF-aligned event vocabulary for `IntentReport` alignment.
 
@@ -1475,7 +1583,7 @@ IC MS emits `IntentReportDeleteEvent` only after successful governed internal/ad
 
 ## 12. Hub create subscription:
 
-### Strict TMF route request:
+### 12.1. Strict TMF route request:
 
 ```http
 POST /intentManagement/v5/hub
@@ -1491,7 +1599,7 @@ Accept: application/json
 }
 ```
 
-### Strict TMF route success response:
+### 12.2. Strict TMF route success response:
 
 ```http
 HTTP/1.1 201 Created
@@ -1517,7 +1625,7 @@ ETag: "subscription-sub-intent-001-v1"
 }
 ```
 
-### Domain-scoped platform extension request:
+### 12.3. Domain-scoped platform extension request:
 
 ```http
 POST /intentManagement/v5/intent/hub
@@ -1533,7 +1641,7 @@ Accept: application/json
 }
 ```
 
-### Domain-scoped platform extension success response:
+### 12.4. Domain-scoped platform extension success response:
 
 ```http
 HTTP/1.1 201 Created
@@ -1559,7 +1667,7 @@ ETag: "subscription-sub-intent-001-v1"
 }
 ```
 
-### Supported event filters:
+### 12.5. Supported event filters:
 
 ```text
 IntentCreateEvent
@@ -1573,13 +1681,13 @@ IntentReportDeleteEvent
 
 `IntentReportDeleteEvent` is included in the subscription vocabulary for TMF alignment, but is emitted only for governed internal/admin retention or deletion scenarios, not ordinary external consumer delete.
 
-### Hub notification delivery rule:
+### 12.6. Hub notification delivery rule:
 
 Subscribed notifications are delivered as REST webhook callbacks. IC MS sends an HTTP `POST` to the subscriber callback URL using the corresponding external TMF-aligned event payload as the request body. Kafka and CloudEvents headers are not used for this external hub delivery path. Webhook requests use HTTP headers such as `Content-Type`, `X-Correlation-Id`, and subscriber-specific authentication headers where configured.
 
 IC MS records pending webhook deliveries in an IC MS-owned local delivery outbox and retries delivery according to platform retry policy. A subscriber listener should return `204 No Content` when the notification is accepted.
 
-### Example subscriber listener callback:
+### 12.7. Example subscriber listener callback:
 
 ```http
 POST https://consumer.example.com/listener/intent/events HTTP/1.1
@@ -1620,7 +1728,7 @@ X-Correlation-Id: corr-intent-status-001
 }
 ```
 
-### Subscriber listener success response:
+### 12.8. Subscriber listener success response:
 
 ```http
 HTTP/1.1 204 No Content
@@ -1630,14 +1738,14 @@ HTTP/1.1 204 No Content
 
 ## 13. Hub retrieve subscription:
 
-### Request:
+### 13.1. Request:
 
 ```http
 GET /intentManagement/v5/intent/hub/sub-intent-001
 Accept: application/json
 ```
 
-### Request with fresh-read override:
+### 13.2. Request with fresh-read override:
 
 ```http
 GET /intentManagement/v5/intent/hub/sub-intent-001
@@ -1645,7 +1753,7 @@ Accept: application/json
 Cache-Control: no-cache
 ```
 
-### Success response:
+### 13.3. Success response:
 
 ```http
 HTTP/1.1 200 OK
@@ -1675,14 +1783,14 @@ Cache-Control: private, max-age=300
 
 ## 14. Hub delete subscription:
 
-### Request:
+### 14.1. Request:
 
 ```http
 DELETE /intentManagement/v5/intent/hub/sub-intent-001
 If-Match: "subscription-sub-intent-001-v1"
 ```
 
-### Success response:
+### 14.2. Success response:
 
 ```http
 HTTP/1.1 204 No Content
@@ -1695,7 +1803,7 @@ X-Platform-Extension: true
 
 ## 15. Validation and dependency error examples:
 
-### Missing expression IRI:
+### 15.1. Missing expression IRI:
 
 ```http
 HTTP/1.1 422 Unprocessable Entity
@@ -1717,7 +1825,7 @@ Cache-Control: no-store
 }
 ```
 
-### Missing IntentSpecification ID:
+### 15.2. Missing IntentSpecification ID:
 
 ```http
 HTTP/1.1 422 Unprocessable Entity
@@ -1739,7 +1847,7 @@ Cache-Control: no-store
 }
 ```
 
-### Referenced specification not active:
+### 15.3. Referenced specification not active:
 
 ```http
 HTTP/1.1 422 Unprocessable Entity
@@ -1761,7 +1869,7 @@ Cache-Control: no-store
 }
 ```
 
-### IntentSpecification lookup unavailable:
+### 15.4. IntentSpecification lookup unavailable:
 
 ```http
 HTTP/1.1 503 Service Unavailable
@@ -1784,7 +1892,7 @@ Retry-After: 30
 }
 ```
 
-### ETag mismatch:
+### 15.5. ETag mismatch:
 
 ```http
 HTTP/1.1 412 Precondition Failed
@@ -1808,7 +1916,7 @@ Cache-Control: no-store
 
 ---
 
-### Submitted Intent update not allowed:
+### 15.6. Submitted Intent update not allowed:
 
 ```http
 HTTP/1.1 409 Conflict
@@ -1830,7 +1938,7 @@ Cache-Control: no-store
 }
 ```
 
-### External event timestamp rule:
+### 15.7. External event timestamp rule:
 
 External TMF-aligned event examples populate both `eventTime` and `timeOccurred` with the same canonical event occurrence timestamp. `timeOccurred` is the platform-corrected spelling used consistently across ID MS and IC MS external event examples. TMF921 examples contain the misspelled `timeOcurred`; this baseline intentionally uses the corrected spelling while preserving the same timestamp semantics.
 
@@ -2220,9 +2328,9 @@ Baseline:
 - External event examples include both `eventTime` and `timeOccurred` with the same canonical event occurrence timestamp.
 - IC MS does not expose ordinary external `DELETE /intent/{intentId}/intentReport/{id}` by default; IntentReport is read-only audit/projection history and is retained unless governed internal retention policy archives or purges it.
 
-## Shared semantic bucket baseline:
+## 27. Shared semantic bucket baseline:
 
-### Runtime Intent expression:
+### 27.1. Runtime Intent expression:
 
 IC MS accepts and projects runtime Intent resources using the external runtime expression shape baselined by ID MS:
 
@@ -2245,7 +2353,7 @@ IC MS accepts and projects runtime Intent resources using the external runtime e
 
 `location`, `serviceType`, and `serviceClass` are not peer fields beside `targets`, `constraints`, and `preferences`. They are modelled under `expression.expressionValue.context.constraints` because they restrict what and where the intent must fulfil.
 
-### Complete POST /intent request body example:
+### 27.2. Complete POST /intent request body example:
 
 ```json
 {
@@ -2297,7 +2405,7 @@ IC MS accepts and projects runtime Intent resources using the external runtime e
 }
 ```
 
-### Complete IntentValidatedEvent body example:
+### 27.3. Complete IntentValidatedEvent body example:
 
 ```json
 {
@@ -2354,7 +2462,7 @@ IC MS accepts and projects runtime Intent resources using the external runtime e
 }
 ```
 
-### Baseline rules:
+### 27.4. Baseline rules:
 
 - External runtime `Intent.expression.expressionValue` uses the `context` wrapper.
 - `context` contains only `targets`, `constraints`, and `preferences`.

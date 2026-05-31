@@ -10,32 +10,32 @@
 
 ## Table of contents:
 
-- [1. Decision summary](#1-decision-summary)
-- [2. Decision flow diagram](#2-decision-flow-diagram)
-- [3. Context](#3-context)
-- [4. Decision drivers](#4-decision-drivers)
-- [5. Decision](#5-decision)
-  - [5.1 TMF-aligned, not TMF-minimal](#51-tmf-aligned-not-tmf-minimal)
-  - [5.2 Runtime Intent admission profile](#52-runtime-intent-admission-profile)
-  - [5.3 Minimum attributes for Intent Draft creation](#53-minimum-attributes-for-intent-draft-creation)
-  - [5.4 Minimum response attributes for Intent Draft creation](#54-minimum-response-attributes-for-intent-draft-creation)
-  - [5.5 IntentSpecification resolution rule](#55-intentspecification-resolution-rule)
-  - [5.6 Persisted response profile after admission](#56-persisted-response-profile-after-admission)
-  - [5.7 Optional intent-management-entity governed enrichment fields](#57-optional-intent-management-entity-governed-enrichment-fields)
-  - [5.8 Lifecycle ownership guardrail](#58-lifecycle-ownership-guardrail)
-- [6. Examples](#6-examples)
-  - [6.1 Minimal admission request](#61-minimal-admission-request)
-  - [6.2 Minimal persisted response after admission](#62-minimal-persisted-response-after-admission)
-- [7. Consequences](#7-consequences)
-  - [7.1 Positive consequences](#71-positive-consequences)
-  - [7.2 Trade-offs](#72-trade-offs)
-- [8. Alternatives considered](#8-alternatives-considered)
-  - [8.1 Allow admission by expression.iri alone](#81-allow-admission-by-expressioniri-alone)
-  - [8.2 Make humanExpression mandatory](#82-make-humanexpression-mandatory)
-  - [8.3 Allow admission request without expression.iri](#83-allow-admission-request-without-expressioniri)
-- [9. Decision outcome](#9-decision-outcome)
-- [10. References](#10-references)
-- [11. Follow-up work](#11-follow-up-work)
+- [1. Decision summary:](#1-decision-summary)
+- [2. Decision flow diagram:](#2-decision-flow-diagram)
+- [3. Context:](#3-context)
+- [4. Decision drivers:](#4-decision-drivers)
+- [5. Decision:](#5-decision)
+  - [5.1. TMF-aligned, not TMF-minimal:](#51-tmf-aligned-not-tmf-minimal)
+  - [5.2. Runtime Intent admission profile:](#52-runtime-intent-admission-profile)
+  - [5.3. Minimum attributes for Intent Draft creation:](#53-minimum-attributes-for-intent-draft-creation)
+  - [5.4. Minimum response attributes for Intent Draft creation:](#54-minimum-response-attributes-for-intent-draft-creation)
+  - [5.5. IntentSpecification resolution rule:](#55-intentspecification-resolution-rule)
+  - [5.6. Persisted response profile after admission:](#56-persisted-response-profile-after-admission)
+  - [5.7. Optional intent-management-entity governed enrichment fields:](#57-optional-intent-management-entity-governed-enrichment-fields)
+  - [5.8. Lifecycle ownership guardrail:](#58-lifecycle-ownership-guardrail)
+- [6. Examples:](#6-examples)
+  - [6.1. Minimal admission request:](#61-minimal-admission-request)
+  - [6.2. Minimal persisted response after admission:](#62-minimal-persisted-response-after-admission)
+- [7. Consequences:](#7-consequences)
+  - [7.1. Positive consequences:](#71-positive-consequences)
+  - [7.2. Trade-offs:](#72-trade-offs)
+- [8. Alternatives considered:](#8-alternatives-considered)
+  - [8.1. Allow admission by `expression.iri` alone:](#81-allow-admission-by-expressioniri-alone)
+  - [8.2. Make `humanExpression` mandatory:](#82-make-humanexpression-mandatory)
+  - [8.3. Allow admission request without `expression.iri`:](#83-allow-admission-request-without-expressioniri)
+- [9. Decision outcome:](#9-decision-outcome)
+- [10. References:](#10-references)
+- [11. Follow-up work:](#11-follow-up-work)
 
 ## 1. Decision summary:
 
@@ -93,7 +93,7 @@ The intent management entity must be able to answer questions such as:
 
 ## 5. Decision:
 
-### 5.1 TMF-aligned, not TMF-minimal:
+### 5.1. TMF-aligned, not TMF-minimal:
 
 The intent management entity remains TMF-aligned by using the TMF921 runtime `Intent` resource model and operation pattern.
 
@@ -103,7 +103,7 @@ The rule is:
 
 > TMF-aligned does not mean TMF-minimal.
 
-### 5.2 Runtime Intent admission profile:
+### 5.2. Runtime Intent admission profile:
 
 The runtime admission profile is the main profile in this paper.
 
@@ -130,7 +130,7 @@ The admission request is **strongly** encouraged to include:
 
 `intentSpecification.id` is mandatory for admission because it selects the exact platform-managed `IntentSpecification` resource used for validation, governance, and audit. `expression.iri` is also mandatory because it identifies the semantic/expression contract the runtime expression claims to follow. Both fields are required because they serve different purposes.
 
-### 5.3 Minimum attributes for Intent Draft creation:
+### 5.3. Minimum attributes for Intent Draft creation:
 
 Draft is a pre-admission authoring convenience.
 
@@ -185,7 +185,7 @@ Recommended Draft creation request payload with `humanExpression`:
 
 When a Draft is later moved into admission using `submit: true`, it must satisfy the normal runtime Intent admission profile defined in section 5.2.
 
-### 5.4 Minimum response attributes for Intent Draft creation:
+### 5.4. Minimum response attributes for Intent Draft creation:
 
 A persisted Draft response should include enough information to identify, retrieve, edit, and understand the Draft state.
 
@@ -241,7 +241,7 @@ Recommended Draft creation response payload with `humanExpression` when supplied
 }
 ```
 
-### 5.5 IntentSpecification resolution rule:
+### 5.5. IntentSpecification resolution rule:
 
 `expression.iri` is mandatory for admission.
 
@@ -257,7 +257,7 @@ If `intentSpecification.id` is omitted, the admission request must be rejected. 
 
 After successful admission, `intentSpecification.id` remains mandatory on the persisted `Intent` representation because the intent management entity must record which active specification governed validation and admission.
 
-### 5.6 Persisted response profile after admission:
+### 5.6. Persisted response profile after admission:
 
 A persisted `Intent` response after admission is accepted must include:
 
@@ -281,7 +281,7 @@ The important distinction is:
 
 > `intentSpecification.id` is mandatory in the admission request and remains mandatory in the persisted response after admission is accepted.
 
-### 5.7 Optional intent-management-entity governed enrichment fields:
+### 5.7. Optional intent-management-entity governed enrichment fields:
 
 Optional enrichment fields are useful, but they are not part of the generic minimum mandatory profile.
 
@@ -300,7 +300,7 @@ Optional enrichment fields may be required by a specific implementation, product
 
 However, they are not part of the generic minimum mandatory profile defined by this decision.
 
-### 5.8 Lifecycle ownership guardrail:
+### 5.8. Lifecycle ownership guardrail:
 
 External consumers must not supply `lifecycleStatus` in any external write request.
 
@@ -310,7 +310,7 @@ External consumers must not supply `lifecycleStatus` in any external write reque
 
 The examples use a hospital surgical-connectivity scenario only to make the profile concrete. Draft request/response payloads are shown in sections 5.3 and 5.4. This section focuses on admission and the persisted response after admission.
 
-### 6.1 Minimal admission request:
+### 6.1. Minimal admission request:
 
 This example supplies both `intentSpecification.id` and `expression.iri`, because both are mandatory for admission and serve different purposes.
 
@@ -349,7 +349,7 @@ This example supplies both `intentSpecification.id` and `expression.iri`, becaus
 }
 ```
 
-### 6.2 Minimal persisted response after admission:
+### 6.2. Minimal persisted response after admission:
 
 ```json
 {
@@ -394,7 +394,7 @@ This example supplies both `intentSpecification.id` and `expression.iri`, becaus
 
 ## 7. Consequences:
 
-### 7.1 Positive consequences:
+### 7.1. Positive consequences:
 
 As accepted, this decision gives the intent management entity:
 
@@ -404,7 +404,7 @@ As accepted, this decision gives the intent management entity:
 - stronger traceability after admission
 - clearer separation between minimum mandatory fields and optional enrichment
 
-### 7.2 Trade-offs:
+### 7.2. Trade-offs:
 
 As accepted, this decision also means:
 
@@ -417,19 +417,19 @@ These trade-offs are acceptable because admission requests should remain interop
 
 ## 8. Alternatives considered:
 
-### 8.1 Allow admission by `expression.iri` alone:
+### 8.1. Allow admission by `expression.iri` alone:
 
 This was rejected.
 
 Although `expression.iri` identifies the semantic/expression contract, the same IRI may be referenced by more than one `ACTIVE` `IntentSpecification`. Admission by IRI alone can therefore be ambiguous. The safer rule is to require `intentSpecification.id` for admission and use `expression.iri` as the semantic contract consistency check.
 
-### 8.2 Make `humanExpression` mandatory:
+### 8.2. Make `humanExpression` mandatory:
 
 This was rejected.
 
 `humanExpression` is valuable for traceability and human interpretation, but it is not machine-authoritative. Making it mandatory would make the API harder to use without improving machine validation.
 
-### 8.3 Allow admission request without `expression.iri`:
+### 8.3. Allow admission request without `expression.iri`:
 
 This was rejected.
 

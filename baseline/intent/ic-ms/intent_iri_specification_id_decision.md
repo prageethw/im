@@ -10,26 +10,26 @@
 
 ## Table of contents:
 
-- [1. Decision summary](#1-decision-summary)
-- [2. Decision flow diagram](#2-decision-flow-diagram)
-- [3. Context](#3-context)
-- [4. Decision drivers](#4-decision-drivers)
-- [5. Options considered](#5-options-considered)
-  - [5.1 Rejected option: expression.iri-only admission](#51-rejected-option-expressioniri-only-admission)
-  - [5.2 Use intentSpecification.id only](#52-use-intentspecificationid-only)
-  - [5.3 Require both intentSpecification.id and expression.iri](#53-require-both-intentspecificationid-and-expressioniri)
-- [6. Decision](#6-decision)
-- [7. Validation rule](#7-validation-rule)
-- [8. Examples](#8-examples)
-  - [8.1 Valid admission request](#81-valid-admission-request)
-  - [8.2 Rejected request when intentSpecification.id is missing](#82-rejected-request-when-intentspecificationid-is-missing)
-  - [8.3 Rejected request when IRI does not match the specification](#83-rejected-request-when-iri-does-not-match-the-specification)
-- [9. Consequences](#9-consequences)
-  - [9.1 Positive consequences](#91-positive-consequences)
-  - [9.2 Trade-offs](#92-trade-offs)
-- [10. Decision outcome](#10-decision-outcome)
-- [11. References](#11-references)
-- [12. Follow-up work](#12-follow-up-work)
+- [1. Decision summary:](#1-decision-summary)
+- [2. Decision flow diagram:](#2-decision-flow-diagram)
+- [3. Context:](#3-context)
+- [4. Decision drivers:](#4-decision-drivers)
+- [5. Options considered:](#5-options-considered)
+  - [5.1. Rejected option: expression.iri-only admission:](#51-rejected-option-expressioniri-only-admission)
+  - [5.2. Use intentSpecification.id only:](#52-use-intentspecificationid-only)
+  - [5.3. Require both intentSpecification.id and expression.iri:](#53-require-both-intentspecificationid-and-expressioniri)
+- [6. Decision:](#6-decision)
+- [7. Validation rule:](#7-validation-rule)
+- [8. Examples:](#8-examples)
+  - [8.1. Valid admission request:](#81-valid-admission-request)
+  - [8.2. Rejected request when intentSpecification.id is missing:](#82-rejected-request-when-intentspecificationid-is-missing)
+  - [8.3. Rejected request when IRI does not match the specification:](#83-rejected-request-when-iri-does-not-match-the-specification)
+- [9. Consequences:](#9-consequences)
+  - [9.1. Positive consequences:](#91-positive-consequences)
+  - [9.2. Trade-offs:](#92-trade-offs)
+- [10. Decision outcome:](#10-decision-outcome)
+- [11. References:](#11-references)
+- [12. Follow-up work:](#12-follow-up-work)
 
 ## 1. Decision summary:
 
@@ -87,7 +87,7 @@ Therefore, allowing runtime admission by IRI alone can be ambiguous.
 
 ## 5. Options considered:
 
-### 5.1 Rejected option: expression.iri-only admission:
+### 5.1. Rejected option: expression.iri-only admission:
 
 This option makes `expression.iri` the only mandatory contract reference in runtime admission.
 
@@ -103,7 +103,7 @@ Problems:
 - audit trails become harder to explain
 - adding a second active specification with the same IRI can change runtime admission behaviour
 
-### 5.2 Use intentSpecification.id only:
+### 5.2. Use intentSpecification.id only:
 
 This option makes `intentSpecification.id` mandatory but does not require `expression.iri`.
 
@@ -118,7 +118,7 @@ Problems:
 - IC MS cannot check that the runtime expression IRI and selected specification IRI are consistent
 - the expression body becomes less portable and less self-describing
 
-### 5.3 Require both intentSpecification.id and expression.iri:
+### 5.3. Require both intentSpecification.id and expression.iri:
 
 This option makes both fields mandatory for runtime admission.
 
@@ -171,7 +171,7 @@ This means the intent management entity does not infer the governing runtime con
 
 ## 8. Examples:
 
-### 8.1 Valid admission request:
+### 8.1. Valid admission request:
 
 ```json
 {
@@ -213,7 +213,7 @@ This request is valid only if `ispec-hss-001` resolves to an active `IntentSpeci
 https://example.com/tio/hospital-surgical-slice/v1.0
 ```
 
-### 8.2 Rejected request when intentSpecification.id is missing:
+### 8.2. Rejected request when intentSpecification.id is missing:
 
 ```json
 {
@@ -238,7 +238,7 @@ Suggested error reason:
 MISSING_INTENT_SPECIFICATION_ID
 ```
 
-### 8.3 Rejected request when IRI does not match the specification:
+### 8.3. Rejected request when IRI does not match the specification:
 
 ```json
 {
@@ -269,7 +269,7 @@ INTENT_EXPRESSION_IRI_MISMATCH
 
 ## 9. Consequences:
 
-### 9.1 Positive consequences:
+### 9.1. Positive consequences:
 
 - Admission is deterministic.
 - IC MS does not need ambiguous active-specification resolution by IRI alone.
@@ -278,7 +278,7 @@ INTENT_EXPRESSION_IRI_MISMATCH
 - Operators can see both the governing specification and semantic contract.
 - Future introduction of multiple active specifications with the same IRI does not change admission behaviour.
 
-### 9.2 Trade-offs:
+### 9.2. Trade-offs:
 
 - Requesters must know the active `IntentSpecification.id` before admission.
 - OEX or catalogue discovery becomes more important.
