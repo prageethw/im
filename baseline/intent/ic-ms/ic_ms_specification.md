@@ -2299,14 +2299,15 @@ IC MS accepts and projects runtime Intent resources using the external runtime e
 {
   "body": {
     "intentId": "INT-HOSP-2026-001",
-    "version": "v1",
+    "intentVersion": "v1",
     "lifecycleStatus": "Acknowledged",
     "statusReason": "Intent request passed IC MS admission validation and was admitted for downstream processing.",
     "intentSpecification": {
       "id": "ispec-hss-001",
-    "specKey": "hospital-surgical-slice-spec"
+      "specKey": "hospital-surgical-slice-spec"
     },
     "expression": {
+      "iri": "https://mycsp.com.au/tio/hospital-surgical-slice/v1.0",
       "context": {
         "targets": {
           "maxLatencyMs": 10,
@@ -2341,7 +2342,7 @@ IC MS accepts and projects runtime Intent resources using the external runtime e
       },
       "intentSpecification": {
         "id": "ispec-hss-001",
-    "specKey": "hospital-surgical-slice-spec",
+        "specKey": "hospital-surgical-slice-spec",
         "href": "/intentManagement/v5/intentSpecification/ispec-hss-001?version=1.20"
       }
     }
