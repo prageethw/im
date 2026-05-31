@@ -965,12 +965,33 @@ No caching strategy is baselined for non-GET operations.
 
 ### 21.2. GET caching behaviour:
 
+For cacheable GET operations, IC MS builds a deterministic cache key from the effective request shape.
+
+The cache key includes:
+
+- request path
+- query parameters
+- selected `fields` projection
+- relevant caller-safe projection context
+- any other input that can change the returned representation
+
+When a GET request is received:
+
+1. IC MS builds the cache key for the request.
+2. If the request does not include `Cache-Control: no-cache`, IC MS checks the cache for a valid unexpired response for that cache key.
+3. If a valid cache entry exists, IC MS may return the cached response directly with the configured `Cache-Control` response header and remaining TTL according to the platform cache-header convention.
+4. If no valid cache entry exists, IC MS compiles the response from the source-of-truth store, writes the response to cache with the configured TTL where safe, and returns the response with the configured cache-control headers.
+
+Endpoint-level cache behaviour:
+
 | **Endpoint** | **Cache behaviour** |
 |---|---|
 | `GET /intent/{id}` | Private bounded TTL; returns current projected Intent version |
 | `GET /intent` | Private bounded TTL; shorter TTL for list |
 | `GET /intent/{intentId}/intentReport` | Private bounded TTL; short TTL because reports can change with assurance |
 | `GET /intent/{intentId}/intentReport/{reportId}` | Private bounded TTL; moderate TTL |
+
+IC MS may refresh or invalidate affected cache entries on write paths or lifecycle/status transitions when it knows the current projection has changed. Examples include Intent create, Draft update, admission, lifecycle/status projection update, IntentReport projection update, termination, and governed report purge.
 
 ### 21.3. Client cache override:
 
@@ -979,6 +1000,8 @@ Clients can request a fresh GET response using:
 ```http
 Cache-Control: no-cache
 ```
+
+When `Cache-Control: no-cache` is received, IC MS must bypass any existing cached response for that request, compile the response from the source-of-truth store, refresh the cache entry for the derived cache key where safe, and return the fresh response with normal cache-control headers.
 
 ### 21.4. ETag rule:
 
@@ -1061,7 +1084,7 @@ Retry-After: 30
 
 ### 21.8. Baseline statements:
 
-**IC MS caching applies only to GET responses. Clients either use cached GET responses within TTL or request a fresh copy using `Cache-Control: no-cache`. ETag is used only for unsafe-operation concurrency through `If-Match`. No caching strategy is baselined for non-GET operations.**
+**IC MS caching applies only to GET responses. For cacheable GET operations, IC MS derives a deterministic cache key from the effective request shape, returns a valid unexpired cached response where available, and otherwise compiles the response from the source-of-truth store and refreshes the cache where safe. Clients can bypass cached response serving with `Cache-Control: no-cache`; IC MS then reads from source of truth, refreshes the cache entry where safe, and returns the fresh response. ETag is used only for unsafe-operation concurrency through `If-Match`. No caching strategy is baselined for non-GET operations.**
 
 **For runtime-content admission, IC MS must confirm the resolved `ACTIVE` `IntentSpecification` from ID MS or a valid fresh cached active specification. If it cannot confirm the active specification, IC MS fails closed and does not admit the runtime Intent or runtime version.**
 

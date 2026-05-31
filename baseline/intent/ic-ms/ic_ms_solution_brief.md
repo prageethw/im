@@ -832,10 +832,18 @@ Webhook notifications use HTTP headers, not Kafka CloudEvents headers.
 
 ### 25.3. Caching behaviour:
 
+For cacheable GET operations, IC MS builds a deterministic cache key from the effective request shape, including the path, query parameters, selected `fields` projection, and other inputs that can change the returned representation.
+
+If a valid unexpired cache entry exists and the request does not include `Cache-Control: no-cache`, IC MS may return the cached response with the configured cache-control headers.
+
+If no valid cache entry exists, or if the consumer sends `Cache-Control: no-cache`, IC MS reads from the source-of-truth store, refreshes the cache entry where safe, and returns the fresh response with normal cache-control headers.
+
+IC MS may also invalidate or refresh affected cache entries on write paths or lifecycle/status transitions when it knows the current Intent or IntentReport projection has changed.
+
 | Operation | Behaviour |
 |---|---|
-| GET list/retrieve | May use `Cache-Control: private, max-age=300` and `ETag` where applicable. |
-| Fresh read | Client may send `Cache-Control: no-cache`. |
+| GET list/retrieve | May use bounded private caching with `Cache-Control` and `ETag` where applicable. |
+| Fresh read | Client may send `Cache-Control: no-cache`; IC MS bypasses cached serving and refreshes the cache where safe. |
 | Non-GET | No caching strategy baselined. |
 
 ### 25.4. Delete/termination behaviour:

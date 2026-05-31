@@ -459,10 +459,42 @@ Runtime `Intent` records are retained for audit, reporting, lifecycle history, a
 
 ### 2.10. Caching and ETag rules:
 
-- Caching applies only to GET responses.
-- Clients may request a fresh GET response with `Cache-Control: no-cache`.
-- ETag is used for unsafe-operation concurrency through `If-Match`.
-- No caching strategy is baselined for non-GET operations.
+Caching applies only to GET responses.
+
+For cacheable GET operations, IC MS builds a deterministic cache key from the effective request shape, including:
+
+- request path
+- query parameters
+- selected `fields` projection
+- relevant caller-safe projection context
+- any other input that can change the returned representation
+
+When a GET request is received:
+
+1. IC MS builds the cache key for the request.
+2. If the request does not include `Cache-Control: no-cache`, IC MS checks the cache for a valid unexpired response for that cache key.
+3. If a valid cache entry exists, IC MS may return the cached response directly with the configured `Cache-Control` response header and remaining TTL according to the platform cache-header convention.
+4. If no valid cache entry exists, IC MS compiles the response from the source-of-truth store, writes the response to cache with the configured TTL where safe, and returns the response with the configured cache-control headers.
+
+Clients may bypass cached response serving using:
+
+```http
+Cache-Control: no-cache
+```
+
+When `Cache-Control: no-cache` is received, IC MS must bypass any existing cached response for that request, compile the response from the source-of-truth store, refresh the cache entry for the derived cache key where safe, and return the fresh response with normal cache-control headers.
+
+IC MS may also invalidate or refresh affected cache entries on write paths or lifecycle/status transitions when it knows cached projections have become stale. Examples include Intent create, Draft update, admission, lifecycle/status projection update, IntentReport projection update, termination, and governed report purge.
+
+ETag is used only for unsafe-operation concurrency through:
+
+```http
+If-Match
+```
+
+ETag is not used for GET revalidation in this baseline. `If-None-Match` and `304 Not Modified` are not baselined.
+
+No caching strategy is baselined for non-GET operations.
 
 ### 2.11. Typed placeholder rule:
 
@@ -2297,8 +2329,8 @@ Baseline:
 - `PATCH /intent/{id}` is supported for TMF compatibility and is allowed only while the current Intent/Draft projection is in `Draft`.
 - Once an Intent leaves `Draft`, material changes require creating a new Draft authoring record.
 - ETag is used for unsafe-operation concurrency through `If-Match`.
-- GET responses may use bounded private caching.
-- Clients may request a fresh GET using `Cache-Control: no-cache`.
+- GET responses may use bounded private caching based on a deterministic cache key derived from the effective request shape.
+- Clients may request a fresh GET using `Cache-Control: no-cache`; IC MS bypasses cached serving, reads from source of truth, and refreshes the cache entry where safe.
 - `IntentDeleteEvent` represents termination acceptance, not physical deletion.
 - External `Intent` events and `IntentReport` events are curated projection events and must not expose raw telemetry, raw callback payloads, raw optimiser details, raw knowledge-plane data, or internal candidate scoring.
 - External event examples include both `eventTime` and `timeOccurred` with the same canonical event occurrence timestamp.
