@@ -73,7 +73,7 @@ The intent management entity must be able to answer questions such as:
 
 - What did the requester ask for?
 - Which expression contract does the runtime expression follow?
-- Which active `IntentSpecification` governed admission and validation?
+- Which `ACTIVE` `IntentSpecification` governed admission and validation?
 - What lifecycle state was projected externally?
 - What version of the runtime `Intent` is currently represented?
 - Can the request be traced back to a human-readable business statement?
@@ -107,7 +107,7 @@ The rule is:
 
 The runtime admission profile is the main profile in this paper.
 
-Admission is the point where the intent management entity accepts the Intent into runtime processing. At this point, the request must be complete enough to resolve the active `IntentSpecification` and validate the submitted expression.
+Admission is the point where the intent management entity accepts the Intent into runtime processing. At this point, the request must be complete enough to resolve the `ACTIVE` `IntentSpecification` and validate the submitted expression.
 
 The minimum admission request must include:
 
@@ -417,7 +417,7 @@ These trade-offs are acceptable because admission requests should remain interop
 
 This was rejected.
 
-Although `expression.iri` identifies the semantic/expression contract, the same IRI may be referenced by more than one active `IntentSpecification`. Admission by IRI alone can therefore be ambiguous. The safer rule is to require `intentSpecification.id` for admission and use `expression.iri` as the semantic contract consistency check.
+Although `expression.iri` identifies the semantic/expression contract, the same IRI may be referenced by more than one `ACTIVE` `IntentSpecification`. Admission by IRI alone can therefore be ambiguous. The safer rule is to require `intentSpecification.id` for admission and use `expression.iri` as the semantic contract consistency check.
 
 ### 8.2 Make `humanExpression` mandatory:
 

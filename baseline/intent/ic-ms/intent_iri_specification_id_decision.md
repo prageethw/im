@@ -46,7 +46,7 @@ The two fields serve different purposes:
 | `intentSpecification.id` | Selects the exact platform-managed `IntentSpecification` resource used for validation, governance, lifecycle, and audit. |
 | `expression.iri` | Identifies the semantic/expression contract that the runtime expression claims to follow. |
 
-`expression.iri` alone is not sufficient for admission because the same IRI may be referenced by multiple active `IntentSpecification` resources.
+`expression.iri` alone is not sufficient for admission because the same IRI may be referenced by multiple `ACTIVE` `IntentSpecification` resources.
 
 `intentSpecification.id` alone is not sufficient because the runtime expression still needs to declare the semantic/expression contract it follows, and the intent management entity must verify consistency between the runtime expression and the selected specification.
 
@@ -78,7 +78,7 @@ Therefore, allowing runtime admission by IRI alone can be ambiguous.
 
 | **Driver** | **Need** |
 | --- | --- |
-| Deterministic admission | IC MS must know the exact active `IntentSpecification` governing the request. |
+| Deterministic admission | IC MS must know the exact `ACTIVE` `IntentSpecification` governing the request. |
 | Semantic consistency | The runtime `expression.iri` must match the selected specification's `expressionSpecification.iri`. |
 | Auditability | Persisted Intents must show which specification governed admission and which semantic contract was claimed. |
 | Runtime safety | Avoid accidental admission against the wrong active specification when multiple specifications share the same IRI. |
@@ -294,7 +294,7 @@ This proposal recommends the following baseline:
 - Draft creation does not require `intentSpecification.id` or `expression.iri`.
 - Runtime Intent admission requires `intentSpecification.id`.
 - Runtime Intent admission requires `expression.iri`.
-- IC MS retrieves the active `IntentSpecification` by `intentSpecification.id`.
+- IC MS retrieves the `ACTIVE` `IntentSpecification` by `intentSpecification.id`.
 - IC MS rejects admission if `expression.iri` does not match `IntentSpecification.expressionSpecification.iri`.
 - Persisted Intent responses after admission include both the selected `intentSpecification.id` and the runtime `expression.iri`.
 

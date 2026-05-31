@@ -31,7 +31,7 @@ state Active       #2ecc71 : Change applied and\nassurance confirmed
 state Degraded     #f9e79f : Assurance degradation\ndetected
 state Paused       #e8daef : Paused outcome\nreported by IA MS
 state Failed       #f1948a : Change or runtime\nfailure reported
-state Rejected     #f5cba7 : Semantic / policy\nrejection
+state Rejected     #f5cba7 : Semantic and policy\nrejection
 state Terminated   #aab7b8 : Retained — no longer\nruntime-active
 
 ' ── Entry ─────────────────────────────────────────────────────────────────

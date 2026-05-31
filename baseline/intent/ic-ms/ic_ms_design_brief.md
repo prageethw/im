@@ -23,7 +23,7 @@ It is responsible for:
 | External `Intent` API | Create, retrieve, list, update, patch, delete runtime intents |
 | External `IntentReport` API | Expose read-only assurance/report projections for intents |
 | Runtime lifecycle/status projection | Own external `Intent.lifecycleStatus`, `statusReason`, and `statusChangeDate` |
-| Syntactic validation | Validate incoming runtime `Intent` against active `IntentSpecification` from ID MS |
+| Schema and request-shape validation | Validate incoming runtime `Intent` against `ACTIVE` `IntentSpecification` from ID MS |
 | Initial admission | Accept schema and request-shape valid requests and project `Acknowledged` |
 | Internal state/progress event publication | Emit `IntentValidatedEvent` to the internal Kafka event backbone after schema and request-shape validation succeeds |
 | Rejection projection | Consume rejection outcome from II MS and project `Rejected` |
@@ -104,7 +104,7 @@ On `POST /intentManagement/v5/intent`, IC MS:
 1. receives the external runtime intent request
 2. validates basic TMF/resource shape
 3. resolves the referenced `IntentSpecification`
-4. validates the request against the active `IntentSpecification`
+4. validates the request against the `ACTIVE` `IntentSpecification`
 5. rejects schema and request-shape invalid requests
 6. accepts schema and request-shape valid requests
 7. creates/persists the external `Intent` projection
@@ -202,6 +202,7 @@ IC MS externally exposes lifecycle/status using:
 ### Lifecycle values:
 
 ```text
+Draft
 Acknowledged
 InProgress
 Active
@@ -387,7 +388,7 @@ Platform preference:
 
 ## IC MS boundary statement:
 
-**IC MS is the TMF-compliant runtime intent controller. It owns external `Intent` and `IntentReport` resources, performs schema and request-shape validation against active `IntentSpecification`, emits `IntentValidatedEvent` as an internal state/progress event, and projects external lifecycle/status from II MS rejection outcomes and IA MS assurance outcomes. IC MS does not perform semantic validation, policy validation, optimisation, network apply, runtime assurance, telemetry ingestion, or callback mediation.**
+**IC MS is the TMF-compliant runtime intent controller. It owns external `Intent` and `IntentReport` resources, performs schema and request-shape validation against `ACTIVE` `IntentSpecification`, emits `IntentValidatedEvent` as an internal state/progress event, and projects external lifecycle/status from II MS rejection outcomes and IA MS assurance outcomes. IC MS does not perform semantic validation, policy validation, optimisation, network apply, runtime assurance, telemetry ingestion, or callback mediation.**
 
 ## Lifecycle/status and versioning baseline:
 
@@ -396,6 +397,7 @@ Platform preference:
 The overall external Intent lifecycle remains:
 
 ```text
+Draft
 Acknowledged
 InProgress
 Active
@@ -480,7 +482,7 @@ Runtime truth comes from:
 
 | **Source** | **Meaning** |
 |---|---|
-| IC MS | Syntactic admission only |
+| IC MS | Schema and request-shape admission only |
 | II MS | Semantic/policy rejection outcome |
 | IA MS | Apply, active, degraded, failed, paused, and runtime assurance outcomes |
 | External client/OEX | Termination request |
@@ -662,6 +664,7 @@ Important rule: `Standby` and `Retired` are version-level states, not overall In
 ### Intent-level lifecycle states:
 
 ```text
+Draft
 Acknowledged
 InProgress
 Active
@@ -876,8 +879,9 @@ Accept: application/json
   "statusReason": "Intent version v2 is active and assurance is healthy.",
   "statusChangeDate": "2026-04-18T12:20:00+10:00",
   "intentSpecification": {
-    "id": "hospital-surgical-slice-spec-v1.20",
-    "href": "/intentManagement/v5/intentSpecification/hospital-surgical-slice-spec-v1.20"
+    "id": "ispec-hss-001",
+    "specKey": "hospital-surgical-slice-spec",
+    "href": "/intentManagement/v5/intentSpecification/ispec-hss-001?version=1.20"
   },
   "@type": "Intent",
   "@baseType": "Entity"
@@ -1022,7 +1026,7 @@ DELETE /intentManagement/v5/intent/{id}
 
 ### ID MS dependency rule:
 
-For submitted `POST`, submitted `PUT`, and submitted/runtime-content-changing `PATCH`, IC MS must validate against the resolved active `IntentSpecification` selected by mandatory `intentSpecification.id`, and must confirm the request `expression.iri` matches the selected specification's `expressionSpecification.iri`.
+For submitted `POST`, submitted `PUT`, and submitted/runtime-content-changing `PATCH`, IC MS must validate against the resolved `ACTIVE` `IntentSpecification` selected by mandatory `intentSpecification.id`, and must confirm the request `expression.iri` matches the selected specification's `expressionSpecification.iri`.
 
 If ID MS cannot confirm that spec is `ACTIVE`:
 
@@ -1064,7 +1068,7 @@ Retry-After: 30
 {
   "code": "SERVICE_UNAVAILABLE",
   "reason": "INTENT_SPECIFICATION_LOOKUP_UNAVAILABLE",
-  "message": "Intent creation or update cannot be accepted because the referenced active IntentSpecification could not be confirmed.",
+  "message": "Intent creation or update cannot be accepted because the referenced ACTIVE IntentSpecification could not be confirmed.",
   "status": 503,
   "referenceError": "https://mycsp.com.au/errors/SERVICE_UNAVAILABLE",
   "@type": "Error"
@@ -1075,7 +1079,7 @@ Retry-After: 30
 
 **IC MS caching applies only to GET responses. Clients either use cached GET responses within TTL or request a fresh copy using `Cache-Control: no-cache`. ETag is used only for unsafe-operation concurrency through `If-Match`. No caching strategy is baselined for non-GET operations.**
 
-**For runtime-content admission, IC MS must confirm the resolved active `IntentSpecification` from ID MS or a valid fresh cached active specification. If it cannot confirm the active specification, IC MS fails closed and does not admit the runtime Intent or runtime version.**
+**For runtime-content admission, IC MS must confirm the resolved `ACTIVE` `IntentSpecification` from ID MS or a valid fresh cached active specification. If it cannot confirm the active specification, IC MS fails closed and does not admit the runtime Intent or runtime version.**
 
 **IC MS uses dependency-specific circuit-breaker behaviour. DB failure is hard fail-fast and returns `503 Service Unavailable`. Cache failure is graceful/silent. Kafka/event-broker failure is handled through internal event outbox. External webhook callback failure is asynchronous and does not affect the original API response.**
 
