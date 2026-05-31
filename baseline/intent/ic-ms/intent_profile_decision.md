@@ -113,6 +113,7 @@ The minimum admission request must include:
 
 - `name`
 - `intentSpecification.id`
+- `isBundle`
 - `expression`
 - `expression.@type`
 - `expression.iri`
@@ -267,6 +268,7 @@ A persisted `Intent` response after admission is accepted must include:
 - `statusReason`
 - `statusChangeDate`
 - `intentSpecification.id`
+- `isBundle`
 - `expression`
 - `expression.@type`
 - `expression.iri`
@@ -319,6 +321,7 @@ This example supplies both `intentSpecification.id` and `expression.iri`, becaus
     "id": "ispec-hss-001",
     "specKey": "hospital-surgical-slice-spec"
   },
+  "isBundle": false,
   "expression": {
     "@type": "JsonLdExpression",
     "iri": "https://example.com/tio/hospital-surgical-slice/v1.0",
@@ -361,6 +364,7 @@ This example supplies both `intentSpecification.id` and `expression.iri`, becaus
     "id": "ispec-hss-001",
     "specKey": "hospital-surgical-slice-spec"
   },
+  "isBundle": false,
   "expression": {
     "@type": "JsonLdExpression",
     "iri": "https://example.com/tio/hospital-surgical-slice/v1.0",
