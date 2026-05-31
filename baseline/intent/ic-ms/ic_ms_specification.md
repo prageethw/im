@@ -279,7 +279,7 @@ Failed
 Terminated
 ```
 
-### Intent-version lifecycleStatus values:
+### Intent-version lifecycleStatus values after admission:
 
 ```text
 Acknowledged
@@ -675,10 +675,10 @@ ETag: "intent-INT-HOSP-2026-001-v1"
   "name": "Sydney Hospital Surgical Connection Intent",
   "humanExpression": "I need a surgical connection in Sydney Hospital with latency less than or equal to 10 ms.",
   "submit": false,
+  "version": "v1",
   "lifecycleStatus": "Draft",
   "statusReason": "Intent saved as draft and not submitted for admission.",
   "statusChangeDate": "2026-04-18T12:00:00+10:00",
-  "isBundle": false,
   "@type": "Intent",
   "@baseType": "Entity"
 }
@@ -970,9 +970,8 @@ If-Match: "intent-INT-HOSP-2026-001-v3"
 ```http
 HTTP/1.1 200 OK
 Content-Type: application/json
-Content-Language: en-AU
-X-TMF-Native: false
-X-Platform-Extension: true
+X-TMF-Native: true
+X-Platform-Extension: false
 Content-Location: /intentManagement/v5/intent/INT-HOSP-2026-001
 ETag: "intent-INT-HOSP-2026-001-v4"
 ```
@@ -985,6 +984,7 @@ ETag: "intent-INT-HOSP-2026-001-v4"
   "description": "Updated surgical connection request with lower latency target.",
   "humanExpression": "I need a surgical connection in Sydney Hospital with latency less than or equal to 8 ms and availability at least 99.99%.",
   "submit": false,
+  "version": "v4",
   "lifecycleStatus": "Draft",
   "statusReason": "Draft intent updated and not submitted for admission.",
   "statusChangeDate": "2026-04-18T12:00:00+10:00",
@@ -1120,9 +1120,8 @@ If-Match: "intent-INT-HOSP-2026-001-v4"
 ```http
 HTTP/1.1 200 OK
 Content-Type: application/json
-Content-Language: en-AU
-X-TMF-Native: false
-X-Platform-Extension: true
+X-TMF-Native: true
+X-Platform-Extension: false
 Content-Location: /intentManagement/v5/intent/INT-HOSP-2026-001
 ETag: "intent-INT-HOSP-2026-001-v5"
 ```
@@ -1135,6 +1134,7 @@ ETag: "intent-INT-HOSP-2026-001-v5"
   "description": "Patched surgical connection request with lower latency target.",
   "humanExpression": "I need a surgical connection in Sydney Hospital with latency less than or equal to 10 ms and availability at least 99.99%.",
   "submit": false,
+  "version": "v5",
   "lifecycleStatus": "Draft",
   "statusReason": "Draft intent patched and not submitted for admission.",
   "statusChangeDate": "2026-04-18T12:00:00+10:00",

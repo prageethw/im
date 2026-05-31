@@ -390,12 +390,11 @@ Terminated
 
 ![alt text](ic_ms_intent_lifecycle_state_diagram.svg)
 
-### Intent-version lifecycleStatus values:
+### Intent-version lifecycleStatus values after admission:
 
-The Intent-version-level `lifecycleStatus` is the lifecycle truth for each individual runtime version. It supports version history, rollback/restart, audit, and governance.
+The Intent-version-level `lifecycleStatus` is the lifecycle truth for each admitted runtime version. It supports version history, rollback/restart, audit, and governance.
 
 ```text
-Draft
 Acknowledged
 InProgress
 Active
@@ -837,7 +836,7 @@ Internal consumers can rely on `IntentValidatedEvent` as the admitted runtime in
 | Public exposure posture for TMF strict `/hub` versus domain-scoped `/intent/hub` | Both are baselined; gateway product exposure can choose supported route set. |
 | Optional internal/admin `IntentReport` purge API details | Governed capability is allowed, but ordinary external consumer delete remains not exposed by default. |
 | Full internal version-history retrieval API | Not exposed by default; can be defined later as a documented platform extension if needed. |
-| Draft authoring-record creation route/detail | Needs to be represented consistently in the detailed specification and diagrams where a submitted Intent requires a new Draft authoring record for material change. |
+| New Draft authoring record after submission | Future scope. New submitted-version changes require a new Draft authoring record. The route or operation for creating that record is intentionally deferred. `PUT` and `PATCH` must not mutate an admitted runtime version. |
 
 ## Closed items:
 
