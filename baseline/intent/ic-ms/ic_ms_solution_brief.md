@@ -176,7 +176,7 @@ IC MS does not own:
 | Raw orchestrator callback interpretation | IA MS |
 | Raw candidate and resource scoring exposure | Internal optimiser/assurance pipeline only |
 
-IC MS also does not resolve an `IntentSpecification` by `expression.iri` alone, `specKey`, name, key, or inferred expression shape alone. Submitted runtime create and update admission requests must include both `intentSpecification.id` and `expression.iri`. `intentSpecification.id` selects the exact ACTIVE platform-managed specification. `expression.iri` identifies the semantic/expression contract and must match the selected specification's `expressionSpecification.iri`. `intentSpecification.specKey` and `intentSpecification.name` are optional hints only.
+IC MS also does not resolve an `IntentSpecification` by `expression.iri` alone, `specKey`, name, or inferred expression shape alone. Submitted runtime create and update admission requests must include both `intentSpecification.id` and `expression.iri`. `intentSpecification.id` selects the exact ACTIVE platform-managed specification. `expression.iri` identifies the semantic/expression contract and must match the selected specification's `expressionSpecification.iri`. `intentSpecification.specKey` and `intentSpecification.name` are optional hints only.
 
 IC MS does not allow external consumers to set or patch `lifecycleStatus`; lifecycle state is assigned and projected by the intent management entity.
 

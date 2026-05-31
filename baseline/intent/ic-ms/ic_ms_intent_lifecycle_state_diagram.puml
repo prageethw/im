@@ -25,13 +25,13 @@ skinparam note {
 title <b>IC MS — Intent-Level Lifecycle State Diagram</b>
 
 ' ── States ────────────────────────────────────────────────────────────────
-state Acknowledged #d4e6f1 : Syntactically admitted\nawaiting fulfilment
+state Acknowledged #d4e6f1 : Schema and request-shape\nadmitted
 state InProgress   #d5f5e3 : Change execution\nunderway
 state Active       #2ecc71 : Change applied and\nassurance confirmed
 state Degraded     #f9e79f : Assurance degradation\ndetected
 state Paused       #e8daef : Paused outcome\nreported by IA MS
 state Failed       #f1948a : Change or runtime\nfailure reported
-state Rejected     #f5cba7 : Semantic / policy\nrejection
+state Rejected     #f5cba7 : Semantic and policy\nrejection
 state Terminated   #aab7b8 : Retained — no longer\nruntime-active
 
 ' ── Entry ─────────────────────────────────────────────────────────────────
@@ -39,13 +39,13 @@ state Terminated   #aab7b8 : Retained — no longer\nruntime-active
 
 ' ── Acknowledged ──────────────────────────────────────────────────────────
 Acknowledged --> InProgress : change execution starts
-Acknowledged --> Rejected   : II MS semantic / policy rejection
+Acknowledged --> Rejected   : II MS semantic and policy rejection
 Acknowledged --> Terminated : termination request accepted
 
 ' ── InProgress ────────────────────────────────────────────────────────────
 InProgress --> Active     : IA MS confirms change applied and assured
 InProgress --> Failed     : IA MS reports change or runtime failure
-InProgress --> Rejected   : semantic / policy rejection outcome
+InProgress --> Rejected   : semantic and policy rejection outcome
 InProgress --> Terminated : termination request accepted
 
 ' ── Active ────────────────────────────────────────────────────────────────

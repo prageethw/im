@@ -280,7 +280,7 @@ Unsupported admission request because `intentSpecification.id` is missing:
 }
 ```
 
-IC MS must not resolve `IntentSpecification` by IRI alone, family, key, name, or inferred payload shape alone for submitted runtime admission.
+IC MS must not resolve `IntentSpecification` by IRI alone, `specKey`, name, or inferred payload shape alone for submitted runtime admission.
 
 Baseline:
 - submitted admission requires `intentSpecification.id`
@@ -2373,7 +2373,7 @@ External hub notifications do not use these Kafka headers. They are HTTP webhook
 - `expression.iri` identifies the semantic/expression contract and must match the selected specification's `expressionSpecification.iri`.
 - IC MS does not admit by IRI-only resolution.
 - `intentSpecification.specKey` and `intentSpecification.name` are optional hints only and are not authoritative runtime validation keys.
-- IC MS must not resolve `IntentSpecification` by family, key, name, or inferred payload shape alone.
+- IC MS must not resolve `IntentSpecification` by `specKey`, name, or inferred payload shape alone.
 
 Baseline:
 - `expression.iri` is mandatory.
