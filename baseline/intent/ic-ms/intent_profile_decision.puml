@@ -1,5 +1,5 @@
 @startuml
-title Intent mandatory profile proposal
+title Intent mandatory profile decision
 
 skinparam shadowing false
 skinparam defaultTextAlignment center
@@ -24,7 +24,7 @@ rectangle "Primary profile:\nruntime Intent admission" as ADMISSION #FFE0B2 {
 }
 
 rectangle "Persisted Intent response\nafter admission is accepted" as ADMISSION_RESPONSE #E0F2F1 {
-  rectangle "Minimum response attributes\n\n- id\n- href\n- name\n- version\n- lifecycleStatus\n- statusReason\n- statusChangeDate\n- intentSpecification.id\n- expression\n- expression.@type\n- expression.iri\n- expression.expressionValue\n- @type\n- @baseType" as RESPONSE_MIN
+  rectangle "Minimum response attributes\n\n- id\n- href\n- name\n- version\n- lifecycleStatus\n- statusReason\n- statusChangeDate\n- intentSpecification.id\n- isBundle\n- expression\n- expression.@type\n- expression.iri\n- expression.expressionValue\n- @type\n- @baseType" as RESPONSE_MIN
 
   rectangle "Key distinction\n\nintentSpecification.id is mandatory\nin the admission request and\nin the persisted response.\n\nexpression.iri is mandatory\nin the admission request and\npersisted expression." as RESPONSE_DISTINCTION
 }
@@ -36,9 +36,9 @@ rectangle "Draft \npre-admission authoring context" as DRAFT #FFF8E1 {
 
   rectangle "Draft does not require\n\n- intentSpecification.id\n- expression\n- expression.iri\n- expression.expressionValue" as DRAFT_NOT_REQUIRED
 
-  rectangle "Minimum Draft response\n\n- id\n- href\n- name\n- submit = false\n- lifecycleStatus = Draft\n- statusReason\n- statusChangeDate\n- @type\n- @baseType" as DRAFT_RESPONSE
+  rectangle "Minimum Draft response\n\n- id\n- href\n- name\n- submit = false\n- lifecycleStatus = Draft\n- statusReason\n- statusChangeDate\n- isBundle\n- @type\n- @baseType" as DRAFT_RESPONSE
 
-  rectangle "Draft authoring-record rule\n\nDraft Intents are authoring records only.\nThey are not assigned\na permanent runtime version.\n\nPermanent runtime version is\nassigned only after admission\nis accepted." as DRAFT_AUTHORING_RECORD_RULE
+  rectangle "Draft authoring-record rule\n\nDraft Intents are not assigned\na permanent runtime version.\n\nPermanent runtime version is\nassigned only after admission\nis accepted." as DRAFT_AUTHORING_RECORD_RULE
 }
 
 rectangle "Optional intent-management-entity\ngoverned enrichment fields" as ENRICHMENT #F3E5F5 {
@@ -80,7 +80,7 @@ end note
 
 note bottom of DRAFT_AUTHORING_RECORD_RULE
 No draft lineage or special ID
-design is part of this paper.
+design is part of this decision.
 This paper defines minimum
 data requirements only.
 end note

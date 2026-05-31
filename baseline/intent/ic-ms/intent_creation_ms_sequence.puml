@@ -44,13 +44,13 @@ end note
 Consumer -> GW : POST /intentManagement/v5/intent\n{ submit: true, intentSpecification.id, expression.iri, expression, ... }
 GW -> ICMS : mTLS forward request\n(system/service context)
 
-group TMF-compliant resource and syntax validation
+group TMF-aligned resource and schema/request-shape validation
   ICMS -> ICMS : require intentSpecification.id and expression.iri\nfor submitted admission
   ICMS -> IDMS : GET /intentManagement/v5/intentSpecification/{id}\nverify referenced specification is ACTIVE
   IDMS --> ICMS : IntentSpecification { lifecycleStatus: ACTIVE, expressionSpecification.iri, schema/definition }
-  ICMS -> ICMS : validate TMF-compliant Intent resource shape
+  ICMS -> ICMS : validate TMF-aligned Intent resource shape
   ICMS -> ICMS : confirm request expression.iri matches\nIntentSpecification.expressionSpecification.iri
-  ICMS -> ICMS : validate expression syntax against active IntentSpecification
+  ICMS -> ICMS : validate expression shape against ACTIVE IntentSpecification
 end
 
 alt Validation fails
@@ -71,7 +71,7 @@ else Validation succeeds
   RELAY -> OUTBOX : poll PENDING IntentCreateEvent
   OUTBOX --> RELAY : [IntentCreateEvent]
   RELAY -> SUBREG : lookup matching subscriptions
-  SUBREG --> RELAY : [{ callbackUrl }]
+  SUBREG --> RELAY : [{ callback }]
   RELAY -> SUB : HTTPS POST to subscriber-owned callbackUrl\nTMF-aligned event payload
 
   alt HTTP 2xx
@@ -83,17 +83,18 @@ else Validation succeeds
   end
 end
 
-== 2. Runtime Intent Update / New Version ==
+== 2. Draft Update and Submission ==
 
 note over Consumer, ICMS
-Unsafe operations require If-Match header.
-A newer version must not be created if an existing newer candidate version is already Acknowledged or InProgress.
+PUT and PATCH are allowed only while the current Intent/Draft projection is Draft.
+Material changes after admission require a new Draft authoring record.
+The route or operation for creating that new Draft authoring record is future scope.
 end note
 
 Consumer -> GW : PUT /intentManagement/v5/intent/{id}\nor PATCH /intentManagement/v5/intent/{id}\nHeaders: If-Match: "{currentETag}"\nPATCH Content-Type: application/merge-patch+json
 GW -> ICMS : mTLS forward request\n(system/service context)
-ICMS -> STORE : fetch current Intent record, version history, ETag
-STORE --> ICMS : { intent, versions, etag }
+ICMS -> STORE : fetch current Intent/Draft projection and ETag
+STORE --> ICMS : { intent, lifecycleStatus, etag }
 
 alt Missing If-Match for unsafe update
   ICMS --> GW : 428 Precondition Required
@@ -101,47 +102,42 @@ alt Missing If-Match for unsafe update
 else ETag mismatch
   ICMS --> GW : 412 Precondition Failed
   GW --> Consumer : 412 Precondition Failed
-else Existing newer candidate is Acknowledged or InProgress
-  ICMS --> GW : 409 Conflict\n{ code: VERSION_CHANGE_IN_PROGRESS }
+else Current projection is not Draft
+  ICMS --> GW : 409 Conflict\n{ code: INVALID_STATE_TRANSITION, reason: INTENT_NOT_DRAFT }
   GW --> Consumer : 409 Conflict
-else ETag matches and no newer candidate is in flight
-  group TMF-compliant validation
-    ICMS -> ICMS : if submitting Draft, require\nintentSpecification.id and expression.iri
-    ICMS -> IDMS : GET /intentManagement/v5/intentSpecification/{id}\nverify ACTIVE and load schema
+else Current projection is Draft and request keeps submit=false or omitted
+  ICMS -> STORE : update Draft authoring record\n{ lifecycleStatus: Draft, activeVersion unchanged }
+  ICMS --> GW : 200 OK\n{ intent, lifecycleStatus: Draft, newETag }
+  GW --> Consumer : 200 OK { intent }
+else Current projection is Draft and submit=true
+  group TMF-aligned schema/request-shape validation
+    ICMS -> ICMS : require intentSpecification.id and expression.iri\nfor submitted admission
+    ICMS -> IDMS : GET /intentManagement/v5/intentSpecification/{id}\nverify referenced specification is ACTIVE
     IDMS --> ICMS : IntentSpecification { lifecycleStatus: ACTIVE, expressionSpecification.iri, schema/definition }
     ICMS -> ICMS : confirm request expression.iri matches\nIntentSpecification.expressionSpecification.iri
-    ICMS -> ICMS : validate updated expression against active IntentSpecification
+    ICMS -> ICMS : validate expression shape against ACTIVE IntentSpecification
   end
 
-  alt Meaningful runtime content change
+  alt Admission validation fails
+    ICMS --> GW : 422 Unprocessable Entity\n{ code: VALIDATION_FAILED }
+    GW --> Consumer : 422 VALIDATION_FAILED
+  else Admission validation succeeds
     group Atomic DB transaction
-      ICMS -> STORE : create new Intent version n+1\n{ lifecycleStatus: Acknowledged }
-      ICMS -> STORE : keep activeVersion pointing to current version\nuntil n+1 becomes Active
-      ICMS -> OUTBOX : write IntentAttributeValueChangeEvent\n{ status: PENDING }
+      ICMS -> STORE : assign admitted runtime version\n{ lifecycleStatus: Acknowledged, activeVersion not driven until Active }
+      ICMS -> OUTBOX : write external IntentAttributeValueChangeEvent row\n{ status: PENDING }
     end
 
-    ICMS -> KAFKA : publish IntentValidatedEvent for version n+1
+    ICMS -> KAFKA : publish IntentValidatedEvent\ninternal platform event
     IIMS -> KAFKA : consume event
 
-    note over ICMS, STORE
-    When version n+1 later becomes activeVersion:
-    - previous Active / Degraded / Paused versions move to Standby
-    - previous Failed / Rejected versions move to Terminated
-    - Standby may re-enter through Acknowledged, or move to Terminated
-    - only Terminated may later move to Retired
-    end note
-  else Minor / non-content change
-    ICMS -> STORE : update projection in place\n(no new runtime version)
-    ICMS -> OUTBOX : write IntentAttributeValueChangeEvent\n{ status: PENDING }
+    ICMS --> GW : 200 OK\n{ intent, lifecycleStatus: Acknowledged, newETag }
+    GW --> Consumer : 200 OK { intent }
+
+    RELAY -> OUTBOX : poll PENDING external event
+    RELAY -> SUB : HTTPS POST to subscriber-owned callbackUrl\nTMF-aligned event payload
+    SUB --> RELAY : 204 No Content
+    RELAY -> OUTBOX : mark DELIVERED
   end
-
-  ICMS --> GW : 200 OK\n{ intent, activeVersion, newETag }
-  GW --> Consumer : 200 OK { intent }
-
-  RELAY -> OUTBOX : poll PENDING external event
-  RELAY -> SUB : HTTPS POST to subscriber-owned callbackUrl\nTMF-aligned event payload
-  SUB --> RELAY : 204 No Content
-  RELAY -> OUTBOX : mark DELIVERED
 end
 
 == 3. Runtime Intent Termination ==
@@ -169,7 +165,7 @@ GW --> Consumer : 202 Accepted { intent }
 RELAY -> OUTBOX : poll PENDING IntentDeleteEvent
 OUTBOX --> RELAY : [IntentDeleteEvent]
 RELAY -> SUBREG : lookup matching subscriptions
-SUBREG --> RELAY : [{ callbackUrl }]
+SUBREG --> RELAY : [{ callback }]
 RELAY -> SUB : HTTPS POST to subscriber-owned callbackUrl\nTMF-aligned event payload
 SUB --> RELAY : 204 No Content
 RELAY -> OUTBOX : mark DELIVERED
@@ -191,7 +187,7 @@ RELAY -> SUB : HTTPS POST to subscriber-owned callbackUrl\nTMF-aligned event pay
 SUB --> RELAY : 204 No Content
 RELAY -> OUTBOX : mark DELIVERED
 
-Consumer -> GW : GET /intentManagement/v5/intentReport\nor GET /intentManagement/v5/intentReport/{reportId}
+Consumer -> GW : GET /intentManagement/v5/intent/{intentId}/intentReport\nor GET /intentManagement/v5/intent/{intentId}/intentReport/{reportId}
 GW -> ICMS : mTLS forward request
 ICMS -> STORE : query IntentReport projections
 STORE --> ICMS : [IntentReport] or single record
@@ -219,21 +215,21 @@ Subscriber registers a subscriber-owned callback URL.
 IC hub delivery is external HTTP webhook delivery, not Kafka.
 end note
 
-Consumer -> GW : POST /intentManagement/v5/hub\nor POST /intentManagement/v5/intent/hub\n{ callbackUrl, query/filter }
+Consumer -> GW : POST /intentManagement/v5/hub\nor POST /intentManagement/v5/intent/hub\n{ callback, query/filter }
 GW -> ICMS : mTLS forward request
-ICMS -> SUBREG : persist { subscriptionId, callbackUrl, filter, deliveryMetadata }
+ICMS -> SUBREG : persist { subscriptionId, callback, filter, deliveryMetadata }
 SUBREG --> ICMS : 201 { subscriptionId }
-ICMS --> GW : 201 Created { subscriptionId, callbackUrl }
+ICMS --> GW : 201 Created { subscriptionId, callback }
 GW --> Consumer : 201 Created { subscription }
 
-Consumer -> GW : GET /intentManagement/v5/hub/{id}
+Consumer -> GW : GET /intentManagement/v5/intent/hub/{id}
 GW -> ICMS : mTLS forward request
 ICMS -> SUBREG : lookup subscription record
 SUBREG --> ICMS : subscription
 ICMS --> GW : 200 OK { subscription }
 GW --> Consumer : 200 OK { subscription }
 
-Consumer -> GW : DELETE /intentManagement/v5/hub/{id}
+Consumer -> GW : DELETE /intentManagement/v5/hub/{id}\nor DELETE /intentManagement/v5/intent/hub/{id}
 GW -> ICMS : mTLS forward request
 ICMS -> SUBREG : remove subscription record
 SUBREG --> ICMS : confirmed

@@ -29,7 +29,7 @@ skinparam legend {
 title IC MS — Intent Version Lifecycle State Diagram
 
 ' ── Entry ──────────────────────────────────────────────────────────────────
-[*] --> Acknowledged : version accepted
+[*] --> Acknowledged : version created /\nschema and request-shape admitted
 
 ' ── States ────────────────────────────────────────────────────────────────
 state Acknowledged #d4e6f1 : Schema and request-shape admitted,\nawaiting change handling
@@ -47,7 +47,7 @@ state Retired #d5d8dc : Administrative /\nversion-governance archive
 Acknowledged --> InProgress : change starts
 InProgress --> Active : network/service confirmed
 InProgress --> Failed : change failed
-InProgress --> Rejected : validation / policy rejection
+InProgress --> Rejected : semantic / policy rejection
 
 ' ── Operational runtime lifecycle ──────────────────────────────────────────
 Active --> Degraded : assurance degradation

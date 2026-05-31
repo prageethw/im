@@ -54,7 +54,7 @@
                 <mxCell id="e3" style="edgeStyle=orthogonalEdgeStyle;rounded=0;dashed=1;fillColor=#d5e8d4;strokeColor=default;" parent="1" source="icms_core" target="idms" edge="1">
                     <mxGeometry relative="1" as="geometry"/>
                 </mxCell>
-                <mxCell id="e3_lbl" value="GET ACTIVE IntentSpecification&#xa;(schema and request-shape validation)" style="edgeLabel;fontSize=10;fontStyle=2;container=0;rounded=0;" parent="e3" connectable="0" vertex="1">
+                <mxCell id="e3_lbl" value="GET ACTIVE IntentSpecification&#xa;(schema/request-shape validation)" style="edgeLabel;fontSize=10;fontStyle=2;container=0;rounded=0;" parent="e3" connectable="0" vertex="1">
                     <mxGeometry relative="0.5" as="geometry">
                         <mxPoint x="-58" y="-42" as="offset"/>
                     </mxGeometry>
@@ -170,7 +170,7 @@
                 <mxCell id="gateway" value="NGW" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=default;fontStyle=1;fontSize=12;container=0;" parent="1" vertex="1">
                     <mxGeometry x="470" y="150" width="160" height="50" as="geometry"/>
                 </mxCell>
-                <mxCell id="icms_core" value="Intent Controller MS (IC MS)&lt;br&gt;&lt;br&gt;Owns:&lt;br&gt;• TMF-compliant /intentManagement/v5/intent&lt;br&gt;• TMF-compliant /intentManagement/v5/intent/{id}&lt;br&gt;• IntentReport read APIs&lt;br&gt;• Hub APIs:&amp;nbsp; /intent/hub" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=default;fontStyle=1;fontSize=12;align=left;spacingLeft=10;container=0;" parent="1" vertex="1">
+                <mxCell id="icms_core" value="Intent Controller MS (IC MS)&lt;br&gt;&lt;br&gt;Owns:&lt;br&gt;• TMF-aligned /intentManagement/v5/intent&lt;br&gt;• TMF-aligned /intentManagement/v5/intent/{id}&lt;br&gt;• IntentReport read APIs&lt;br&gt;• Hub APIs:&amp;nbsp; /intent/hub" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=default;fontStyle=1;fontSize=12;align=left;spacingLeft=10;container=0;" parent="1" vertex="1">
                     <mxGeometry x="750" y="90" width="380" height="110" as="geometry"/>
                 </mxCell>
                 <mxCell id="intent_store" value="Intent Projection Store&#xa;(Intent + IntentReport)" style="shape=cylinder3;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=default;fontStyle=1;fontSize=12;container=0;rounded=0;" parent="1" vertex="1">
