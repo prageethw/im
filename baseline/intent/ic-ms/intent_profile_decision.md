@@ -2,7 +2,7 @@
 
 | **Document status** | **Value** |
 | --- | --- |
-| Status | Proposed decision paper |
+| Status | Accepted baseline decision |
 | Scope | Runtime Intent minimum data requirements |
 | Primary focus | Admission request profile, persisted response profile, Draft request/response minimums, optional enrichment separation |
 | Out of scope | Full lifecycle design, full version-history design, Draft lineage design, implementation routing details |
@@ -113,13 +113,14 @@ The minimum admission request must include:
 
 - `name`
 - `intentSpecification.id`
-- `isBundle`
 - `expression`
 - `expression.@type`
 - `expression.iri`
 - `expression.expressionValue`
 - `@type`
 - `@baseType`
+
+`isBundle` is optional in request bodies and defaults to `false` when omitted on create. Persisted responses include the server-resolved `isBundle` value.
 
 The admission request is **strongly** encouraged to include:
 
@@ -268,7 +269,6 @@ A persisted `Intent` response after admission is accepted must include:
 - `statusReason`
 - `statusChangeDate`
 - `intentSpecification.id`
-- `isBundle`
 - `expression`
 - `expression.@type`
 - `expression.iri`

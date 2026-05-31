@@ -573,6 +573,7 @@ Last-Modified: Sat, 18 Apr 2026 02:00:00 GMT
     "specKey": "hospital-surgical-slice-spec",
     "href": "/intentManagement/v5/intentSpecification/ispec-hss-001?version=1.20"
   },
+  "isBundle": false,
   "priority": "critical",
   "relatedParty": [
     {

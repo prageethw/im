@@ -2,7 +2,7 @@
 
 | **Document status** | **Value** |
 | --- | --- |
-| Status | Proposed decision paper |
+| Status | Accepted baseline decision |
 | Scope | Runtime Intent admission contract reference rule |
 | Primary focus | Whether runtime Intent admission should require `expression.iri`, `intentSpecification.id`, or both |
 | Out of scope | Full runtime lifecycle design, Draft authoring details, internal version-history design, implementation routing details |

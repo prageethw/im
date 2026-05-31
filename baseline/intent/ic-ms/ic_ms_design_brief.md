@@ -694,7 +694,8 @@ Retired
 
 | **Rule** | **Baseline** |
 |---|---|
-| Initial schema and request-shape success | Intent/version starts as `Acknowledged` |
+| Submitted schema and request-shape success | Intent/admitted version starts as `Acknowledged` |
+| Draft creation with `submit:false` | Intent-level lifecycleStatus is `Draft`; no admitted Intent version is created and `activeVersion` is not driven |
 | Semantic/policy rejection | Moves to `Rejected` |
 | Fulfilment/apply starts | Moves to `InProgress` |
 | Assurance confirms active | Moves to `Active` |
@@ -729,7 +730,10 @@ skinparam note {
   FontColor #111827
 }
 
-[*] --> Acknowledged : POST /intent passes\nschema and request-shape validation
+[*] --> Draft : POST /intent with submit:false
+Draft --> Draft : PUT/PATCH while Draft
+Draft --> Acknowledged : submit:true passes schema\nand request-shape validation
+[*] --> Acknowledged : POST /intent submit:true or omitted\npasses schema and request-shape validation
 Acknowledged --> Rejected : II MS semantic/policy\nrejection outcome
 Acknowledged --> InProgress : downstream fulfilment\nstarts
 InProgress --> Rejected : semantic/policy\nrejection outcome
