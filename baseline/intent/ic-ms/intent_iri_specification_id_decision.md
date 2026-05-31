@@ -1,4 +1,4 @@
-# Runtime Intent contract reference decision: IRI, IntentSpecification ID, or both
+# TAF - Decision Proposal,  IRI, IntentSpecification ID, or both?
 
 | **Document status** | **Value** |
 | --- | --- |

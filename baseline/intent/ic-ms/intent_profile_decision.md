@@ -1,4 +1,4 @@
-# Intent mandatory profile decision
+# TAF - Decision Proposal Intent, Minimum data requirement.
 
 | **Document status** | **Value** |
 | --- | --- |
