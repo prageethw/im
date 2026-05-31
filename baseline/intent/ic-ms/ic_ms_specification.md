@@ -198,44 +198,40 @@ IC MS therefore has two separate event-delivery paths:
 
 ### 1.4. TMF compliance and platform extension baseline:
 
-IC MS exposes response classification headers and maintains a documented set of strict TMF-compatible operations and approved platform extensions.
+IC MS exposes response classification header and maintains a documented set of strict TMF-compatible operations and approved platform extensions.
 
 #### 1.4.1. Response classification headers:
 
-IC MS returns response classification headers on external REST API responses so callers can distinguish strict TMF-native behaviour from documented platform-extension behaviour.
+IC MS returns a response classification header on external REST API responses so callers can distinguish strict TMF-aligned behaviour from documented platform-extension behaviour.
 
-These are response headers only. Clients do not send these headers in requests.
+This is a response header only. Clients do not send this header in requests.
 
 | **Response header** | **Meaning** |
 |---|---|
-| `X-TMF-Native: true` | The response is for a TMF-native operation/behaviour. |
-| `X-TMF-Native: false` | The response is for an operation/behaviour that includes platform-specific semantics. |
 | `X-Platform-Extension: true` | The route, method, response, or behaviour includes a documented platform extension. |
 | `X-Platform-Extension: false` | No platform extension is used for the response. |
 
 Header classification guidance:
 
-| **IC MS response area** | **X-TMF-Native** | **X-Platform-Extension** | **Reason** |
-|---|---:|---:|---|
-| `POST /intent`, `GET /intent`, `GET /intent/{id}`, `PATCH /intent/{id}` using strict TMF-compatible behaviour | `true` | `false` | TMF-compatible Intent resource operations. |
-| `POST /intent` or `PATCH /intent/{id}` using `submit` Draft/admission control | `false` | `true` | `submit` is an IC MS request-control extension. |
-| `PUT /intent/{id}` | `false` | `true` | Deterministic full replacement is a platform extension. |
-| `DELETE /intent/{id}` termination/retention response | `false` | `true` | The verb is TMF-compatible, but retained termination behaviour is platform-specific. |
-| `GET /intent/{intentId}/intentReport`, `GET /intent/{intentId}/intentReport/{id}` | `true` | `false` | TMF-aligned read-only report projection. |
-| Strict `/hub` create/delete responses | `true` | `false` | Strict TMF hub route family. |
-| Domain-scoped `/intent/hub` responses | `false` | `true` | Domain-owned hub route family is a platform extension. |
+| **IC MS response area** | **X-Platform-Extension** | **Reason** |
+|---|---:|---|
+| `POST /intent`, `GET /intent`, `GET /intent/{id}`, `PATCH /intent/{id}` using strict TMF-compatible behaviour | `false` | TMF-compatible Intent resource operations. |
+| `POST /intent` or `PATCH /intent/{id}` using `submit` Draft/admission control | `true` | `submit` is an IC MS request-control extension. |
+| `PUT /intent/{id}` | `true` | Deterministic full replacement is a platform extension. |
+| `DELETE /intent/{id}` termination/retention response | `true` | The verb is TMF-compatible, but retained termination behaviour is platform-specific. |
+| `GET /intent/{intentId}/intentReport`, `GET /intent/{intentId}/intentReport/{id}` | `false` | TMF-aligned read-only report projection. |
+| Strict `/hub` create/delete responses | `false` | Strict TMF hub route family. |
+| Domain-scoped `/intent/hub` responses | `true` | Domain-owned hub route family is a platform extension. |
 
-Example TMF-native response headers:
+Example strict TMF-aligned response classification header:
 
 ```http
-X-TMF-Native: true
 X-Platform-Extension: false
 ```
 
-Example platform-extension response headers:
+Example platform-extension response classification header:
 
 ```http
-X-TMF-Native: false
 X-Platform-Extension: true
 ```
 
@@ -364,6 +360,8 @@ Unsupported admission request because `intentSpecification.id` is missing:
 ```
 
 IC MS must not resolve `IntentSpecification` by IRI alone, `specKey`, name, or inferred payload shape alone for submitted runtime admission.
+
+The baseline surgical hospital slice is an illustrative runtime example used to make the IC MS contract concrete. It is not the only supported runtime Intent type, IntentSpecification, service class, schema, expression IRI, location, service type, or deployment profile. Other runtime Intents may use different targets, constraints, preferences, expression schemas, service types, priorities, and governance profiles while following the same IC MS contract rules.
 
 Baseline:
 - submitted admission requires `intentSpecification.id`
@@ -539,7 +537,6 @@ Do not use string placeholders for array/object fields.
 HTTP/1.1 428 Precondition Required
 Content-Type: application/json
 Content-Language: en-AU
-X-TMF-Native: true
 X-Platform-Extension: false
 Cache-Control: no-store
 ```
@@ -561,7 +558,6 @@ Cache-Control: no-store
 HTTP/1.1 412 Precondition Failed
 Content-Type: application/json
 Content-Language: en-AU
-X-TMF-Native: true
 X-Platform-Extension: false
 Cache-Control: no-store
 ```
@@ -659,7 +655,6 @@ HTTP/1.1 201 Created
 Location: /intentManagement/v5/intent/INT-HOSP-2026-001
 Content-Type: application/json
 Content-Language: en-AU
-X-TMF-Native: false
 X-Platform-Extension: true
 ETag: "intent-INT-HOSP-2026-001-v1"
 Last-Modified: Sat, 18 Apr 2026 02:00:00 GMT
@@ -773,7 +768,6 @@ HTTP/1.1 201 Created
 Location: /intentManagement/v5/intent/INT-HOSP-2026-001
 Content-Type: application/json
 Content-Language: en-AU
-X-TMF-Native: false
 X-Platform-Extension: true
 ETag: "intent-INT-HOSP-2026-001-v1"
 ```
@@ -831,7 +825,6 @@ Cache-Control: no-cache
 HTTP/1.1 200 OK
 Content-Type: application/json
 Content-Language: en-AU
-X-TMF-Native: true
 X-Platform-Extension: false
 X-Total-Count: 1
 X-Result-Count: 1
@@ -895,7 +888,6 @@ Cache-Control: no-cache
 HTTP/1.1 200 OK
 Content-Type: application/json
 Content-Language: en-AU
-X-TMF-Native: true
 X-Platform-Extension: false
 Content-Location: /intentManagement/v5/intent/INT-HOSP-2026-001
 ETag: "intent-INT-HOSP-2026-001-v3"
@@ -987,7 +979,6 @@ Cache-Control: private, max-age=300
 HTTP/1.1 404 Not Found
 Content-Type: application/json
 Content-Language: en-AU
-X-TMF-Native: true
 X-Platform-Extension: false
 Cache-Control: no-store
 ```
@@ -1083,7 +1074,6 @@ If-Match: "intent-INT-HOSP-2026-001-v3"
 HTTP/1.1 200 OK
 Content-Type: application/json
 Content-Language: en-AU
-X-TMF-Native: false
 X-Platform-Extension: true
 Content-Location: /intentManagement/v5/intent/INT-HOSP-2026-001
 ETag: "intent-INT-HOSP-2026-001-v4"
@@ -1233,7 +1223,6 @@ If-Match: "intent-INT-HOSP-2026-001-v4"
 HTTP/1.1 200 OK
 Content-Type: application/json
 Content-Language: en-AU
-X-TMF-Native: false
 X-Platform-Extension: true
 Content-Location: /intentManagement/v5/intent/INT-HOSP-2026-001
 ETag: "intent-INT-HOSP-2026-001-v5"
@@ -1341,7 +1330,6 @@ If-Match: "intent-INT-HOSP-2026-001-v5"
 HTTP/1.1 202 Accepted
 Content-Type: application/json
 Content-Language: en-AU
-X-TMF-Native: false
 X-Platform-Extension: true
 Location: /intentManagement/v5/intent/INT-HOSP-2026-001
 ETag: "intent-INT-HOSP-2026-001-v6"
@@ -1392,7 +1380,6 @@ Cache-Control: no-cache
 HTTP/1.1 200 OK
 Content-Type: application/json
 Content-Language: en-AU
-X-TMF-Native: true
 X-Platform-Extension: false
 X-Total-Count: 1
 X-Result-Count: 1
@@ -1474,7 +1461,6 @@ Cache-Control: no-cache
 HTTP/1.1 200 OK
 Content-Type: application/json
 Content-Language: en-AU
-X-TMF-Native: true
 X-Platform-Extension: false
 Content-Location: /intentManagement/v5/intent/INT-HOSP-2026-001/intentReport/IR-INT-HOSP-2026-001-003
 ETag: "intent-report-IR-INT-HOSP-2026-001-003-v1"
@@ -1606,7 +1592,6 @@ HTTP/1.1 201 Created
 Location: /intentManagement/v5/hub/sub-intent-001
 Content-Type: application/json
 Content-Language: en-AU
-X-TMF-Native: true
 X-Platform-Extension: false
 ETag: "subscription-sub-intent-001-v1"
 ```
@@ -1648,7 +1633,6 @@ HTTP/1.1 201 Created
 Location: /intentManagement/v5/intent/hub/sub-intent-001
 Content-Type: application/json
 Content-Language: en-AU
-X-TMF-Native: false
 X-Platform-Extension: true
 ETag: "subscription-sub-intent-001-v1"
 ```
@@ -1759,7 +1743,6 @@ Cache-Control: no-cache
 HTTP/1.1 200 OK
 Content-Type: application/json
 Content-Language: en-AU
-X-TMF-Native: false
 X-Platform-Extension: true
 ETag: "subscription-sub-intent-001-v1"
 Cache-Control: private, max-age=300
@@ -1795,7 +1778,6 @@ If-Match: "subscription-sub-intent-001-v1"
 ```http
 HTTP/1.1 204 No Content
 Content-Language: en-AU
-X-TMF-Native: false
 X-Platform-Extension: true
 ```
 
@@ -1809,7 +1791,6 @@ X-Platform-Extension: true
 HTTP/1.1 422 Unprocessable Entity
 Content-Type: application/json
 Content-Language: en-AU
-X-TMF-Native: true
 X-Platform-Extension: false
 Cache-Control: no-store
 ```
@@ -1831,7 +1812,6 @@ Cache-Control: no-store
 HTTP/1.1 422 Unprocessable Entity
 Content-Type: application/json
 Content-Language: en-AU
-X-TMF-Native: true
 X-Platform-Extension: false
 Cache-Control: no-store
 ```
@@ -1853,7 +1833,6 @@ Cache-Control: no-store
 HTTP/1.1 422 Unprocessable Entity
 Content-Type: application/json
 Content-Language: en-AU
-X-TMF-Native: true
 X-Platform-Extension: false
 Cache-Control: no-store
 ```
@@ -1875,7 +1854,6 @@ Cache-Control: no-store
 HTTP/1.1 503 Service Unavailable
 Content-Type: application/json
 Content-Language: en-AU
-X-TMF-Native: true
 X-Platform-Extension: false
 Cache-Control: no-store
 Retry-After: 30
@@ -1898,7 +1876,6 @@ Retry-After: 30
 HTTP/1.1 412 Precondition Failed
 Content-Type: application/json
 Content-Language: en-AU
-X-TMF-Native: true
 X-Platform-Extension: false
 Cache-Control: no-store
 ```
@@ -1922,7 +1899,6 @@ Cache-Control: no-store
 HTTP/1.1 409 Conflict
 Content-Type: application/json
 Content-Language: en-AU
-X-TMF-Native: true
 X-Platform-Extension: false
 Cache-Control: no-store
 ```

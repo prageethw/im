@@ -74,6 +74,8 @@ The same `expression.iri` can be used by multiple `IntentSpecification` resource
 
 Therefore, allowing runtime admission by IRI alone can be ambiguous.
 
+The baseline surgical hospital slice is an illustrative runtime example used to make the IC MS contract concrete. It is not the only supported runtime Intent type, IntentSpecification, service class, schema, expression IRI, location, service type, or deployment profile. Other runtime Intents may use different targets, constraints, preferences, expression schemas, service types, priorities, and governance profiles while following the same IC MS contract rules.
+
 ## 4. Decision drivers:
 
 | **Driver** | **Need** |

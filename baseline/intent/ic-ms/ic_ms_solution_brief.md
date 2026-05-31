@@ -200,6 +200,8 @@ The design intentionally separates these concerns:
 
 IC MS therefore exposes a stable TMF-compliant resource API while avoiding leakage of internal fulfilment mechanics.
 
+The baseline surgical hospital slice is an illustrative runtime example used to make the IC MS contract concrete. It is not the only supported runtime Intent type, IntentSpecification, service class, schema, expression IRI, location, service type, or deployment profile. Other runtime Intents may use different targets, constraints, preferences, expression schemas, service types, priorities, and governance profiles while following the same IC MS contract rules.
+
 It is responsible for Draft authoring control, correct external lifecycle/status representation, consumer-safe reports, event subscription handling, ETag concurrency, and error consistency. External consumers request draft/save versus submission through `submit`; they do not assign lifecycle state.
 
 ## 5. Responsibilities:
@@ -246,28 +248,24 @@ IC MS does not allow external consumers to set or patch `lifecycleStatus`; lifec
 
 ## 7. Response classification headers:
 
-The service returns response classification headers on external REST API responses so callers can distinguish strict TMF-native behaviour from documented platform-extension behaviour.
+The service returns a response classification header on external REST API responses so callers can distinguish strict TMF-aligned behaviour from documented platform-extension behaviour.
 
-These are response headers only. Clients do not send these headers in requests.
+This is a response header only. Clients do not send this header in requests.
 
 | **Response header** | **Meaning** |
 |---|---|
-| `X-TMF-Native: true` | The response is for a TMF-native operation/behaviour. |
-| `X-TMF-Native: false` | The response is for an operation/behaviour that includes platform-specific semantics. |
 | `X-Platform-Extension: true` | The route, method, response, or behaviour includes a documented platform extension. |
 | `X-Platform-Extension: false` | No platform extension is used for the response. |
 
 Use canonical header casing in examples:
 
 ```http
-X-TMF-Native: true
 X-Platform-Extension: false
 ```
 
 or:
 
 ```http
-X-TMF-Native: false
 X-Platform-Extension: true
 ```
 

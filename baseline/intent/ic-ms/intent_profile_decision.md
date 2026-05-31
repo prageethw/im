@@ -310,6 +310,8 @@ External consumers must not supply `lifecycleStatus` in any external write reque
 
 The examples use a hospital surgical-connectivity scenario only to make the profile concrete. Draft request/response payloads are shown in sections 5.3 and 5.4. This section focuses on admission and the persisted response after admission.
 
+The baseline surgical hospital slice is an illustrative runtime example used to make the IC MS contract concrete. It is not the only supported runtime Intent type, IntentSpecification, service class, schema, expression IRI, location, service type, or deployment profile. Other runtime Intents may use different targets, constraints, preferences, expression schemas, service types, priorities, and governance profiles while following the same IC MS contract rules.
+
 ### 6.1. Minimal admission request:
 
 This example supplies both `intentSpecification.id` and `expression.iri`, because both are mandatory for admission and serve different purposes.
