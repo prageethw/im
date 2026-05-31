@@ -464,11 +464,4 @@ As accepted, the intent management entity will document and enforce:
 
 ## 11. Follow-up work:
 
-After this decision is baselined, update the affected architecture and specification artifacts surgically:
-
-- document the runtime `Intent` mandatory profile
-- clarify admission request minimum mandatory fields
-- clarify mandatory `intentSpecification.id`, mandatory `expression.iri`, and strongly recommended `humanExpression`
-- clarify persisted response mandatory fields
-- clarify `intentSpecification.id` and `expression.iri` consistency validation
-- keep runtime version/lifecycle profile wording aligned with the existing `activeVersion` baseline
+The follow-up work for this accepted baseline decision is resolved in the current IC MS baseline. The runtime `Intent` mandatory profile, Draft request/response profile, persisted admitted response profile, `intentSpecification.id` and `expression.iri` consistency rule, server-resolved `isBundle` behaviour, and runtime version/lifecycle wording have been aligned across the IC MS artefacts.

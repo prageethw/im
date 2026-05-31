@@ -18,7 +18,7 @@
   - [5.1 Rejected option: expression.iri-only admission](#51-rejected-option-expressioniri-only-admission)
   - [5.2 Use intentSpecification.id only](#52-use-intentspecificationid-only)
   - [5.3 Require both intentSpecification.id and expression.iri](#53-require-both-intentspecificationid-and-expressioniri)
-- [6. Proposal](#6-decision)
+- [6. Decision](#6-decision)
 - [7. Validation rule](#7-validation-rule)
 - [8. Examples](#8-examples)
   - [8.1 Valid admission request](#81-valid-admission-request)
@@ -207,7 +207,7 @@ This means the intent management entity does not infer the governing runtime con
 }
 ```
 
-This request is valid only if `ispec-hss-001` version `1.20` is active and its `expressionSpecification.iri` equals:
+This request is valid only if `ispec-hss-001` resolves to an active `IntentSpecification` version, for example version `1.20`, and its `expressionSpecification.iri` equals. The version is resolved from the selected specification and is not required in the request JSON because `intentSpecification.id` is the authoritative runtime contract selector.
 
 ```text
 https://example.com/tio/hospital-surgical-slice/v1.0
@@ -309,10 +309,4 @@ This decision establishes the following baseline:
 
 ## 12. Follow-up work:
 
-After this decision is baselined, update affected architecture and specification artefacts surgically:
-
-- update `intent_profile_decision.md`
-- update IC MS specification admission request profile
-- update IC MS solution brief wording
-- update relevant PUML diagrams if they show admission resolution
-- remove optional-by-IRI-alone admission wording from implementation-facing artefacts
+The follow-up work for this accepted baseline decision is resolved in the current IC MS baseline. The affected profile paper, IC MS specification, solution brief, and related diagrams have been aligned so runtime admission requires both `intentSpecification.id` and `expression.iri`, and IRI-only admission is not used as a governing contract-selection rule.

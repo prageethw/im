@@ -10,7 +10,7 @@
 | Domain | Intent Domain |
 | Primary resource | `Intent` |
 | Secondary resource | `IntentReport` |
-| Primary responsibility | TMF-compliant runtime intent controller and lifecycle/status projection |
+| Primary responsibility | TMF-compliant runtime Intent controller, schema and request-shape admission, lifecycle/status projection, and external runtime intent events |
 
 ## IC MS core purpose:
 
@@ -60,21 +60,21 @@ The API gateway may map external deployment routes to the internal platform rout
 
 ### Intent resource APIs:
 
-| **Purpose** | **Method** | **Endpoint** |
-|---|---:|---|
-| Create runtime intent | `POST` | `/intentManagement/v5/intent` |
-| List runtime intents | `GET` | `/intentManagement/v5/intent` |
-| Retrieve runtime intent by ID | `GET` | `/intentManagement/v5/intent/{id}` |
-| Full replace runtime intent | `PUT` | `/intentManagement/v5/intent/{id}` |
-| Partial update runtime intent | `PATCH` | `/intentManagement/v5/intent/{id}` |
-| Delete / terminate runtime intent | `DELETE` | `/intentManagement/v5/intent/{id}` |
+| **Purpose** | **Method** | **Endpoint** | **Position** |
+|---|---:|---|---|
+| Create runtime intent | `POST` | `/intentManagement/v5/intent` | TMF-aligned |
+| List runtime intents | `GET` | `/intentManagement/v5/intent` | TMF-aligned |
+| Retrieve runtime intent by ID | `GET` | `/intentManagement/v5/intent/{id}` | TMF-aligned |
+| Full replace runtime intent | `PUT` | `/intentManagement/v5/intent/{id}` | Platform extension |
+| Partial update runtime intent | `PATCH` | `/intentManagement/v5/intent/{id}` | TMF-aligned |
+| Delete / terminate runtime intent | `DELETE` | `/intentManagement/v5/intent/{id}` | TMF-aligned delete verb; platform behaviour is termination, not physical deletion |
 
 ### IntentReport APIs:
 
-| **Purpose** | **Method** | **Endpoint** |
-|---|---:|---|
-| List reports for intent | `GET` | `/intentManagement/v5/intent/{intentId}/intentReport` |
-| Retrieve report by ID | `GET` | `/intentManagement/v5/intent/{intentId}/intentReport/{id}` |
+| **Purpose** | **Method** | **Endpoint** | **Position** |
+|---|---:|---|---|
+| List reports for intent | `GET` | `/intentManagement/v5/intent/{intentId}/intentReport` | Platform/TMF-aligned nested report projection |
+| Retrieve report by ID | `GET` | `/intentManagement/v5/intent/{intentId}/intentReport/{id}` | Platform/TMF-aligned nested report projection |
 
 ### Hub subscription APIs:
 
@@ -331,6 +331,7 @@ No separate `IntentReport` lifecycle is baselined for ordinary consumer use beca
 
 ## TMF compliance and platform extension baseline:
 
+IC MS keeps the external Intent and IntentReport contract TMF-aligned while documenting controlled platform extensions explicitly.
 
 ## Response classification headers:
 

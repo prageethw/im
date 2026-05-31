@@ -90,6 +90,7 @@ IC MS therefore has two separate event-delivery paths:
 
 ### TMF compliance and platform extension baseline:
 
+IC MS exposes response classification headers and maintains a documented set of strict TMF-compatible operations and approved platform extensions.
 
 #### Response classification headers:
 
@@ -2163,6 +2164,8 @@ This is not a point-to-point command for a single consumer.
 It is a platform state/progress event meaning the runtime Intent has passed IC MS schema and request-shape validation and has been admitted into the Intent lifecycle.
 
 Current primary consumer is II MS / `intent-intelligence-ms`, but the event may be consumed by other authorised internal consumers where useful.
+
+IC MS also consumes downstream internal events that drive projection updates. `IntentRejectedEvent` carries II MS semantic or policy rejection outcomes that IC MS projects as external `Rejected` state. `IntentAssuranceEvent` carries IA MS assurance and runtime outcome facts that IC MS uses to update external `Intent` and `IntentReport` projections. IC MS does not consume `IntentCallbackEvent` by default; callback interpretation belongs to IA MS.
 
 Internal publication uses the IC MS internal event outbox and Kafka relay. Kafka records use the platform CloudEvents-style header model. This internal Kafka publication path is separate from external hub notification delivery.
 

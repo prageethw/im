@@ -214,19 +214,19 @@ X-Platform-Extension: true
 
 | Purpose | Method | Endpoint | Position |
 |---|---:|---|---|
-| Create runtime intent | `POST` | `/intentManagement/v5/intent` | TMF-compliant |
-| List runtime intents | `GET` | `/intentManagement/v5/intent` | TMF-compliant |
-| Retrieve runtime intent by ID | `GET` | `/intentManagement/v5/intent/{id}` | TMF-compliant |
+| Create runtime intent | `POST` | `/intentManagement/v5/intent` | TMF-aligned |
+| List runtime intents | `GET` | `/intentManagement/v5/intent` | TMF-aligned |
+| Retrieve runtime intent by ID | `GET` | `/intentManagement/v5/intent/{id}` | TMF-aligned |
 | Full replace runtime intent | `PUT` | `/intentManagement/v5/intent/{id}` | Platform extension |
-| Partial update runtime intent | `PATCH` | `/intentManagement/v5/intent/{id}` | TMF-compliant |
-| Terminate runtime intent | `DELETE` | `/intentManagement/v5/intent/{id}` | TMF-compliant delete verb; platform behaviour is termination, not physical deletion |
+| Partial update runtime intent | `PATCH` | `/intentManagement/v5/intent/{id}` | TMF-aligned |
+| Terminate runtime intent | `DELETE` | `/intentManagement/v5/intent/{id}` | TMF-aligned delete verb; platform behaviour is termination, not physical deletion |
 
 ### IntentReport APIs:
 
 | Purpose | Method | Endpoint | Position |
 |---|---:|---|---|
-| List reports for intent | `GET` | `/intentManagement/v5/intent/{intentId}/intentReport` | Platform/TMF-compliant nested report projection |
-| Retrieve report by ID | `GET` | `/intentManagement/v5/intent/{intentId}/intentReport/{id}` | Platform/TMF-compliant nested report projection |
+| List reports for intent | `GET` | `/intentManagement/v5/intent/{intentId}/intentReport` | Platform/TMF-aligned nested report projection |
+| Retrieve report by ID | `GET` | `/intentManagement/v5/intent/{intentId}/intentReport/{id}` | Platform/TMF-aligned nested report projection |
 
 Ordinary external consumers do not receive a public `DELETE /intentManagement/v5/intent/{intentId}/intentReport/{id}` capability. Governed internal/admin purge may exist, but is not exposed through NGW/public consumer APIs by default.
 
