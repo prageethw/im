@@ -2,7 +2,7 @@
 
 ## Summary:
 
-Intent Controller MS (IC MS) is the TMF-compliant runtime intent controller for the Intent Enabler. It owns the external `Intent` and `IntentReport` resource boundary, supports Draft runtime Intent authoring through the approved `submit` request-control extension, admits syntactically valid submitted runtime intent requests, projects external lifecycle/status state, and publishes curated external runtime intent events.
+Intent Controller MS (IC MS) is the TMF-compliant runtime intent controller for the Intent Enabler. It owns the external `Intent` and `IntentReport` resource boundary, supports Draft runtime Intent authoring through the approved `submit` request-control extension, admits schema and request-shape valid submitted runtime intent requests, projects external lifecycle/status state, and publishes curated external runtime intent events.
 
 IC MS is deliberately not the owner of semantic validation, optimisation, callback ingestion, change execution, or runtime assurance truth.
 
@@ -36,7 +36,7 @@ IC MS -> webhook_delivery_outbox -> HTTP POST -> external subscriber listener ca
 | External event subscribers | Receive TMF-aligned `Intent` and `IntentReport` events through REST webhook subscriber listener callbacks registered via the IC MS hub subscription model. |
 | External notification path | Uses `webhook_delivery_outbox` and HTTP `POST`; Kafka is not used for external hub notification delivery. |
 
-IC MS owns the externally visible runtime projection, not the full internal fulfilment state machine. The external `Intent` record is the current consumer-facing state of the runtime intent. Draft versions are authoring records only and do not drive `activeVersion`. Historical versions, standby states, rollback candidates, internal resource candidates, optimiser scoring, and raw assurance detail remain internal unless projected through `IntentReport` or another documented platform extension.
+IC MS owns the externally visible runtime projection, not the full internal fulfilment state machine. The external `Intent` record is the current consumer-facing state of the runtime intent. Draft authoring records are authoring only and do not drive `activeVersion`. Historical versions, standby states, rollback candidates, internal resource candidates, optimiser scoring, and raw assurance detail remain internal unless projected through `IntentReport` or another documented platform extension.
 
 ## Process View:
 
@@ -60,7 +60,7 @@ IC MS owns the externally visible runtime projection, not the full internal fulf
 
 ### Runtime intent Draft update and submitted-version change:
 
-1. A consumer may update an existing Draft projection using `PUT` or `PATCH` only while the current Intent/Draft projection is in `Draft`.
+1. A consumer may update an existing runtime intent using `PUT` or `PATCH` only while the current version is in `Draft`.
 2. Unsafe update operations require `If-Match`.
 3. IC MS applies optimistic concurrency using the current ETag.
 4. For a Draft Intent, all attributes accepted by the `PUT` / `PATCH` request contract are mutable.
@@ -69,10 +69,10 @@ IC MS owns the externally visible runtime projection, not the full internal fulf
 7. If `submit` is omitted while the current Intent is already Draft, the Intent remains Draft.
 8. If `submit: true` is supplied, IC MS validates the runtime admission profile and, if accepted, moves the projected lifecycle to `Acknowledged`.
 9. Once an Intent leaves Draft, general attribute update on that submitted version is not allowed.
-10. Material changes after submission require creating a new Draft version, editing that Draft version, and explicitly submitting it.
+10. Material changes after submission require creating a new Draft authoring record, editing that Draft authoring record, and explicitly submitting it.
 11. IC MS projects the current runtime version externally while retaining internal version history for audit and traceability.
 
-A new runtime version must not be created while there is already a newer candidate version in `Acknowledged` or `InProgress`. Draft versions are not admitted runtime candidates and do not drive `activeVersion`.
+A new runtime version must not be created while there is already a newer candidate version in `Acknowledged` or `InProgress`. Draft authoring records are not admitted runtime candidates and do not drive `activeVersion`.
 
 When a newer version becomes `activeVersion`, the previous version transition rule is:
 
@@ -146,11 +146,11 @@ IC MS is responsible for:
 |---|---|
 | Runtime `Intent` API | Create, list, retrieve, replace, patch, and terminate runtime intents. |
 | Draft Intent authoring | Persist and update Draft Intents using the `submit` request-control extension without admitting them to downstream processing. |
-| Runtime syntactic validation | Validate submitted runtime intent request shape against the active `IntentSpecification` selected by mandatory `intentSpecification.id`, with mandatory `expression.iri` checked against the selected specification's `expressionSpecification.iri`. |
-| Initial admission | Persist syntactically valid submitted requests and project `Acknowledged`. |
-| Internal progress publication | Emit `IntentValidatedEvent` after syntactic validation succeeds. |
+| Runtime schema and request-shape validation | Validate submitted runtime intent request shape against the active `IntentSpecification` selected by mandatory `intentSpecification.id`, with mandatory `expression.iri` checked against the selected specification's `expressionSpecification.iri`. |
+| Initial admission | Persist schema and request-shape valid submitted requests and project `Acknowledged`. |
+| Internal progress publication | Emit `IntentValidatedEvent` after schema and request-shape validation succeeds. |
 | External lifecycle projection | Own consumer-facing `Intent.lifecycleStatus`, `statusReason`, and `statusChangeDate`; external consumers cannot set or patch these fields. |
-| Runtime version projection | Return the current projected runtime version externally while retaining internal version history; Draft versions do not drive `activeVersion`. |
+| Runtime version projection | Return the current projected runtime version externally while retaining internal version history; Draft authoring records do not drive `activeVersion`. |
 | `IntentReport` projection | Expose read-only curated report/projection history derived from assurance outcomes. |
 | Event subscription | Support strict TMF `/hub` and domain-scoped `/intent/hub` subscription routes. |
 | External event delivery | Deliver consumer-safe TMF-aligned `Intent` and `IntentReport` event notifications by REST webhook callback to subscriber listener URLs. |
@@ -176,7 +176,7 @@ IC MS does not own:
 | Raw orchestrator callback interpretation | IA MS |
 | Raw candidate/resource scoring exposure | Internal optimiser/assurance pipeline only |
 
-IC MS also does not resolve an `IntentSpecification` by `expression.iri` alone, `specKey`, name, key, or inferred expression shape alone. Submitted runtime create/update admission requests must include both `intentSpecification.id` and `expression.iri`. `intentSpecification.id` selects the exact active platform-managed specification. `expression.iri` identifies the semantic/expression contract and must match the selected specification's `expressionSpecification.iri`. `intentSpecification.specKey` and `intentSpecification.name` are optional hints only.
+IC MS also does not resolve an `IntentSpecification` by `expression.iri` alone, `specKey`, name, or inferred expression shape alone. Submitted runtime create/update admission requests must include both `intentSpecification.id` and `expression.iri`. `intentSpecification.id` selects the exact active platform-managed specification. `expression.iri` identifies the semantic/expression contract and must match the selected specification's `expressionSpecification.iri`. `intentSpecification.specKey` and `intentSpecification.name` are optional hints only.
 
 IC MS does not allow external consumers to set or patch `lifecycleStatus`; lifecycle state is assigned and projected by the intent management entity.
 
@@ -325,8 +325,7 @@ Example explicit specification reference:
 ```json
 {
   "intentSpecification": {
-    "id": "ispec-hss-001",
-    "specKey": "hospital-surgical-slice-spec"
+    "id": "hospital-surgical-slice-spec-v1.20"
   },
   "expression": {
     "iri": "https://mycsp.com.au/tio/hospital-surgical-slice/v1.0"
@@ -390,12 +389,11 @@ Terminated
 
 ![alt text](ic_ms_intent_lifecycle_state_diagram.svg)
 
-### Intent-version lifecycleStatus values:
+### Intent-version lifecycleStatus values after admission:
 
-The Intent-version-level `lifecycleStatus` is the lifecycle truth for each individual runtime version. It supports version history, rollback/restart, audit, and governance.
+The Intent-version-level `lifecycleStatus` is the lifecycle truth for each admitted runtime version. It supports version history, rollback/restart, audit, and governance.
 
 ```text
-Draft
 Acknowledged
 InProgress
 Active
@@ -424,14 +422,14 @@ External `GET /intent/{id}` returns the current projected `Intent` state. It doe
 | Immutable identity | `id` is immutable; if included in `PUT`, it must match the path `id`. |
 | Lifecycle ownership | `lifecycleStatus` is not writable through create/update contracts; it is assigned and projected by the intent management entity. |
 | Bundle defaulting | `isBundle` is optional in request bodies and defaults to `false` when omitted on create; persisted responses include the server-resolved value. |
-| Submitted-version update | Once an Intent leaves Draft, general attribute update on that submitted version is not allowed. Material changes require a new Draft version. |
+| Submitted-version update | Once an Intent leaves Draft, general attribute update on that submitted version is not allowed. Material changes require a new Draft authoring record. |
 
 ### Intent-version lifecycle rules:
 
 | Rule | Baseline |
 |---|---|
 | New version gating | Do not create another newer version while there is already a newer candidate version in `Acknowledged` or `InProgress`. |
-| Draft version behaviour | Draft versions are editable authoring records and do not drive `activeVersion`. |
+| Draft authoring-record behaviour | Draft authoring records are editable authoring records and do not drive `activeVersion`. |
 | New version becomes `activeVersion` after previous `Active` / `Degraded` / `Paused` | Previous version moves to `Standby`. |
 | New version becomes `activeVersion` after previous `Rejected` / `Failed` | Previous version moves to `Terminated`. |
 | Standby reactivation | `Standby -> Acknowledged -> InProgress -> Active`. |
@@ -497,7 +495,7 @@ IC MS persists external runtime intent projections, runtime version metadata, hu
 | State item | Purpose |
 |---|---|
 | Runtime intent record | External canonical `Intent` projection, including Draft authoring records where `submit: false` is used. |
-| Current projected version | Version returned by standard `GET /intent/{id}`; Draft versions do not drive `activeVersion`. |
+| Current projected version | Version returned by standard `GET /intent/{id}`; Draft authoring records do not drive `activeVersion`. |
 | Lifecycle/status fields | `lifecycleStatus`, `statusReason`, `statusChangeDate`, assigned and projected by the intent management entity. |
 | ETag/version token | Optimistic concurrency for unsafe operations. |
 | Internal version history | Audit and traceability; not returned by default external GET. |
@@ -551,7 +549,7 @@ IC MS publishes internal state/progress events through the platform Kafka event 
 |---|---|---|---|
 | `IntentValidatedEvent` | Internal state/progress event emitted after schema and request-shape validation succeeds. | Kafka. | II MS / `intent-intelligence-ms`. |
 
-`IntentValidatedEvent` is not a point-to-point command. It states that an `Intent` has passed IC MS syntactic validation and has been admitted into the runtime lifecycle. IC MS writes the event to its internal event outbox, and the internal event relay publishes it to Kafka using the platform event header model.
+`IntentValidatedEvent` is not a point-to-point command. It states that an `Intent` has passed IC MS schema and request-shape validation and has been admitted into the runtime lifecycle. IC MS writes the event to its internal event outbox, and the internal event relay publishes it to Kafka using the platform event header model.
 
 ## External hub notification delivery:
 
@@ -641,32 +639,34 @@ Canonical message intent:
     "intentVersion": "v1",
     "lifecycleStatus": "Acknowledged",
     "intentSpecification": {
-      "id": "ispec-hss-001",
-      "specKey": "hospital-surgical-slice-spec",
-      "version": "1.20"
+      "id": "hospital-surgical-slice-spec-v1.20"
     },
     "expression": {
+      "@type": "JsonLdExpression",
+      "@baseType": "Expression",
       "iri": "https://mycsp.com.au/tio/hospital-surgical-slice/v1.0",
-      "context": {
-        "targets": {
-          "maxLatencyMs": 10,
-          "minAvailabilityPercent": 99.99,
-          "maxJitterMs": 2,
-          "maxPacketLossPercent": 0.01
-        },
-        "constraints": {
-          "location": {
-            "locationId": "AU-NSW-SYD-HOSP-001",
-            "locationType": "hospital",
-            "geographicScope": "campus"
+      "expressionValue": {
+        "context": {
+          "targets": {
+            "maxLatencyMs": 10,
+            "minAvailabilityPercent": 99.99,
+            "maxJitterMs": 2,
+            "maxPacketLossPercent": 0.01
           },
-          "serviceType": "surgical-connectivity",
-          "serviceClass": "critical-gold",
-          "priority": "critical",
-          "redundancyRequired": true
-        },
-        "preferences": {
-          "preferredAccessTechnology": "5G"
+          "constraints": {
+            "location": {
+              "locationId": "AU-NSW-SYD-HOSP-001",
+              "locationType": "hospital",
+              "geographicScope": "campus"
+            },
+            "serviceType": "surgical-connectivity",
+            "serviceClass": "critical-gold",
+            "priority": "critical",
+            "redundancyRequired": true
+          },
+          "preferences": {
+            "preferredAccessTechnology": "5G"
+          }
         }
       }
     },
@@ -675,7 +675,7 @@ Canonical message intent:
         "href": "/intentManagement/v5/intent/INT-HOSP-2026-001"
       },
       "intentSpecification": {
-        "href": "/intentManagement/v5/intentSpecification/ispec-hss-001?version=1.20"
+        "href": "/intentManagement/v5/intentSpecification/hospital-surgical-slice-spec-v1.20"
       }
     }
   }
@@ -762,7 +762,7 @@ Webhook notifications use HTTP headers, not Kafka CloudEvents headers.
 |---|---|
 | Unsafe operation missing required `If-Match` | Return `428 PRECONDITION_REQUIRED` with reason `IF_MATCH_REQUIRED`. |
 | Stale or mismatched ETag | Return `412 PRECONDITION_FAILED` with reason `ETAG_MISMATCH`. |
-| Draft PUT/PATCH | Allowed while the current Intent/Draft projection is `Draft`; all request-contract attributes are mutable. |
+| Draft PUT/PATCH | Allowed while the current version is `Draft`; all request-contract attributes are mutable. |
 | Submitted-version PUT/PATCH | Not allowed for general attribute update; material change requires a new Draft authoring record. |
 | Newer candidate already exists | Reject/defer another newer version while the existing candidate is `Acknowledged` or `InProgress`. |
 | `PATCH` usage | Supported for TMF compatibility while Draft, but `PUT` is preferred for deterministic full update. |
@@ -822,7 +822,7 @@ External consumers can rely on IC MS to provide:
 | Report read model | `IntentReport` is a read-only curated projection/audit resource for ordinary consumers. |
 | Hypermedia links | Responses include links for valid next actions where applicable. |
 | Optimistic concurrency | Unsafe operations use `If-Match` and ETag. |
-| Submitted-version immutability | Once an Intent leaves Draft, consumers cannot patch arbitrary attributes on that submitted version; material change requires a new Draft version. |
+| Submitted-version immutability | Once an Intent leaves Draft, consumers cannot patch arbitrary attributes on that submitted version; material change requires a new Draft authoring record. |
 | External events | Subscribers receive consumer-safe TMF-aligned resource events through REST webhook callbacks. |
 | No internal leakage | Raw telemetry, optimiser decisions, callback payloads, candidate scoring, and KP internals are not exposed in external events. |
 
@@ -836,15 +836,15 @@ Internal consumers can rely on `IntentValidatedEvent` as the admitted runtime in
 | Public exposure posture for TMF strict `/hub` versus domain-scoped `/intent/hub` | Both are baselined; gateway product exposure can choose supported route set. |
 | Optional internal/admin `IntentReport` purge API details | Governed capability is allowed, but ordinary external consumer delete remains not exposed by default. |
 | Full internal version-history retrieval API | Not exposed by default; can be defined later as a documented platform extension if needed. |
-| Draft version creation route/detail | Needs to be represented consistently in the detailed specification and diagrams where a submitted Intent requires a new Draft version for material change. |
+| Draft authoring-record creation route/detail | Future scope. New submitted-version changes require a new Draft authoring record, but the route or operation for creating that record is intentionally deferred. PUT and PATCH on an admitted runtime version must not create, mutate, or submit that new Draft authoring record. |
 
 ## Closed items:
 
 | Item | Decision |
 |---|---|
 | IC MS service identity | Full name is `Intent Controller MS`; service name is `intent-controller-ms`. |
-| Runtime create/update active spec resolution | Submitted admission requires both `intentSpecification.id` and `expression.iri`; family/name are optional hints only. |
-| IC MS validation scope | Syntactic/request-shape validation only for submitted requests; no semantic or optimisation ownership. |
+| Runtime create/update active spec resolution | Submitted admission requires both `intentSpecification.id` and `expression.iri`; specKey/name are optional hints only. |
+| IC MS validation scope | Schema and request-shape validation only for submitted requests; no semantic or optimisation ownership. |
 | Initial admitted state | `Acknowledged` after submitted request admission; `Draft` when `submit: false` is used. |
 | Internal handoff event | `IntentValidatedEvent`. |
 | Hub notification delivery | REST webhook delivery to subscriber listener callback URLs; Kafka is not used for external hub delivery. |
@@ -866,4 +866,4 @@ Internal consumers can rely on `IntentValidatedEvent` as the admitted runtime in
 | Base path | `/intentManagement/v5` |
 | Primary resource | `Intent` |
 | Secondary resource | `IntentReport` |
-| Primary responsibility | TMF-compliant runtime `Intent` controller, syntactic admission, lifecycle/status projection, and external runtime intent events |
+| Primary responsibility | TMF-compliant runtime `Intent` controller, schema and request-shape admission, lifecycle/status projection, and external runtime intent events |
