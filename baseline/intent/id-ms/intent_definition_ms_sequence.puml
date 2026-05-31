@@ -47,7 +47,7 @@ SUBREG --> DISPATCHER : [{ subscriptionId, callbackUrl }]
 loop for each matched subscription:
   DISPATCHER -> SUB : HTTPS POST to subscriber-owned callbackUrl\nHTTP webhook; no external Kafka\nTMF-aligned event payload\n{ eventType: IntentSpecificationCreateEvent, event, eventId, eventTime, ... }
   alt HTTP 2xx:
-    SUB --> DISPATCHER : 200 OK or 202 Accepted
+    SUB --> DISPATCHER : 204 No Content
     DISPATCHER -> OUTBOX : Mark event row DELIVERED
   else HTTP error or timeout:
     SUB --> DISPATCHER : 4xx, 5xx, or timeout
@@ -93,7 +93,7 @@ OUTBOX --> DISPATCHER : [IntentSpecificationAttributeValueChangeEvent]
 DISPATCHER -> SUBREG : Lookup matching subscriptions
 SUBREG --> DISPATCHER : [{ callbackUrl }]
 DISPATCHER -> SUB : HTTPS POST to subscriber-owned callbackUrl\nTMF-aligned webhook event payload\nNo external Kafka delivery
-SUB --> DISPATCHER : 200 OK or 202 Accepted
+SUB --> DISPATCHER : 204 No Content
 DISPATCHER -> OUTBOX : Mark DELIVERED
 
 == 3b. Partial Update (supported but discouraged PATCH): ==
@@ -151,9 +151,9 @@ OUTBOX --> DISPATCHER : [StatusChange(ACTIVE), StatusChange(RETIRED)]
 DISPATCHER -> SUBREG : Lookup matching subscriptions
 SUBREG --> DISPATCHER : [{ callbackUrl }]
 DISPATCHER -> SUB : HTTPS POST to subscriber-owned callbackUrl\nTMF-aligned IntentSpecificationStatusChangeEvent\n{ lifecycleStatus: "ACTIVE" }
-SUB --> DISPATCHER : 200 OK or 202 Accepted
+SUB --> DISPATCHER : 204 No Content
 DISPATCHER -> SUB : HTTPS POST to subscriber-owned callbackUrl\nTMF-aligned IntentSpecificationStatusChangeEvent\n{ lifecycleStatus: "RETIRED", id: previousSpecId }
-SUB --> DISPATCHER : 200 OK or 202 Accepted
+SUB --> DISPATCHER : 204 No Content
 DISPATCHER -> OUTBOX : Mark both events DELIVERED
 
 == 5. Delete Unused Draft IntentSpecification: ==
@@ -190,7 +190,7 @@ OUTBOX --> DISPATCHER : [IntentSpecificationDeleteEvent]
 DISPATCHER -> SUBREG : Lookup matching subscriptions
 SUBREG --> DISPATCHER : [{ callbackUrl }]
 DISPATCHER -> SUB : HTTPS POST to subscriber-owned callbackUrl\nTMF-aligned IntentSpecificationDeleteEvent\nNo external Kafka delivery
-SUB --> DISPATCHER : 200 OK or 202 Accepted
+SUB --> DISPATCHER : 204 No Content
 DISPATCHER -> OUTBOX : Mark DELIVERED
 
 == 6a. Register External Event Subscription: ==
