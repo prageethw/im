@@ -21,7 +21,7 @@ This specification uses `/intentManagement/v5` in examples as the platform base 
 
 IC MS owns the external runtime `Intent` and `IntentReport` resources.
 
-IC MS validates runtime `Intent` request shape against the applicable active `IntentSpecification` resolved from mandatory `intentSpecification.id`, with mandatory `expression.iri` used to confirm the semantic/expression contract. IC MS admits schema and request-shape valid runtime intents, emits `IntentValidatedEvent` as an internal state/progress event, projects external lifecycle/status based on downstream outcomes, and exposes curated `IntentReport` projections.
+IC MS validates runtime `Intent` request shape against the applicable `ACTIVE` `IntentSpecification` resolved from mandatory `intentSpecification.id`, with mandatory `expression.iri` used to confirm the semantic/expression contract. IC MS admits schema and request-shape valid runtime intents, emits `IntentValidatedEvent` as an internal state/progress event, projects external lifecycle/status based on downstream outcomes, and exposes curated `IntentReport` projections.
 
 IC MS does not own:
 
@@ -221,7 +221,7 @@ These fields serve different purposes:
 
 | **Field** | **Purpose** |
 |---|---|
-| `intentSpecification.id` | Selects the exact active platform-managed `IntentSpecification` used for validation, governance, and audit. |
+| `intentSpecification.id` | Selects the exact `ACTIVE` platform-managed `IntentSpecification` used for validation, governance, and audit. |
 | `expression.iri` | Identifies the semantic/expression contract claimed by the runtime expression. |
 
 For submitted admission, `intentSpecification.id` is mandatory. IC MS does not infer the governing runtime validation contract from `expression.iri` alone.
@@ -675,10 +675,10 @@ ETag: "intent-INT-HOSP-2026-001-v1"
   "name": "Sydney Hospital Surgical Connection Intent",
   "humanExpression": "I need a surgical connection in Sydney Hospital with latency less than or equal to 10 ms.",
   "submit": false,
-  "version": "v1",
   "lifecycleStatus": "Draft",
   "statusReason": "Intent saved as draft and not submitted for admission.",
   "statusChangeDate": "2026-04-18T12:00:00+10:00",
+  "isBundle": false,
   "@type": "Intent",
   "@baseType": "Entity"
 }
@@ -1229,8 +1229,8 @@ If-Match: "intent-INT-HOSP-2026-001-v5"
 HTTP/1.1 202 Accepted
 Content-Type: application/json
 Content-Language: en-AU
-X-TMF-Native: true
-X-Platform-Extension: false
+X-TMF-Native: false
+X-Platform-Extension: true
 Location: /intentManagement/v5/intent/INT-HOSP-2026-001
 ETag: "intent-INT-HOSP-2026-001-v6"
 ```
@@ -1487,6 +1487,32 @@ Accept: application/json
 }
 ```
 
+### Strict TMF route success response:
+
+```http
+HTTP/1.1 201 Created
+Location: /intentManagement/v5/hub/sub-intent-001
+Content-Type: application/json
+Content-Language: en-AU
+X-TMF-Native: true
+X-Platform-Extension: false
+ETag: "subscription-sub-intent-001-v1"
+```
+
+```json
+{
+  "id": "sub-intent-001",
+  "callback": "https://consumer.example.com/listener/intent/events",
+  "query": "eventType=IntentStatusChangeEvent",
+  "@type": "EventSubscription",
+  "_links": {
+    "self": {
+      "href": "/intentManagement/v5/hub/sub-intent-001"
+    }
+  }
+}
+```
+
 ### Domain-scoped platform extension request:
 
 ```http
@@ -1503,14 +1529,15 @@ Accept: application/json
 }
 ```
 
-### Success response:
+### Domain-scoped platform extension success response:
 
 ```http
 HTTP/1.1 201 Created
 Location: /intentManagement/v5/intent/hub/sub-intent-001
 Content-Type: application/json
-X-TMF-Native: true
-X-Platform-Extension: false
+Content-Language: en-AU
+X-TMF-Native: false
+X-Platform-Extension: true
 ETag: "subscription-sub-intent-001-v1"
 ```
 
@@ -1592,9 +1619,8 @@ X-Correlation-Id: corr-intent-status-001
 ### Subscriber listener success response:
 
 ```http
-X-TMF-Native: true
-X-Platform-Extension: false
 HTTP/1.1 204 No Content
+Content-Language: en-AU
 ```
 
 ---
@@ -1621,8 +1647,9 @@ Cache-Control: no-cache
 ```http
 HTTP/1.1 200 OK
 Content-Type: application/json
-X-TMF-Native: true
-X-Platform-Extension: false
+Content-Language: en-AU
+X-TMF-Native: false
+X-Platform-Extension: true
 ETag: "subscription-sub-intent-001-v1"
 Cache-Control: private, max-age=300
 ```
@@ -1655,9 +1682,10 @@ If-Match: "subscription-sub-intent-001-v1"
 ### Success response:
 
 ```http
-X-TMF-Native: true
-X-Platform-Extension: false
 HTTP/1.1 204 No Content
+Content-Language: en-AU
+X-TMF-Native: false
+X-Platform-Extension: true
 ```
 
 ---
@@ -1677,7 +1705,7 @@ X-Platform-Extension: false
 {
   "code": "VALIDATION_FAILED",
   "reason": "EXPRESSION_IRI_REQUIRED",
-  "message": "Runtime Intent create/update requests must include expression.iri so IC MS can resolve the applicable expression contract for runtime validation.",
+  "message": "Runtime Intent create and update requests must include expression.iri so IC MS can resolve the applicable expression contract for runtime validation.",
   "status": 422,
   "referenceError": "https://mycsp.com.au/errors/VALIDATION_FAILED",
   "@type": "Error"
