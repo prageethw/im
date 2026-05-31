@@ -15,15 +15,14 @@
 - [3. Context](#3-context)
 - [4. Decision drivers](#4-decision-drivers)
 - [5. Proposal](#5-proposal)
-  - [5.1 Request vs persisted response quick reference](#51-request-vs-persisted-response-quick-reference)
-  - [5.2 TMF-aligned, not TMF-minimal](#52-tmf-aligned-not-tmf-minimal)
-  - [5.3 Runtime Intent admission profile](#53-runtime-intent-admission-profile)
-  - [5.4 Minimum attributes for Intent Draft creation](#54-minimum-attributes-for-intent-draft-creation)
-  - [5.5 Minimum response attributes for Intent Draft creation](#55-minimum-response-attributes-for-intent-draft-creation)
-  - [5.6 IntentSpecification resolution rule](#56-intentspecification-resolution-rule)
-  - [5.7 Persisted response profile after admission](#57-persisted-response-profile-after-admission)
-  - [5.8 Optional intent-management-entity governed enrichment fields](#58-optional-intent-management-entity-governed-enrichment-fields)
-  - [5.9 Lifecycle ownership guardrail](#59-lifecycle-ownership-guardrail)
+  - [5.1 TMF-aligned, not TMF-minimal](#51-tmf-aligned-not-tmf-minimal)
+  - [5.2 Runtime Intent admission profile](#52-runtime-intent-admission-profile)
+  - [5.3 Minimum attributes for Intent Draft creation](#53-minimum-attributes-for-intent-draft-creation)
+  - [5.4 Minimum response attributes for Intent Draft creation](#54-minimum-response-attributes-for-intent-draft-creation)
+  - [5.5 IntentSpecification resolution rule](#55-intentspecification-resolution-rule)
+  - [5.6 Persisted response profile after admission](#56-persisted-response-profile-after-admission)
+  - [5.7 Optional intent-management-entity governed enrichment fields](#57-optional-intent-management-entity-governed-enrichment-fields)
+  - [5.8 Lifecycle ownership guardrail](#58-lifecycle-ownership-guardrail)
 - [6. Examples](#6-examples)
   - [6.1 Minimal admission request](#61-minimal-admission-request)
   - [6.2 Minimal persisted response after admission](#62-minimal-persisted-response-after-admission)
@@ -94,19 +93,7 @@ The intent management entity must be able to answer questions such as:
 
 ## 5. Proposal:
 
-### 5.1 Request vs persisted response quick reference:
-
-| **Profile point** | **Consumer/request fields** | **Persisted response fields** |
-| --- | --- | --- |
-| Draft create request | `name`, `submit: false`, `@type`, `@baseType`; `humanExpression` strongly recommended | Not applicable |
-| Draft create response | Not applicable | `id`, `href`, `name`, `submit: false`, `lifecycleStatus: Draft`, `statusReason`, `statusChangeDate`, server-resolved `isBundle`, `@type`, `@baseType`; no permanent runtime `version` |
-| Submitted admission request | `name`, `intentSpecification.id`, `expression`, `expression.@type`, `expression.iri`, `expression.expressionValue`, `@type`, `@baseType`; `humanExpression` strongly recommended | Not applicable |
-| Persisted admitted response | Not applicable | `id`, `href`, `name`, permanent runtime `version`, `lifecycleStatus`, `statusReason`, `statusChangeDate`, server-resolved `isBundle`, resolved `intentSpecification.id`, `expression`, `@type`, `@baseType` |
-| GET projection | Not applicable | Current projected runtime `Intent` state only; not the full internal version aggregate |
-
-This distinction prevents Draft authoring fields, submitted admission fields, and persisted projection fields from being treated as the same contract.
-
-### 5.2 TMF-aligned, not TMF-minimal:
+### 5.1 TMF-aligned, not TMF-minimal:
 
 The intent management entity remains TMF-aligned by using the TMF921 runtime `Intent` resource model and operation pattern.
 
@@ -116,7 +103,7 @@ The rule is:
 
 > TMF-aligned does not mean TMF-minimal.
 
-### 5.3 Runtime Intent admission profile:
+### 5.2 Runtime Intent admission profile:
 
 The runtime admission profile is the main profile in this paper.
 
@@ -141,7 +128,7 @@ The admission request is **strongly** encouraged to include:
 
 `intentSpecification.id` is mandatory for admission because it selects the exact platform-managed `IntentSpecification` resource used for validation, governance, and audit. `expression.iri` is also mandatory because it identifies the semantic/expression contract the runtime expression claims to follow. Both fields are required because they serve different purposes.
 
-### 5.4 Minimum attributes for Intent Draft creation:
+### 5.3 Minimum attributes for Intent Draft creation:
 
 Draft is a pre-admission authoring convenience.
 
@@ -171,10 +158,6 @@ Draft creation does not require:
 - `expression.expressionValue`
 - `intentSpecification.id`
 
-`isBundle` is optional in Draft creation requests. If omitted, IC MS defaults it to `false`.
-
-External consumers must not supply `lifecycleStatus` in Draft creation requests. IC MS assigns `lifecycleStatus: Draft` in the persisted response.
-
 Minimal Draft creation request payload:
 
 ```json
@@ -200,7 +183,7 @@ Recommended Draft creation request payload with `humanExpression`:
 
 When a Draft is later moved into admission using `submit: true`, it must satisfy the normal runtime Intent admission profile defined in section 5.2.
 
-### 5.5 Minimum response attributes for Intent Draft creation:
+### 5.4 Minimum response attributes for Intent Draft creation:
 
 A persisted Draft response should include enough information to identify, retrieve, edit, and understand the Draft state.
 
@@ -217,7 +200,6 @@ Minimum Draft creation response attributes:
 | `lifecycleStatus` | Mandatory with value `Draft` | Entity-assigned Draft state. |
 | `statusReason` | Mandatory | Human-readable reason for Draft state. |
 | `statusChangeDate` | Mandatory | Timestamp of Draft state assignment/update. |
-| `isBundle` | Mandatory with server-resolved value | Defaults to `false` when omitted from the request. |
 | `@type` | Mandatory | TMF polymorphic resource type. |
 | `@baseType` | Mandatory | TMF base type alignment. |
 
@@ -232,7 +214,6 @@ Minimum Draft creation response payload:
   "lifecycleStatus": "Draft",
   "statusReason": "Intent saved as draft and not submitted for admission.",
   "statusChangeDate": "2026-04-18T12:00:00+10:00",
-  "isBundle": false,
   "@type": "Intent",
   "@baseType": "Entity"
 }
@@ -250,13 +231,12 @@ Recommended Draft creation response payload with `humanExpression` when supplied
   "lifecycleStatus": "Draft",
   "statusReason": "Intent saved as draft and not submitted for admission.",
   "statusChangeDate": "2026-04-18T12:00:00+10:00",
-  "isBundle": false,
   "@type": "Intent",
   "@baseType": "Entity"
 }
 ```
 
-### 5.6 IntentSpecification resolution rule:
+### 5.5 IntentSpecification resolution rule:
 
 `expression.iri` is mandatory for admission.
 
@@ -272,7 +252,7 @@ If `intentSpecification.id` is omitted, the admission request must be rejected. 
 
 After successful admission, `intentSpecification.id` remains mandatory on the persisted `Intent` representation because the intent management entity must record which active specification governed validation and admission.
 
-### 5.7 Persisted response profile after admission:
+### 5.6 Persisted response profile after admission:
 
 A persisted `Intent` response after admission is accepted must include:
 
@@ -283,7 +263,6 @@ A persisted `Intent` response after admission is accepted must include:
 - `lifecycleStatus`
 - `statusReason`
 - `statusChangeDate`
-- `isBundle`
 - `intentSpecification.id`
 - `expression`
 - `expression.@type`
@@ -296,7 +275,7 @@ The important distinction is:
 
 > `intentSpecification.id` is mandatory in the admission request and remains mandatory in the persisted response after admission is accepted.
 
-### 5.8 Optional intent-management-entity governed enrichment fields:
+### 5.7 Optional intent-management-entity governed enrichment fields:
 
 Optional enrichment fields are useful, but they are not part of the generic minimum mandatory profile.
 
@@ -306,25 +285,20 @@ Optional enrichment fields are useful, but they are not part of the generic mini
 | `intentSpecification.id` in admission request | **Mandatory for submitted admission** | Selects the exact active platform-managed `IntentSpecification` used for validation, governance, and audit. |
 | `description` | Optional | Useful for extra human-readable context. |
 | `validFor.startDateTime` | Optional | Useful when the runtime intent should be valid from a specific time. |
-| `isBundle` | Optional on request; defaults to `false` when omitted | Useful where bundled intent behaviour is supported. Persisted responses include the server-resolved value. |
+| `isBundle` | Optional | Useful where bundled intent behaviour is supported. |
 | `priority` | Optional | Useful where priority is handled as policy or operational guidance. |
 | `relatedParty` | Optional | Useful for requester, customer, or provider attribution. |
 | `_links` | Optional | Useful for discoverable operation affordances. |
-
-
-Top-level `priority` and `expression.expressionValue.context.constraints.priority` are different fields. Top-level `priority` is an API or platform processing priority used by IC MS and platform controls. `constraints.priority` is a domain-specific fulfilment constraint interpreted by downstream semantic validation, policy, optimisation, and assurance components. When both are present, they should normally be consistent, but they are not the same field.
 
 Optional enrichment fields may be required by a specific implementation, product, channel, policy, onboarding profile, or security posture.
 
 However, they are not part of the generic minimum mandatory profile defined by this proposal.
 
-### 5.9 Lifecycle ownership guardrail:
+### 5.8 Lifecycle ownership guardrail:
 
 External consumers must not supply `lifecycleStatus` in any external write request.
 
 `lifecycleStatus` is assigned, transitioned, and projected by the intent management entity.
-
-`isBundle` is not mandatory in external write requests. If omitted on create, IC MS defaults it to `false`; persisted responses include the server-resolved value.
 
 ## 6. Examples:
 
@@ -380,7 +354,6 @@ This example supplies both `intentSpecification.id` and `expression.iri`, becaus
   "lifecycleStatus": "Acknowledged",
   "statusReason": "Intent accepted for admission processing.",
   "statusChangeDate": "2026-04-18T12:10:00+10:00",
-  "isBundle": false,
   "intentSpecification": {
     "id": "ispec-hss-001",
     "specKey": "hospital-surgical-slice-spec"
@@ -462,14 +435,13 @@ This proposal recommends adopting a runtime `Intent` mandatory profile baseline.
 If accepted, the intent management entity will document and enforce:
 
 - runtime Intent admission requires `name`, `intentSpecification.id`, `expression`, `expression.@type`, `expression.iri`, `expression.expressionValue`, `@type`, and `@baseType`
-- persisted Intent response after admission requires identity, lifecycle projection, server-resolved `isBundle`, resolved `intentSpecification.id`, expression, `@type`, and `@baseType`
+- persisted Intent response after admission requires identity, lifecycle projection, resolved `intentSpecification.id`, expression, `@type`, and `@baseType`
 - Draft creation requires only `name`, `submit: false`, `@type`, and `@baseType`
-- Draft creation response requires identity, Draft lifecycle projection, server-resolved `isBundle`, `submit: false`, `@type`, and `@baseType`; it does not require a permanent runtime `version`
+- Draft creation response requires identity, Draft lifecycle projection, `submit: false`, `@type`, and `@baseType`; it does not require a permanent runtime `version`
 - `humanExpression` is strongly recommended for admission, but not generically mandatory
 - `intentSpecification.id` is mandatory in both the admission request and the persisted response after admission is accepted
 - optional enrichment fields remain separate from the generic minimum mandatory profile
 - `lifecycleStatus` must not be supplied in any external write request
-- `isBundle` is optional in request bodies and defaults to `false` when omitted
 
 ## 10. References:
 

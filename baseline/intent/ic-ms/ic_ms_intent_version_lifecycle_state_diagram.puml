@@ -32,7 +32,7 @@ title IC MS — Intent Version Lifecycle State Diagram
 [*] --> Acknowledged : version accepted
 
 ' ── States ────────────────────────────────────────────────────────────────
-state Acknowledged #d4e6f1 : Syntactically admitted,\nawaiting change handling
+state Acknowledged #d4e6f1 : Schema and request-shape admitted,\nawaiting change handling
 state InProgress #d5f5e3 : Change execution\nin progress
 state Active #2ecc71 : Network / service confirmed\n(activeVersion)
 state Degraded #f9e79f : Assurance degradation\ndetected

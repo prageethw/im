@@ -19,18 +19,17 @@
   - [5.2 Use intentSpecification.id only](#52-use-intentspecificationid-only)
   - [5.3 Require both intentSpecification.id and expression.iri](#53-require-both-intentspecificationid-and-expressioniri)
 - [6. Proposal](#6-proposal)
-- [7. Do not implement shortcut admission](#7-do-not-implement-shortcut-admission)
-- [8. Validation rule](#8-validation-rule)
-- [9. Examples](#9-examples)
-  - [9.1 Valid admission request](#91-valid-admission-request)
-  - [9.2 Rejected request when intentSpecification.id is missing](#92-rejected-request-when-intentspecificationid-is-missing)
-  - [9.3 Rejected request when IRI does not match the specification](#93-rejected-request-when-iri-does-not-match-the-specification)
-- [10. Consequences](#10-consequences)
-  - [10.1 Positive consequences](#101-positive-consequences)
-  - [10.2 Trade-offs](#102-trade-offs)
-- [11. Proposal outcome](#11-proposal-outcome)
-- [12. References](#12-references)
-- [13. Follow-up work](#13-follow-up-work)
+- [7. Validation rule](#7-validation-rule)
+- [8. Examples](#8-examples)
+  - [8.1 Valid admission request](#81-valid-admission-request)
+  - [8.2 Rejected request when intentSpecification.id is missing](#82-rejected-request-when-intentspecificationid-is-missing)
+  - [8.3 Rejected request when IRI does not match the specification](#83-rejected-request-when-iri-does-not-match-the-specification)
+- [9. Consequences](#9-consequences)
+  - [9.1 Positive consequences](#91-positive-consequences)
+  - [9.2 Trade-offs](#92-trade-offs)
+- [10. Proposal outcome](#10-proposal-outcome)
+- [11. References](#11-references)
+- [12. Follow-up work](#12-follow-up-work)
 
 ## 1. Decision summary:
 
@@ -154,20 +153,7 @@ The admission request is rejected if:
 
 Draft creation is not affected by this decision. Draft creation may omit both fields because Draft is not admitted into runtime processing.
 
-## 7. Do not implement shortcut admission:
-
-The following admission shortcuts are explicitly out of scope for IC MS:
-
-| **Shortcut** | **Decision** | **Reason** |
-| --- | --- | --- |
-| IRI-only admission | Do not implement | Multiple active `IntentSpecification` resources may share the same expression IRI. |
-| `specKey`-only admission | Do not implement | `specKey` is a descriptive and discovery hint in runtime requests, not the authoritative selector. |
-| Name-only admission | Do not implement | Names are not stable governance identifiers. |
-| Payload-shape inference | Do not implement | Inferring the specification from payload shape makes admission ambiguous and difficult to audit. |
-
-IC MS must select the governing contract from the explicit `intentSpecification.id` and then verify that the supplied `expression.iri` matches the selected specification's `expressionSpecification.iri`.
-
-## 8. Validation rule:
+## 7. Validation rule:
 
 The validation rule is:
 
@@ -183,9 +169,9 @@ The validation rule is:
 
 This means the intent management entity does not infer the governing runtime contract from `expression.iri` alone.
 
-## 9. Examples:
+## 8. Examples:
 
-### 9.1 Valid admission request:
+### 8.1 Valid admission request:
 
 ```json
 {
@@ -227,7 +213,7 @@ This request is valid only if `ispec-hss-001` version `1.20` is active and its `
 https://example.com/tio/hospital-surgical-slice/v1.0
 ```
 
-### 9.2 Rejected request when intentSpecification.id is missing:
+### 8.2 Rejected request when intentSpecification.id is missing:
 
 ```json
 {
@@ -252,7 +238,7 @@ Suggested error reason:
 MISSING_INTENT_SPECIFICATION_ID
 ```
 
-### 9.3 Rejected request when IRI does not match the specification:
+### 8.3 Rejected request when IRI does not match the specification:
 
 ```json
 {
@@ -281,9 +267,9 @@ Suggested error reason:
 INTENT_EXPRESSION_IRI_MISMATCH
 ```
 
-## 10. Consequences:
+## 9. Consequences:
 
-### 10.1 Positive consequences:
+### 9.1 Positive consequences:
 
 - Admission is deterministic.
 - IC MS does not need ambiguous active-specification resolution by IRI alone.
@@ -292,7 +278,7 @@ INTENT_EXPRESSION_IRI_MISMATCH
 - Operators can see both the governing specification and semantic contract.
 - Future introduction of multiple active specifications with the same IRI does not change admission behaviour.
 
-### 10.2 Trade-offs:
+### 9.2 Trade-offs:
 
 - Requesters must know the active `IntentSpecification.id` before admission.
 - OEX or catalogue discovery becomes more important.
@@ -301,7 +287,7 @@ INTENT_EXPRESSION_IRI_MISMATCH
 
 These trade-offs are acceptable because they remove ambiguity from runtime admission and make audit/governance stronger.
 
-## 11. Proposal outcome:
+## 10. Proposal outcome:
 
 This proposal recommends the following baseline:
 
@@ -312,7 +298,7 @@ This proposal recommends the following baseline:
 - IC MS rejects admission if `expression.iri` does not match `IntentSpecification.expressionSpecification.iri`.
 - Persisted Intent responses after admission include both the selected `intentSpecification.id` and the runtime `expression.iri`.
 
-## 12. References:
+## 11. References:
 
 | **Reference** | **URL** | **Relevance to this proposal** |
 | --- | --- | --- |
@@ -321,7 +307,7 @@ This proposal recommends the following baseline:
 | TR299 Intent Specification | https://www.tmforum.org/resources/standard/tr299-intent-specification/ | Provides the intent specification concept used to define rules for well-formed intent and allowed intent content. |
 | Intent architecture baseline repository | https://github.com/prageethw/im/tree/main/baseline/intent | Holds the intent architecture baseline and project-specific profile artefacts. |
 
-## 13. Follow-up work:
+## 12. Follow-up work:
 
 After this proposal is reviewed and baselined, update affected architecture and specification artefacts surgically:
 
