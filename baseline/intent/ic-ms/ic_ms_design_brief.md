@@ -219,7 +219,8 @@ IC MS owns the external lifecycle/status projection, but not the runtime truth.
 
 | **Lifecycle/status source** | **IC MS action** |
 |---|---|
-| IC MS schema and request-shape validation succeeds | Project `Acknowledged` |
+| Submitted IC MS schema and request-shape validation succeeds | Project `Acknowledged` |
+| Draft creation with `submit:false` | Project `Draft`; no admitted Intent version is created and `activeVersion` is not driven |
 | II MS semantic/policy rejection | Project `Rejected` |
 | IA MS apply success / active assurance | Project `Active` |
 | IA MS degraded assurance | Project `Degraded` |
@@ -491,7 +492,7 @@ Runtime truth comes from:
 
 | **Step** | **Trigger / event** | **Intent version** | **Version lifecycleStatus** | **Intent activeVersion** | **IC MS external projection** |
 |---:|---|---|---|---|---|
-| 1 | `POST /intent` passes schema and request-shape validation | `v1` | `Acknowledged` | none | Intent admitted; `IntentValidatedEvent` emitted |
+| 1 | `POST /intent` with `submit:true` or omitted `submit` passes schema and request-shape validation | `v1` | `Acknowledged` | none | Intent admitted; `IntentValidatedEvent` emitted |
 | 2 | Downstream fulfilment starts | `v1` | `InProgress` | none | Intent is being processed |
 | 3 | IA MS confirms apply/assurance active | `v1` | `Active` | `v1` | Intent active; `v1` becomes active version |
 | 4 | Runtime degradation reported by IA MS | `v1` | `Degraded` | `v1` | Intent degraded, but `v1` remains `activeVersion` |

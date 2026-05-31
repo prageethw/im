@@ -11,14 +11,14 @@
 ## Table of contents:
 
 - [1. Decision summary](#1-decision-summary)
-- [2. Proposal flow diagram](#2-proposal-flow-diagram)
+- [2. Decision flow diagram](#2-decision-flow-diagram)
 - [3. Context](#3-context)
 - [4. Decision drivers](#4-decision-drivers)
 - [5. Options considered](#5-options-considered)
   - [5.1 Rejected option: expression.iri-only admission](#51-rejected-option-expressioniri-only-admission)
   - [5.2 Use intentSpecification.id only](#52-use-intentspecificationid-only)
   - [5.3 Require both intentSpecification.id and expression.iri](#53-require-both-intentspecificationid-and-expressioniri)
-- [6. Proposal](#6-proposal)
+- [6. Proposal](#6-decision)
 - [7. Validation rule](#7-validation-rule)
 - [8. Examples](#8-examples)
   - [8.1 Valid admission request](#81-valid-admission-request)
@@ -27,13 +27,13 @@
 - [9. Consequences](#9-consequences)
   - [9.1 Positive consequences](#91-positive-consequences)
   - [9.2 Trade-offs](#92-trade-offs)
-- [10. Proposal outcome](#10-proposal-outcome)
+- [10. Decision outcome](#10-decision-outcome)
 - [11. References](#11-references)
 - [12. Follow-up work](#12-follow-up-work)
 
 ## 1. Decision summary:
 
-This proposal decides how a runtime `Intent` admission request identifies the governing runtime contract.
+This decision records how a runtime `Intent` admission request identifies the governing runtime contract.
 
 The decision is:
 
@@ -52,9 +52,9 @@ The two fields serve different purposes:
 
 Draft creation remains lighter and does not require either field. This decision applies when a Draft is moved into admission or when a new runtime Intent is created directly for admission.
 
-## 2. Proposal flow diagram:
+## 2. Decision flow diagram:
 
-![Intent mandatory iri vs spec.id proposal](intent_iri_specification_id_decision.svg)
+![Intent mandatory iri vs spec.id decision](intent_iri_specification_id_decision.svg)
 
 
 ## 3. Context:
@@ -122,7 +122,7 @@ Problems:
 
 This option makes both fields mandatory for runtime admission.
 
-It is the recommended option.
+It is the accepted option.
 
 Benefits:
 
@@ -132,7 +132,7 @@ Benefits:
 - audit records contain both the platform governance reference and the semantic contract reference
 - no ambiguous active-specification resolution is needed during admission
 
-## 6. Proposal:
+## 6. Decision:
 
 Runtime `Intent` admission requires:
 
@@ -287,9 +287,9 @@ INTENT_EXPRESSION_IRI_MISMATCH
 
 These trade-offs are acceptable because they remove ambiguity from runtime admission and make audit/governance stronger.
 
-## 10. Proposal outcome:
+## 10. Decision outcome:
 
-This proposal recommends the following baseline:
+This decision establishes the following baseline:
 
 - Draft creation does not require `intentSpecification.id` or `expression.iri`.
 - Runtime Intent admission requires `intentSpecification.id`.
@@ -300,7 +300,7 @@ This proposal recommends the following baseline:
 
 ## 11. References:
 
-| **Reference** | **URL** | **Relevance to this proposal** |
+| **Reference** | **URL** | **Relevance to this decision** |
 | --- | --- | --- |
 | TMF921 Intent Management API v5.0.0 specification | https://www.tmforum.org/resources/specification/tmf921-intent-management-api-v5-0-0/ | Defines the TMF921 Intent Management API and runtime `Intent` and `IntentSpecification` resource model used as the base for this profile decision. |
 | TR292 TM Forum Intent Ontology (TIO) v3.6.0 | https://www.tmforum.org/resources/standard/tr292-intent-ontology-tio-v3-6-0/ | Provides the intent ontology and semantic-model background behind expression contract identifiers. |
@@ -309,7 +309,7 @@ This proposal recommends the following baseline:
 
 ## 12. Follow-up work:
 
-After this proposal is reviewed and baselined, update affected architecture and specification artefacts surgically:
+After this decision is baselined, update affected architecture and specification artefacts surgically:
 
 - update `intent_profile_decision.md`
 - update IC MS specification admission request profile

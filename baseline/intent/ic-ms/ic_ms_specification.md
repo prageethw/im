@@ -742,7 +742,7 @@ Cache-Control: private, max-age=60
     "statusChangeDate": "2026-04-18T12:20:00+10:00",
     "intentSpecification": {
       "id": "ispec-hss-001",
-    "specKey": "hospital-surgical-slice-spec"
+      "specKey": "hospital-surgical-slice-spec"
     },
     "@type": "Intent",
     "@baseType": "Entity"
@@ -1873,7 +1873,7 @@ They must not expose raw telemetry, raw optimiser decisions, raw `t7.knowledge p
       "lifecycleStatus": "Acknowledged",
       "intentSpecification": {
         "id": "ispec-hss-001",
-    "specKey": "hospital-surgical-slice-spec"
+        "specKey": "hospital-surgical-slice-spec"
       },
       "@type": "Intent",
       "@baseType": "Entity"
