@@ -115,7 +115,7 @@ Activation is a lifecycle update on the resource, not a custom action endpoint. 
 
 ID MS manages the definition-time contract used by the intent platform. A specification defines the governed expression shape, high-level characteristic catalogue, metadata, lifecycle status, version identity, related parties, and schema references used by downstream intent creation and validation flows.
 
-The baseline surgical hospital slice specification uses:
+The example baseline surgical hospital slice specification uses:
 
 - `@type: IntentSpecification`
 - `@baseType: EntitySpecification`
