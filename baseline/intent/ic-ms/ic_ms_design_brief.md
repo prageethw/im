@@ -202,6 +202,7 @@ IC MS externally exposes lifecycle/status using:
 ### Lifecycle values:
 
 ```text
+Draft
 Acknowledged
 InProgress
 Active
@@ -662,6 +663,7 @@ Important rule: `Standby` and `Retired` are version-level states, not overall In
 ### Intent-level lifecycle states:
 
 ```text
+Draft
 Acknowledged
 InProgress
 Active
@@ -878,7 +880,7 @@ Accept: application/json
   "intentSpecification": {
     "id": "ispec-hss-001",
     "specKey": "hospital-surgical-slice-spec",
-    "href": "/intentManagement/v5/intentSpecification/ispec-hss-001?version=1.20"
+    "href": "/intentManagement/v5/intentSpecification/ispec-hss-001-v1.20"
   },
   "@type": "Intent",
   "@baseType": "Entity"
