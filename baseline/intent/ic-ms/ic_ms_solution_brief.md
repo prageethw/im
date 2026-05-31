@@ -60,7 +60,7 @@ IC MS owns the externally visible runtime projection, not the full internal fulf
 
 ### Runtime intent Draft update and submitted-version change:
 
-1. A consumer may update an existing runtime intent using `PUT` or `PATCH` only while the current Intent/Draft projection is in `Draft`.
+1. A consumer may update an existing Draft projection using `PUT` or `PATCH` only while the current Intent/Draft projection is in `Draft`.
 2. Unsafe update operations require `If-Match`.
 3. IC MS applies optimistic concurrency using the current ETag.
 4. For a Draft Intent, all attributes accepted by the `PUT` / `PATCH` request contract are mutable.
@@ -762,7 +762,7 @@ Webhook notifications use HTTP headers, not Kafka CloudEvents headers.
 |---|---|
 | Unsafe operation missing required `If-Match` | Return `428 PRECONDITION_REQUIRED` with reason `IF_MATCH_REQUIRED`. |
 | Stale or mismatched ETag | Return `412 PRECONDITION_FAILED` with reason `ETAG_MISMATCH`. |
-| Draft PUT/PATCH | Allowed while the current version is `Draft`; all request-contract attributes are mutable. |
+| Draft PUT/PATCH | Allowed while the current Intent/Draft projection is `Draft`; all request-contract attributes are mutable. |
 | Submitted-version PUT/PATCH | Not allowed for general attribute update; material change requires a new Draft authoring record. |
 | Newer candidate already exists | Reject/defer another newer version while the existing candidate is `Acknowledged` or `InProgress`. |
 | `PATCH` usage | Supported for TMF compatibility while Draft, but `PUT` is preferred for deterministic full update. |
