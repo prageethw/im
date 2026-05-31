@@ -25,6 +25,7 @@ skinparam note {
 title <b>IC MS — Intent-Level Lifecycle State Diagram</b>
 
 ' ── States ────────────────────────────────────────────────────────────────
+state Draft        #ebf5fb : Draft authoring record
 state Acknowledged #d4e6f1 : Schema and request-shape admitted\nawaiting fulfilment
 state InProgress   #d5f5e3 : Change execution\nunderway
 state Active       #2ecc71 : Change applied and\nassurance confirmed
@@ -35,7 +36,10 @@ state Rejected     #f5cba7 : Semantic and policy\nrejection
 state Terminated   #aab7b8 : Retained — no longer\nruntime-active
 
 ' ── Entry ─────────────────────────────────────────────────────────────────
-[*] --> Acknowledged : POST /intent passes\nTMF schema and request-shape validation
+[*] --> Draft : POST /intent\nsubmit=false
+[*] --> Acknowledged : POST /intent\nsubmitted and admitted
+Draft --> Acknowledged : submit=true passes\nschema and request-shape validation
+Draft --> Terminated : termination request accepted
 
 ' ── Acknowledged ──────────────────────────────────────────────────────────
 Acknowledged --> InProgress : change execution starts
