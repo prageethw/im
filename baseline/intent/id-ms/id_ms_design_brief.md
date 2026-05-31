@@ -189,6 +189,8 @@ External `IntentSpecificationCreateEvent`, `IntentSpecificationAttributeValueCha
 
 `IntentSpecificationStatusChangeEvent` carries the current `intentSpecification.lifecycleStatus` snapshot. It does not carry separate `previousLifecycleStatus` or `newLifecycleStatus` fields in the external event payload.
 
+The baseline surgical hospital slice is an illustrative example used to make the ID MS contract concrete. It is not the only supported IntentSpecification, intent type, service class, schema, expression IRI, or deployment profile. Other IntentSpecifications may use different targets, constraints, preferences, expression schemas, service types, and governance profiles while following the same ID MS contract rules.
+
 ## 5. IntentSpecification resource APIs:
 
 | **Purpose** | **Method** | **Endpoint** |

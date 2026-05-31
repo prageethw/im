@@ -127,6 +127,8 @@ The example baseline surgical hospital slice specification uses:
 - `priority` values of `critical`, `high`, and `standard`
 - canonical `context.targets`, `context.constraints`, and `context.preferences` semantics in the expression model
 
+The baseline surgical hospital slice is an illustrative example used to make the ID MS contract concrete. It is not the only supported IntentSpecification, intent type, service class, schema, expression IRI, or deployment profile. Other IntentSpecifications may use different targets, constraints, preferences, expression schemas, service types, and governance profiles while following the same ID MS contract rules.
+
 ID MS validates resource structure, required fields, lifecycle rules, and syntax and schema references. It does not decide whether a submitted runtime intent is semantically feasible or fulfillable in the network. Semantic and policy validation belongs to II MS and the knowledge plane. Runtime assurance belongs to IA MS.
 
 ## 5. Responsibilities:

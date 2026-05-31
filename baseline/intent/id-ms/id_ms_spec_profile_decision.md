@@ -238,6 +238,8 @@ This avoids a long negative list of prohibited fields while keeping the ownershi
 | `validFor.endDateTime` | Optional | Optional |
 | `@schemaLocation` | Optional | Strongly recommended |
 
+The baseline surgical hospital slice is an illustrative example used to make the ID MS contract concrete. It is not the only supported IntentSpecification, intent type, service class, schema, expression IRI, or deployment profile. Other IntentSpecifications may use different targets, constraints, preferences, expression schemas, service types, and governance profiles while following the same ID MS contract rules.
+
 ## 9. Minimal DRAFT create example:
 
 ```json

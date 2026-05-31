@@ -238,6 +238,8 @@ Content-Type: application/merge-patch+json
 
 Where `targetEntitySchema.schemaHash` is supplied, real values must use the `sha256:<hex>` form. The placeholder `sha256:REPLACE_WITH_PUBLISHED_SCHEMA_HASH` is illustrative only and must not be used in deployed resources. Verification against a schema registry is an implementation detail unless a stronger registry integration rule is introduced later.
 
+The baseline surgical hospital slice is an illustrative example used to make the ID MS contract concrete. It is not the only supported IntentSpecification, intent type, service class, schema, expression IRI, or deployment profile. Other IntentSpecifications may use different targets, constraints, preferences, expression schemas, service types, and governance profiles while following the same ID MS contract rules.
+
 ### 3.6 Response classification headers:
 
 ID MS returns response classification headers on external REST API responses so callers can distinguish strict TMF-native behaviour from documented platform-extension behaviour.
