@@ -52,6 +52,7 @@
   - [10.5. Example headers](#105-example-headers)
   - [10.6. Example body — network ready for change execution and assurance](#106-example-body-network-ready-for-change-execution-and-assurance)
   - [10.7. Event-specific rules](#107-event-specific-rules)
+  - [10.8. Optimiser integration pattern for selected configuration](#108-optimiser-integration-pattern-for-selected-configuration)
 - [11. KP mapping rules](#11-kp-mapping-rules)
 - [12. Idempotency and ordering](#12-idempotency-and-ordering)
 - [13. Persistence](#13-persistence)
@@ -836,6 +837,8 @@ II MS emits `IntentNetworkReadyEvent` after semantic resolution and service-read
 
 IntentNetworkReadyEvent may be emitted only after II MS has received or derived a governed selected configuration from the authorised downstream selection or optimisation path. II MS does not own the optimisation algorithm or optimiser backend. II MS owns packaging the selected configuration into the service-ready event for IA MS.
 
+For optimisation-backed selection, II MS uses the approved Optimiser platform integration pattern: a governed REST request to `POST /optimisation`, followed by the approved Optimiser webhook/event outcome, represented in this baseline as `OptimisationStatusChangeEvent`. The Optimiser platform owns optimisation execution, selection logic, solver models, and optimiser lifecycle. II MS owns submitting the governed request, receiving the selected configuration outcome, and packaging that selected configuration into `IntentNetworkReadyEvent` for IA MS.
+
 ### 10.5. Example headers
 
 ```http
@@ -1016,8 +1019,316 @@ content-type: application/json
 - Use `serviceConfiguration.observerConfiguration` for assurance/monitoring details.
 - `serviceConfiguration.orchestratorConfiguration.resources[]` carries only the optimiser-selected network-ready configuration/resources that must be applied by the change-execution layer; it includes resource details, topology, roles, and change-execution-relevant information, but not metric values.
 - `serviceConfiguration.observerConfiguration.resources[]` carries the full assurance observation scope, including selected resources and any additional primary/secondary alternatives that IA must observe; it uses `metrics` as a list of metric names IA should observe, not a value object.
+- When optimisation-backed selection is required, the selected configuration must come from the approved Optimiser path: `POST /optimisation` followed by `OptimisationStatusChangeEvent` or the approved optimiser completion/status event.
 - Do not include `applyOutcome`.
 - Do not use this event as a substitute for `IntentAssuranceEvent`; IA MS remains responsible for apply outcome interpretation and runtime assurance truth.
+
+
+### 10.8. Optimiser integration pattern for selected configuration
+
+When an intent requires optimisation-backed resource selection, II MS submits the resolved candidate context to the Optimiser platform using `POST /optimisation`. The request carries the resolved `body.expression.context`, candidate resources, targets, constraints, preferences, and correlation metadata from the admitted and resolved intent.
+
+The Optimiser platform performs optimisation execution and returns the selected configuration asynchronously through the approved webhook/event outcome pattern. This baseline represents that outcome as `OptimisationStatusChangeEvent`.
+
+II MS does not own the optimisation algorithm, optimiser backend, solver model, or optimiser lifecycle. II MS owns submitting the governed optimisation request, receiving the optimiser outcome, and packaging the returned selected configuration into `IntentNetworkReadyEvent` for IA MS.
+
+Example `POST /optimisation` request body:
+
+```json
+{
+  "sourceContext": {
+    "domain": "intent-management",
+    "resource": {
+      "id": "INT-HOSP-2026-001",
+      "href": "/intentManagement/v5/intent/INT-HOSP-2026-001",
+      "@type": "IntentRef",
+      "@referredType": "Intent"
+    },
+    "correlationId": "corr-intent-create-001",
+    "intentVersion": "v1"
+  },
+  "optimisationSpecification": {
+    "id": "ospec-hss-resource-selection-001",
+    "specKey": "optimisation-spec-surgical-routing",
+    "@type": "OptimisationSpecificationRef",
+    "@referredType": "OptimisationSpecification"
+  },
+  "name": "Hospital surgical slice resource selection optimisation",
+  "description": "Optimise candidate resource selection for the Sydney hospital surgical slice workload before II MS emits IntentNetworkReadyEvent.",
+  "priority": "1",
+  "expression": {
+    "@type": "JsonLdExpression",
+    "@baseType": "Expression",
+    "iri": "https://mycsp.com.au/ontology/optimisation/hospital-surgical-slice/v1.0",
+    "expressionValue": {
+      "@context": {
+        "opt": "https://mycsp.com.au/ontology/optimisation#",
+        "context": "opt:context",
+        "targets": "opt:targets",
+        "constraints": "opt:constraints",
+        "preferences": "opt:preferences",
+        "resources": "opt:resources"
+      },
+      "@type": "opt:OptimisationProblem",
+      "context": {
+        "targets": [
+          {
+            "maxLatencyMs": 10,
+            "minAvailabilityPercent": 99.99,
+            "maxJitterMs": 2,
+            "maxPacketLossPercent": 0.01
+          }
+        ],
+        "constraints": [
+          {
+            "location": {
+              "locationId": "AU-NSW-SYD-HOSP-001",
+              "displayName": "Sydney-Main-Hospital"
+            },
+            "serviceType": "surgical-connectivity",
+            "serviceClass": "critical-gold",
+            "priority": "critical",
+            "redundancyRequired": true,
+            "timeWindow": {
+              "startDateTime": "2026-04-18T12:00:00+10:00",
+              "endDateTime": "2026-04-18T14:00:00+10:00"
+            }
+          }
+        ],
+        "preferences": [
+          {
+            "preferredAccessTechnology": "5G",
+            "optimiseFor": "lowest-latency"
+          }
+        ],
+        "resources": [
+          {
+            "resourceId": "SYD-PRI-01",
+            "resourceType": "deliveryResource",
+            "resourceClass": "critical-gold",
+            "roles": [
+              "primary"
+            ],
+            "accessTechnology": "fibre",
+            "metrics": {
+              "latencyMs": 7,
+              "availabilityPercent": 99.996,
+              "jitterMs": 1.1,
+              "packetLossPercent": 0.004
+            },
+            "relationships": [
+              {
+                "type": "pairedSecondary",
+                "resourceId": "SYD-SEC-01"
+              }
+            ]
+          },
+          {
+            "resourceId": "SYD-PRI-02",
+            "resourceType": "deliveryResource",
+            "resourceClass": "critical-gold",
+            "roles": [
+              "primary"
+            ],
+            "accessTechnology": "5G",
+            "metrics": {
+              "latencyMs": 8,
+              "availabilityPercent": 99.995,
+              "jitterMs": 1.5,
+              "packetLossPercent": 0.005
+            },
+            "relationships": [
+              {
+                "type": "pairedSecondary",
+                "resourceId": "SYD-SEC-02"
+              }
+            ]
+          },
+          {
+            "resourceId": "SYD-SEC-01",
+            "resourceType": "deliveryResource",
+            "resourceClass": "critical-gold",
+            "roles": [
+              "secondary"
+            ],
+            "accessTechnology": "5G",
+            "metrics": {
+              "latencyMs": 10,
+              "availabilityPercent": 99.994,
+              "jitterMs": 1.8,
+              "packetLossPercent": 0.006
+            },
+            "relationships": [
+              {
+                "type": "protects",
+                "resourceId": "SYD-PRI-01"
+              }
+            ]
+          },
+          {
+            "resourceId": "SYD-SEC-02",
+            "resourceType": "deliveryResource",
+            "resourceClass": "critical-gold",
+            "roles": [
+              "secondary"
+            ],
+            "accessTechnology": "fibre",
+            "metrics": {
+              "latencyMs": 9,
+              "availabilityPercent": 99.997,
+              "jitterMs": 1.2,
+              "packetLossPercent": 0.003
+            },
+            "relationships": [
+              {
+                "type": "protects",
+                "resourceId": "SYD-PRI-02"
+              }
+            ]
+          }
+        ]
+      }
+    }
+  },
+  "@type": "Optimisation",
+  "@baseType": "Entity",
+  "@schemaLocation": "/schema/Optimisation.schema.json"
+}
+```
+
+Example optimiser webhook/event outcome:
+
+```json
+{
+  "eventType": "OptimisationStatusChangeEvent",
+  "eventTime": "2026-04-18T12:03:30+10:00",
+  "timeOccurred": "2026-04-18T12:03:30+10:00",
+  "event": {
+    "optimisation": {
+      "id": "opt-hss-2026-001",
+      "href": "/optimisation/opt-hss-2026-001",
+      "previousLifecycleStatus": "PROCESSING",
+      "newLifecycleStatus": "COMPLETED",
+      "sourceContext": {
+        "domain": "intent-management",
+        "resource": {
+          "id": "INT-HOSP-2026-001",
+          "href": "/intentManagement/v5/intent/INT-HOSP-2026-001",
+          "@type": "IntentRef",
+          "@referredType": "Intent"
+        },
+        "correlationId": "corr-intent-create-001",
+        "intentVersion": "v1"
+      },
+      "resultSummary": {
+        "outcome": "COMPLETED",
+        "summary": "Optimisation completed successfully. Selected primary and secondary resources for the Sydney hospital surgical slice."
+      },
+      "selectedConfiguration": {
+        "orchestratorConfiguration": {
+          "target": "t7-network-orchestrator",
+          "profile": "hospital-surgical-slice-apply-v1",
+          "resources": [
+            {
+              "resourceId": "SYD-PRI-01",
+              "resourceType": "deliveryResource",
+              "resourceClass": "critical-gold",
+              "roles": [
+                "primary"
+              ],
+              "accessTechnology": "fibre",
+              "relationships": [
+                {
+                  "type": "pairedSecondary",
+                  "resourceId": "SYD-SEC-01"
+                }
+              ]
+            },
+            {
+              "resourceId": "SYD-SEC-01",
+              "resourceType": "deliveryResource",
+              "resourceClass": "critical-gold",
+              "roles": [
+                "secondary"
+              ],
+              "accessTechnology": "5G",
+              "relationships": [
+                {
+                  "type": "protects",
+                  "resourceId": "SYD-PRI-01"
+                }
+              ]
+            }
+          ]
+        },
+        "observerConfiguration": {
+          "target": "t7-observability-platform",
+          "profile": "critical-gold-assurance-observation-v1",
+          "resources": [
+            {
+              "resourceId": "SYD-PRI-01",
+              "resourceType": "deliveryResource",
+              "resourceClass": "critical-gold",
+              "roles": [
+                "primary"
+              ],
+              "metrics": [
+                "latencyMs",
+                "availabilityPercent",
+                "jitterMs",
+                "packetLossPercent"
+              ]
+            },
+            {
+              "resourceId": "SYD-PRI-02",
+              "resourceType": "deliveryResource",
+              "resourceClass": "critical-gold",
+              "roles": [
+                "primary"
+              ],
+              "metrics": [
+                "latencyMs",
+                "availabilityPercent",
+                "jitterMs",
+                "packetLossPercent"
+              ]
+            },
+            {
+              "resourceId": "SYD-SEC-01",
+              "resourceType": "deliveryResource",
+              "resourceClass": "critical-gold",
+              "roles": [
+                "secondary"
+              ],
+              "metrics": [
+                "latencyMs",
+                "availabilityPercent",
+                "jitterMs",
+                "packetLossPercent"
+              ]
+            },
+            {
+              "resourceId": "SYD-SEC-02",
+              "resourceType": "deliveryResource",
+              "resourceClass": "critical-gold",
+              "roles": [
+                "secondary"
+              ],
+              "metrics": [
+                "latencyMs",
+                "availabilityPercent",
+                "jitterMs",
+                "packetLossPercent"
+              ]
+            }
+          ]
+        }
+      }
+    }
+  },
+  "@type": "OptimisationStatusChangeEvent"
+}
+```
 
 ---
 

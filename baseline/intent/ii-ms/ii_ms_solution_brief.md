@@ -58,6 +58,8 @@ Its responsibility is to convert a syntactically accepted runtime intent into on
 
 `IntentResolvedEvent` and `IntentNetworkReadyEvent` are intentionally different milestones. `IntentResolvedEvent` is the candidate-level semantic-resolution handoff. `IntentNetworkReadyEvent` is the service-ready preparation handoff to IA MS and means the service configuration/resource set has been prepared for change execution and assurance observation. It does not mean the network application has succeeded. IntentNetworkReadyEvent may be emitted only after II MS has received or derived a governed selected configuration from the authorised downstream selection or optimisation path. II MS does not own the optimisation algorithm or optimiser backend. II MS owns packaging the selected configuration into the service-ready event for IA MS.
 
+For optimisation-backed selection, II MS uses the approved Optimiser platform integration pattern: `POST /optimisation` for the governed REST request, followed by the approved Optimiser webhook/event outcome, represented in this baseline as `OptimisationStatusChangeEvent`. The Optimiser platform owns optimisation execution, selection logic, solver models, and optimiser lifecycle. II MS owns submitting the governed request, receiving the selected configuration outcome, and packaging that selected configuration into `IntentNetworkReadyEvent` for IA MS.
+
 ## 2. Logical View:
 
 ![alt text](ii_ms_logical_view.svg)

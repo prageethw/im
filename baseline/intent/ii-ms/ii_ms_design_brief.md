@@ -236,6 +236,8 @@ II MS emits `IntentNetworkReadyEvent` when service-ready preparation has produce
 
 IntentNetworkReadyEvent may be emitted only after II MS has received or derived a governed selected configuration from the authorised downstream selection or optimisation path. II MS does not own the optimisation algorithm or optimiser backend. II MS owns packaging the selected configuration into the service-ready event for IA MS.
 
+For optimisation-backed selection, II MS submits the resolved intent context and candidate resources to the Optimiser platform using `POST /optimisation`. The Optimiser platform returns the governed selected configuration through the approved webhook/event outcome pattern, represented in this baseline as `OptimisationStatusChangeEvent`. II MS then packages that selected configuration into `IntentNetworkReadyEvent` for IA MS.
+
 `IntentNetworkReadyEvent`:
 
 - is produced by `intent-intelligence-ms`

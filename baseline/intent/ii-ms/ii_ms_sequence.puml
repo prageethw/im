@@ -16,6 +16,7 @@ participant "Kafka\n(internal event backbone)" as KAFKA
 participant "Intent Intelligence MS\n(II MS)" as IIMS
 participant "Knowledge Plane\n(KP)" as KP
 participant "Other T7 services / governed sources\n(optional pre-resolution validation)" as AUTH
+participant "Optimiser Platform\n(POST /optimisation + webhook/event outcome)" as OPT
 database "II MS Store\n(semantic state + outbox)" as STORE
 participant "Outbox Relay\n(background worker)" as RELAY
 participant "IC MS" as ICMS
@@ -161,18 +162,24 @@ else not yet processed
         RELAY -> KAFKA : publish IntentResolvedEvent
         STORE <- RELAY : mark row DELIVERED
 
-        == 11. Service-Ready Preparation (if applicable) ==
+        == 11. Optimisation-Backed Selection and Service-Ready Preparation ==
 
-        note over IIMS
-          When service configuration is prepared for
-          downstream change execution and assurance observation.
+        note over IIMS,OPT
+          When optimisation-backed selection is required,
+          II MS submits the resolved candidate context to
+          the Optimiser platform using POST /optimisation.
+          The Optimiser owns selection logic and returns
+          the governed selected configuration through the
+          approved webhook/event outcome pattern.
         end note
 
-        IIMS -> IIMS : prepare service configuration\nfrom resolved candidate set
+        IIMS -> OPT : POST /optimisation\n{ body.expression.context, candidate resources,\n targets, constraints, preferences, correlation }
+        OPT --> IIMS : OptimisationStatusChangeEvent\n{ selectedConfiguration }
+        IIMS -> IIMS : package selected configuration\ninto IntentNetworkReadyEvent for IA MS
 
         group Atomic DB transaction
-          IIMS -> STORE : update semantic decision trail\n{ serviceConfig, readyState }
-          IIMS -> STORE : write IntentNetworkReadyEvent to outbox\n{ intentId, context, serviceConfiguration, references }
+          IIMS -> STORE : update semantic decision trail\n{ optimisationId, selectedConfiguration, readyState }
+          IIMS -> STORE : write IntentNetworkReadyEvent to outbox\n{ intentId, expression.context, serviceConfiguration, references }
         end
 
         RELAY -> STORE : poll -> IntentNetworkReadyEvent
