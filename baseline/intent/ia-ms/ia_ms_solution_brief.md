@@ -563,12 +563,12 @@ Other authorised internal decision components may consume `IntentAssuranceEvent`
 | Exact observation endpoint API contract | The solution brief assumes logical observation endpoint facts; the concrete endpoint API remains environment/platform specific. |
 | Dead-letter storage and replay implementation detail | DLQ handling is required as a minimum baseline; the exact storage/topic and replay runbook remain an implementation detail aligned to platform policy. |
 | Mapping policy ownership detail | IA owns mapping execution; final operational governance for mapping config should remain aligned with platform configuration management. |
-| Event example harmonisation | Closed for the active IA baseline. Future example changes must preserve the metrics-first `IntentAssuranceEvent` shape and must not reintroduce candidates, evaluations, benchmark wrappers, or `requiresReoptimisation` by default. |
 
 ## 25. Closed items:
 
 | Item | Decision |
 |---|---|
+| Event example harmonisation | Closed for the active IA baseline. Future example changes must preserve the metrics-first `IntentAssuranceEvent` shape and must not reintroduce candidates, evaluations, benchmark wrappers, or `requiresReoptimisation` by default. |
 | IA external API | IA MS has no external TMF-compliant API. |
 | IA input events | IA consumes `IntentNetworkReadyEvent`, `IntentCallbackEvent`, and runtime metrics/observation facts only. |
 | `IntentOptimisedEvent` as IA input | Not used. IA receives apply/assurance context through `IntentNetworkReadyEvent`. |
