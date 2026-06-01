@@ -146,7 +146,7 @@ Idempotency-Key: cb-EXT-ORCH-001-INT-HOSP-2026-001-0001
       }
     ]
   },
-  "@type": "IntentCallbackSubmission"
+  "@type": "IntentCallbackEvent"
 }
 ```
 
@@ -205,7 +205,7 @@ Idempotency-Key: cb-EXT-ORCH-001-INT-HOSP-2026-003-0001
     "message": "Network apply failed in change-execution layer.",
     "errorCode": "ORCH_APPLY_TIMEOUT"
   },
-  "@type": "IntentCallbackSubmission"
+  "@type": "IntentCallbackEvent"
 }
 ```
 
@@ -247,11 +247,101 @@ Idempotency-Key: cb-OPT-HSS-2026-001-0001
       "selectedConfiguration": {
         "orchestratorConfiguration": {
           "target": "t7-network-orchestrator",
-          "profile": "hospital-surgical-slice-apply-v1"
+          "profile": "hospital-surgical-slice-apply-v1",
+          "resources": [
+            {
+              "resourceId": "SYD-PRI-01",
+              "resourceType": "deliveryResource",
+              "resourceClass": "critical-gold",
+              "roles": [
+                "primary"
+              ],
+              "accessTechnology": "fibre",
+              "relationships": [
+                {
+                  "type": "pairedSecondary",
+                  "resourceId": "SYD-SEC-01"
+                }
+              ]
+            },
+            {
+              "resourceId": "SYD-SEC-01",
+              "resourceType": "deliveryResource",
+              "resourceClass": "critical-gold",
+              "roles": [
+                "secondary"
+              ],
+              "accessTechnology": "5G",
+              "relationships": [
+                {
+                  "type": "protects",
+                  "resourceId": "SYD-PRI-01"
+                }
+              ]
+            }
+          ]
         },
         "observerConfiguration": {
           "target": "t7-observability-platform",
-          "profile": "critical-gold-assurance-observation-v1"
+          "profile": "critical-gold-assurance-observation-v1",
+          "resources": [
+            {
+              "resourceId": "SYD-PRI-01",
+              "resourceType": "deliveryResource",
+              "resourceClass": "critical-gold",
+              "roles": [
+                "primary"
+              ],
+              "metrics": [
+                "latencyMs",
+                "availabilityPercent",
+                "jitterMs",
+                "packetLossPercent"
+              ]
+            },
+            {
+              "resourceId": "SYD-PRI-02",
+              "resourceType": "deliveryResource",
+              "resourceClass": "critical-gold",
+              "roles": [
+                "primary"
+              ],
+              "metrics": [
+                "latencyMs",
+                "availabilityPercent",
+                "jitterMs",
+                "packetLossPercent"
+              ]
+            },
+            {
+              "resourceId": "SYD-SEC-01",
+              "resourceType": "deliveryResource",
+              "resourceClass": "critical-gold",
+              "roles": [
+                "secondary"
+              ],
+              "metrics": [
+                "latencyMs",
+                "availabilityPercent",
+                "jitterMs",
+                "packetLossPercent"
+              ]
+            },
+            {
+              "resourceId": "SYD-SEC-02",
+              "resourceType": "deliveryResource",
+              "resourceClass": "critical-gold",
+              "roles": [
+                "secondary"
+              ],
+              "metrics": [
+                "latencyMs",
+                "availabilityPercent",
+                "jitterMs",
+                "packetLossPercent"
+              ]
+            }
+          ]
         }
       }
     }
@@ -466,11 +556,101 @@ content-type: application/json
         "selectedConfiguration": {
           "orchestratorConfiguration": {
             "target": "t7-network-orchestrator",
-            "profile": "hospital-surgical-slice-apply-v1"
+            "profile": "hospital-surgical-slice-apply-v1",
+            "resources": [
+              {
+                "resourceId": "SYD-PRI-01",
+                "resourceType": "deliveryResource",
+                "resourceClass": "critical-gold",
+                "roles": [
+                  "primary"
+                ],
+                "accessTechnology": "fibre",
+                "relationships": [
+                  {
+                    "type": "pairedSecondary",
+                    "resourceId": "SYD-SEC-01"
+                  }
+                ]
+              },
+              {
+                "resourceId": "SYD-SEC-01",
+                "resourceType": "deliveryResource",
+                "resourceClass": "critical-gold",
+                "roles": [
+                  "secondary"
+                ],
+                "accessTechnology": "5G",
+                "relationships": [
+                  {
+                    "type": "protects",
+                    "resourceId": "SYD-PRI-01"
+                  }
+                ]
+              }
+            ]
           },
           "observerConfiguration": {
             "target": "t7-observability-platform",
-            "profile": "critical-gold-assurance-observation-v1"
+            "profile": "critical-gold-assurance-observation-v1",
+            "resources": [
+              {
+                "resourceId": "SYD-PRI-01",
+                "resourceType": "deliveryResource",
+                "resourceClass": "critical-gold",
+                "roles": [
+                  "primary"
+                ],
+                "metrics": [
+                  "latencyMs",
+                  "availabilityPercent",
+                  "jitterMs",
+                  "packetLossPercent"
+                ]
+              },
+              {
+                "resourceId": "SYD-PRI-02",
+                "resourceType": "deliveryResource",
+                "resourceClass": "critical-gold",
+                "roles": [
+                  "primary"
+                ],
+                "metrics": [
+                  "latencyMs",
+                  "availabilityPercent",
+                  "jitterMs",
+                  "packetLossPercent"
+                ]
+              },
+              {
+                "resourceId": "SYD-SEC-01",
+                "resourceType": "deliveryResource",
+                "resourceClass": "critical-gold",
+                "roles": [
+                  "secondary"
+                ],
+                "metrics": [
+                  "latencyMs",
+                  "availabilityPercent",
+                  "jitterMs",
+                  "packetLossPercent"
+                ]
+              },
+              {
+                "resourceId": "SYD-SEC-02",
+                "resourceType": "deliveryResource",
+                "resourceClass": "critical-gold",
+                "roles": [
+                  "secondary"
+                ],
+                "metrics": [
+                  "latencyMs",
+                  "availabilityPercent",
+                  "jitterMs",
+                  "packetLossPercent"
+                ]
+              }
+            ]
           }
         }
       }
@@ -491,7 +671,9 @@ content-type: application/json
 
 ## 13. Structural validation rules:
 
-Required request fields:
+Required request fields depend on the approved callback profile.
+
+### 13.1. IntentCallbackEvent change-execution/apply callback profile:
 
 | **Field** | **Rule** |
 |---|---|
@@ -499,12 +681,26 @@ Required request fields:
 | `callbackSource` | Required, non-empty string; gateway identity remains authoritative |
 | `callbackTimestamp` | Required ISO-8601 date-time |
 | `sourceState.state` | Required, non-empty string; interpreted by IA MS, not ICB MS |
-| `@type` | Required, normally `IntentCallbackSubmission` |
+| `@type` | Required, normally `IntentCallbackEvent` |
+| `Idempotency-Key` | Strongly recommended for external retry safety; may be required by platform policy |
+
+### 13.2. OptimisationStatusChangeEvent optimiser outcome callback profile:
+
+| **Field** | **Rule** |
+|---|---|
+| `eventType` | Required; must be `OptimisationStatusChangeEvent` for the approved optimiser profile |
+| `event.optimisation.id` | Required optimisation id |
+| `event.optimisation.sourceContext.resource.id` | Required related runtime `intentId` |
+| `event.optimisation.sourceContext.correlationId` | Required correlation id |
+| `event.optimisation.sourceContext.intentVersion` | Required where runtime intent versioning is used |
+| `event.optimisation.newLifecycleStatus` | Required optimiser lifecycle state |
+| `event.optimisation.selectedConfiguration` | Required when `newLifecycleStatus` is `COMPLETED` and the optimiser outcome is intended to drive service-ready packaging |
+| `@type` | Required, normally `OptimisationStatusChangeEvent` |
 | `Idempotency-Key` | Strongly recommended for external retry safety; may be required by platform policy |
 
 ICB MS validates syntax and structure only. It does not validate service feasibility, lifecycle meaning, assurance meaning, selected-configuration meaning, or optimiser outcomes.
 
-Do not use `callbackType` as an ICB contract field. Raw callback meaning is carried by `sourceState.state` and interpreted by IA MS.
+Do not use `callbackType` as an ICB contract field. Raw change-execution/apply callback meaning is carried by `sourceState.state` and interpreted by IA MS. Optimiser outcome meaning is carried by `OptimisationStatusChangeEvent` and interpreted by II MS.
 
 ## 14. Standard errors:
 

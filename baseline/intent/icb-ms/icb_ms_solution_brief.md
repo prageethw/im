@@ -149,6 +149,8 @@ The same ICB-owned submission endpoint is used for approved callback profiles. T
 
 II MS registers or supplies the ICB-owned callback submission URL, `POST /intent-callback/v1/submissions`, to the Optimiser platform. ICB MS validates and relays the optimiser event structurally; II MS owns correlation and interpretation of the optimiser outcome.
 
+The submission API is a protected REST ingress for event-like callback facts. External callers do not publish directly to internal Kafka topics; ICB MS accepts, validates, persists, and relays the approved callback event internally through the outbox.
+
 
 #### 5.1.1. Request shape:
 
@@ -186,7 +188,7 @@ Idempotency-Key: cb-EXT-ORCH-001-INT-HOSP-2026-001-0001
       }
     ]
   },
-  "@type": "IntentCallbackSubmission"
+  "@type": "IntentCallbackEvent"
 }
 ```
 
@@ -260,7 +262,9 @@ Idempotency-Key: cb-OPT-HSS-2026-001-0001
               "resourceId": "SYD-PRI-01",
               "resourceType": "deliveryResource",
               "resourceClass": "critical-gold",
-              "roles": ["primary"],
+              "roles": [
+                "primary"
+              ],
               "accessTechnology": "fibre",
               "relationships": [
                 {
@@ -273,7 +277,9 @@ Idempotency-Key: cb-OPT-HSS-2026-001-0001
               "resourceId": "SYD-SEC-01",
               "resourceType": "deliveryResource",
               "resourceClass": "critical-gold",
-              "roles": ["secondary"],
+              "roles": [
+                "secondary"
+              ],
               "accessTechnology": "5G",
               "relationships": [
                 {
@@ -286,7 +292,65 @@ Idempotency-Key: cb-OPT-HSS-2026-001-0001
         },
         "observerConfiguration": {
           "target": "t7-observability-platform",
-          "profile": "critical-gold-assurance-observation-v1"
+          "profile": "critical-gold-assurance-observation-v1",
+          "resources": [
+            {
+              "resourceId": "SYD-PRI-01",
+              "resourceType": "deliveryResource",
+              "resourceClass": "critical-gold",
+              "roles": [
+                "primary"
+              ],
+              "metrics": [
+                "latencyMs",
+                "availabilityPercent",
+                "jitterMs",
+                "packetLossPercent"
+              ]
+            },
+            {
+              "resourceId": "SYD-PRI-02",
+              "resourceType": "deliveryResource",
+              "resourceClass": "critical-gold",
+              "roles": [
+                "primary"
+              ],
+              "metrics": [
+                "latencyMs",
+                "availabilityPercent",
+                "jitterMs",
+                "packetLossPercent"
+              ]
+            },
+            {
+              "resourceId": "SYD-SEC-01",
+              "resourceType": "deliveryResource",
+              "resourceClass": "critical-gold",
+              "roles": [
+                "secondary"
+              ],
+              "metrics": [
+                "latencyMs",
+                "availabilityPercent",
+                "jitterMs",
+                "packetLossPercent"
+              ]
+            },
+            {
+              "resourceId": "SYD-SEC-02",
+              "resourceType": "deliveryResource",
+              "resourceClass": "critical-gold",
+              "roles": [
+                "secondary"
+              ],
+              "metrics": [
+                "latencyMs",
+                "availabilityPercent",
+                "jitterMs",
+                "packetLossPercent"
+              ]
+            }
+          ]
         }
       }
     }
@@ -302,13 +366,13 @@ Idempotency-Key: cb-OPT-HSS-2026-001-0001
 | `intentId` | Yes | Required, non-empty string | Syntax only. IA MS validates existence and correlation. |
 | `callbackSource` | Yes | Required, non-empty string | Identifies the external source/change-execution instance. Gateway identity remains authoritative for trust. |
 | `callbackTimestamp` | Yes | ISO 8601 date-time | Source-reported callback time. Distinct from ICB receive time and Kafka publish time. |
-| `sourceState.state` | Yes for `IntentCallbackSubmission` | Required, non-empty string | Raw source-owned state. IA MS interprets it. ICB MS does not map it. |
+| `sourceState.state` | Yes for `IntentCallbackEvent` | Required, non-empty string | Raw source-owned state. IA MS interprets it. ICB MS does not map it. |
 | `eventType` | Yes for optimiser outcome callback | Must be `OptimisationStatusChangeEvent` for approved optimiser profile | Used to select the structural relay profile, not to interpret optimiser outcome meaning. |
 | `event.optimisation` | Yes for optimiser outcome callback | Required object for approved optimiser profile | ICB validates structure and relays; II MS interprets/correlates. |
 | `sourceState.reason` | No | String when supplied | Human-readable source reason or explanatory detail. |
 | `sourceReference` | No | Object when supplied | External source reference only. Must not be treated as a platform resource reference. |
 | `details` | No | Structured JSON object subject to size and policy limits | Raw or structured callback detail where safe. Must not contain secrets or credentials. |
-| `@type` | Yes | Normally `IntentCallbackSubmission` | Type marker for the submission payload. |
+| `@type` | Yes | `IntentCallbackEvent` for change-execution/apply callbacks; `OptimisationStatusChangeEvent` for approved optimiser outcome callbacks. | Type marker for the submitted callback event payload. |
 | `Idempotency-Key` header | Strongly recommended / may be required | Non-empty string | Protects external retry safety and duplicate callback handling. |
 | `X-Correlation-ID` header | Recommended | Non-empty string | Propagated for tracing and operational correlation. |
 
@@ -738,7 +802,7 @@ The mapping configuration belongs to IA MS. It is not an ICB MS configuration co
 | 2 | Lifecycle interpretation | IA MS owns callback interpretation and lifecycle-driving assurance outcomes. |
 | 3 | `intentId` existence validation | ICB MS checks syntax only; IA MS validates/correlates existence. |
 | 4 | Callback topic | ICB publishes to dedicated `t7.intent.management.events.callbacks`. |
-| 5 | Main event topic usage | ICB MS does not emit callback facts to the main internal events topic. |
+| 5 | Main event topic usage | ICB MS does not emit change-execution/apply `IntentCallbackEvent` facts to the main internal events topic. Change-execution/apply callbacks are published only to `t7.intent.management.events.callbacks`. Approved optimiser outcome callbacks are published as `OptimisationStatusChangeEvent` to `t7.intent.management.events` for II MS. |
 | 6 | Outbox pattern | Accepted callback submission and callback outbox record are written transactionally. |
 | 7 | Gateway protection | ICB MS sits behind API Gateway and trusts only gateway-forwarded identity/claims. |
 | 8 | Event body style | Internal event value uses top-level `body`. |
@@ -765,5 +829,5 @@ The mapping configuration belongs to IA MS. It is not an ICB MS configuration co
 | Deployment | Kubernetes service behind API Gateway |
 | Relay model | Outbox relay with single-active coordination such as ShedLock |
 | Consumes from Kafka | None |
-| Publishes to Kafka | Yes, callback topic only |
+| Publishes to Kafka | Yes. Publishes `IntentCallbackEvent` to `t7.intent.management.events.callbacks` and `OptimisationStatusChangeEvent` to `t7.intent.management.events` |
 | External TMF API owner | No. This is a platform callback ingestion API, not a TMF921 resource API. |

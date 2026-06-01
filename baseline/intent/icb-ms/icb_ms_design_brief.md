@@ -42,7 +42,7 @@ ICB MS does not interpret lifecycle, assurance, degradation, optimisation, or se
 | Service name | `intent-callback-ms` |
 | Short name | ICB MS |
 | Main responsibility | Thin callback ingestion and raw callback event relay for change-execution/apply callbacks and optimiser outcome callbacks |
-| Primary external input | Callback submission from external change-execution/apply system or approved Optimiser platform |
+| Primary external input | Callback event submitted over REST from external change-execution/apply systems or approved optimiser platform or approved Optimiser platform |
 | Primary internal outputs | `IntentCallbackEvent`; `OptimisationStatusChangeEvent` |
 | Internal callback topics | `t7.intent.management.events.callbacks` for `IntentCallbackEvent`; `t7.intent.management.events` for `OptimisationStatusChangeEvent` |
 | Source-of-truth persistence | Managed PostgreSQL / PostgreSQL-compatible RDBMS |
@@ -100,7 +100,7 @@ ICB MS must not decide whether a callback means `Active`, `Failed`, `Terminated`
 
 ## 7. Callback submission model:
 
-The external callback submission contains raw change-execution/apply facts.
+The external callback submission API carries event-like callback facts across the protected REST boundary. For change-execution/apply callbacks, the submitted payload uses `@type: IntentCallbackEvent`; ICB MS accepts, persists, and relays the fact internally as `ce-type: IntentCallbackEvent`. Approved optimiser outcome callbacks use `@type: OptimisationStatusChangeEvent` and are relayed internally as `ce-type: OptimisationStatusChangeEvent`.
 
 Typical callback facts include:
 
