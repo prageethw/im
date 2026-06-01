@@ -146,7 +146,7 @@ Idempotency-Key: cb-EXT-ORCH-001-INT-HOSP-2026-001-0001
       }
     ]
   },
-  "@type": "IntentCallbackEvent"
+  "@type": "IntentCallbackEventRequest"
 }
 ```
 
@@ -205,7 +205,7 @@ Idempotency-Key: cb-EXT-ORCH-001-INT-HOSP-2026-003-0001
     "message": "Network apply failed in change-execution layer.",
     "errorCode": "ORCH_APPLY_TIMEOUT"
   },
-  "@type": "IntentCallbackEvent"
+  "@type": "IntentCallbackEventRequest"
 }
 ```
 
@@ -346,7 +346,7 @@ Idempotency-Key: cb-OPT-HSS-2026-001-0001
       }
     }
   },
-  "@type": "OptimisationStatusChangeEvent"
+  "@type": "OptimisationStatusChangeEventRequest"
 }
 ```
 
@@ -681,7 +681,7 @@ Required request fields depend on the approved callback profile.
 | `callbackSource` | Required, non-empty string; gateway identity remains authoritative |
 | `callbackTimestamp` | Required ISO-8601 date-time |
 | `sourceState.state` | Required, non-empty string; interpreted by IA MS, not ICB MS |
-| `@type` | Required, normally `IntentCallbackEvent` |
+| `@type` | Required, normally `IntentCallbackEventRequest` |
 | `Idempotency-Key` | Strongly recommended for external retry safety; may be required by platform policy |
 
 ### 13.2. OptimisationStatusChangeEvent optimiser outcome callback profile:
@@ -695,7 +695,7 @@ Required request fields depend on the approved callback profile.
 | `event.optimisation.sourceContext.intentVersion` | Required where runtime intent versioning is used |
 | `event.optimisation.newLifecycleStatus` | Required optimiser lifecycle state |
 | `event.optimisation.selectedConfiguration` | Required when `newLifecycleStatus` is `COMPLETED` and the optimiser outcome is intended to drive service-ready packaging |
-| `@type` | Required, normally `OptimisationStatusChangeEvent` |
+| `@type` | Required, normally `OptimisationStatusChangeEventRequest` |
 | `Idempotency-Key` | Strongly recommended for external retry safety; may be required by platform policy |
 
 ICB MS validates syntax and structure only. It does not validate service feasibility, lifecycle meaning, assurance meaning, selected-configuration meaning, or optimiser outcomes.

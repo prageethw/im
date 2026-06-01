@@ -188,7 +188,7 @@ Idempotency-Key: cb-EXT-ORCH-001-INT-HOSP-2026-001-0001
       }
     ]
   },
-  "@type": "IntentCallbackEvent"
+  "@type": "IntentCallbackEventRequest"
 }
 ```
 
@@ -355,7 +355,7 @@ Idempotency-Key: cb-OPT-HSS-2026-001-0001
       }
     }
   },
-  "@type": "OptimisationStatusChangeEvent"
+  "@type": "OptimisationStatusChangeEventRequest"
 }
 ```
 
@@ -372,7 +372,7 @@ Idempotency-Key: cb-OPT-HSS-2026-001-0001
 | `sourceState.reason` | No | String when supplied | Human-readable source reason or explanatory detail. |
 | `sourceReference` | No | Object when supplied | External source reference only. Must not be treated as a platform resource reference. |
 | `details` | No | Structured JSON object subject to size and policy limits | Raw or structured callback detail where safe. Must not contain secrets or credentials. |
-| `@type` | Yes | `IntentCallbackEvent` for change-execution/apply callbacks; `OptimisationStatusChangeEvent` for approved optimiser outcome callbacks. | Type marker for the submitted callback event payload. |
+| `@type` | Yes | `IntentCallbackEventRequest` for change-execution/apply callbacks; `OptimisationStatusChangeEventRequest` for approved optimiser outcome callbacks. | Type marker for the submitted REST callback request payload. Internal Kafka event names remain `IntentCallbackEvent` and `OptimisationStatusChangeEvent`. |
 | `Idempotency-Key` header | Strongly recommended / may be required | Non-empty string | Protects external retry safety and duplicate callback handling. |
 | `X-Correlation-ID` header | Recommended | Non-empty string | Propagated for tracing and operational correlation. |
 

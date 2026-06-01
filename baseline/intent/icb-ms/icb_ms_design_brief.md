@@ -100,7 +100,7 @@ ICB MS must not decide whether a callback means `Active`, `Failed`, `Terminated`
 
 ## 7. Callback submission model:
 
-The external callback submission API carries event-like callback facts across the protected REST boundary. For change-execution/apply callbacks, the submitted payload uses `@type: IntentCallbackEvent`; ICB MS accepts, persists, and relays the fact internally as `ce-type: IntentCallbackEvent`. Approved optimiser outcome callbacks use `@type: OptimisationStatusChangeEvent` and are relayed internally as `ce-type: OptimisationStatusChangeEvent`.
+The external callback submission API carries event-like callback facts across the protected REST boundary. For change-execution/apply callbacks, the submitted payload uses `@type: IntentCallbackEventRequest`; ICB MS accepts, persists, and relays the fact internally as `ce-type: IntentCallbackEvent`. Approved optimiser outcome callbacks use `@type: OptimisationStatusChangeEventRequest` and are relayed internally as `ce-type: OptimisationStatusChangeEvent`.
 
 Typical callback facts include:
 
