@@ -55,9 +55,9 @@ The canonical runtime semantic model uses the same buckets through the pipeline:
 {
   "expression": {
     "context": {
-      "targets": [],
-      "constraints": [],
-      "preferences": []
+      "targets": {},
+      "constraints": {},
+      "preferences": {}
     }
   }
 }
@@ -401,7 +401,7 @@ External runtime and definition-time API access is limited to the services that 
 
 - ID MS for `IntentSpecification` and specification hub subscriptions.
 - IC MS for runtime `Intent`, `IntentReport`, and runtime intent hub subscriptions.
-- ICB MS only for trusted external change-execution/apply callback submission through its callback API.
+- ICB MS only for trusted external change-execution/apply callback submission and approved Optimiser outcome callback submission through its callback API.
 
 II MS and IA MS remain internal-only microservices.
 
@@ -727,9 +727,9 @@ External runtime intent expression:
         "intent": "https://example.com/ontology/intent#"
       },
       "context": {
-        "targets": [],
-        "constraints": [],
-        "preferences": []
+        "targets": {},
+        "constraints": {},
+        "preferences": {}
       }
     }
   }
@@ -744,9 +744,9 @@ Internal runtime event expression should preserve the same semantic grouping, no
     "expression": {
       "iri": "https://example.com/ontology/intent/v1",
       "context": {
-        "targets": [],
-        "constraints": [],
-        "preferences": []
+        "targets": {},
+        "constraints": {},
+        "preferences": {}
       }
     }
   }
@@ -790,5 +790,5 @@ Terminated
 | `IntentResolvedEvent` | `intent-intelligence-ms` | Optimiser / downstream fulfilment path | Candidate-level semantic-resolution handoff. |
 | `OptimisationStatusChangeEvent` | `intent-callback-ms` | `intent-intelligence-ms` | Approved optimiser outcome callback relayed by ICB MS after durable callback ingestion. |
 | `IntentNetworkReadyEvent` | `intent-intelligence-ms` | `intent-assurance-ms` | Service configuration ready for change execution/apply and observation. |
-| `IntentCallbackEvent` | `intent-callback-ms` | `intent-assurance-ms` | Raw accepted callback fact. |
+| `IntentCallbackEvent` | `intent-callback-ms` | `intent-assurance-ms` | Raw accepted change-execution/apply callback fact for IA MS. |
 | `IntentAssuranceEvent` | `intent-assurance-ms` | `intent-controller-ms` | Assurance/apply/runtime outcome truth for external projection. |

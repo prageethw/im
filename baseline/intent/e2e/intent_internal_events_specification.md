@@ -23,7 +23,7 @@ Internal events are state/progress/outcome facts, not point-to-point commands fo
 | Deduplication key | `ce-id` / `eventId` |
 | Correlation | `correlationId` must be propagated |
 | Kafka key | Prefer `intentId` for intent-scoped events |
-| Payload style | Plain JSON body with CloudEvents metadata in transport headers |
+| Payload style | Plain JSON payload with CloudEvents metadata in transport headers. Most internal events use top-level `body`; `OptimisationStatusChangeEvent` uses the approved optimiser event payload shape at payload root. |
 | Event naming | Use final baselined event names exactly |
 | Schema evolution | Additive changes preferred; breaking changes require versioning |
 | Sensitive data | Do not include secrets, tokens, credentials, or raw internal stack traces |
@@ -118,7 +118,7 @@ content-type: application/json
 | `OptimisationStatusChangeEvent` | `intent-callback-ms` | `intent-intelligence-ms` | Approved optimiser outcome callback relayed by ICB MS after durable callback ingestion. |
 | `IntentNetworkReadyEvent` | `intent-intelligence-ms` | `intent-assurance-ms` | Optimised resource set has been projected into service configuration ready for change-execution/apply; apply success is not yet confirmed |
 | `IntentAssuranceEvent` | `intent-assurance-ms` | `intent-controller-ms` | Assurance/apply/runtime outcome truth for external Intent and IntentReport projection |
-| `IntentCallbackEvent` | `intent-callback-ms` | `intent-assurance-ms` | Accepted raw callback relayed to the internal event backbone |
+| `IntentCallbackEvent` | `intent-callback-ms` | `intent-assurance-ms` | Accepted raw change-execution/apply callback fact relayed to the dedicated callback topic for IA MS |
 
 ---
 
@@ -458,10 +458,6 @@ x-correlation-id: corr-intent-create-001
         "correlationId": "corr-intent-create-001",
         "intentVersion": "v1"
       },
-      "resultSummary": {
-        "outcome": "COMPLETED",
-        "summary": "Optimisation completed successfully."
-      },
       "selectedConfiguration": {
         "orchestratorConfiguration": {
           "target": "t7-network-orchestrator",
@@ -471,7 +467,9 @@ x-correlation-id: corr-intent-create-001
               "resourceId": "SYD-PRI-01",
               "resourceType": "deliveryResource",
               "resourceClass": "critical-gold",
-              "roles": ["primary"],
+              "roles": [
+                "primary"
+              ],
               "accessTechnology": "fibre",
               "relationships": [
                 {
@@ -484,7 +482,9 @@ x-correlation-id: corr-intent-create-001
               "resourceId": "SYD-SEC-01",
               "resourceType": "deliveryResource",
               "resourceClass": "critical-gold",
-              "roles": ["secondary"],
+              "roles": [
+                "secondary"
+              ],
               "accessTechnology": "5G",
               "relationships": [
                 {
@@ -499,10 +499,62 @@ x-correlation-id: corr-intent-create-001
           "target": "t7-observability-platform",
           "profile": "critical-gold-assurance-observation-v1",
           "resources": [
-            {"resourceId": "SYD-PRI-01", "resourceType": "deliveryResource", "resourceClass": "critical-gold", "roles": ["primary"], "metrics": ["latencyMs", "availabilityPercent", "jitterMs", "packetLossPercent"]},
-            {"resourceId": "SYD-PRI-02", "resourceType": "deliveryResource", "resourceClass": "critical-gold", "roles": ["primary"], "metrics": ["latencyMs", "availabilityPercent", "jitterMs", "packetLossPercent"]},
-            {"resourceId": "SYD-SEC-01", "resourceType": "deliveryResource", "resourceClass": "critical-gold", "roles": ["secondary"], "metrics": ["latencyMs", "availabilityPercent", "jitterMs", "packetLossPercent"]},
-            {"resourceId": "SYD-SEC-02", "resourceType": "deliveryResource", "resourceClass": "critical-gold", "roles": ["secondary"], "metrics": ["latencyMs", "availabilityPercent", "jitterMs", "packetLossPercent"]}
+            {
+              "resourceId": "SYD-PRI-01",
+              "resourceType": "deliveryResource",
+              "resourceClass": "critical-gold",
+              "roles": [
+                "primary"
+              ],
+              "metrics": [
+                "latencyMs",
+                "availabilityPercent",
+                "jitterMs",
+                "packetLossPercent"
+              ]
+            },
+            {
+              "resourceId": "SYD-PRI-02",
+              "resourceType": "deliveryResource",
+              "resourceClass": "critical-gold",
+              "roles": [
+                "primary"
+              ],
+              "metrics": [
+                "latencyMs",
+                "availabilityPercent",
+                "jitterMs",
+                "packetLossPercent"
+              ]
+            },
+            {
+              "resourceId": "SYD-SEC-01",
+              "resourceType": "deliveryResource",
+              "resourceClass": "critical-gold",
+              "roles": [
+                "secondary"
+              ],
+              "metrics": [
+                "latencyMs",
+                "availabilityPercent",
+                "jitterMs",
+                "packetLossPercent"
+              ]
+            },
+            {
+              "resourceId": "SYD-SEC-02",
+              "resourceType": "deliveryResource",
+              "resourceClass": "critical-gold",
+              "roles": [
+                "secondary"
+              ],
+              "metrics": [
+                "latencyMs",
+                "availabilityPercent",
+                "jitterMs",
+                "packetLossPercent"
+              ]
+            }
           ]
         }
       }
@@ -650,17 +702,100 @@ IA MS reports curated assurance/apply/runtime outcome truth. IC MS consumes this
     "statusReason": "All observed resources in the assurance scope are operating within resolved runtime targets.",
     "expression": {
       "context": {
-        "targets": {"maxLatencyMs": 10, "minAvailabilityPercent": 99.99, "maxJitterMs": 2, "maxPacketLossPercent": 0.01},
-        "constraints": {"location": {"locationId": "AU-NSW-SYD-HOSP-001", "displayName": "Sydney-Main-Hospital"}, "serviceType": "surgical-connectivity", "serviceClass": "critical-gold", "priority": "critical", "redundancyRequired": true},
-        "preferences": {"preferredAccessTechnology": "5G"}
+        "targets": {
+          "maxLatencyMs": 10,
+          "minAvailabilityPercent": 99.99,
+          "maxJitterMs": 2,
+          "maxPacketLossPercent": 0.01
+        },
+        "constraints": {
+          "location": {
+            "locationId": "AU-NSW-SYD-HOSP-001",
+            "displayName": "Sydney-Main-Hospital"
+          },
+          "serviceType": "surgical-connectivity",
+          "serviceClass": "critical-gold",
+          "priority": "critical",
+          "redundancyRequired": true
+        },
+        "preferences": {
+          "preferredAccessTechnology": "5G"
+        }
       }
     },
     "current": {
       "resources": [
-        {"resourceId": "SYD-PRI-01", "resourceType": "deliveryResource", "resourceClass": "critical-gold", "roles": ["primary"], "metrics": {"latencyMs": 8, "availabilityPercent": 99.995, "jitterMs": 1.5, "packetLossPercent": 0.005}}
+        {
+          "resourceId": "SYD-PRI-01",
+          "resourceType": "deliveryResource",
+          "resourceClass": "critical-gold",
+          "roles": [
+            "primary"
+          ],
+          "metrics": {
+            "latencyMs": 8,
+            "availabilityPercent": 99.995,
+            "jitterMs": 1.5,
+            "packetLossPercent": 0.005
+          }
+        },
+        {
+          "resourceId": "SYD-PRI-02",
+          "resourceType": "deliveryResource",
+          "resourceClass": "critical-gold",
+          "roles": [
+            "primary"
+          ],
+          "metrics": {
+            "latencyMs": 9,
+            "availabilityPercent": 99.996,
+            "jitterMs": 1.4,
+            "packetLossPercent": 0.004
+          }
+        },
+        {
+          "resourceId": "SYD-SEC-01",
+          "resourceType": "deliveryResource",
+          "resourceClass": "critical-gold",
+          "roles": [
+            "secondary"
+          ],
+          "metrics": {
+            "latencyMs": 10,
+            "availabilityPercent": 99.994,
+            "jitterMs": 1.8,
+            "packetLossPercent": 0.006
+          }
+        },
+        {
+          "resourceId": "SYD-SEC-02",
+          "resourceType": "deliveryResource",
+          "resourceClass": "critical-gold",
+          "roles": [
+            "secondary"
+          ],
+          "metrics": {
+            "latencyMs": 9,
+            "availabilityPercent": 99.997,
+            "jitterMs": 1.2,
+            "packetLossPercent": 0.003
+          }
+        }
       ]
     },
-    "references": {"correlationId": "corr-intent-assurance-001", "intent": {"id": "INT-HOSP-2026-001", "href": "/intentManagement/v5/intent/INT-HOSP-2026-001"}, "intentSpecification": {"id": "ispec-hss-001", "specKey": "hospital-surgical-slice-spec", "version": "1.20", "href": "/intentManagement/v5/intentSpecification/ispec-hss-001?version=1.20"}}
+    "references": {
+      "correlationId": "corr-intent-assurance-001",
+      "intent": {
+        "id": "INT-HOSP-2026-001",
+        "href": "/intentManagement/v5/intent/INT-HOSP-2026-001"
+      },
+      "intentSpecification": {
+        "id": "ispec-hss-001",
+        "specKey": "hospital-surgical-slice-spec",
+        "version": "1.20",
+        "href": "/intentManagement/v5/intentSpecification/ispec-hss-001?version=1.20"
+      }
+    }
   }
 }
 ```
@@ -676,17 +811,100 @@ IA MS reports curated assurance/apply/runtime outcome truth. IC MS consumes this
     "statusReason": "Observed latency on one primary delivery resource is above the resolved target threshold.",
     "expression": {
       "context": {
-        "targets": {"maxLatencyMs": 10, "minAvailabilityPercent": 99.99, "maxJitterMs": 2, "maxPacketLossPercent": 0.01},
-        "constraints": {"location": {"locationId": "AU-NSW-SYD-HOSP-001", "displayName": "Sydney-Main-Hospital"}, "serviceType": "surgical-connectivity", "serviceClass": "critical-gold", "priority": "critical", "redundancyRequired": true},
-        "preferences": {"preferredAccessTechnology": "5G"}
+        "targets": {
+          "maxLatencyMs": 10,
+          "minAvailabilityPercent": 99.99,
+          "maxJitterMs": 2,
+          "maxPacketLossPercent": 0.01
+        },
+        "constraints": {
+          "location": {
+            "locationId": "AU-NSW-SYD-HOSP-001",
+            "displayName": "Sydney-Main-Hospital"
+          },
+          "serviceType": "surgical-connectivity",
+          "serviceClass": "critical-gold",
+          "priority": "critical",
+          "redundancyRequired": true
+        },
+        "preferences": {
+          "preferredAccessTechnology": "5G"
+        }
       }
     },
     "current": {
       "resources": [
-        {"resourceId": "SYD-PRI-01", "resourceType": "deliveryResource", "resourceClass": "critical-gold", "roles": ["primary"], "metrics": {"latencyMs": 18, "availabilityPercent": 99.995, "jitterMs": 1.5, "packetLossPercent": 0.005}}
+        {
+          "resourceId": "SYD-PRI-01",
+          "resourceType": "deliveryResource",
+          "resourceClass": "critical-gold",
+          "roles": [
+            "primary"
+          ],
+          "metrics": {
+            "latencyMs": 18,
+            "availabilityPercent": 99.992,
+            "jitterMs": 1.8,
+            "packetLossPercent": 0.006
+          }
+        },
+        {
+          "resourceId": "SYD-PRI-02",
+          "resourceType": "deliveryResource",
+          "resourceClass": "critical-gold",
+          "roles": [
+            "primary"
+          ],
+          "metrics": {
+            "latencyMs": 14,
+            "availabilityPercent": 99.993,
+            "jitterMs": 1.7,
+            "packetLossPercent": 0.006
+          }
+        },
+        {
+          "resourceId": "SYD-SEC-01",
+          "resourceType": "deliveryResource",
+          "resourceClass": "critical-gold",
+          "roles": [
+            "secondary"
+          ],
+          "metrics": {
+            "latencyMs": 12,
+            "availabilityPercent": 99.994,
+            "jitterMs": 1.8,
+            "packetLossPercent": 0.006
+          }
+        },
+        {
+          "resourceId": "SYD-SEC-02",
+          "resourceType": "deliveryResource",
+          "resourceClass": "critical-gold",
+          "roles": [
+            "secondary"
+          ],
+          "metrics": {
+            "latencyMs": 13,
+            "availabilityPercent": 99.993,
+            "jitterMs": 1.9,
+            "packetLossPercent": 0.007
+          }
+        }
       ]
     },
-    "references": {"correlationId": "corr-intent-assurance-002", "intent": {"id": "INT-HOSP-2026-001", "href": "/intentManagement/v5/intent/INT-HOSP-2026-001"}, "intentSpecification": {"id": "ispec-hss-001", "specKey": "hospital-surgical-slice-spec", "version": "1.20", "href": "/intentManagement/v5/intentSpecification/ispec-hss-001?version=1.20"}}
+    "references": {
+      "correlationId": "corr-intent-assurance-002",
+      "intent": {
+        "id": "INT-HOSP-2026-001",
+        "href": "/intentManagement/v5/intent/INT-HOSP-2026-001"
+      },
+      "intentSpecification": {
+        "id": "ispec-hss-001",
+        "specKey": "hospital-surgical-slice-spec",
+        "version": "1.20",
+        "href": "/intentManagement/v5/intentSpecification/ispec-hss-001?version=1.20"
+      }
+    }
   }
 }
 ```
@@ -741,7 +959,7 @@ IntentCallbackEvent
 
 ### Meaning
 
-ICB MS publishes accepted raw callbacks to Kafka as `IntentCallbackEvent`.
+ICB MS publishes accepted raw change-execution/apply callbacks to the dedicated callback Kafka topic as `IntentCallbackEvent`.
 
 IA MS consumes this event, validates/correlates intent state, maps raw source state into lifecycle/assurance meaning, and emits assurance outcomes where applicable.
 
@@ -762,14 +980,21 @@ content-type: application/json
 ```json
 {
   "body": {
+    "callbackId": "cb-sub-0001",
     "intentId": "INT-HOSP-2026-001",
     "callbackSource": "t7-network-orchestrator",
     "callbackTimestamp": "2026-04-18T12:14:58+10:00",
     "sourceState": {
       "state": "APPLIED",
-      "details": {
-        "message": "Raw callback payload retained by ICB MS"
-      }
+      "reason": "Configuration applied successfully."
+    },
+    "sourceReference": {
+      "id": "orch-job-9001",
+      "href": "https://orchestrator.example.com/jobs/orch-job-9001"
+    },
+    "receivedAt": "2026-04-18T12:15:00+10:00",
+    "details": {
+      "message": "Raw callback payload retained by ICB MS according to retention policy."
     },
     "references": {
       "correlationId": "corr-intent-callback-001",
