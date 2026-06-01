@@ -123,7 +123,7 @@ The hospital surgical slice baseline mainly uses Knowledge Plane data and optimi
 
 Those systems provide facts for semantic interpretation, capability validation, policy validation, candidate discovery, or service-ready preparation. They do not own the external `Intent` lifecycle, and they do not change the II MS event ownership model. II MS still curates the resolved facts and emits `IntentRejectedEvent`, `IntentResolvedEvent`, or `IntentNetworkReadyEvent` according to the same contract rules.
 
-II MS must not dump raw authority responses into events. Only validated, normalised, and next-stage-relevant facts should be carried forward in the canonical `targets`, `constraints`, `preferences`, `resources`, and `serviceConfiguration` structures.
+II MS must not dump raw source-system responses into events. Only validated, normalised, and next-stage-relevant facts should be carried forward in the canonical `targets`, `constraints`, `preferences`, `resources`, and `serviceConfiguration` structures.
 
 The baseline surgical hospital slice is an illustrative runtime example used to make the II MS semantic interpretation and Knowledge Plane-backed resolution contract concrete. It is not the only supported runtime Intent type, IntentSpecification, service class, schema, expression IRI, location, service type, Knowledge Plane profile, or deployment profile. Other runtime Intents may use different targets, constraints, preferences, expression schemas, service types, priorities, resources, and governance profiles while following the same II MS contract rules.
 

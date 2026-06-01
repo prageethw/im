@@ -243,7 +243,7 @@ II MS does not expect the external TMF `Intent.expression` wrapper in internal e
 | 1 | Consume `IntentValidatedEvent` |
 | 2 | Check idempotency using CloudEvents `ce-id` and intent identity |
 | 3 | Parse admitted internal `expression.context` |
-| 4 | Resolve `context.constraints.location` from KP or another approved location authority where required |
+| 4 | Resolve `context.constraints.location` from KP or another approved pre-resolution validation source where required |
 | 5 | Resolve `context.constraints.serviceType` and `context.constraints.serviceClass` from KP, catalogue, policy, or another approved pre-resolution validation source where required |
 | 6 | Validate service capability/status |
 | 7 | Validate hard constraints, including priority, redundancy, and time window where present |
