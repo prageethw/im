@@ -519,6 +519,27 @@ Baseline reason-code families:
         }
       },
       {
+        "resourceId": "SYD-PRI-02",
+        "resourceType": "deliveryResource",
+        "resourceClass": "critical-gold",
+        "roles": [
+          "primary"
+        ],
+        "accessTechnology": "5G",
+        "relationships": [
+          {
+            "type": "pairedSecondary",
+            "resourceId": "SYD-SEC-02"
+          }
+        ],
+        "metrics": {
+          "latencyMs": 8,
+          "availabilityPercent": 99.995,
+          "jitterMs": 1.5,
+          "packetLossPercent": 0.005
+        }
+      },
+      {
         "resourceId": "SYD-SEC-01",
         "resourceType": "deliveryResource",
         "resourceClass": "critical-gold",
@@ -537,6 +558,27 @@ Baseline reason-code families:
           "availabilityPercent": 99.994,
           "jitterMs": 1.8,
           "packetLossPercent": 0.006
+        }
+      },
+      {
+        "resourceId": "SYD-SEC-02",
+        "resourceType": "deliveryResource",
+        "resourceClass": "critical-gold",
+        "roles": [
+          "secondary"
+        ],
+        "accessTechnology": "fibre",
+        "relationships": [
+          {
+            "type": "protects",
+            "resourceId": "SYD-PRI-02"
+          }
+        ],
+        "metrics": {
+          "latencyMs": 9,
+          "availabilityPercent": 99.997,
+          "jitterMs": 1.2,
+          "packetLossPercent": 0.003
         }
       }
     ],
@@ -661,6 +703,34 @@ Rules:
               "jitterMs",
               "packetLossPercent"
             ]
+          },
+          {
+            "resourceId": "SYD-PRI-02",
+            "resourceType": "deliveryResource",
+            "resourceClass": "critical-gold",
+            "roles": [
+              "primary"
+            ],
+            "metrics": [
+              "latencyMs",
+              "availabilityPercent",
+              "jitterMs",
+              "packetLossPercent"
+            ]
+          },
+          {
+            "resourceId": "SYD-SEC-02",
+            "resourceType": "deliveryResource",
+            "resourceClass": "critical-gold",
+            "roles": [
+              "secondary"
+            ],
+            "metrics": [
+              "latencyMs",
+              "availabilityPercent",
+              "jitterMs",
+              "packetLossPercent"
+            ]
           }
         ]
       }
@@ -766,7 +836,7 @@ Consumer rules:
 - Treat `IntentNetworkReadyEvent` as service-ready preparation only, not apply success.
 - Do not infer assurance status from II events.
 - Use `body.references.correlationId` for traceability.
-- Preserve the canonical `targets`, `constraints`, and `preferences` grouping when forwarding or deriving downstream state.
+- Preserve the canonical `body.expression.context.targets`, `body.expression.context.constraints`, and `body.expression.context.preferences` grouping when forwarding or deriving downstream state.
 
 ## 24. Open items:
 
