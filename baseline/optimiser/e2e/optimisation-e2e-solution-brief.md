@@ -1,4 +1,4 @@
-# Optimisation Platform End-to-End Solution Brief-(SB)
+# End-to-End Solution Brief — Optimisation Platform
 
 **Document status:**
 
@@ -51,14 +51,14 @@ Core services:
 
 | **Service** | **Responsibility** |
 |---|---|
-| **OD MS (Optimisation Definition MS)** | Owns the governed `OptimisationSpecification` catalogue, lifecycle, draft candidate identity, official versioning, and caller-facing request contracts. |
-| **OC MS (Optimisation Controller MS)** | Owns runtime `Optimisation` resources, lifecycle, cancellation, retrial, persistence, event integration, result projection, and resolved specification contract pointers. |
-| **OSB MS (Optimisation Screen Builder MS)** | Provides the OEX backend-for-frontend experience, shapes UI views and actions using user context, and calls backend optimisation APIs through NGW. |
+| **OD MS(Optimisation Definition MS)** | Owns the governed `OptimisationSpecification` catalogue, lifecycle, draft candidate identity, official versioning, and caller-facing request contracts. |
+| **OC MS(Optimisation Controller MS)** | Owns runtime `Optimisation` resources, lifecycle, cancellation, retrial, persistence, event integration, result projection, and resolved specification contract pointers. |
+| **OSB MS(Optimisation Screen Builder MS)** | Provides the OEX backend-for-frontend experience, shapes UI views and actions using user context, and calls backend optimisation APIs through NGW. |
 | **OW MS (Optimisation Worker MS)** | Python worker service that consumes Kafka worker instructions, integrates with the Gurobi Python API, executes or cancels optimisation work, and emits outcome facts. |
 
 OW MS means Optimisation Worker MS. OW MS emits outcome facts only; OC MS owns REST-visible lifecycle and result projection.
 
-Operator access to the experience layer is governed by the ASG approval process and Microsoft Entra ID SSO. OGW invokes OSB MS using mTLS and User Context JWT. OSB MS invokes NGW using mTLS and OAuth2 system-to-system. User context stops before NGW; downstream OD MS and OC MS calls use service identity only.
+Operator access to the experience layer is governed by the ACG approval process and Microsoft Entra ID SSO. OGW invokes OSB MS using mTLS and User Context JWT. OSB MS invokes NGW using mTLS and OAuth2 system-to-system. User context stops before NGW; downstream OD MS and OC MS calls use service identity only.
 
 OC MS validates the request structure and referenced ACTIVE OD MS request contract, persists the runtime `Optimisation` resource, returns `201 Created`, writes `OptimisationRequestedEvent` to its outbox, and drives execution asynchronously through Kafka. OC MS also owns external optimisation webhook subscriptions through `/optimisation/hub` and emits `OptimisationStatusChangeEvent` notifications after lifecycle or result projection is durably persisted.
 
@@ -168,7 +168,7 @@ OC MS -> /optimisation/hub subscription delivery -> subscriber callback URL
 Key logical relationships:
 
 ```text
-1. User -> Microsoft Entra ID: user authenticates using SSO after ASG approval.
+1. User -> Microsoft Entra ID: user authenticates using SSO after ACG approval.
 2. UI -> OGW: OGW is the user-context-aware gateway.
 3. OGW -> OSB MS: mTLS and User Context JWT.
 4. OSB MS -> NGW: mTLS and OAuth2 system-to-system.
@@ -350,14 +350,15 @@ Retrial is available only from `FAILED` in the baseline. Retrial is not availabl
 
 OW MS does not set REST-visible `lifecycleStatus` directly; it emits outcome facts consumed and projected by OC MS.
 
-OW MS idempotency in this E2E brief means duplicate event detection using `eventId` or `ce-id`, `optimisationId`, and instruction context before executing work. Detailed OW MS execution eligibility, cancellation handling, solver timeout, idempotency, deduplication, and DLQ rules are owned by `ow-ms/ow_ms_specification.md`.
+OW MS idempotency in this E2E brief means duplicate event detection using `eventId` or `ce-id`, `optimisationId`, and instruction context before executing work. Detailed OW MS eligibility and deduplication rules belong in `ow-ms/ow_ms_specification.md`.
+Detailed OW MS execution eligibility, cancellation handling, solver timeout, idempotency, and DLQ rules are owned by the OW MS specification.
 
 ## 4. Capability matrix:
 
 | **Component** | **Responsibility** |
 |---|---|
 | **Microsoft Entra ID** | Provides SSO authentication for users before they access OEX/experience layer. |
-| **ASG approval process** | Governs operator access to the OEX optimisation experience. |
+| **ACG approval process** | Governs operator access to the OEX optimisation experience. |
 | **OGW** | User-context-aware gateway for OEX APIs. Invokes OSB MS using mTLS and User Context JWT. |
 | **OEX UI and experience layer** | Provides user/operator-facing experience for discovery, request submission, monitoring, cancellation, retrial, and result viewing. |
 | **OSB MS** | Builds OEX view models, applies user-context filtering, uses backend `_links` plus user context for actions, forwards ETags, and calls backend APIs through NGW. |
@@ -382,10 +383,10 @@ OW MS idempotency in this E2E brief means duplicate event detection using `event
 
 ### 5.1. User authentication and access governance:
 
-Users access OEX through ASG approval and Microsoft Entra ID SSO.
+Users access OEX through ACG approval and Microsoft Entra ID SSO.
 
 ```text
-User -> ASG approval process -> Microsoft Entra ID SSO -> OGW -> OEX APIs and UI
+User -> ACG approval process -> Microsoft Entra ID SSO -> OGW -> OEX APIs and UI
 ```
 
 ### 5.2. Experience layer internal access path:
@@ -421,7 +422,7 @@ NGW-to-downstream OD MS and OC MS calls do not carry or expose end-user identity
 
 ### 5.5. OC MS to OD MS service-to-service security:
 
-OC MS resolves and validates the referenced OD MS contract through the approved internal service-to-service path. The baseline internal path uses service-to-service mTLS and does not route through NGW unless platform routing policy changes later.
+OC MS calls OD MS directly using service-to-service mTLS for specification validation. This is an internal service path and does not route through NGW.
 
 OC MS resolves and validates the referenced specification contract:
 
@@ -601,7 +602,7 @@ For OC MS runtime creation and cancellation, Kafka broker unavailability does no
 
 ## 8. Assumptions:
 
-- Operators access OEX only after ASG approval.
+- Operators access OEX only after ACG approval.
 - User and operator authentication uses Microsoft Entra ID SSO.
 - OGW is the user-context-aware gateway for OEX APIs.
 - OGW integrates with OSB MS using mTLS and User Context JWT.
@@ -624,7 +625,7 @@ For OC MS runtime creation and cancellation, Kafka broker unavailability does no
 - `OptimisationSpecification` and `Optimisation` are optimiser-domain platform resources, not native TMF Open API resources.
 - Optimiser resources are platform resource models aligned to TMF conventions; approved optimiser-specific fields, operations, headers, link relations, and lifecycle values are documented in the owning service specifications.
 - OGW-exposed experience APIs, private MS-to-MS APIs, private MS-to-MS events, and internal Kafka events do not need to be TMF REST compliant.
-- `x-platform-extension: true` and `x-tmf-native: false` are governance documentation response headers on external NGW-facing optimiser resources.
+- `x-platform-extension: true` is the governance documentation response header used where an external NGW-facing optimiser resource, route, field, lifecycle value, or behaviour includes a documented platform extension. `X-TMF-Native` is not used for optimiser APIs because these APIs are TMF-style platform resources, not native TMF Open API resources.
 - `x-cb-triggered: true` is a diagnostic response header used only when a remote dependency circuit breaker changes the externally meaningful response path. It is not a business-logic switch and is not used on internal Kafka events.
 - Do not expose Gurobi model formulation, solver configuration, objective internals, candidate-resource rules, or model binding through public APIs or OSB views.
 - OD MS exposes only the caller-facing `OptimisationSpecification` request contract.
