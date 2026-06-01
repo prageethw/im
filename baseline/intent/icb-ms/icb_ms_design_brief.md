@@ -102,7 +102,7 @@ ICB MS must not decide whether a callback means `Active`, `Failed`, `Terminated`
 
 The external callback submission API carries event-like callback facts across the protected REST boundary. For change-execution/apply callbacks, the submitted payload uses `@type: IntentCallbackEventRequest`; ICB MS accepts, persists, and relays the fact internally as `ce-type: IntentCallbackEvent`. Approved optimiser outcome callbacks use `@type: OptimisationStatusChangeEventRequest` and are relayed internally as `ce-type: OptimisationStatusChangeEvent`.
 
-Typical callback facts include:
+Typical change-execution/apply callback facts include:
 
 - `intentId`
 - `callbackSource`
@@ -112,6 +112,9 @@ Typical callback facts include:
 - raw or structured detail payload where safe
 
 ICB MS validates that these fields are present and structurally valid. It does not validate that `intentId` is known to IA MS or decide what the raw state means.
+
+
+Optimiser outcome callback submissions use the approved `OptimisationStatusChangeEventRequest` shape and carry optimiser facts under `event.optimisation`. ICB MS validates this optimiser payload structurally and relays it without interpreting optimiser status, feasibility, or selected-configuration meaning.
 
 Do not use `callbackType` as an ICB contract field. ICB MS does not classify callback meaning; IA MS interprets raw `sourceState.state` and source references in the context of the intent and assurance state.
 
@@ -219,4 +222,4 @@ icb_ms_callback_validation_error_count
 
 ## 14. Design baseline statement:
 
-**ICB MS is a thin callback ingestion service. It receives callback submissions from external systems through API Gateway, authorises and structurally validates them, stores them durably through an outbox pattern, and publishes raw `IntentCallbackEvent` facts to the callback Kafka topic for IA MS and approved `OptimisationStatusChangeEvent` facts to the main internal topic for II MS. ICB MS must not interpret lifecycle or assurance meaning; IA MS owns callback correlation and state interpretation.**
+**ICB MS is a thin callback ingestion service. It receives callback submissions from external systems through API Gateway, authorises and structurally validates them, stores them durably through an outbox pattern, and publishes raw `IntentCallbackEvent` facts to the callback Kafka topic for IA MS and approved `OptimisationStatusChangeEvent` facts to the main internal topic for II MS. ICB MS must not interpret lifecycle, assurance, optimisation, selected-configuration, feasibility, or service meaning. IA MS owns change-execution callback correlation and state interpretation; II MS owns optimiser outcome correlation and selected-configuration packaging.**

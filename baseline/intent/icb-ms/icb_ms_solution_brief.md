@@ -479,7 +479,7 @@ ICB MS follows the IME DB baseline: managed PostgreSQL or PostgreSQL-compatible 
 | `intent_id` | VARCHAR | Kafka key and event subject. |
 | `correlation_id` | VARCHAR | Propagated tracing/correlation value. |
 | `event_type` | VARCHAR | `IntentCallbackEvent` or `OptimisationStatusChangeEvent`. |
-| `event_payload` | JSONB | JSON payload with top-level `body`. |
+| `event_payload` | JSONB | JSON event payload. `IntentCallbackEvent` uses the ICB-owned top-level `body` callback fact shape; `OptimisationStatusChangeEvent` uses the approved optimiser event payload shape consumed by II MS. |
 | `outbox_status` | VARCHAR / ENUM | Pending/published handling state, with failure represented by retry state or operational status according to implementation policy. |
 | `retry_count` | INT | Relay retry attempts. |
 | `next_attempt_at` | TIMESTAMPTZ | Optional retry scheduling field. |
@@ -707,7 +707,7 @@ content-type: application/json
 | 6 | Insert or update callback submission/idempotency records. |
 | 7 | Insert callback outbox record in same DB transaction. |
 | 8 | Return `202 Accepted` after durable commit. |
-| 9 | Relay publishes `IntentCallbackEvent` asynchronously. |
+| 9 | Relay publishes the selected internal event asynchronously: `IntentCallbackEvent` for change-execution/apply callbacks, or `OptimisationStatusChangeEvent` for approved optimiser outcome callbacks. |
 
 ### 10.2. Duplicate behaviour:
 
