@@ -65,7 +65,7 @@ Approved platform extensions:
 | `DELETE /optimisationSpecification/draft/{draftId}` | Physical deletion of an unused mutable `DRAFT` candidate. | Not allowed for `ACTIVE` or `RETIRED` official versions. |
 | `_links` | HATEOAS controls. | Does not replace `href`; lifecycle-aware and authorisation-aware. |
 | `ETag` and `If-Match` governance | HTTP header based optimistic concurrency for unsafe existing-resource operations. | Required for `PUT`, `PATCH`, and `DELETE`; ETags are headers, not JSON payload fields. |
-| `x-platform-extension` and `x-tmf-native` response headers | Governance documentation headers for NGW-facing optimiser-domain resources. | Used only on external NGW-facing OD and OC APIs; clients must not use these headers as business-logic switches. |
+| `x-platform-extension` response header | Governance documentation header for NGW-facing optimiser-domain resources. | Used only on external NGW-facing optimiser APIs where a documented platform extension is present; clients must not use this header as a business-logic switch. |
 
 ## 3. Ownership:
 
@@ -632,7 +632,7 @@ Unsupported or malformed query parameters return `400 Bad Request`. Requests com
 Pagination rule:
 
 ```text
-OD MS list responses support `offset` and `limit` where pagination is enabled. When result counts are available, list responses include `X-Total-Count` for the total number of matching records and `X-Result-Count` for the number of records returned in the current response. If a deployment does not support count calculation, it may omit these headers but must still honour `offset` and `limit` or reject unsupported parameters with 400 Bad Request.
+OD MS list responses support `offset` and `limit` where pagination is enabled. When result counts are available, list responses include `X-Total-Count` for the total number of matching records and `X-Result-Count` for the number of records returned in the current response. If a deployment does not support count calculation, it may omit this header but must still honour `offset` and `limit` or reject unsupported parameters with 400 Bad Request.
 ```
 
 Default list resolution rule:
@@ -669,18 +669,19 @@ Unsupported field names still return 400 Bad Request.
 
 ## 15. External response header governance:
 
-OD MS external NGW-facing API responses include the following governance and documentation headers because `OptimisationSpecification` is an optimiser-domain platform resource that follows TMF-style conventions but is not a native TMF Open API resource:
+OD MS external NGW-facing API responses may include the following governance and documentation header when a route, method, response, field, lifecycle value, link relation, or behaviour includes a documented platform extension:
 
 ```http
 x-platform-extension: true
-x-tmf-native: false
 ```
 
-These headers apply to OD MS external API responses only. They are not used on internal Kafka events, database records, or private worker contracts.
+`OptimisationSpecification` is an optimiser-domain platform resource that follows TMF-style conventions but is not a native TMF Open API resource. OD MS does not use `x-tmf-native` in the optimiser baseline.
+
+This header applies to OD MS external API responses only. It is not used on internal database records or private worker contracts.
 
 `x-cb-triggered: true` may also be returned when a remote dependency circuit breaker changes the externally meaningful response path. It is diagnostic only and must not be used as a business-logic switch.
 
-Clients must not use these headers as runtime business-logic switches.
+Clients must not use this header as runtime business-logic switches.
 
 ## 16. Concurrency and cache governance:
 
@@ -845,7 +846,6 @@ HTTP/1.1 201 Created
 Location: /optimisationManagement/v1/optimisationSpecification/draft/od-draft-surgical-routing-a
 ETag: "od-draft-surgical-routing-a-r1"
 x-platform-extension: true
-x-tmf-native: false
 Content-Type: application/json
 ```
 
@@ -923,7 +923,6 @@ HTTP/1.1 200 OK
 Cache-Control: private, max-age=300
 ETag: "od-spec-list-r42"
 x-platform-extension: true
-x-tmf-native: false
 Content-Type: application/json
 ```
 
@@ -1014,7 +1013,6 @@ Response:
 HTTP/1.1 200 OK
 ETag: "od-spec-surgical-routing-r4"
 x-platform-extension: true
-x-tmf-native: false
 Content-Type: application/json
 ```
 
@@ -1074,7 +1072,6 @@ Response:
 HTTP/1.1 200 OK
 ETag: "od-spec-surgical-routing-r4"
 x-platform-extension: true
-x-tmf-native: false
 Content-Type: application/json
 ```
 
