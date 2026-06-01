@@ -1,6 +1,66 @@
 # II MS Specification
 
-## Service identity
+| **Document status** | **Value** |
+| --- | --- |
+| Status | Current baseline |
+| Scope | Intent Intelligence MS internal event specification |
+| Source of truth after commit | GitHub `baseline/intent/ii-ms/ii_ms_specification.md` |
+
+## Table of contents:
+
+- [1. Service identity](#1-service-identity)
+- [2. Boundary statement](#2-boundary-statement)
+- [3. External API](#3-external-api)
+- [4. Event input: IntentValidatedEvent](#4-event-input-intentvalidatedevent)
+  - [4.1. Topic](#41-topic)
+  - [4.2. Producer](#42-producer)
+  - [4.3. Consumer](#43-consumer)
+  - [4.4. Meaning](#44-meaning)
+  - [4.5. Example headers](#45-example-headers)
+  - [4.6. Example body consumed by II MS](#46-example-body-consumed-by-ii-ms)
+  - [4.7. Input validation rules](#47-input-validation-rules)
+- [5. Semantic processing flow](#5-semantic-processing-flow)
+- [6. Target, constraint, and preference handling](#6-target-constraint-and-preference-handling)
+  - [6.1. Targets](#61-targets)
+  - [6.2. Constraints](#62-constraints)
+  - [6.3. Preferences](#63-preferences)
+- [7. Rejection reason codes](#7-rejection-reason-codes)
+- [8. Event output: IntentRejectedEvent](#8-event-output-intentrejectedevent)
+  - [8.1. Topic](#81-topic)
+  - [8.2. Producer](#82-producer)
+  - [8.3. Current primary consumer](#83-current-primary-consumer)
+  - [8.4. Meaning](#84-meaning)
+  - [8.5. Example headers](#85-example-headers)
+  - [8.6. Example body — service class unsupported](#86-example-body-service-class-unsupported)
+  - [8.7. Example body — redundancy capability unsupported](#87-example-body-redundancy-capability-unsupported)
+  - [8.8. Event-specific rules](#88-event-specific-rules)
+- [9. Event output: IntentResolvedEvent](#9-event-output-intentresolvedevent)
+  - [9.1. Topic](#91-topic)
+  - [9.2. Producer](#92-producer)
+  - [9.3. Current primary consumer](#93-current-primary-consumer)
+  - [9.4. Meaning](#94-meaning)
+  - [9.5. Example headers](#95-example-headers)
+  - [9.6. Example body — Sydney resolved](#96-example-body-sydney-resolved)
+  - [9.7. Example body — Melbourne resolved with open-ended time window](#97-example-body-melbourne-resolved-with-open-ended-time-window)
+  - [9.8. Event-specific rules](#98-event-specific-rules)
+- [10. Event output: IntentNetworkReadyEvent](#10-event-output-intentnetworkreadyevent)
+  - [10.1. Topic](#101-topic)
+  - [10.2. Producer](#102-producer)
+  - [10.3. Current primary consumer](#103-current-primary-consumer)
+  - [10.4. Meaning](#104-meaning)
+  - [10.5. Example headers](#105-example-headers)
+  - [10.6. Example body — network ready for change execution and assurance](#106-example-body-network-ready-for-change-execution-and-assurance)
+  - [10.7. Event-specific rules](#107-event-specific-rules)
+- [11. KP mapping rules](#11-kp-mapping-rules)
+- [12. Idempotency and ordering](#12-idempotency-and-ordering)
+- [13. Persistence](#13-persistence)
+- [14. Dependency behaviour](#14-dependency-behaviour)
+- [15. Observability](#15-observability)
+- [16. Security](#16-security)
+- [17. Contract summary](#17-contract-summary)
+
+
+## 1. Service identity
 
 | Item | Baseline |
 |---|---|
@@ -13,7 +73,7 @@
 | Primary input event | `IntentValidatedEvent` |
 | Output events | `IntentRejectedEvent`, `IntentResolvedEvent`, `IntentNetworkReadyEvent` |
 
-## Boundary statement
+## 2. Boundary statement
 
 II MS consumes syntactically admitted runtime intent facts from IC MS and performs semantic interpretation and Knowledge Plane-backed resolution.
 
@@ -25,9 +85,11 @@ II MS emits:
 
 II MS does not own runtime `Intent` REST APIs, external lifecycle projection, downstream selection/fulfilment decisions, assurance truth, callback ingestion, change execution, or KP governance.
 
+The baseline surgical hospital slice is an illustrative runtime example used to make the II MS semantic interpretation and Knowledge Plane-backed resolution contract concrete. It is not the only supported runtime Intent type, IntentSpecification, service class, schema, expression IRI, location, service type, Knowledge Plane profile, or deployment profile. Other runtime Intents may use different targets, constraints, preferences, expression schemas, service types, priorities, resources, and governance profiles while following the same II MS contract rules.
+
 ---
 
-## 1. External API
+## 3. External API
 
 II MS has no external TMF-compliant API and no consumer-facing REST contract in the active baseline. II MS is not exposed through NGW, OEX, public API gateways, or partner-facing API channels.
 
@@ -45,33 +107,33 @@ These endpoints, if implemented, are restricted to the platform/runtime network 
 
 ---
 
-## 2. Event input: IntentValidatedEvent
+## 4. Event input: IntentValidatedEvent
 
-### Topic
+### 4.1. Topic
 
 ```text
 t7.intent.management.events
 ```
 
-### Producer
+### 4.2. Producer
 
 ```text
 intent-controller-ms
 ```
 
-### Consumer
+### 4.3. Consumer
 
 ```text
 intent-intelligence-ms
 ```
 
-### Meaning
+### 4.4. Meaning
 
 `IntentValidatedEvent` means IC MS has admitted a runtime Intent after syntactic validation.
 
 It does not mean semantic feasibility, policy acceptance, service availability, or downstream fulfilment success.
 
-### Example headers
+### 4.5. Example headers
 
 ```http
 ce-specversion: 1.0
@@ -83,13 +145,13 @@ ce-subject: INT-HOSP-2026-001
 content-type: application/json
 ```
 
-### Example body consumed by II MS
+### 4.6. Example body consumed by II MS
 
 ```json
 {
   "body": {
     "intentId": "INT-HOSP-2026-001",
-    "version": "v1",
+    "intentVersion": "v1",
     "lifecycleStatus": "Acknowledged",
     "statusReason": "Intent request passed IC MS admission validation and was admitted for downstream processing.",
     "intentSpecification": {
@@ -141,14 +203,14 @@ content-type: application/json
 }
 ```
 
-### Input validation rules
+### 4.7. Input validation rules
 
 II MS expects:
 
 | Field | Rule |
 |---|---|
 | `body.intentId` | Required |
-| `body.version` | Required where versioned runtime intent is used |
+| `body.intentVersion` | Required where versioned runtime intent is used |
 | `body.intentSpecification.id` | Required |
 | `body.expression.iri` | Required |
 | `body.expression.context` | Required |
@@ -164,7 +226,7 @@ II MS does not expect the external TMF `Intent.expression` wrapper in internal e
 
 ---
 
-## 3. Semantic processing flow
+## 5. Semantic processing flow
 
 | Step | Action |
 |---|---|
@@ -182,9 +244,9 @@ II MS does not expect the external TMF `Intent.expression` wrapper in internal e
 
 ---
 
-## 4. Target, constraint, and preference handling
+## 6. Target, constraint, and preference handling
 
-### Targets
+### 6.1. Targets
 
 Targets are measurable runtime objectives.
 
@@ -199,7 +261,7 @@ maxPacketLossPercent
 
 II MS validates that target names and value types are supported for the requested service/service class. II MS preserves target names and values under `expression.context.targets`.
 
-### Constraints
+### 6.2. Constraints
 
 Constraints are hard runtime requirements.
 
@@ -222,7 +284,7 @@ When `constraints.timeWindow` is present:
 - `endDateTime` is optional
 - `endDateTime` is included in the schema as an allowed optional property, not a mandatory property
 
-### Preferences
+### 6.3. Preferences
 
 Preferences are soft runtime selection guidance.
 
@@ -236,7 +298,7 @@ II MS preserves preferences for downstream selection guidance. II MS does not re
 
 ---
 
-## 5. Rejection reason codes
+## 7. Rejection reason codes
 
 II MS reason codes must be expressed as intent-domain semantic, policy, capability, or processing issues. II MS must not expose downstream implementation vocabulary or use downstream-selection-specific reason codes.
 
@@ -259,31 +321,31 @@ Capability/resource shortfall must be expressed as an intent-domain semantic or 
 
 ---
 
-## 6. Event output: IntentRejectedEvent
+## 8. Event output: IntentRejectedEvent
 
-### Topic
+### 8.1. Topic
 
 ```text
 t7.intent.management.events
 ```
 
-### Producer
+### 8.2. Producer
 
 ```text
 intent-intelligence-ms
 ```
 
-### Current primary consumer
+### 8.3. Current primary consumer
 
 ```text
 intent-controller-ms
 ```
 
-### Meaning
+### 8.4. Meaning
 
 II MS emits `IntentRejectedEvent` when the admitted intent is syntactically valid but cannot be semantically, policy, or capability resolved.
 
-### Example headers
+### 8.5. Example headers
 
 ```http
 ce-specversion: 1.0
@@ -295,13 +357,13 @@ ce-subject: INT-HOSP-2026-002
 content-type: application/json
 ```
 
-### Example body — service class unsupported
+### 8.6. Example body — service class unsupported
 
 ```json
 {
   "body": {
     "intentId": "INT-HOSP-2026-002",
-    "version": "v1",
+    "intentVersion": "v1",
     "lifecycleStatus": "Rejected",
     "reasonCode": "SEMANTIC_SERVICE_CLASS_UNSUPPORTED",
     "statusReason": "Surgical critical-gold connectivity is not supported for the requested location and service context.",
@@ -337,13 +399,13 @@ content-type: application/json
 }
 ```
 
-### Example body — redundancy capability unsupported
+### 8.7. Example body — redundancy capability unsupported
 
 ```json
 {
   "body": {
     "intentId": "INT-HOSP-2026-003",
-    "version": "v1",
+    "intentVersion": "v1",
     "lifecycleStatus": "Rejected",
     "reasonCode": "SEMANTIC_INTENT_CONTRADICTORY",
     "statusReason": "Redundancy was required by the intent, but the resolved domain context cannot satisfy the requested redundant capability.",
@@ -381,7 +443,7 @@ content-type: application/json
 }
 ```
 
-### Event-specific rules
+### 8.8. Event-specific rules
 
 - Use `lifecycleStatus: Rejected`.
 - Include `reasonCode` and `statusReason`.
@@ -394,31 +456,31 @@ content-type: application/json
 
 ---
 
-## 7. Event output: IntentResolvedEvent
+## 9. Event output: IntentResolvedEvent
 
-### Topic
+### 9.1. Topic
 
 ```text
 t7.intent.management.events
 ```
 
-### Producer
+### 9.2. Producer
 
 ```text
 intent-intelligence-ms
 ```
 
-### Current primary consumer
+### 9.3. Current primary consumer
 
 ```text
 optimiser-controller-ms
 ```
 
-### Meaning
+### 9.4. Meaning
 
 II MS emits `IntentResolvedEvent` when the admitted intent has been semantically resolved into a canonical handoff that can proceed to the next internal fulfilment stage.
 
-### Example headers
+### 9.5. Example headers
 
 ```http
 ce-specversion: 1.0
@@ -430,13 +492,13 @@ ce-subject: INT-HOSP-2026-001
 content-type: application/json
 ```
 
-### Example body — Sydney resolved
+### 9.6. Example body — Sydney resolved
 
 ```json
 {
   "body": {
     "intentId": "INT-HOSP-2026-001",
-    "version": "v1",
+    "intentVersion": "v1",
     "lifecycleStatus": "InProgress",
     "expression": {
       "context": {
@@ -571,13 +633,13 @@ content-type: application/json
 }
 ```
 
-### Example body — Melbourne resolved with open-ended time window
+### 9.7. Example body — Melbourne resolved with open-ended time window
 
 ```json
 {
   "body": {
     "intentId": "INT-HOSP-2026-004",
-    "version": "v1",
+    "intentVersion": "v1",
     "lifecycleStatus": "InProgress",
     "expression": {
       "context": {
@@ -694,7 +756,7 @@ content-type: application/json
 }
 ```
 
-### Event-specific rules
+### 9.8. Event-specific rules
 
 - Preserve resolved semantic context under `expression.context`.
 - Preserve `targets`, `constraints`, and `preferences` as first-class semantic buckets under `expression.context`.
@@ -707,33 +769,33 @@ content-type: application/json
 
 ---
 
-## 8. Event output: IntentNetworkReadyEvent
+## 10. Event output: IntentNetworkReadyEvent
 
-### Topic
+### 10.1. Topic
 
 ```text
 t7.intent.management.events
 ```
 
-### Producer
+### 10.2. Producer
 
 ```text
 intent-intelligence-ms
 ```
 
-### Current primary consumer
+### 10.3. Current primary consumer
 
 ```text
 intent-assurance-ms
 ```
 
-### Meaning
+### 10.4. Meaning
 
 II MS emits `IntentNetworkReadyEvent` after semantic resolution and service-ready preparation have produced the concrete change-execution and observation configuration required by IA MS.
 
 `IntentNetworkReadyEvent` does not mean network apply has succeeded. It means the service configuration/resource set has been prepared for change execution/apply and assurance observation.
 
-### Example headers
+### 10.5. Example headers
 
 ```http
 ce-specversion: 1.0
@@ -745,13 +807,13 @@ ce-subject: INT-HOSP-2026-001
 content-type: application/json
 ```
 
-### Example body — network ready for change execution and assurance
+### 10.6. Example body — network ready for change execution and assurance
 
 ```json
 {
   "body": {
     "intentId": "INT-HOSP-2026-001",
-    "version": "v1",
+    "intentVersion": "v1",
     "lifecycleStatus": "InProgress",
     "context": {
       "targets": {
@@ -898,7 +960,7 @@ content-type: application/json
 }
 ```
 
-### Event-specific rules
+### 10.7. Event-specific rules
 
 - `IntentNetworkReadyEvent` is produced by `intent-intelligence-ms`.
 - `IntentNetworkReadyEvent` is consumed by `intent-assurance-ms`.
@@ -915,7 +977,7 @@ content-type: application/json
 
 ---
 
-## 9. KP mapping rules
+## 11. KP mapping rules
 
 II MS maps KP data into event-facing resource entries.
 
@@ -932,7 +994,7 @@ II MS maps KP data into event-facing resource entries.
 
 ---
 
-## 10. Idempotency and ordering
+## 12. Idempotency and ordering
 
 II MS must support at-least-once event delivery.
 
@@ -945,7 +1007,7 @@ Rules:
 
 ---
 
-## 11. Persistence
+## 13. Persistence
 
 Suggested tables:
 
@@ -960,7 +1022,7 @@ Suggested tables:
 
 ---
 
-## 12. Dependency behaviour
+## 14. Dependency behaviour
 
 | Dependency | Behaviour |
 |---|---|
@@ -972,7 +1034,7 @@ Suggested tables:
 
 ---
 
-## 13. Observability
+## 15. Observability
 
 Recommended logs and metrics:
 
@@ -992,7 +1054,7 @@ All logs and traces must include `correlationId` and `intentId` where available.
 
 ---
 
-## 14. Security
+## 16. Security
 
 II MS is internal only.
 
@@ -1008,7 +1070,7 @@ Rules:
 
 ---
 
-## 15. Contract summary
+## 17. Contract summary
 
 II MS consumes `IntentValidatedEvent`, validates and resolves the admitted expression using Knowledge Plane/domain knowledge, preserves `expression.context.targets`, `expression.context.constraints`, and `expression.context.preferences`, and emits `IntentRejectedEvent`, `IntentResolvedEvent`, or `IntentNetworkReadyEvent` depending on the resolved milestone.
 

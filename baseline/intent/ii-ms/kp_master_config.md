@@ -1,6 +1,20 @@
 # KP Master Config
 
-## KP master config baseline
+| **Document status** | **Value** |
+| --- | --- |
+| Status | Current baseline |
+| Scope | II MS lightweight Knowledge Plane master config example |
+| Source of truth after commit | GitHub `baseline/intent/ii-ms/kp_master_config.md` |
+
+## Table of contents:
+
+- [1. KP master config baseline](#1-kp-master-config-baseline)
+- [2. Baseline notes](#2-baseline-notes)
+
+
+## 1. KP master config baseline
+
+The baseline surgical hospital slice in this file is an illustrative Knowledge Plane example used to make the II MS lookup and mapping behaviour concrete. It is not the only supported service domain, location model, service class, resource class, expression mapping profile, optimiser target, orchestrator target, observer target, or deployment profile. Other Knowledge Plane configurations may use different targets, constraints, preferences, resources, service types, and governance profiles while following the same mapping and ownership rules.
 
 ```json
 {
@@ -427,7 +441,7 @@
 }
 ```
 
-## Baseline notes
+## 2. Baseline notes
 - KP uses shared resource vocabulary where meaning is not lost: resource entries use `resourceType: "deliveryResource"`, `resourceClass: "critical-gold"`, and `roles`. KP-native reference/capability terminology remains valid for resource `metrics.benchmark.*`, location/service `benchmarks.*`, and `optimiserTarget: "t7-gurobi-optimiser"`.
 
 - KP contains current available knowledge, not optimiser/orchestrator execution logic.

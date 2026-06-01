@@ -1,6 +1,49 @@
 # Intent Intelligence MS Solution Brief
 
-## Summary:
+| **Document status** | **Value** |
+| --- | --- |
+| Status | Current baseline |
+| Scope | Intent Intelligence MS solution brief |
+| Source of truth after commit | GitHub `baseline/intent/ii-ms/ii_ms_solution_brief.md` |
+
+## Table of contents:
+
+- [1. Summary:](#1-summary)
+- [2. Logical View:](#2-logical-view)
+- [3. Process View:](#3-process-view)
+- [4. Solution Elaboration:](#4-solution-elaboration)
+- [5. Responsibilities:](#5-responsibilities)
+- [6. II MS does not:](#6-ii-ms-does-not)
+- [7. Contracts:](#7-contracts)
+- [8. Event delivery path:](#8-event-delivery-path)
+- [9. Inbound internal Kafka event shape:](#9-inbound-internal-kafka-event-shape)
+  - [9.1. IntentValidatedEvent:](#91-intentvalidatedevent)
+- [10. Field specification:](#10-field-specification)
+- [11. Fields not accepted:](#11-fields-not-accepted)
+- [12. Authorisation:](#12-authorisation)
+- [13. Persistence / state / outbox model:](#13-persistence-state-outbox-model)
+- [14. Internal Kafka publication:](#14-internal-kafka-publication)
+- [15. Internal Kafka topics:](#15-internal-kafka-topics)
+- [16. Event identity:](#16-event-identity)
+- [17. Internal Kafka CloudEvents headers:](#17-internal-kafka-cloudevents-headers)
+- [18. Internal Kafka message body: IntentRejectedEvent:](#18-internal-kafka-message-body-intentrejectedevent)
+- [19. Internal Kafka message body: IntentResolvedEvent:](#19-internal-kafka-message-body-intentresolvedevent)
+- [20. Internal Kafka message body: IntentNetworkReadyEvent:](#20-internal-kafka-message-body-intentnetworkreadyevent)
+- [21. Behaviour:](#21-behaviour)
+  - [21.1. Successful semantic resolution:](#211-successful-semantic-resolution)
+  - [21.2. Semantic rejection:](#212-semantic-rejection)
+  - [21.3. Service-ready preparation:](#213-service-ready-preparation)
+  - [21.4. Idempotency:](#214-idempotency)
+  - [21.5. Ordering:](#215-ordering)
+  - [21.6. Dependency failure:](#216-dependency-failure)
+- [22. Configuration:](#22-configuration)
+- [23. Consumer contract:](#23-consumer-contract)
+- [24. Open items:](#24-open-items)
+- [25. Closed items:](#25-closed-items)
+- [26. MS identity:](#26-ms-identity)
+
+
+## 1. Summary:
 
 Intent Intelligence MS (II MS) is the internal semantic interpretation and resolution service for admitted runtime intents. It consumes syntactically admitted intent facts from Intent Controller MS (IC MS), interprets the admitted expression using governed Knowledge Plane data, validates semantic feasibility, policy, capability, and resource context, and emits the next internal milestone event.
 
@@ -14,7 +57,7 @@ Its responsibility is to convert a syntactically accepted runtime intent into on
 
 `IntentResolvedEvent` and `IntentNetworkReadyEvent` are intentionally different milestones. `IntentResolvedEvent` is the candidate-level semantic-resolution handoff. `IntentNetworkReadyEvent` is the service-ready preparation handoff to IA MS and means the service configuration/resource set has been prepared for change execution and assurance observation. It does not mean the network application has succeeded.
 
-## Logical View:
+## 2. Logical View:
 
 ![alt text](ii_ms_logical_view.svg)
 
@@ -39,7 +82,7 @@ Logical responsibilities:
 | Reliability | Use idempotent consumption and outbox-backed publication. |
 | Audit | Persist the semantic decision trail where required. |
 
-## Process View:
+## 3. Process View:
 
 ![alt text](ii_ms_sequence.svg)
 
@@ -55,7 +98,7 @@ Logical responsibilities:
 10. The II outbox relay publishes the event to the internal event backbone.
 11. Consumers continue the workflow according to the milestone event emitted.
 
-## Solution Elaboration:
+## 4. Solution Elaboration:
 
 II MS exists because IC MS admission validation is intentionally syntactic and contract-focused.
 
@@ -73,7 +116,9 @@ expression.context.preferences
 
 II MS must not flatten these buckets into unrelated top-level fields. Keeping the same semantic buckets from ID MS to IC MS to II MS reduces mapping, prevents drift, and allows IA MS and later control-loop components to interpret assurance outcomes against the same intent context.
 
-## Responsibilities:
+The baseline surgical hospital slice is an illustrative runtime example used to make the II MS semantic interpretation and Knowledge Plane-backed resolution contract concrete. It is not the only supported runtime Intent type, IntentSpecification, service class, schema, expression IRI, location, service type, Knowledge Plane profile, or deployment profile. Other runtime Intents may use different targets, constraints, preferences, expression schemas, service types, priorities, resources, and governance profiles while following the same II MS contract rules.
+
+## 5. Responsibilities:
 
 II MS owns:
 
@@ -93,7 +138,7 @@ II MS owns:
 | Persistence | Store current semantic resolution state, decision audit, idempotency records, and outbox entries. |
 | Event publication | Publish II-owned events reliably using the outbox relay pattern. |
 
-## II MS does not:
+## 6. II MS does not:
 
 | Concern | Owner |
 |---|---|
@@ -112,7 +157,7 @@ II MS owns:
 | KP configuration CRUD/governance | Knowledge Plane operating model |
 | Public, partner, OEX, or NGW-facing API exposure | Not applicable to II MS |
 
-## Contracts:
+## 7. Contracts:
 
 II MS contracts are internal event contracts only.
 
@@ -127,15 +172,15 @@ II MS has no external TMF-compliant REST contract in the active baseline. Any he
 
 II MS does not expose REST hub subscriptions and does not deliver external HTTP webhook notifications. All II-owned event contracts are internal Kafka event contracts only.
 
-## Event delivery path:
+## 8. Event delivery path:
 
 II MS has one event-delivery model in the active baseline: internal Kafka event processing. It consumes `IntentValidatedEvent` from the internal intent-management event topic and publishes II-owned milestone events through the II internal outbox relay to Kafka.
 
 These events use CloudEvents-style Kafka/platform headers and JSON bodies. II MS does not use the external REST hub/webhook notification model because it has no external TMF-compliant API or subscriber callback contract.
 
-## Inbound internal Kafka event shape:
+## 9. Inbound internal Kafka event shape:
 
-### IntentValidatedEvent:
+### 9.1. IntentValidatedEvent:
 
 The inbound event is consumed from Kafka and uses CloudEvents-style Kafka/platform headers with a plain JSON body.
 
@@ -153,7 +198,7 @@ content-type: application/json
 {
   "body": {
     "intentId": "INT-HOSP-2026-001",
-    "version": "v1",
+    "intentVersion": "v1",
     "lifecycleStatus": "Acknowledged",
     "statusReason": "Intent request passed IC MS admission validation and was admitted for downstream processing.",
     "intentSpecification": {
@@ -205,12 +250,12 @@ content-type: application/json
 }
 ```
 
-## Field specification:
+## 10. Field specification:
 
 | Field | Requirement | Notes |
 |---|---|---|
 | `body.intentId` | Required | Runtime Intent identity admitted by IC MS. |
-| `body.version` | Required where runtime intent versioning is used | Used to prevent stale event decisions overriding newer versions. |
+| `body.intentVersion` | Required where runtime intent versioning is used | Used to prevent stale event decisions overriding newer versions. |
 | `body.lifecycleStatus` | Required | Expected to reflect IC MS admission state, commonly `Acknowledged`. |
 | `body.intentSpecification.id` | Required | Active specification used by IC MS admission validation. |
 | `body.expression.iri` | Required | Semantic/expression contract admitted by IC MS and checked against the selected specification. |
@@ -225,7 +270,7 @@ content-type: application/json
 | `body.references.intent` | Required | Runtime Intent reference. |
 | `body.references.intentSpecification` | Required | IntentSpecification reference. |
 
-## Fields not accepted:
+## 11. Fields not accepted:
 
 II MS should reject or ignore unexpected fields according to its schema and compatibility policy. It must not re-resolve the governing `IntentSpecification` by IRI alone; `intentSpecification.id` and `expression.iri` are carried-forward admission facts from IC MS. The following fields are not part of the II MS baseline contract:
 
@@ -240,7 +285,7 @@ II MS should reject or ignore unexpected fields according to its schema and comp
 | Raw KP payload dumps | II MS curates KP data into event-facing fields only. |
 | Secrets, tokens, credentials, raw stack traces | Must never be emitted in event payloads. |
 
-## Authorisation:
+## 12. Authorisation:
 
 II MS is internal only.
 
@@ -257,7 +302,7 @@ Security and authorisation rules:
 - Audit semantic and policy rejections where required.
 - Do not emit secrets, credentials, or sensitive internal implementation details in events.
 
-## Persistence / state / outbox model:
+## 13. Persistence / state / outbox model:
 
 II MS should use source-of-truth persistence for semantic resolution state and reliable event publication.
 
@@ -276,7 +321,7 @@ Suggested tables:
 
 The processing transaction should persist the semantic decision and enqueue the output event atomically. The relay publishes from the outbox and records publication state separately from decision ownership.
 
-## Internal Kafka publication:
+## 14. Internal Kafka publication:
 
 II MS publishes internal platform events through the internal outbox relay to Kafka. Event delivery is at-least-once. Consumers must be idempotent.
 
@@ -290,7 +335,7 @@ Publication rules:
 - Retry transient Kafka publication failures through the outbox relay.
 - Treat exhausted publication retries as an operational failure requiring support handling.
 
-## Internal Kafka topics:
+## 15. Internal Kafka topics:
 
 | Topic | Event types | Direction for II MS |
 |---|---|---|
@@ -298,7 +343,7 @@ Publication rules:
 
 A future split into more granular topics can be introduced if throughput, retention, or ownership boundaries require it, but the baseline uses the shared internal intent-management events topic.
 
-## Event identity:
+## 16. Event identity:
 
 CloudEvents identity must be stable and suitable for deduplication.
 
@@ -310,10 +355,10 @@ CloudEvents identity must be stable and suitable for deduplication.
 | `ce-subject` | Runtime `intentId`. |
 | `ce-time` | Event creation time. |
 | `body.intentId` | Same runtime intent identity as `ce-subject`. |
-| `body.version` | Runtime intent version when versioning is used. |
+| `body.intentVersion` | Runtime intent version when versioning is used. |
 | `body.references.correlationId` | End-to-end trace/correlation id. |
 
-## Internal Kafka CloudEvents headers:
+## 17. Internal Kafka CloudEvents headers:
 
 Example outbound headers for `IntentResolvedEvent`:
 
@@ -339,7 +384,7 @@ ce-subject: INT-HOSP-2026-001
 content-type: application/json
 ```
 
-## Internal Kafka message body: IntentRejectedEvent:
+## 18. Internal Kafka message body: IntentRejectedEvent:
 
 `IntentRejectedEvent` is emitted when semantic, policy, capability, or processing validation fails after IC MS syntactic admission.
 
@@ -347,7 +392,7 @@ content-type: application/json
 {
   "body": {
     "intentId": "INT-HOSP-2026-002",
-    "version": "v1",
+    "intentVersion": "v1",
     "lifecycleStatus": "Rejected",
     "reasonCode": "SEMANTIC_SERVICE_CLASS_UNSUPPORTED",
     "statusReason": "Surgical critical-gold connectivity is not supported for the requested location and service context.",
@@ -400,7 +445,7 @@ Baseline reason-code families:
 | `KNOWLEDGE_LOOKUP_ERROR` | KP lookup failed or returned insufficient trusted information. |
 | `PROCESSING_ERROR` | II MS failed due to an internal processing error. |
 
-## Internal Kafka message body: IntentResolvedEvent:
+## 19. Internal Kafka message body: IntentResolvedEvent:
 
 `IntentResolvedEvent` is the candidate-level semantic-resolution handoff. It carries canonical context and all valid/applicable candidate resources known for the resolved context after scope and policy filtering. It is not the final selected/applied resource set.
 
@@ -408,7 +453,7 @@ Baseline reason-code families:
 {
   "body": {
     "intentId": "INT-HOSP-2026-001",
-    "version": "v1",
+    "intentVersion": "v1",
     "lifecycleStatus": "InProgress",
     "expression": {
       "context": {
@@ -510,7 +555,7 @@ Rules:
 - Do not use context-encoded metric wrappers such as `metrics.benchmark` or `metrics.telemetry` in the baseline message shape.
 - Do not include `provider` by default.
 
-## Internal Kafka message body: IntentNetworkReadyEvent:
+## 20. Internal Kafka message body: IntentNetworkReadyEvent:
 
 `IntentNetworkReadyEvent` is the service-ready preparation handoff to IA MS. It carries the service configuration required for change execution and assurance observation. It does not mean network apply succeeded.
 
@@ -518,7 +563,7 @@ Rules:
 {
   "body": {
     "intentId": "INT-HOSP-2026-001",
-    "version": "v1",
+    "intentVersion": "v1",
     "lifecycleStatus": "InProgress",
     "context": {
       "targets": {
@@ -627,33 +672,33 @@ Rules:
 - Do not include `applyOutcome`.
 - Do not treat this event as proof that network apply succeeded.
 
-## Behaviour:
+## 21. Behaviour:
 
-### Successful semantic resolution:
+### 21.1. Successful semantic resolution:
 
 When an admitted intent can be semantically interpreted and candidate resources are known, II MS emits `IntentResolvedEvent`.
 
-### Semantic rejection:
+### 21.2. Semantic rejection:
 
 When an admitted intent is syntactically valid but cannot be semantically, policy, or capability resolved, II MS emits `IntentRejectedEvent`. Rejection reason codes must be intent-domain reason codes and must not leak downstream implementation vocabulary.
 
-### Service-ready preparation:
+### 21.3. Service-ready preparation:
 
 When the service configuration required for change execution and assurance observation is prepared, II MS emits `IntentNetworkReadyEvent`.
 
 This event carries `serviceConfiguration.orchestratorConfiguration` and `serviceConfiguration.observerConfiguration`.
 
-### Idempotency:
+### 21.4. Idempotency:
 
 II MS must support at-least-once delivery. It deduplicates consumed events by CloudEvents id and runtime intent identity, and avoids duplicate output milestone events for the same input event and semantic decision.
 
-### Ordering:
+### 21.5. Ordering:
 
 II MS must not allow stale events for older runtime intent versions to overwrite newer semantic resolution state.
 
 Where runtime versioning is active, state transitions are keyed by `intentId` and version.
 
-### Dependency failure:
+### 21.6. Dependency failure:
 
 | Dependency | Behaviour |
 |---|---|
@@ -664,7 +709,7 @@ Where runtime versioning is active, state transitions are keyed by `intentId` an
 | Optimiser unavailable | Not a dependency for semantic resolution; downstream consumption handles its own availability. |
 | IA MS unavailable | Not a synchronous dependency; `IntentNetworkReadyEvent` remains the handoff. |
 
-## Configuration:
+## 22. Configuration:
 
 II MS configuration should be environment-specific and externally supplied through platform configuration mechanisms.
 
@@ -682,7 +727,7 @@ Suggested configuration areas:
 
 Configuration must not introduce per-environment contract drift. Contract field names and event meaning remain stable across environments.
 
-## Consumer contract:
+## 23. Consumer contract:
 
 Consumers of II-owned events must treat the event stream as at-least-once.
 
@@ -695,7 +740,7 @@ Consumer rules:
 - Use `body.references.correlationId` for traceability.
 - Preserve the canonical `targets`, `constraints`, and `preferences` grouping when forwarding or deriving downstream state.
 
-## Open items:
+## 24. Open items:
 
 | Item | Status |
 |---|---|
@@ -704,7 +749,7 @@ Consumer rules:
 | Finalise DLQ operational runbook and replay controls. | Open implementation detail. |
 | Confirm whether future topic split is needed for `IntentResolvedEvent` and `IntentNetworkReadyEvent` as volume grows. | Open scalability decision. |
 
-## Closed items:
+## 25. Closed items:
 
 | Item | Decision |
 |---|---|
@@ -719,7 +764,7 @@ Consumer rules:
 | Canonical buckets are `targets`, `constraints`, and `preferences`. | Closed. |
 | `availabilityPercent` is the standard availability metric name. | Closed. |
 
-## MS identity:
+## 26. MS identity:
 
 | Attribute | Value |
 |---|---|

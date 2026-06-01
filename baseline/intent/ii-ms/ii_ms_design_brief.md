@@ -1,6 +1,37 @@
 # II MS Design Brief
 
-## Purpose
+| **Document status** | **Value** |
+| --- | --- |
+| Status | Current baseline |
+| Scope | Intent Intelligence MS design brief |
+| Source of truth after commit | GitHub `baseline/intent/ii-ms/ii_ms_design_brief.md` |
+
+## Table of contents:
+
+- [1. Purpose](#1-purpose)
+- [2. Service identity](#2-service-identity)
+- [3. Core responsibility](#3-core-responsibility)
+- [4. II MS does not own](#4-ii-ms-does-not-own)
+- [5. Main input](#5-main-input)
+- [6. Main outputs](#6-main-outputs)
+- [7. Processing stages](#7-processing-stages)
+- [8. Semantic bucket handling](#8-semantic-bucket-handling)
+- [9. Knowledge Plane usage](#9-knowledge-plane-usage)
+- [10. Resource and metric vocabulary](#10-resource-and-metric-vocabulary)
+- [11. Resolution rule](#11-resolution-rule)
+- [12. Service-ready preparation rule](#12-service-ready-preparation-rule)
+- [13. Rejection rule](#13-rejection-rule)
+- [14. Lifecycle projection relationship with IC MS](#14-lifecycle-projection-relationship-with-ic-ms)
+- [15. Internal event style](#15-internal-event-style)
+- [16. API stance](#16-api-stance)
+- [17. Persistence baseline](#17-persistence-baseline)
+- [18. Dependency and circuit-breaker behaviour](#18-dependency-and-circuit-breaker-behaviour)
+- [19. Security baseline](#19-security-baseline)
+- [20. Observability baseline](#20-observability-baseline)
+- [21. Design baseline statement](#21-design-baseline-statement)
+
+
+## 1. Purpose
 
 Intent Intelligence MS, referred to as II MS, owns semantic interpretation, Knowledge Plane-backed validation, and semantic/service-ready preparation for admitted runtime intents.
 
@@ -14,7 +45,7 @@ II MS is internal only.
 
 It does not expose a TMF-compliant REST API and is not exposed through NGW, OEX, public API gateways, or partner-facing API channels.
 
-## Service identity
+## 2. Service identity
 
 | Attribute | Value |
 |---|---|
@@ -29,7 +60,7 @@ It does not expose a TMF-compliant REST API and is not exposed through NGW, OEX,
 | Source-of-truth persistence | Managed PostgreSQL / PostgreSQL-compatible RDBMS |
 | External TMF API owner | No |
 
-## Core responsibility
+## 3. Core responsibility
 
 II MS answers this question:
 
@@ -54,7 +85,7 @@ II MS owns:
 | Idempotency | Deduplicates consumed events and avoids duplicate semantic outcomes |
 | Audit | Records semantic interpretation, KP lookup, rejection, resolution, and service-ready preparation decisions where required |
 
-## II MS does not own
+## 4. II MS does not own
 
 | Concern | Owner |
 |---|---|
@@ -71,7 +102,7 @@ II MS owns:
 | KP config CRUD/governance | Knowledge Plane operating model |
 | OEX user experience | OEX layer |
 
-## Main input
+## 5. Main input
 
 II MS consumes `IntentValidatedEvent` from the internal event backbone.
 
@@ -96,7 +127,9 @@ expression.context.preferences
 
 Domain inputs such as `location`, `serviceType`, and `serviceClass` are carried under `expression.context.constraints`.
 
-## Main outputs
+The baseline surgical hospital slice is an illustrative runtime example used to make the II MS semantic interpretation and Knowledge Plane-backed resolution contract concrete. It is not the only supported runtime Intent type, IntentSpecification, service class, schema, expression IRI, location, service type, Knowledge Plane profile, or deployment profile. Other runtime Intents may use different targets, constraints, preferences, expression schemas, service types, priorities, resources, and governance profiles while following the same II MS contract rules.
+
+## 6. Main outputs
 
 | Output | Condition | Purpose |
 |---|---|---|
@@ -104,7 +137,7 @@ Domain inputs such as `location`, `serviceType`, and `serviceClass` are carried 
 | `IntentResolvedEvent` | Semantic/capability resolution succeeds and downstream fulfilment/selection is required | Provides candidate-level canonical context and the valid resource set for downstream consideration, including all applicable/applyable resources and neutral metric values |
 | `IntentNetworkReadyEvent` | Service-ready preparation succeeds after resolution | Provides IA MS with prepared change-execution and observation configuration; it does not mean apply succeeded |
 
-## Processing stages
+## 7. Processing stages
 
 | Stage | Description |
 |---|---|
@@ -121,7 +154,7 @@ Domain inputs such as `location`, `serviceType`, and `serviceClass` are carried 
 | Durable publication | Write event to II outbox and publish through relay |
 | Audit | Record semantic/KP decision trail where required |
 
-## Semantic bucket handling
+## 8. Semantic bucket handling
 
 II MS preserves the canonical semantic bucket model.
 
@@ -135,7 +168,7 @@ II MS must not flatten the buckets into unrelated top-level fields in `IntentRes
 
 II MS may normalise values only where the semantic meaning is preserved and traceable.
 
-## Knowledge Plane usage
+## 9. Knowledge Plane usage
 
 II MS uses the Knowledge Plane as governed domain knowledge.
 
@@ -156,7 +189,7 @@ It curates only the information required by the next stage. `provider` remains K
 
 II maps KP resource metric values into neutral event-facing `metrics` fields such as `latencyMs`, `availabilityPercent`, `jitterMs`, and `packetLossPercent`.
 
-## Resource and metric vocabulary
+## 10. Resource and metric vocabulary
 
 II MS uses the shared event-facing resource vocabulary when emitting events:
 
@@ -171,7 +204,7 @@ Event-facing metric fields must not encode origin or pipeline context into wrapp
 
 Do not use `metrics.benchmark`, `metrics.telemetry`, `latencyBenchmarkMs`, or `currentLatencyMs` in II event payloads. The event type and processing stage provide the meaning of the metric values.
 
-## Resolution rule
+## 11. Resolution rule
 
 II MS emits `IntentResolvedEvent` only when the admitted intent can be semantically understood and resolved into a candidate-level canonical context.
 
@@ -188,7 +221,7 @@ A successful resolution implies:
 
 It includes neutral event-facing metric values for those resources so `optimiser-controller-ms` can compare and select the best applicable configuration. `IntentResolvedEvent.resources[]` is not the final selected/applied resource set and it is not the service-ready/apply-ready handoff.
 
-## Service-ready preparation rule
+## 12. Service-ready preparation rule
 
 II MS emits `IntentNetworkReadyEvent` when service-ready preparation has produced the concrete change-execution and observation configuration required by IA MS.
 
@@ -210,7 +243,7 @@ IA MS consumes this event and must not produce it.
 
 Do not introduce a separate `observationPoints` attribute.
 
-## Rejection rule
+## 13. Rejection rule
 
 II MS emits `IntentRejectedEvent` when the admitted intent is syntactically valid but cannot be semantically/policy/capability resolved. II MS reason codes are intent-domain reason codes. They must not leak downstream implementation or selection vocabulary.
 
@@ -231,7 +264,7 @@ Typical rejection reasons include:
 | `KNOWLEDGE_LOOKUP_ERROR` | KP lookup failed or returned insufficient trusted information |
 | `PROCESSING_ERROR` | II MS failed due to an internal processing error |
 
-## Lifecycle projection relationship with IC MS
+## 14. Lifecycle projection relationship with IC MS
 
 II MS does not own the external `Intent.lifecycleStatus` resource API.
 
@@ -245,7 +278,7 @@ II MS emits lifecycle-driving internal facts:
 
 IC MS owns the external projection and external TMF event publication.
 
-## Internal event style
+## 15. Internal event style
 
 II MS emits internal events using:
 
@@ -260,7 +293,7 @@ II MS emits internal events using:
 
 Internal II events do not use the TMF external `Intent.expression` wrapper, but they do preserve the native `expression.context.targets`, `expression.context.constraints`, and `expression.context.preferences` grouping.
 
-## API stance
+## 16. API stance
 
 II MS has no external TMF-compliant API and no consumer-facing REST contract. It is not exposed through NGW, OEX, public API gateways, or partner-facing API channels.
 
@@ -268,7 +301,7 @@ Operational probes such as `/health`, `/ready`, and `/metrics`, if implemented, 
 
 Any future operational/admin endpoint must be platform-internal only and must not be presented as a TMF921 resource API.
 
-## Persistence baseline
+## 17. Persistence baseline
 
 II MS follows the active IME DB baseline.
 
@@ -292,7 +325,7 @@ Indicative tables:
 | `intent_resolution_dead_letter` | Optional failed/unprocessable event handling |
 | `shedlock` | Relay coordination if II MS runs a clustered outbox relay |
 
-## Dependency and circuit-breaker behaviour
+## 18. Dependency and circuit-breaker behaviour
 
 | Dependency | Behaviour |
 |---|---|
@@ -302,7 +335,7 @@ Indicative tables:
 | Cache unavailable | Bypass cache and use KP/source where safe |
 | Downstream fulfilment/preparation stage unavailable | Not an external caller concern; II emits only the milestone it has actually reached |
 
-## Security baseline
+## 19. Security baseline
 
 II MS is internal only.
 
@@ -317,7 +350,7 @@ Security baseline:
 - no raw KP credentials or endpoint details in logs/events
 - audit semantic rejection and policy rejection decisions where required
 
-## Observability baseline
+## 20. Observability baseline
 
 II MS must emit:
 
@@ -343,7 +376,7 @@ ii_ms_outbox_publish_failure_count
 ii_ms_duplicate_event_count
 ```
 
-## Design baseline statement
+## 21. Design baseline statement
 
 II MS is the internal semantic interpretation, resolution, and service-ready preparation service.
 
