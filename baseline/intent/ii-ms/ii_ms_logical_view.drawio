@@ -208,10 +208,10 @@
                 <mxCell id="evt_resolved" value="IntentResolvedEvent&#xa;&#xa;Candidate-level semantic&#xa;resolution handoff." style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=default;fontSize=11;align=left;spacingLeft=8;container=0;" parent="1" vertex="1">
                     <mxGeometry x="880" y="985" width="200" height="75" as="geometry"/>
                 </mxCell>
-                <mxCell id="evt_ready" value="IntentNetworkReadyEvent&#xa;&#xa;Service config ready after&#xa;POST /optimisation and&#xa;webhook/event outcome;&#xa;packaged for IA MS." style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=default;fontSize=11;align=left;spacingLeft=8;container=0;" parent="1" vertex="1">
+                <mxCell id="evt_ready" value="IntentNetworkReadyEvent&#xa;&#xa;Service config ready after&#xa;POST /optimisation and&#xa;internal optimiser event outcome;&#xa;packaged for IA MS." style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=default;fontSize=11;align=left;spacingLeft=8;container=0;" parent="1" vertex="1">
                     <mxGeometry x="1115" y="985" width="200" height="75" as="geometry"/>
                 </mxCell>
-                <mxCell id="ds_optimiser" value="Optimiser integration path&#xa;POST /optimisation +&#xa;OptimisationStatusChangeEvent" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=default;fontSize=11;container=0;" parent="1" vertex="1">
+                <mxCell id="ds_optimiser" value="Optimiser integration path&#xa;POST /optimisation +&#xa;POST /intent-intelligence/v1/optimisation/events" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=default;fontSize=11;container=0;" parent="1" vertex="1">
                     <mxGeometry x="1570" y="252" width="160" height="45" as="geometry"/>
                 </mxCell>
                 <mxCell id="ds_assurance" value="Assurance (IA MS)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=default;fontSize=11;container=0;" parent="1" vertex="1">

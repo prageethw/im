@@ -12,6 +12,7 @@
 - [2. Boundary statement](#2-boundary-statement)
   - [2.1. Required pre-resolution validation](#21-required-pre-resolution-validation)
 - [3. External API](#3-external-api)
+  - [3.1. Internal optimiser event ingestion endpoint](#31-internal-optimiser-event-ingestion-endpoint)
 - [4. Event input: IntentValidatedEvent](#4-event-input-intentvalidatedevent)
   - [4.1. Topic](#41-topic)
   - [4.2. Producer](#42-producer)
@@ -103,6 +104,43 @@ II MS must curate and normalise facts returned by pre-resolution validation sour
 ## 3. External API
 
 II MS has no external TMF-compliant API and no consumer-facing REST contract in the active baseline. II MS is not exposed through NGW, OEX, public API gateways, or partner-facing API channels.
+
+II MS exposes one platform-internal optimiser event ingestion endpoint for the approved Optimiser integration path. This endpoint is not a TMF921 API, not exposed through NGW or OEX, and not available to external consumers.
+
+### 3.1. Internal optimiser event ingestion endpoint
+
+```http
+POST /intent-intelligence/v1/optimisation/events
+```
+
+This endpoint receives approved optimiser outcome events for optimisation requests previously submitted by II MS using `POST /optimisation`. The approved event shape is represented in this baseline as `OptimisationStatusChangeEvent`.
+
+Request handling rules:
+
+- accept calls only from the approved Optimiser platform identity
+- validate the event shape, `eventType`, optimisation id, source context, `intentId`, `intentVersion`, and `correlationId`
+- reject or quarantine events that cannot be correlated to an II-submitted optimisation request
+- process events idempotently by optimisation id, event type, and event occurrence identity where available
+- persist the selected configuration and outcome decision before publishing `IntentNetworkReadyEvent`
+- never treat optimiser completion as network apply success
+
+Successful accepted outcome response:
+
+```http
+HTTP/1.1 202 Accepted
+Content-Type: application/json
+```
+
+```json
+{
+  "optimisationId": "opt-hss-2026-001",
+  "eventType": "OptimisationStatusChangeEvent",
+  "intentId": "INT-HOSP-2026-001",
+  "intentVersion": "v1",
+  "correlationId": "corr-intent-create-001",
+  "status": "ACCEPTED"
+}
+```
 
 Operational probes such as health, readiness, and metrics are platform-internal only. They are for Kubernetes/platform operations and must not be treated as external product APIs or TMF921 resource APIs.
 
@@ -837,7 +875,7 @@ II MS emits `IntentNetworkReadyEvent` after semantic resolution and service-read
 
 IntentNetworkReadyEvent may be emitted only after II MS has received or derived a governed selected configuration from the authorised downstream selection or optimisation path. II MS does not own the optimisation algorithm or optimiser backend. II MS owns packaging the selected configuration into the service-ready event for IA MS.
 
-For optimisation-backed selection, II MS uses the approved Optimiser platform integration pattern: a governed REST request to `POST /optimisation`, followed by the approved Optimiser webhook/event outcome, represented in this baseline as `OptimisationStatusChangeEvent`. The Optimiser platform owns optimisation execution, selection logic, solver models, and optimiser lifecycle. II MS owns submitting the governed request, receiving the selected configuration outcome, and packaging that selected configuration into `IntentNetworkReadyEvent` for IA MS.
+For optimisation-backed selection, II MS uses the approved Optimiser platform integration pattern: a governed REST request to `POST /optimisation`, followed by the approved internal optimiser event ingestion endpoint `POST /intent-intelligence/v1/optimisation/events`, carrying `OptimisationStatusChangeEvent`. The Optimiser platform owns optimisation execution, selection logic, solver models, and optimiser lifecycle. II MS owns submitting the governed request, receiving the selected configuration outcome, and packaging that selected configuration into `IntentNetworkReadyEvent` for IA MS.
 
 ### 10.5. Example headers
 
@@ -1019,7 +1057,7 @@ content-type: application/json
 - Use `serviceConfiguration.observerConfiguration` for assurance/monitoring details.
 - `serviceConfiguration.orchestratorConfiguration.resources[]` carries only the optimiser-selected network-ready configuration/resources that must be applied by the change-execution layer; it includes resource details, topology, roles, and change-execution-relevant information, but not metric values.
 - `serviceConfiguration.observerConfiguration.resources[]` carries the full assurance observation scope, including selected resources and any additional primary/secondary alternatives that IA must observe; it uses `metrics` as a list of metric names IA should observe, not a value object.
-- When optimisation-backed selection is required, the selected configuration must come from the approved Optimiser path: `POST /optimisation` followed by `OptimisationStatusChangeEvent` or the approved optimiser completion/status event.
+- When optimisation-backed selection is required, the selected configuration must come from the approved Optimiser path: `POST /optimisation` followed by `POST /intent-intelligence/v1/optimisation/events` carrying `OptimisationStatusChangeEvent` or the approved optimiser completion/status event.
 - Do not include `applyOutcome`.
 - Do not use this event as a substitute for `IntentAssuranceEvent`; IA MS remains responsible for apply outcome interpretation and runtime assurance truth.
 
@@ -1028,9 +1066,9 @@ content-type: application/json
 
 When an intent requires optimisation-backed resource selection, II MS submits the resolved candidate context to the Optimiser platform using `POST /optimisation`. The request carries the resolved `body.expression.context`, candidate resources, targets, constraints, preferences, and correlation metadata from the admitted and resolved intent.
 
-The Optimiser platform performs optimisation execution and returns the selected configuration asynchronously through the approved webhook/event outcome pattern. This baseline represents that outcome as `OptimisationStatusChangeEvent`.
+The Optimiser platform performs optimisation execution and returns the selected configuration asynchronously through the approved internal optimiser event ingestion endpoint `POST /intent-intelligence/v1/optimisation/events`. This baseline represents that outcome as `OptimisationStatusChangeEvent`.
 
-II MS does not own the optimisation algorithm, optimiser backend, solver model, or optimiser lifecycle. II MS owns submitting the governed optimisation request, receiving the optimiser outcome, and packaging the returned selected configuration into `IntentNetworkReadyEvent` for IA MS.
+II MS does not own the optimisation algorithm, optimiser backend, solver model, or optimiser lifecycle. II MS owns submitting the governed optimisation request, receiving the optimiser outcome through `POST /intent-intelligence/v1/optimisation/events`, and packaging the returned selected configuration into `IntentNetworkReadyEvent` for IA MS.
 
 Example `POST /optimisation` request body:
 
@@ -1196,7 +1234,7 @@ Example `POST /optimisation` request body:
 }
 ```
 
-Example optimiser webhook/event outcome:
+Example internal optimiser event outcome submitted to `POST /intent-intelligence/v1/optimisation/events`:
 
 ```json
 {

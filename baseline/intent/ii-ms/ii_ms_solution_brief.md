@@ -58,7 +58,7 @@ Its responsibility is to convert a syntactically accepted runtime intent into on
 
 `IntentResolvedEvent` and `IntentNetworkReadyEvent` are intentionally different milestones. `IntentResolvedEvent` is the candidate-level semantic-resolution handoff. `IntentNetworkReadyEvent` is the service-ready preparation handoff to IA MS and means the service configuration/resource set has been prepared for change execution and assurance observation. It does not mean the network application has succeeded. IntentNetworkReadyEvent may be emitted only after II MS has received or derived a governed selected configuration from the authorised downstream selection or optimisation path. II MS does not own the optimisation algorithm or optimiser backend. II MS owns packaging the selected configuration into the service-ready event for IA MS.
 
-For optimisation-backed selection, II MS uses the approved Optimiser platform integration pattern: `POST /optimisation` for the governed REST request, followed by the approved Optimiser webhook/event outcome, represented in this baseline as `OptimisationStatusChangeEvent`. The Optimiser platform owns optimisation execution, selection logic, solver models, and optimiser lifecycle. II MS owns submitting the governed request, receiving the selected configuration outcome, and packaging that selected configuration into `IntentNetworkReadyEvent` for IA MS.
+For optimisation-backed selection, II MS uses the approved Optimiser platform integration pattern: `POST /optimisation` for the governed REST request, followed by `POST /intent-intelligence/v1/optimisation/events` for the approved internal optimiser outcome event, represented in this baseline as `OptimisationStatusChangeEvent`. The Optimiser platform owns optimisation execution, selection logic, solver models, and optimiser lifecycle. II MS owns submitting the governed request, receiving the selected configuration outcome, and packaging that selected configuration into `IntentNetworkReadyEvent` for IA MS.
 
 ## 2. Logical View:
 
@@ -178,10 +178,19 @@ II MS contracts are internal event contracts only.
 | `IntentRejectedEvent` | Outbound | `intent-intelligence-ms` | `intent-controller-ms` | Tells IC MS that the admitted intent is semantically/policy/capability rejected. |
 | `IntentResolvedEvent` | Outbound | `intent-intelligence-ms` | Optimiser / downstream fulfilment stage | Candidate-level semantic-resolution handoff. |
 | `IntentNetworkReadyEvent` | Outbound | `intent-intelligence-ms` | `intent-assurance-ms` | Service-ready change-execution and observation configuration handoff. |
+| `OptimisationStatusChangeEvent` | Inbound internal REST event | Optimiser platform | `intent-intelligence-ms` | Optimiser outcome event submitted to `POST /intent-intelligence/v1/optimisation/events` for a previously submitted `POST /optimisation` request. |
 
 II MS has no external TMF-compliant REST contract in the active baseline. Any health, readiness, or metrics endpoints are internal platform probes only and must not be treated as product APIs.
 
-II MS does not expose REST hub subscriptions and does not deliver external HTTP webhook notifications. All II-owned event contracts are internal Kafka event contracts only.
+II MS exposes one platform-internal optimiser event ingestion endpoint for the approved Optimiser integration path:
+
+```http
+POST /intent-intelligence/v1/optimisation/events
+```
+
+This endpoint receives approved `OptimisationStatusChangeEvent` outcomes for optimisation requests previously submitted by II MS through `POST /optimisation`. It is not a TMF921 API, not exposed through NGW or OEX, and not available to external consumers.
+
+II MS does not expose REST hub subscriptions and does not deliver external HTTP webhook notifications to external subscribers. All II-owned workflow events remain internal Kafka event contracts; the optimiser event ingestion endpoint is a restricted internal callback ingress used only by the approved Optimiser platform path.
 
 ## 8. Event delivery path:
 
@@ -819,7 +828,7 @@ Suggested configuration areas:
 |---|---|
 | Kafka topics | Internal intent-management event topic names and consumer group id. |
 | Outbox relay | Batch size, retry backoff, maximum retry count, relay lock settings. |
-| KP and pre-resolution validation access | KP endpoint, approved T7 or governed source endpoints where required, timeout, cache TTL, circuit-breaker settings. |
+| KP, optimiser, and pre-resolution validation access | KP endpoint, `POST /optimisation` endpoint, internal `POST /intent-intelligence/v1/optimisation/events` callback allow-list, approved T7 or governed source endpoints where required, timeout, cache TTL, circuit-breaker settings. |
 | Semantic rules | Supported service types, service classes, target names, constraint names, and policy rule versions. |
 | Rejection mapping | Reason-code mapping and user/projectable `statusReason` templates. |
 | Observability | Log levels, metrics enablement, trace sampling. |
