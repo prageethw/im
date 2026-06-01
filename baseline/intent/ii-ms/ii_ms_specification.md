@@ -76,7 +76,7 @@
 
 ## 2. Boundary statement
 
-II MS consumes syntactically admitted runtime intent facts from IC MS and performs semantic interpretation plus Knowledge Plane-backed and required pre-resolution validation-backed resolution.
+II MS consumes syntactically admitted runtime intent facts from IC MS and performs semantic interpretation plus Knowledge Plane-backed resolution and required pre-resolution validation.
 
 II MS emits:
 
@@ -125,6 +125,8 @@ These endpoints, if implemented, are restricted to the platform/runtime network 
 t7.intent.management.events
 ```
 
+The shared topic is the current baseline; event type and `ce-source` provide ownership boundaries. Future topic splitting may be introduced without changing II MS event payload contracts.
+
 ### 4.2. Producer
 
 ```text
@@ -165,7 +167,8 @@ content-type: application/json
     "lifecycleStatus": "Acknowledged",
     "statusReason": "Intent request passed IC MS admission validation and was admitted for downstream processing.",
     "intentSpecification": {
-      "id": "hospital-surgical-slice-spec",
+      "id": "ispec-hss-001",
+      "specKey": "hospital-surgical-slice-spec",
       "version": "1.20"
     },
     "expression": {
@@ -204,9 +207,10 @@ content-type: application/json
         "href": "/intentManagement/v5/intent/INT-HOSP-2026-001"
       },
       "intentSpecification": {
-        "id": "hospital-surgical-slice-spec",
+        "id": "ispec-hss-001",
+        "specKey": "hospital-surgical-slice-spec",
         "version": "1.20",
-        "href": "/intentManagement/v5/intentSpecification/hospital-surgical-slice-spec?version=1.20"
+        "href": "/intentManagement/v5/intentSpecification/ispec-hss-001?version=1.20"
       }
     }
   }
@@ -396,9 +400,10 @@ content-type: application/json
         "href": "/intentManagement/v5/intent/INT-HOSP-2026-002"
       },
       "intentSpecification": {
-        "id": "hospital-surgical-slice-spec",
+        "id": "ispec-hss-001",
+        "specKey": "hospital-surgical-slice-spec",
         "version": "1.20",
-        "href": "/intentManagement/v5/intentSpecification/hospital-surgical-slice-spec?version=1.20"
+        "href": "/intentManagement/v5/intentSpecification/ispec-hss-001?version=1.20"
       },
       "knowledgePlane": {
         "configId": "hospital-surgical-slice-kp-v1",
@@ -440,9 +445,10 @@ content-type: application/json
         "href": "/intentManagement/v5/intent/INT-HOSP-2026-003"
       },
       "intentSpecification": {
-        "id": "hospital-surgical-slice-spec",
+        "id": "ispec-hss-001",
+        "specKey": "hospital-surgical-slice-spec",
         "version": "1.20",
-        "href": "/intentManagement/v5/intentSpecification/hospital-surgical-slice-spec?version=1.20"
+        "href": "/intentManagement/v5/intentSpecification/ispec-hss-001?version=1.20"
       },
       "knowledgePlane": {
         "configId": "hospital-surgical-slice-kp-v1",
@@ -544,9 +550,10 @@ content-type: application/json
         "href": "/intentManagement/v5/intent/INT-HOSP-2026-001"
       },
       "intentSpecification": {
-        "id": "hospital-surgical-slice-spec",
+        "id": "ispec-hss-001",
+        "specKey": "hospital-surgical-slice-spec",
         "version": "1.20",
-        "href": "/intentManagement/v5/intentSpecification/hospital-surgical-slice-spec?version=1.20"
+        "href": "/intentManagement/v5/intentSpecification/ispec-hss-001?version=1.20"
       },
       "knowledgePlane": {
         "configId": "hospital-surgical-slice-kp-v1",
@@ -582,7 +589,7 @@ content-type: application/json
         "roles": [
           "primary"
         ],
-        "accessTechnology": "fibre",
+        "accessTechnology": "5G",
         "metrics": {
           "latencyMs": 8,
           "availabilityPercent": 99.995,
@@ -684,9 +691,10 @@ content-type: application/json
         "href": "/intentManagement/v5/intent/INT-HOSP-2026-004"
       },
       "intentSpecification": {
-        "id": "hospital-surgical-slice-spec",
+        "id": "ispec-hss-001",
+        "specKey": "hospital-surgical-slice-spec",
         "version": "1.20",
-        "href": "/intentManagement/v5/intentSpecification/hospital-surgical-slice-spec?version=1.20"
+        "href": "/intentManagement/v5/intentSpecification/ispec-hss-001?version=1.20"
       },
       "knowledgePlane": {
         "configId": "hospital-surgical-slice-kp-v1",
@@ -720,6 +728,27 @@ content-type: application/json
         ]
       },
       {
+        "resourceId": "MEL-PRI-02",
+        "resourceType": "deliveryResource",
+        "resourceClass": "critical-gold",
+        "roles": [
+          "primary"
+        ],
+        "accessTechnology": "5G",
+        "metrics": {
+          "latencyMs": 10,
+          "availabilityPercent": 99.994,
+          "jitterMs": 1.6,
+          "packetLossPercent": 0.006
+        },
+        "relationships": [
+          {
+            "type": "pairedSecondary",
+            "resourceId": "MEL-SEC-02"
+          }
+        ]
+      },
+      {
         "resourceId": "MEL-SEC-01",
         "resourceType": "deliveryResource",
         "resourceClass": "critical-gold",
@@ -728,7 +757,7 @@ content-type: application/json
         ],
         "accessTechnology": "5G",
         "metrics": {
-          "latencyMs": 11,
+          "latencyMs": 12,
           "availabilityPercent": 99.993,
           "jitterMs": 1.9,
           "packetLossPercent": 0.007
@@ -749,15 +778,15 @@ content-type: application/json
         ],
         "accessTechnology": "fibre",
         "metrics": {
-          "latencyMs": 10,
-          "availabilityPercent": 99.994,
-          "jitterMs": 1.6,
-          "packetLossPercent": 0.006
+          "latencyMs": 11,
+          "availabilityPercent": 99.996,
+          "jitterMs": 1.3,
+          "packetLossPercent": 0.004
         },
         "relationships": [
           {
             "type": "protects",
-            "resourceId": "MEL-PRI-01"
+            "resourceId": "MEL-PRI-02"
           }
         ]
       }
@@ -773,7 +802,7 @@ content-type: application/json
 - Do not flatten `location`, `serviceType`, or `serviceClass` into top-level event fields.
 - Do not include direct top-level `priority`, `preferredAccessTechnology`, or `redundancyRequired` outside the buckets.
 - Do not include `provider` by default.
-- Do not include downstream-selected resources; all resources in `IntentResolvedEvent.resources` are applicable/applyable resources known for downstream consideration by `optimiser-controller-ms`, not final selected output.
+- Do not include downstream-selected resources; all resources in `IntentResolvedEvent.resources` are applicable/apply-capable resources known for downstream consideration by `optimiser-controller-ms`, not final selected output.
 - Include generic `metrics` values for applicable resources using neutral metric names such as `latencyMs`, `availabilityPercent`, `jitterMs`, and `packetLossPercent`.
 - Do not encode metric origin or lifecycle context into wrappers or field names such as `metrics.benchmark`, `metrics.telemetry`, `latencyBenchmarkMs`, or `currentLatencyMs`.
 
@@ -805,6 +834,8 @@ II MS emits `IntentNetworkReadyEvent` after semantic resolution and service-read
 
 `IntentNetworkReadyEvent` does not mean network apply has succeeded. It means the service configuration/resource set has been prepared for change execution/apply and assurance observation.
 
+IntentNetworkReadyEvent may be emitted only after II MS has received or derived a governed selected configuration from the authorised downstream selection or optimisation path. II MS does not own the optimisation algorithm or optimiser backend. II MS owns packaging the selected configuration into the service-ready event for IA MS.
+
 ### 10.5. Example headers
 
 ```http
@@ -825,35 +856,37 @@ content-type: application/json
     "intentId": "INT-HOSP-2026-001",
     "intentVersion": "v1",
     "lifecycleStatus": "InProgress",
-    "context": {
-      "targets": {
-        "maxLatencyMs": 10,
-        "minAvailabilityPercent": 99.99,
-        "maxJitterMs": 2,
-        "maxPacketLossPercent": 0.01
-      },
-      "constraints": {
-        "location": {
-          "locationId": "AU-NSW-SYD-HOSP-001",
-          "displayName": "Sydney-Main-Hospital"
+    "expression": {
+      "context": {
+        "targets": {
+          "maxLatencyMs": 10,
+          "minAvailabilityPercent": 99.99,
+          "maxJitterMs": 2,
+          "maxPacketLossPercent": 0.01
         },
-        "serviceType": "surgical-connectivity",
-        "serviceClass": "critical-gold",
-        "priority": "critical",
-        "redundancyRequired": true,
-        "timeWindow": {
-          "startDateTime": "2026-04-18T12:00:00+10:00",
-          "endDateTime": "2026-04-18T14:00:00+10:00"
+        "constraints": {
+          "location": {
+            "locationId": "AU-NSW-SYD-HOSP-001",
+            "displayName": "Sydney-Main-Hospital"
+          },
+          "serviceType": "surgical-connectivity",
+          "serviceClass": "critical-gold",
+          "priority": "critical",
+          "redundancyRequired": true,
+          "timeWindow": {
+            "startDateTime": "2026-04-18T12:00:00+10:00",
+            "endDateTime": "2026-04-18T14:00:00+10:00"
+          }
+        },
+        "preferences": {
+          "preferredAccessTechnology": "5G"
         }
-      },
-      "preferences": {
-        "preferredAccessTechnology": "5G"
       }
     },
     "serviceConfiguration": {
       "orchestratorConfiguration": {
         "target": "t7-network-orchestrator",
-        "profile": "surgical-critical-gold-apply",
+        "profile": "hospital-surgical-slice-apply-v1",
         "resources": [
           {
             "resourceId": "SYD-PRI-01",
@@ -889,7 +922,7 @@ content-type: application/json
       },
       "observerConfiguration": {
         "target": "t7-observability-platform",
-        "profile": "surgical-critical-gold-observe",
+        "profile": "critical-gold-assurance-observation-v1",
         "resources": [
           {
             "resourceId": "SYD-PRI-01",
@@ -957,9 +990,10 @@ content-type: application/json
         "href": "/intentManagement/v5/intent/INT-HOSP-2026-001"
       },
       "intentSpecification": {
-        "id": "hospital-surgical-slice-spec",
+        "id": "ispec-hss-001",
+        "specKey": "hospital-surgical-slice-spec",
         "version": "1.20",
-        "href": "/intentManagement/v5/intentSpecification/hospital-surgical-slice-spec?version=1.20"
+        "href": "/intentManagement/v5/intentSpecification/ispec-hss-001?version=1.20"
       },
       "knowledgePlane": {
         "configId": "hospital-surgical-slice-kp-v1",
@@ -977,7 +1011,7 @@ content-type: application/json
 - Consumer identity does not change producer ownership.
 - IA MS consumes this event; IA MS must not produce it.
 - `IntentNetworkReadyEvent` means service configuration is ready for change execution/apply, not that apply has succeeded.
-- Carry the resolved runtime `body.context` with `targets`, `constraints`, and `preferences`; IA MS stores this as assurance context.
+- Carry the resolved runtime `body.expression.context` with `targets`, `constraints`, and `preferences`; IA MS stores this as assurance context.
 - Use `serviceConfiguration.orchestratorConfiguration` for apply/change-execution details.
 - Use `serviceConfiguration.observerConfiguration` for assurance/monitoring details.
 - `serviceConfiguration.orchestratorConfiguration.resources[]` carries only the optimiser-selected network-ready configuration/resources that must be applied by the change-execution layer; it includes resource details, topology, roles, and change-execution-relevant information, but not metric values.
@@ -1086,6 +1120,6 @@ II MS consumes `IntentValidatedEvent`, validates and resolves the admitted expre
 
 `IntentRejectedEvent` is the semantic/policy/capability rejection handoff. IC MS consumes it and projects the external runtime `Intent` lifecycle accordingly.
 
-`IntentResolvedEvent` is the candidate-level semantic-resolution handoff. It carries canonical service context and the full valid/applicable/applyable resource set for downstream consideration by `optimiser-controller-ms`. It includes generic metric values for applicable resources using neutral metric names such as `latencyMs`, `availabilityPercent`, `jitterMs`, and `packetLossPercent`. It is not the final service-ready/apply-ready handoff.
+`IntentResolvedEvent` is the candidate-level semantic-resolution handoff. It carries canonical service context and the full valid/applicable/apply-capable resource set for downstream consideration by `optimiser-controller-ms`. It includes generic metric values for applicable resources using neutral metric names such as `latencyMs`, `availabilityPercent`, `jitterMs`, and `packetLossPercent`. It is not the final service-ready/apply-ready handoff.
 
 `IntentNetworkReadyEvent` is the service-ready preparation handoff to IA MS. It carries the optimiser-selected apply/change-execution configuration in `serviceConfiguration.orchestratorConfiguration` and the full assurance observation scope in `serviceConfiguration.observerConfiguration`, and it does not mean network apply has succeeded. It does not carry metric values in `serviceConfiguration.orchestratorConfiguration.resources[]`; `serviceConfiguration.observerConfiguration.resources[].metrics` names the metrics IA should observe.

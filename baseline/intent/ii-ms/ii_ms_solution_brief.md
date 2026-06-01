@@ -56,7 +56,7 @@ Its responsibility is to convert a syntactically accepted runtime intent into on
 - `IntentResolvedEvent` when the admitted intent has been semantically resolved into a canonical intent context and a full, valid candidate resource set for downstream optimisation or fulfilment consideration.
 - `IntentNetworkReadyEvent` when II MS has prepared the concrete service configuration needed for change execution and assurance observation.
 
-`IntentResolvedEvent` and `IntentNetworkReadyEvent` are intentionally different milestones. `IntentResolvedEvent` is the candidate-level semantic-resolution handoff. `IntentNetworkReadyEvent` is the service-ready preparation handoff to IA MS and means the service configuration/resource set has been prepared for change execution and assurance observation. It does not mean the network application has succeeded.
+`IntentResolvedEvent` and `IntentNetworkReadyEvent` are intentionally different milestones. `IntentResolvedEvent` is the candidate-level semantic-resolution handoff. `IntentNetworkReadyEvent` is the service-ready preparation handoff to IA MS and means the service configuration/resource set has been prepared for change execution and assurance observation. It does not mean the network application has succeeded. IntentNetworkReadyEvent may be emitted only after II MS has received or derived a governed selected configuration from the authorised downstream selection or optimisation path. II MS does not own the optimisation algorithm or optimiser backend. II MS owns packaging the selected configuration into the service-ready event for IA MS.
 
 ## 2. Logical View:
 
@@ -211,7 +211,8 @@ content-type: application/json
     "lifecycleStatus": "Acknowledged",
     "statusReason": "Intent request passed IC MS admission validation and was admitted for downstream processing.",
     "intentSpecification": {
-      "id": "hospital-surgical-slice-spec",
+      "id": "ispec-hss-001",
+      "specKey": "hospital-surgical-slice-spec",
       "version": "1.20"
     },
     "expression": {
@@ -250,9 +251,10 @@ content-type: application/json
         "href": "/intentManagement/v5/intent/INT-HOSP-2026-001"
       },
       "intentSpecification": {
-        "id": "hospital-surgical-slice-spec",
+        "id": "ispec-hss-001",
+        "specKey": "hospital-surgical-slice-spec",
         "version": "1.20",
-        "href": "/intentManagement/v5/intentSpecification/hospital-surgical-slice-spec?version=1.20"
+        "href": "/intentManagement/v5/intentSpecification/ispec-hss-001?version=1.20"
       }
     }
   }
@@ -350,6 +352,8 @@ Publication rules:
 |---|---|---|
 | `t7.intent.management.events` | `IntentValidatedEvent`, `IntentRejectedEvent`, `IntentResolvedEvent`, `IntentNetworkReadyEvent` | Consume and publish internal intent workflow events. |
 
+The shared topic is the current baseline; event type and `ce-source` provide ownership boundaries. Future topic splitting may be introduced without changing II MS event payload contracts.
+
 A future split into more granular topics can be introduced if throughput, retention, or ownership boundaries require it, but the baseline uses the shared internal intent-management events topic.
 
 ## 16. Event identity:
@@ -424,9 +428,10 @@ content-type: application/json
         "href": "/intentManagement/v5/intent/INT-HOSP-2026-002"
       },
       "intentSpecification": {
-        "id": "hospital-surgical-slice-spec",
+        "id": "ispec-hss-001",
+        "specKey": "hospital-surgical-slice-spec",
         "version": "1.20",
-        "href": "/intentManagement/v5/intentSpecification/hospital-surgical-slice-spec?version=1.20"
+        "href": "/intentManagement/v5/intentSpecification/ispec-hss-001?version=1.20"
       },
       "knowledgePlane": {
         "configId": "hospital-surgical-slice-kp-v1",
@@ -496,10 +501,10 @@ Baseline reason-code families:
         "resourceId": "SYD-PRI-01",
         "resourceType": "deliveryResource",
         "resourceClass": "critical-gold",
-        "roles": ["primary"],
-        "resourceAttributes": {
-          "accessTechnology": "fibre"
-        },
+        "roles": [
+          "primary"
+        ],
+        "accessTechnology": "fibre",
         "relationships": [
           {
             "type": "pairedSecondary",
@@ -517,10 +522,10 @@ Baseline reason-code families:
         "resourceId": "SYD-SEC-01",
         "resourceType": "deliveryResource",
         "resourceClass": "critical-gold",
-        "roles": ["secondary"],
-        "resourceAttributes": {
-          "accessTechnology": "5G"
-        },
+        "roles": [
+          "secondary"
+        ],
+        "accessTechnology": "5G",
         "relationships": [
           {
             "type": "protects",
@@ -542,9 +547,10 @@ Baseline reason-code families:
         "href": "/intentManagement/v5/intent/INT-HOSP-2026-001"
       },
       "intentSpecification": {
-        "id": "hospital-surgical-slice-spec",
+        "id": "ispec-hss-001",
+        "specKey": "hospital-surgical-slice-spec",
         "version": "1.20",
-        "href": "/intentManagement/v5/intentSpecification/hospital-surgical-slice-spec?version=1.20"
+        "href": "/intentManagement/v5/intentSpecification/ispec-hss-001?version=1.20"
       },
       "knowledgePlane": {
         "configId": "hospital-surgical-slice-kp-v1",
@@ -574,59 +580,67 @@ Rules:
     "intentId": "INT-HOSP-2026-001",
     "intentVersion": "v1",
     "lifecycleStatus": "InProgress",
-    "context": {
-      "targets": {
-        "maxLatencyMs": 10,
-        "minAvailabilityPercent": 99.99,
-        "maxJitterMs": 2,
-        "maxPacketLossPercent": 0.01
-      },
-      "constraints": {
-        "location": {
-          "locationId": "AU-NSW-SYD-HOSP-001",
-          "displayName": "Sydney-Main-Hospital"
+    "expression": {
+      "context": {
+        "targets": {
+          "maxLatencyMs": 10,
+          "minAvailabilityPercent": 99.99,
+          "maxJitterMs": 2,
+          "maxPacketLossPercent": 0.01
         },
-        "serviceType": "surgical-connectivity",
-        "serviceClass": "critical-gold",
-        "priority": "critical",
-        "redundancyRequired": true,
-        "timeWindow": {
-          "startDateTime": "2026-04-18T12:00:00+10:00",
-          "endDateTime": "2026-04-18T14:00:00+10:00"
+        "constraints": {
+          "location": {
+            "locationId": "AU-NSW-SYD-HOSP-001",
+            "displayName": "Sydney-Main-Hospital"
+          },
+          "serviceType": "surgical-connectivity",
+          "serviceClass": "critical-gold",
+          "priority": "critical",
+          "redundancyRequired": true,
+          "timeWindow": {
+            "startDateTime": "2026-04-18T12:00:00+10:00",
+            "endDateTime": "2026-04-18T14:00:00+10:00"
+          }
+        },
+        "preferences": {
+          "preferredAccessTechnology": "5G"
         }
-      },
-      "preferences": {
-        "preferredAccessTechnology": "5G"
       }
     },
     "serviceConfiguration": {
       "orchestratorConfiguration": {
         "target": "t7-network-orchestrator",
-        "profile": "surgical-critical-gold-apply",
+        "profile": "hospital-surgical-slice-apply-v1",
         "resources": [
           {
             "resourceId": "SYD-PRI-01",
             "resourceType": "deliveryResource",
             "resourceClass": "critical-gold",
-            "roles": ["primary"]
+            "roles": [
+              "primary"
+            ]
           },
           {
             "resourceId": "SYD-SEC-01",
             "resourceType": "deliveryResource",
             "resourceClass": "critical-gold",
-            "roles": ["secondary"]
+            "roles": [
+              "secondary"
+            ]
           }
         ]
       },
       "observerConfiguration": {
         "target": "t7-observability-platform",
-        "profile": "surgical-critical-gold-observe",
+        "profile": "critical-gold-assurance-observation-v1",
         "resources": [
           {
             "resourceId": "SYD-PRI-01",
             "resourceType": "deliveryResource",
             "resourceClass": "critical-gold",
-            "roles": ["primary"],
+            "roles": [
+              "primary"
+            ],
             "metrics": [
               "latencyMs",
               "availabilityPercent",
@@ -638,7 +652,9 @@ Rules:
             "resourceId": "SYD-SEC-01",
             "resourceType": "deliveryResource",
             "resourceClass": "critical-gold",
-            "roles": ["secondary"],
+            "roles": [
+              "secondary"
+            ],
             "metrics": [
               "latencyMs",
               "availabilityPercent",
@@ -656,9 +672,10 @@ Rules:
         "href": "/intentManagement/v5/intent/INT-HOSP-2026-001"
       },
       "intentSpecification": {
-        "id": "hospital-surgical-slice-spec",
+        "id": "ispec-hss-001",
+        "specKey": "hospital-surgical-slice-spec",
         "version": "1.20",
-        "href": "/intentManagement/v5/intentSpecification/hospital-surgical-slice-spec?version=1.20"
+        "href": "/intentManagement/v5/intentSpecification/ispec-hss-001?version=1.20"
       },
       "knowledgePlane": {
         "configId": "hospital-surgical-slice-kp-v1",
@@ -694,6 +711,8 @@ When an admitted intent is syntactically valid but cannot be semantically, polic
 ### 21.3. Service-ready preparation:
 
 When the service configuration required for change execution and assurance observation is prepared, II MS emits `IntentNetworkReadyEvent`.
+
+IntentNetworkReadyEvent may be emitted only after II MS has received or derived a governed selected configuration from the authorised downstream selection or optimisation path. II MS does not own the optimisation algorithm or optimiser backend. II MS owns packaging the selected configuration into the service-ready event for IA MS.
 
 This event carries `serviceConfiguration.orchestratorConfiguration` and `serviceConfiguration.observerConfiguration`.
 

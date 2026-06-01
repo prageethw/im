@@ -135,7 +135,7 @@ The baseline surgical hospital slice is an illustrative runtime example used to 
 | Output | Condition | Purpose |
 |---|---|---|
 | `IntentRejectedEvent` | Semantic, policy, or capability validation fails | Tells IC MS the admitted intent must be externally projected as rejected |
-| `IntentResolvedEvent` | Semantic/capability resolution succeeds and downstream fulfilment/selection is required | Provides candidate-level canonical context and the valid resource set for downstream consideration, including all applicable/applyable resources and neutral metric values |
+| `IntentResolvedEvent` | Semantic/capability resolution succeeds and downstream fulfilment/selection is required | Provides candidate-level canonical context and the valid resource set for downstream consideration, including all applicable/apply-capable resources and neutral metric values |
 | `IntentNetworkReadyEvent` | Service-ready preparation succeeds after resolution | Provides IA MS with prepared change-execution and observation configuration; it does not mean apply succeeded |
 
 ## 7. Processing stages
@@ -226,7 +226,7 @@ A successful resolution implies:
 - the resource set is known and valid for downstream consideration after scope/policy filtering
 - the intent can proceed to the next internal fulfilment/preparation stage
 
-`IntentResolvedEvent.resources[]` contains the full valid/applicable/applyable resource set known in KP for the resolved context after applicable scope/policy filtering.
+`IntentResolvedEvent.resources[]` contains the full valid/applicable/apply-capable resource set known in KP for the resolved context after applicable scope/policy filtering.
 
 It includes neutral event-facing metric values for those resources so `optimiser-controller-ms` can compare and select the best applicable configuration. `IntentResolvedEvent.resources[]` is not the final selected/applied resource set and it is not the service-ready/apply-ready handoff.
 
@@ -234,11 +234,13 @@ It includes neutral event-facing metric values for those resources so `optimiser
 
 II MS emits `IntentNetworkReadyEvent` when service-ready preparation has produced the concrete change-execution and observation configuration required by IA MS.
 
+IntentNetworkReadyEvent may be emitted only after II MS has received or derived a governed selected configuration from the authorised downstream selection or optimisation path. II MS does not own the optimisation algorithm or optimiser backend. II MS owns packaging the selected configuration into the service-ready event for IA MS.
+
 `IntentNetworkReadyEvent`:
 
 - is produced by `intent-intelligence-ms`
 - is consumed by `intent-assurance-ms`
-- carries the resolved runtime `body.context`
+- carries the resolved runtime `body.expression.context`
 - carries selected apply/change-execution details under `serviceConfiguration.orchestratorConfiguration`
 - carries assurance/monitoring details under `serviceConfiguration.observerConfiguration`
 - does not mean network apply has succeeded
@@ -391,6 +393,6 @@ II MS is the internal semantic interpretation, resolution, and service-ready pre
 
 It consumes `IntentValidatedEvent`, validates and resolves the admitted expression using Knowledge Plane data, domain knowledge, and any required use-case-specific pre-resolution validation sources, preserves the canonical `expression.context.targets`, `expression.context.constraints`, and `expression.context.preferences` buckets, and emits `IntentRejectedEvent`, `IntentResolvedEvent`, or `IntentNetworkReadyEvent` depending on the resolved milestone. II MS emits neutral event-facing resource and metric structures.
 
-`IntentResolvedEvent.resources[]` carries the full applicable/applyable resource set with metric values for downstream optimisation/selection. `IntentNetworkReadyEvent.serviceConfiguration.orchestratorConfiguration.resources[]` carries only the selected apply/change-execution configuration, while `serviceConfiguration.observerConfiguration.resources[]` carries the full IA observation scope with metric names to observe.
+`IntentResolvedEvent.resources[]` carries the full applicable/apply-capable resource set with metric values for downstream optimisation/selection. `IntentNetworkReadyEvent.serviceConfiguration.orchestratorConfiguration.resources[]` carries only the selected apply/change-execution configuration, while `serviceConfiguration.observerConfiguration.resources[]` carries the full IA observation scope with metric names to observe.
 
 II MS does not own external TMF APIs, runtime Intent lifecycle projection, downstream apply execution, assurance truth, callback ingestion, or KP governance.
