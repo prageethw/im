@@ -42,7 +42,7 @@ ICB MS does not interpret lifecycle, assurance, degradation, optimisation, or se
 | Service name | `intent-callback-ms` |
 | Short name | ICB MS |
 | Main responsibility | Thin callback ingestion and raw callback event relay for change-execution/apply callbacks and optimiser outcome callbacks |
-| Primary external input | Callback event submitted over REST from external change-execution/apply systems or approved optimiser platform or approved Optimiser platform |
+| Primary external input | Callback event submitted over REST from external change-execution/apply systems or an approved Optimiser platform |
 | Primary internal outputs | `IntentCallbackEvent`; `OptimisationStatusChangeEvent` |
 | Internal callback topics | `t7.intent.management.events.callbacks` for `IntentCallbackEvent`; `t7.intent.management.events` for `OptimisationStatusChangeEvent` |
 | Source-of-truth persistence | Managed PostgreSQL / PostgreSQL-compatible RDBMS |
@@ -136,7 +136,7 @@ ICB MS should also use stable callback fields to protect against duplicates wher
 - `sourceReference`
 - `callbackTimestamp`
 
-Duplicate submissions should not create duplicate internal `IntentCallbackEvent` facts.
+Duplicate submissions should not create duplicate internal callback relay facts, whether the output event is `IntentCallbackEvent` or `OptimisationStatusChangeEvent`.
 
 ## 9. Persistence baseline:
 

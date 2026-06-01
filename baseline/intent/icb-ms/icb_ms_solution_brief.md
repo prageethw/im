@@ -56,7 +56,8 @@
   - [10.3. Failure behaviour:](#103-failure-behaviour)
 - [11. Configuration:](#11-configuration)
 - [12. Consumer contract:](#12-consumer-contract)
-  - [12.1. Consumer contract model:](#121-consumer-contract-model)
+  - [12.1. IntentCallbackEvent consumer contract model:](#121-intentcallbackevent-consumer-contract-model)
+  - [12.1.1. OptimisationStatusChangeEvent consumer contract model:](#1211-optimisationstatuschangeevent-consumer-contract-model)
   - [12.2. IA MS lifecycle mapping steps:](#122-ia-ms-lifecycle-mapping-steps)
   - [12.3. IA MS mapping config (illustrative only):](#123-ia-ms-mapping-config-illustrative-only)
 - [13. Open items:](#13-open-items)
@@ -363,12 +364,16 @@ Idempotency-Key: cb-OPT-HSS-2026-001-0001
 
 | Field | Required | Validation | Notes |
 |---|---:|---|---|
-| `intentId` | Yes | Required, non-empty string | Syntax only. IA MS validates existence and correlation. |
-| `callbackSource` | Yes | Required, non-empty string | Identifies the external source/change-execution instance. Gateway identity remains authoritative for trust. |
-| `callbackTimestamp` | Yes | ISO 8601 date-time | Source-reported callback time. Distinct from ICB receive time and Kafka publish time. |
-| `sourceState.state` | Yes for `IntentCallbackEvent` | Required, non-empty string | Raw source-owned state. IA MS interprets it. ICB MS does not map it. |
-| `eventType` | Yes for optimiser outcome callback | Must be `OptimisationStatusChangeEvent` for approved optimiser profile | Used to select the structural relay profile, not to interpret optimiser outcome meaning. |
-| `event.optimisation` | Yes for optimiser outcome callback | Required object for approved optimiser profile | ICB validates structure and relays; II MS interprets/correlates. |
+| `intentId` | Yes for `IntentCallbackEventRequest` | Required, non-empty string | Syntax only. IA MS validates existence and correlation. |
+| `callbackSource` | Yes for `IntentCallbackEventRequest` | Required, non-empty string | Identifies the external source/change-execution instance. Gateway identity remains authoritative for trust. |
+| `callbackTimestamp` | Yes for `IntentCallbackEventRequest` | ISO 8601 date-time | Source-reported callback time. Distinct from ICB receive time and Kafka publish time. |
+| `sourceState.state` | Yes for `IntentCallbackEventRequest` | Required, non-empty string | Raw source-owned state. IA MS interprets it. ICB MS does not map it. |
+| `eventType` | Yes for `OptimisationStatusChangeEventRequest` | Must be `OptimisationStatusChangeEvent` for the approved optimiser profile | Used to select the structural relay profile, not to interpret optimiser outcome meaning. |
+| `event.optimisation.id` | Yes for `OptimisationStatusChangeEventRequest` | Required object field | Optimisation id for II MS correlation. |
+| `event.optimisation.sourceContext.resource.id` | Yes for `OptimisationStatusChangeEventRequest` | Required non-empty string | Related runtime intentId used for Kafka subject/key and II MS correlation. |
+| `event.optimisation.sourceContext.correlationId` | Yes for `OptimisationStatusChangeEventRequest` | Required non-empty string | Correlation id propagated to II MS. |
+| `event.optimisation.sourceContext.intentVersion` | Required where runtime intent versioning is used | Non-empty string when supplied | Runtime intent version context. |
+| `event.optimisation.selectedConfiguration` | Required when `newLifecycleStatus` is `COMPLETED` and outcome drives service-ready packaging | Object | ICB validates structure only; II MS interprets and packages selected configuration. |
 | `sourceState.reason` | No | String when supplied | Human-readable source reason or explanatory detail. |
 | `sourceReference` | No | Object when supplied | External source reference only. Must not be treated as a platform resource reference. |
 | `details` | No | Structured JSON object subject to size and policy limits | Raw or structured callback detail where safe. Must not contain secrets or credentials. |
@@ -736,7 +741,7 @@ Duplicate submissions must not create duplicate internal callback facts. The ser
 
 ## 12. Consumer contract:
 
-### 12.1. Consumer contract model:
+### 12.1. IntentCallbackEvent consumer contract model:
 
 | Concern | Detail |
 |---|---|
@@ -749,6 +754,19 @@ Duplicate submissions must not create duplicate internal callback facts. The ser
 | Idempotency | IA MS must deduplicate using `ce-id`, callback id, or agreed stable event identifier. |
 | Unknown `intentId` | IA MS owns dead-letter/alert handling. |
 | Unmapped raw state | IA MS owns skip/ignore/dead-letter policy according to its mapping configuration. |
+
+#### 12.1.1. OptimisationStatusChangeEvent consumer contract model:
+
+| Concern | Detail |
+|---|---|
+| Intended consumer | II MS (`intent-intelligence-ms`). |
+| Producer | ICB MS (`intent-callback-ms`). |
+| Topic | `t7.intent.management.events`. |
+| Contract style | Consumer-driven contract between II MS and ICB MS for approved optimiser outcome relay. |
+| Locked shape | CloudEvents headers plus approved `OptimisationStatusChangeEvent` payload shape. |
+| Delivery | At least once. |
+| Idempotency | II MS must deduplicate and correlate using `ce-id`, optimisation id, intentId/intentVersion, and correlation id where available. |
+| Interpretation | II MS owns optimiser outcome correlation and selected-configuration packaging. ICB MS validates and relays structure only. |
 
 ### 12.2. IA MS lifecycle mapping steps:
 

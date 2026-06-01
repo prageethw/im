@@ -516,6 +516,9 @@ ICB MS publishes approved optimiser outcome callbacks to:
 t7.intent.management.events
 ```
 
+OptimisationStatusChangeEvent is relayed using the approved optimiser event payload shape consumed by II MS. Unlike IntentCallbackEvent, it is not converted into an ICB-owned `body.callback` fact shape. ICB MS validates and relays the approved optimiser event structurally; II MS owns correlation and interpretation.
+
+
 ### 11.1. CloudEvents headers:
 
 ```http
@@ -532,130 +535,129 @@ content-type: application/json
 
 ```json
 {
-  "body": {
-    "eventType": "OptimisationStatusChangeEvent",
-    "eventTime": "2026-04-18T12:03:30+10:00",
-    "timeOccurred": "2026-04-18T12:03:30+10:00",
-    "event": {
-      "optimisation": {
-        "id": "opt-hss-2026-001",
-        "href": "/optimisation/opt-hss-2026-001",
-        "previousLifecycleStatus": "PROCESSING",
-        "newLifecycleStatus": "COMPLETED",
-        "sourceContext": {
-          "domain": "intent-management",
-          "resource": {
-            "id": "INT-HOSP-2026-001",
-            "href": "/intentManagement/v5/intent/INT-HOSP-2026-001",
-            "@type": "IntentRef",
-            "@referredType": "Intent"
-          },
-          "correlationId": "corr-intent-create-001",
-          "intentVersion": "v1"
+  "eventType": "OptimisationStatusChangeEvent",
+  "eventTime": "2026-04-18T12:03:30+10:00",
+  "timeOccurred": "2026-04-18T12:03:30+10:00",
+  "event": {
+    "optimisation": {
+      "id": "opt-hss-2026-001",
+      "href": "/optimisation/opt-hss-2026-001",
+      "previousLifecycleStatus": "PROCESSING",
+      "newLifecycleStatus": "COMPLETED",
+      "sourceContext": {
+        "domain": "intent-management",
+        "resource": {
+          "id": "INT-HOSP-2026-001",
+          "href": "/intentManagement/v5/intent/INT-HOSP-2026-001",
+          "@type": "IntentRef",
+          "@referredType": "Intent"
         },
-        "selectedConfiguration": {
-          "orchestratorConfiguration": {
-            "target": "t7-network-orchestrator",
-            "profile": "hospital-surgical-slice-apply-v1",
-            "resources": [
-              {
-                "resourceId": "SYD-PRI-01",
-                "resourceType": "deliveryResource",
-                "resourceClass": "critical-gold",
-                "roles": [
-                  "primary"
-                ],
-                "accessTechnology": "fibre",
-                "relationships": [
-                  {
-                    "type": "pairedSecondary",
-                    "resourceId": "SYD-SEC-01"
-                  }
-                ]
-              },
-              {
-                "resourceId": "SYD-SEC-01",
-                "resourceType": "deliveryResource",
-                "resourceClass": "critical-gold",
-                "roles": [
-                  "secondary"
-                ],
-                "accessTechnology": "5G",
-                "relationships": [
-                  {
-                    "type": "protects",
-                    "resourceId": "SYD-PRI-01"
-                  }
-                ]
-              }
-            ]
-          },
-          "observerConfiguration": {
-            "target": "t7-observability-platform",
-            "profile": "critical-gold-assurance-observation-v1",
-            "resources": [
-              {
-                "resourceId": "SYD-PRI-01",
-                "resourceType": "deliveryResource",
-                "resourceClass": "critical-gold",
-                "roles": [
-                  "primary"
-                ],
-                "metrics": [
-                  "latencyMs",
-                  "availabilityPercent",
-                  "jitterMs",
-                  "packetLossPercent"
-                ]
-              },
-              {
-                "resourceId": "SYD-PRI-02",
-                "resourceType": "deliveryResource",
-                "resourceClass": "critical-gold",
-                "roles": [
-                  "primary"
-                ],
-                "metrics": [
-                  "latencyMs",
-                  "availabilityPercent",
-                  "jitterMs",
-                  "packetLossPercent"
-                ]
-              },
-              {
-                "resourceId": "SYD-SEC-01",
-                "resourceType": "deliveryResource",
-                "resourceClass": "critical-gold",
-                "roles": [
-                  "secondary"
-                ],
-                "metrics": [
-                  "latencyMs",
-                  "availabilityPercent",
-                  "jitterMs",
-                  "packetLossPercent"
-                ]
-              },
-              {
-                "resourceId": "SYD-SEC-02",
-                "resourceType": "deliveryResource",
-                "resourceClass": "critical-gold",
-                "roles": [
-                  "secondary"
-                ],
-                "metrics": [
-                  "latencyMs",
-                  "availabilityPercent",
-                  "jitterMs",
-                  "packetLossPercent"
-                ]
-              }
-            ]
-          }
+        "correlationId": "corr-intent-create-001",
+        "intentVersion": "v1"
+      },
+      "selectedConfiguration": {
+        "orchestratorConfiguration": {
+          "target": "t7-network-orchestrator",
+          "profile": "hospital-surgical-slice-apply-v1",
+          "resources": [
+            {
+              "resourceId": "SYD-PRI-01",
+              "resourceType": "deliveryResource",
+              "resourceClass": "critical-gold",
+              "roles": [
+                "primary"
+              ],
+              "accessTechnology": "fibre",
+              "relationships": [
+                {
+                  "type": "pairedSecondary",
+                  "resourceId": "SYD-SEC-01"
+                }
+              ]
+            },
+            {
+              "resourceId": "SYD-SEC-01",
+              "resourceType": "deliveryResource",
+              "resourceClass": "critical-gold",
+              "roles": [
+                "secondary"
+              ],
+              "accessTechnology": "5G",
+              "relationships": [
+                {
+                  "type": "protects",
+                  "resourceId": "SYD-PRI-01"
+                }
+              ]
+            }
+          ]
+        },
+        "observerConfiguration": {
+          "target": "t7-observability-platform",
+          "profile": "critical-gold-assurance-observation-v1",
+          "resources": [
+            {
+              "resourceId": "SYD-PRI-01",
+              "resourceType": "deliveryResource",
+              "resourceClass": "critical-gold",
+              "roles": [
+                "primary"
+              ],
+              "metrics": [
+                "latencyMs",
+                "availabilityPercent",
+                "jitterMs",
+                "packetLossPercent"
+              ]
+            },
+            {
+              "resourceId": "SYD-PRI-02",
+              "resourceType": "deliveryResource",
+              "resourceClass": "critical-gold",
+              "roles": [
+                "primary"
+              ],
+              "metrics": [
+                "latencyMs",
+                "availabilityPercent",
+                "jitterMs",
+                "packetLossPercent"
+              ]
+            },
+            {
+              "resourceId": "SYD-SEC-01",
+              "resourceType": "deliveryResource",
+              "resourceClass": "critical-gold",
+              "roles": [
+                "secondary"
+              ],
+              "metrics": [
+                "latencyMs",
+                "availabilityPercent",
+                "jitterMs",
+                "packetLossPercent"
+              ]
+            },
+            {
+              "resourceId": "SYD-SEC-02",
+              "resourceType": "deliveryResource",
+              "resourceClass": "critical-gold",
+              "roles": [
+                "secondary"
+              ],
+              "metrics": [
+                "latencyMs",
+                "availabilityPercent",
+                "jitterMs",
+                "packetLossPercent"
+              ]
+            }
+          ]
         }
       }
     }
-  }
+  },
+  "@type": "OptimisationStatusChangeEvent"
 }
 ```
 
