@@ -23,9 +23,10 @@ The Intent Enabler is a multi-microservice solution built around external TMF-co
 3. IC MS emits `IntentValidatedEvent` after admission.
 4. II MS consumes the admitted intent, performs semantic and policy interpretation, and either rejects, resolves, or prepares network-ready service configuration.
 5. II MS emits `IntentRejectedEvent`, `IntentResolvedEvent`, and/or `IntentNetworkReadyEvent` according to the workflow milestone.
-6. ICB MS receives external callback submissions from trusted change-execution/apply systems, validates only structure, persists the callback, and publishes raw `IntentCallbackEvent`.
-7. IA MS consumes `IntentNetworkReadyEvent`, `IntentCallbackEvent`, and runtime observation facts, then emits `IntentAssuranceEvent`.
-8. IC MS consumes curated downstream outcomes and updates the external `Intent` and `IntentReport` projection.
+6. Where optimisation-backed selection is required, II MS submits `POST /optimisation` using the optimisation API outbox and supplies the ICB-owned callback submission URL, `POST /intent-callback/v1/submissions`, as the optimiser outcome callback target.
+7. ICB MS receives external callback submissions from trusted change-execution/apply systems and approved Optimiser platforms, validates only structure, persists the callback, and publishes either raw `IntentCallbackEvent` or approved `OptimisationStatusChangeEvent` relay events.
+8. IA MS consumes `IntentNetworkReadyEvent`, `IntentCallbackEvent`, and runtime observation facts, then emits `IntentAssuranceEvent`.
+9. IC MS consumes curated downstream outcomes and updates the external `Intent` and `IntentReport` projection.
 
 The design keeps external resources stable and controlled while allowing internal services to evolve independently through event contracts.
 
@@ -81,6 +82,10 @@ An external consumer or OEX submits a runtime `Intent` to IC MS. External consum
 ### Interpret and resolve intent:
 
 II MS consumes `IntentValidatedEvent`, interprets the admitted expression, resolves semantic context through Knowledge Plane data, validates policy/capability/resource feasibility, and emits either `IntentRejectedEvent` or `IntentResolvedEvent`.
+
+### Optimisation-backed selection:
+
+Where optimisation-backed selection is required, II MS submits `POST /optimisation` with the resolved candidate set and supplies the ICB-owned callback submission URL, `POST /intent-callback/v1/submissions`, to the Optimiser platform. The Optimiser submits `OptimisationStatusChangeEventRequest` to ICB MS. ICB MS structurally validates and relays the approved `OptimisationStatusChangeEvent` payload to `t7.intent.management.events` for II MS. II MS correlates the optimiser outcome and packages the selected configuration into `IntentNetworkReadyEvent`.
 
 ### Prepare service-ready configuration:
 
@@ -149,6 +154,8 @@ External Consumer / OEX / Authorised Platform
 +----------------------------+
 ```
 
+Optimisation-backed selection uses the same callback ingress boundary: II MS calls `POST /optimisation`, the Optimiser calls `POST /intent-callback/v1/submissions`, ICB MS publishes `OptimisationStatusChangeEvent` to the main internal event topic, and II MS consumes it before emitting `IntentNetworkReadyEvent`.
+
 Logical resource ownership:
 
 | Resource / concept | Owner |
@@ -169,9 +176,9 @@ The Intent Enabler uses three distinct delivery models. They must not be collaps
 
 | Delivery path | Used for | Mechanism | Transport metadata |
 |---|---|---|---|
-| Internal platform events | Internal workflow facts such as `IntentValidatedEvent`, `IntentRejectedEvent`, `IntentResolvedEvent`, `IntentNetworkReadyEvent`, `IntentCallbackEvent`, and `IntentAssuranceEvent` | Service-owned internal event outbox, relay, Kafka topic, idempotent internal consumers | CloudEvents-style Kafka/platform headers |
+| Internal platform events | Internal workflow facts such as `IntentValidatedEvent`, `IntentRejectedEvent`, `IntentResolvedEvent`, `OptimisationStatusChangeEvent`, `IntentNetworkReadyEvent`, `IntentCallbackEvent`, and `IntentAssuranceEvent` | Service-owned internal event outbox, relay, Kafka topic, idempotent internal consumers | CloudEvents-style Kafka/platform headers |
 | External hub notifications | Subscriber notifications for `IntentSpecification`, `Intent`, and `IntentReport` resource events | Service-owned webhook delivery outbox, HTTP retry relay, HTTP `POST` to subscriber listener callback URL | HTTP headers such as `Content-Type`, `X-Correlation-Id`, and subscriber callback authentication where configured |
-| Callback ingestion | Source/change-execution callback submission into the platform | REST `POST` to ICB MS, callback persistence, callback outbox, internal Kafka publication to IA MS | HTTP headers on inbound callback; CloudEvents-style Kafka/platform headers on internal `IntentCallbackEvent` |
+| Callback ingestion | Source/change-execution and optimiser outcome callback submission into the platform | REST `POST` to ICB MS, callback persistence, callback outbox, internal Kafka publication to IA MS or II MS depending on callback profile | HTTP headers on inbound callback; CloudEvents-style Kafka/platform headers on `IntentCallbackEvent` or `OptimisationStatusChangeEvent` |
 
 ID MS and IC MS hub notifications are REST webhook callbacks with TMF-aligned event payloads. Kafka is not used for external hub notification delivery. Subscriber callback URLs are subscriber-owned; the platform defines the subscription API, delivery rules, retry behaviour, and TMF-aligned notification payload shape.
 
@@ -201,12 +208,15 @@ ID MS and IC MS hub notifications are REST webhook callbacks with TMF-aligned ev
 6. II MS performs semantic, policy, capability, and resource-context validation.
 7. II MS emits IntentRejectedEvent if rejected.
 8. II MS emits IntentResolvedEvent when candidate-level resolution is complete.
-9. II MS emits IntentNetworkReadyEvent when service configuration is ready for application and observation.
-10. External change-execution/apply system submits a callback to ICB MS.
-11. ICB MS persists the callback and emits IntentCallbackEvent.
-12. IA MS consumes IntentNetworkReadyEvent, IntentCallbackEvent, and observation metrics.
-13. IA MS emits IntentAssuranceEvent.
-14. IC MS updates external Intent and IntentReport projection.
+9. Where optimisation-backed selection is required, II MS submits POST /optimisation and supplies POST /intent-callback/v1/submissions as the optimiser callback URL.
+10. Optimiser submits OptimisationStatusChangeEventRequest to ICB MS.
+11. ICB MS persists the optimiser callback and emits OptimisationStatusChangeEvent to the main internal event topic for II MS.
+12. II MS consumes OptimisationStatusChangeEvent, correlates it to the submitted optimisation request, and emits IntentNetworkReadyEvent when service configuration is ready for application and observation.
+13. External change-execution/apply system submits a callback to ICB MS.
+14. ICB MS persists the apply callback and emits IntentCallbackEvent to the dedicated callback topic.
+15. IA MS consumes IntentNetworkReadyEvent, IntentCallbackEvent, and observation metrics.
+16. IA MS emits IntentAssuranceEvent.
+17. IC MS updates external Intent and IntentReport projection.
 ```
 
 ## Discover intent capability:
@@ -266,7 +276,7 @@ IC MS validates:
 
 IC MS does not validate semantic feasibility, network topology, resource suitability, or assurance success. After successful admission, IC MS persists the intent with the server-resolved `isBundle` value, sets the projected lifecycle to `Acknowledged`, and emits `IntentValidatedEvent`. II MS then performs semantic interpretation and service-ready preparation.
 
-Where an optimiser component is used, `IntentResolvedEvent` can hand off a full candidate set to the optimiser, and II MS can consume the selected outcome before producing `IntentNetworkReadyEvent`.
+Where an optimiser component is used, `IntentResolvedEvent` can hand off a full candidate set to the optimisation path. II MS submits `POST /optimisation` through its optimisation API outbox, supplies the ICB callback URL, and consumes ICB-relayed `OptimisationStatusChangeEvent` before producing `IntentNetworkReadyEvent`.
 
 ## Monitor runtime intent:
 
@@ -325,11 +335,11 @@ ICB MS exposes:
 POST /intent-callback/v1/submissions
 ```
 
-ICB MS sits behind the API Gateway. It accepts callback submissions from trusted external change-execution/apply systems. It validates only technical and structural properties, such as required fields, non-empty strings, ISO timestamp format, request size, trusted caller/source authorisation, and idempotency, where required.
+ICB MS sits behind the API Gateway. It accepts callback submissions from trusted external change-execution/apply systems and approved Optimiser platforms. It validates only technical and structural properties, such as required fields, non-empty strings, ISO timestamp format, request size, trusted caller/source authorisation, and idempotency, where required.
 
 ICB MS does not validate that `intentId` exists. IA MS owns intent correlation and unknown-intent handling after consuming `IntentCallbackEvent`.
 
-Canonical callback fields:
+For change-execution/apply callbacks, the REST request uses `@type: IntentCallbackEventRequest` and the internal relay event is `IntentCallbackEvent`. Canonical change-execution callback fields:
 
 | Field | Purpose |
 |---|---|
@@ -340,6 +350,9 @@ Canonical callback fields:
 | `sourceState.reason` | Optional raw source reason. |
 | `sourceReference` | Optional external source reference. |
 | `details` | Safe structured callback detail, subject to policy and size limits. |
+
+
+For optimiser outcome callbacks, the REST request uses `@type: OptimisationStatusChangeEventRequest` and the internal relay event is `OptimisationStatusChangeEvent`. ICB MS relays the approved optimiser payload shape to `t7.intent.management.events` for II MS and does not interpret optimiser status, selected configuration, feasibility, or service meaning.
 
 Legacy callback state/source/timestamp fields and `callbackType` must not be used as active ICB contract fields.
 
@@ -439,7 +452,7 @@ Event security rules:
 
 - use stable event names exactly as baselined;
 - use CloudEvents-style transport metadata for internal Kafka events;
-- use a top-level JSON `body` payload for internal Kafka events;
+- use a top-level JSON `body` payload for internal Kafka events unless a specific approved event shape defines otherwise, such as `OptimisationStatusChangeEvent`;
 - propagate `correlationId`;
 - prefer `intentId` as Kafka key for intent-scoped internal events;
 - do not directly expose internal Kafka event payloads as external TMF-aligned webhook notification payloads;
@@ -547,8 +560,6 @@ Expected platform controls include:
 - Runtime intent lifecycle states are `Acknowledged`, `InProgress`, `Active`, `Degraded`, `Paused`, `Rejected`, `Failed`, and `Terminated`.
 - `IntentNetworkReadyEvent` must not be treated as network apply success.
 - ICB MS must not validate `intentId` existence or map callback lifecycle meaning.
-- IA MS must not consume `IntentOptimisedEvent` in the active baseline.
-- `IntentDriftOccurredEvent` is retired.
 - External events must not expose internal KP, optimiser, telemetry, callback, or candidate-scoring details.
 - External hub notifications must use subscriber-owned callback URLs and TMF-aligned event payloads; Kafka is not used for external hub notification delivery.
 
@@ -607,7 +618,7 @@ Expected platform controls include:
 
 | Topic | Purpose | Producer | Consumer |
 |---|---|---|---|
-| Main internal intent event topic | Core internal intent workflow events | IC MS, II MS, IA MS, optimiser where applicable | IC MS, II MS, IA MS, optimiser where applicable |
+| `t7.intent.management.events` | Core internal intent workflow events, including `OptimisationStatusChangeEvent` relay | IC MS, II MS, IA MS, ICB MS for optimiser outcome relay | IC MS, II MS, IA MS |
 | `t7.intent.management.events.callbacks` | Raw accepted callback facts | ICB MS | IA MS |
 
 Exact physical topic names other than the callback topic remain platform implementation details unless separately baselined. External hub notifications are not Kafka topics; they are delivered by HTTP POST to subscriber listener callback URLs through ID MS / IC MS webhook delivery outboxes.
@@ -649,7 +660,7 @@ Internal events:
 IntentValidatedEvent
 IntentRejectedEvent
 IntentResolvedEvent
-IntentOptimisedEvent
+OptimisationStatusChangeEvent
 IntentNetworkReadyEvent
 IntentCallbackEvent
 IntentAssuranceEvent
@@ -777,7 +788,7 @@ Terminated
 | `IntentValidatedEvent` | `intent-controller-ms` | `intent-intelligence-ms` | Runtime intent passed IC MS admission validation. |
 | `IntentRejectedEvent` | `intent-intelligence-ms` | `intent-controller-ms` | Semantic, policy, or capability rejection. |
 | `IntentResolvedEvent` | `intent-intelligence-ms` | Optimiser / downstream fulfilment path | Candidate-level semantic-resolution handoff. |
-| `IntentOptimisedEvent` | Optimiser | `intent-intelligence-ms` / service-ready path | Optimisation completed and selected resources are available. |
+| `OptimisationStatusChangeEvent` | `intent-callback-ms` | `intent-intelligence-ms` | Approved optimiser outcome callback relayed by ICB MS after durable callback ingestion. |
 | `IntentNetworkReadyEvent` | `intent-intelligence-ms` | `intent-assurance-ms` | Service configuration ready for change execution/apply and observation. |
 | `IntentCallbackEvent` | `intent-callback-ms` | `intent-assurance-ms` | Raw accepted callback fact. |
 | `IntentAssuranceEvent` | `intent-assurance-ms` | `intent-controller-ms` | Assurance/apply/runtime outcome truth for external projection. |

@@ -39,6 +39,7 @@ actor "Specification Owner" as SpecOwner
 actor "Governance Owner" as GovActor
 actor "External Consumer / OEX" as Consumer
 actor "Apply / Orchestration System" as ApplySystem
+actor "Optimiser Platform" as Optimiser
 actor "Platform Administrator" as Admin
 
 package "ID MS" #ffe6cc {
@@ -55,10 +56,11 @@ package "IC MS" #d5e8d4 {
 package "II MS" #dae8fc {
   usecase "Interpret and Resolve Intent" as UC_Interpret
   usecase "Prepare Service-Ready Configuration" as UC_Prepare
+  usecase "Submit Optimisation Request" as UC_Optimise
 }
 
 package "ICB MS" #e1d5e7 {
-  usecase "Ingest External Apply Callback" as UC_Callback
+  usecase "Ingest External Callback" as UC_Callback
 }
 
 package "IA MS" #d5f5e3 {
@@ -72,10 +74,13 @@ Admin       --> UC_Activate
 Consumer    --> UC_Create
 Consumer    --> UC_Terminate
 ApplySystem --> UC_Callback
+Optimiser   --> UC_Callback
 
 UC_Create    ..> UC_Define    : <<include>>
 UC_Interpret ..> UC_Create    : <<include>>
 UC_Prepare   ..> UC_Interpret : <<include>>
+UC_Optimise  ..> UC_Interpret : <<include>>
+UC_Prepare   ..> UC_Optimise  : <<include>>
 UC_Callback  ..> UC_Prepare   : <<include>>
 UC_Assure    ..> UC_Prepare   : <<include>>
 UC_Assure    ..> UC_Callback  : <<include>>
@@ -101,13 +106,25 @@ end note
 
 note bottom of UC_Prepare
   IntentNetworkReadyEvent signals config is ready.
+  It is emitted after II MS has selected or
+  received governed selected configuration.
   Does NOT confirm network apply succeeded.
 end note
 
+note bottom of UC_Optimise
+  II MS submits POST /optimisation and supplies
+  POST /intent-callback/v1/submissions as the
+  optimiser callback URL.
+end note
+
 note bottom of UC_Callback
-  Callback submission uses callbackSource,
-  callbackTimestamp, and sourceState.state.
-  ICB relays raw facts only.
+  Change-execution callbacks use
+  IntentCallbackEventRequest and relay
+  IntentCallbackEvent to IA MS.
+  Optimiser callbacks use
+  OptimisationStatusChangeEventRequest and relay
+  OptimisationStatusChangeEvent to II MS.
+  ICB relays structurally valid facts only.
 end note
 
 note bottom of UC_Project

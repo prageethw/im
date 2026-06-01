@@ -8,7 +8,9 @@ This document defines the current baseline internal event contracts for the Inte
 
 ### Event style
 
-Internal events use CloudEvents-style metadata in transport headers and a plain JSON body. The JSON payload uses a top-level `body` object.
+Internal events use CloudEvents-style metadata in transport headers and a plain JSON payload. Most Intent Enabler internal events use a top-level `body` object.
+
+`OptimisationStatusChangeEvent` is the approved optimiser outcome payload relayed by ICB MS for II MS. It keeps the approved optimiser event payload shape at the payload root and is not converted into the ICB-owned `body` callback fact shape.
 
 Internal events are state/progress/outcome facts, not point-to-point commands for one specific consumer.
 
@@ -113,7 +115,7 @@ content-type: application/json
 | `IntentValidatedEvent` | `intent-controller-ms` | `intent-intelligence-ms` | Runtime Intent passed IC MS admission validation and was admitted into the lifecycle |
 | `IntentRejectedEvent` | `intent-intelligence-ms` | `intent-controller-ms` | Semantic/policy validation rejected the admitted Intent |
 | `IntentResolvedEvent` | `intent-intelligence-ms` | `optimiser-controller-ms` | Intent was semantically resolved into a canonical internal handoff with applicable resources for optimisation |
-| `IntentOptimisedEvent` | `optimiser-controller-ms` | `intent-intelligence-ms` / service-ready preparation path | Optimisation completed and selected resources/outcome are available for service-ready preparation |
+| `OptimisationStatusChangeEvent` | `intent-callback-ms` | `intent-intelligence-ms` | Approved optimiser outcome callback relayed by ICB MS after durable callback ingestion. |
 | `IntentNetworkReadyEvent` | `intent-intelligence-ms` | `intent-assurance-ms` | Optimised resource set has been projected into service configuration ready for change-execution/apply; apply success is not yet confirmed |
 | `IntentAssuranceEvent` | `intent-assurance-ms` | `intent-controller-ms` | Assurance/apply/runtime outcome truth for external Intent and IntentReport projection |
 | `IntentCallbackEvent` | `intent-callback-ms` | `intent-assurance-ms` | Accepted raw callback relayed to the internal event backbone |
@@ -156,11 +158,12 @@ content-type: application/json
 {
   "body": {
     "intentId": "INT-HOSP-2026-001",
-    "version": "v1",
+    "intentVersion": "v1",
     "lifecycleStatus": "Acknowledged",
     "statusReason": "Intent request passed IC MS admission validation and was admitted for downstream processing.",
     "intentSpecification": {
-      "id": "hospital-surgical-slice-spec",
+      "id": "ispec-hss-001",
+      "specKey": "hospital-surgical-slice-spec",
       "version": "1.20"
     },
     "expression": {
@@ -195,9 +198,10 @@ content-type: application/json
         "href": "/intentManagement/v5/intent/INT-HOSP-2026-001"
       },
       "intentSpecification": {
-        "id": "hospital-surgical-slice-spec",
+        "id": "ispec-hss-001",
+        "specKey": "hospital-surgical-slice-spec",
         "version": "1.20",
-        "href": "/intentManagement/v5/intentSpecification/hospital-surgical-slice-spec?version=1.20"
+        "href": "/intentManagement/v5/intentSpecification/ispec-hss-001?version=1.20"
       }
     }
   }
@@ -250,7 +254,7 @@ content-type: application/json
 {
   "body": {
     "intentId": "INT-HOSP-2026-002",
-    "version": "v1",
+    "intentVersion": "v1",
     "lifecycleStatus": "Rejected",
     "reasonCode": "SERVICE_NOT_AVAILABLE",
     "statusReason": "Surgical critical-gold connectivity is not currently available at the requested location.",
@@ -267,9 +271,10 @@ content-type: application/json
         "href": "/intentManagement/v5/intent/INT-HOSP-2026-002"
       },
       "intentSpecification": {
-        "id": "hospital-surgical-slice-spec",
+        "id": "ispec-hss-001",
+        "specKey": "hospital-surgical-slice-spec",
         "version": "1.20",
-        "href": "/intentManagement/v5/intentSpecification/hospital-surgical-slice-spec?version=1.20"
+        "href": "/intentManagement/v5/intentSpecification/ispec-hss-001?version=1.20"
       },
       "knowledgePlane": {
         "configId": "hospital-surgical-slice-kp-v1",
@@ -325,26 +330,32 @@ content-type: application/json
 {
   "body": {
     "intentId": "INT-HOSP-2026-001",
-    "version": "v1",
+    "intentVersion": "v1",
     "lifecycleStatus": "InProgress",
-    "location": {
-      "locationId": "AU-NSW-SYD-HOSP-001",
-      "displayName": "Sydney-Main-Hospital"
-    },
-    "serviceType": "surgical-connectivity",
-    "serviceClass": "critical-gold",
-    "targets": {
-      "maxLatencyMs": 10,
-      "minAvailabilityPercent": 99.99,
-      "maxJitterMs": 2,
-      "maxPacketLossPercent": 0.01
-    },
-    "constraints": {
-      "priority": "critical",
-      "redundancyRequired": true
-    },
-    "preferences": {
-      "preferredAccessTechnology": "5G"
+    "statusReason": "Intent has been semantically resolved into candidate resources for optimisation.",
+    "expression": {
+      "iri": "https://mycsp.com.au/tio/hospital-surgical-slice/v1.0",
+      "context": {
+        "targets": {
+          "maxLatencyMs": 10,
+          "minAvailabilityPercent": 99.99,
+          "maxJitterMs": 2,
+          "maxPacketLossPercent": 0.01
+        },
+        "constraints": {
+          "location": {
+            "locationId": "AU-NSW-SYD-HOSP-001",
+            "displayName": "Sydney-Main-Hospital"
+          },
+          "serviceType": "surgical-connectivity",
+          "serviceClass": "critical-gold",
+          "priority": "critical",
+          "redundancyRequired": true
+        },
+        "preferences": {
+          "preferredAccessTechnology": "5G"
+        }
+      }
     },
     "references": {
       "correlationId": "corr-intent-create-001",
@@ -353,9 +364,10 @@ content-type: application/json
         "href": "/intentManagement/v5/intent/INT-HOSP-2026-001"
       },
       "intentSpecification": {
-        "id": "hospital-surgical-slice-spec",
+        "id": "ispec-hss-001",
+        "specKey": "hospital-surgical-slice-spec",
         "version": "1.20",
-        "href": "/intentManagement/v5/intentSpecification/hospital-surgical-slice-spec?version=1.20"
+        "href": "/intentManagement/v5/intentSpecification/ispec-hss-001?version=1.20"
       },
       "knowledgePlane": {
         "configId": "hospital-surgical-slice-kp-v1",
@@ -363,82 +375,10 @@ content-type: application/json
       }
     },
     "resources": [
-      {
-        "resourceId": "SYD-PRI-01",
-        "resourceType": "deliveryResource",
-        "resourceClass": "critical-gold",
-        "roles": ["primary"],
-        "accessTechnology": "fibre",
-        "metrics": {
-          "latencyMs": 7,
-          "availabilityPercent": 99.996,
-          "jitterMs": 1.1,
-          "packetLossPercent": 0.004
-        },
-        "relationships": [
-          {
-            "type": "pairedSecondary",
-            "resourceId": "SYD-SEC-01"
-          }
-        ]
-      },
-      {
-        "resourceId": "SYD-PRI-02",
-        "resourceType": "deliveryResource",
-        "resourceClass": "critical-gold",
-        "roles": ["primary"],
-        "accessTechnology": "5G",
-        "metrics": {
-          "latencyMs": 8,
-          "availabilityPercent": 99.995,
-          "jitterMs": 1.5,
-          "packetLossPercent": 0.005
-        },
-        "relationships": [
-          {
-            "type": "pairedSecondary",
-            "resourceId": "SYD-SEC-02"
-          }
-        ]
-      },
-      {
-        "resourceId": "SYD-SEC-01",
-        "resourceType": "deliveryResource",
-        "resourceClass": "critical-gold",
-        "roles": ["secondary"],
-        "accessTechnology": "5G",
-        "metrics": {
-          "latencyMs": 10,
-          "availabilityPercent": 99.994,
-          "jitterMs": 1.8,
-          "packetLossPercent": 0.006
-        },
-        "relationships": [
-          {
-            "type": "protects",
-            "resourceId": "SYD-PRI-01"
-          }
-        ]
-      },
-      {
-        "resourceId": "SYD-SEC-02",
-        "resourceType": "deliveryResource",
-        "resourceClass": "critical-gold",
-        "roles": ["secondary"],
-        "accessTechnology": "fibre",
-        "metrics": {
-          "latencyMs": 9,
-          "availabilityPercent": 99.997,
-          "jitterMs": 1.2,
-          "packetLossPercent": 0.003
-        },
-        "relationships": [
-          {
-            "type": "protects",
-            "resourceId": "SYD-PRI-02"
-          }
-        ]
-      }
+      {"resourceId": "SYD-PRI-01", "resourceType": "deliveryResource", "resourceClass": "critical-gold", "roles": ["primary"], "accessTechnology": "fibre", "metrics": {"latencyMs": 7, "availabilityPercent": 99.996, "jitterMs": 1.1, "packetLossPercent": 0.004}, "relationships": [{"type": "pairedSecondary", "resourceId": "SYD-SEC-01"}]},
+      {"resourceId": "SYD-PRI-02", "resourceType": "deliveryResource", "resourceClass": "critical-gold", "roles": ["primary"], "accessTechnology": "5G", "metrics": {"latencyMs": 8, "availabilityPercent": 99.995, "jitterMs": 1.5, "packetLossPercent": 0.005}, "relationships": [{"type": "pairedSecondary", "resourceId": "SYD-SEC-02"}]},
+      {"resourceId": "SYD-SEC-01", "resourceType": "deliveryResource", "resourceClass": "critical-gold", "roles": ["secondary"], "accessTechnology": "5G", "metrics": {"latencyMs": 10, "availabilityPercent": 99.994, "jitterMs": 1.8, "packetLossPercent": 0.006}, "relationships": [{"type": "protects", "resourceId": "SYD-PRI-01"}]},
+      {"resourceId": "SYD-SEC-02", "resourceType": "deliveryResource", "resourceClass": "critical-gold", "roles": ["secondary"], "accessTechnology": "fibre", "metrics": {"latencyMs": 9, "availabilityPercent": 99.997, "jitterMs": 1.2, "packetLossPercent": 0.003}, "relationships": [{"type": "protects", "resourceId": "SYD-PRI-02"}]}
     ]
   }
 }
@@ -453,238 +393,132 @@ content-type: application/json
 - Use `expression.context.preferences` for soft selection guidance such as `preferredAccessTechnology`.
 - Do not include direct top-level `priority`, `preferredAccessTechnology`, or `redundancyRequired`; place them under `expression.context.constraints` or `expression.context.preferences`.
 - Do not include `capabilityStatus`; successful `IntentResolvedEvent` emission implies semantic/capability resolution succeeded.
-- `IntentResolvedEvent.resources[]` contains all applicable/applyable resources for the resolved location/service that the optimiser may consider, not a shortened selected list.
+- `IntentResolvedEvent.resources[]` contains all applicable/apply-capable resources for the resolved location/service that the optimiser may consider, not a shortened selected list.
 - `IntentResolvedEvent.resources[].metrics` carries neutral metric values using names such as `latencyMs`, `availabilityPercent`, `jitterMs`, and `packetLossPercent`.
 
-## IntentOptimisedEvent
+
+## OptimisationStatusChangeEvent
 
 ### Producer
 
 ```text
-optimiser-controller-ms
+intent-callback-ms
 ```
 
 ### Current primary consumer
 
 ```text
-intent-intelligence-ms / service-ready preparation path
+intent-intelligence-ms
 ```
 
 ### Meaning
 
-Optimisation completed and selected resources/outcome are available for II MS to prepare the service-ready configuration for downstream change-execution/apply and assurance setup.
+`OptimisationStatusChangeEvent` is the approved optimiser outcome event relayed by ICB MS after the Optimiser platform submits `OptimisationStatusChangeEventRequest` to `POST /intent-callback/v1/submissions`. ICB MS validates the payload structurally, persists it through the callback outbox, and publishes the event to the main internal intent event topic. II MS owns optimiser outcome correlation, interpretation, and selected-configuration packaging.
+
+### Topic
+
+```text
+t7.intent.management.events
+```
 
 ### Example headers
 
 ```http
 ce-specversion: 1.0
-ce-type: IntentOptimisedEvent
-ce-source: optimiser-controller-ms
-ce-id: evt-intent-optimised-001
-ce-time: 2026-04-18T12:05:00+10:00
+ce-type: OptimisationStatusChangeEvent
+ce-source: intent-callback-ms
+ce-id: evt-optimisation-status-001
+ce-time: 2026-04-18T12:03:30+10:00
 ce-subject: INT-HOSP-2026-001
 content-type: application/json
+x-correlation-id: corr-intent-create-001
 ```
 
-### Example body
+### Example payload
 
 ```json
 {
-  "body": {
-    "intentId": "INT-HOSP-2026-001",
-    "version": "v1",
-    "location": {
-      "locationId": "AU-NSW-SYD-HOSP-001",
-      "displayName": "Sydney-Main-Hospital"
-    },
-    "serviceType": "surgical-connectivity",
-    "serviceClass": "critical-gold",
-    "resources": [
-      {
-        "resourceId": "SYD-PRI-01",
-        "roles": ["primary"],
-        "resourceType": "deliveryResource",
-        "resourceClass": "critical-gold",
-        "accessTechnology": "fibre",
-        "metrics": {
-          "latencyMs": 7,
-          "availabilityPercent": 99.996,
-          "jitterMs": 1.1,
-          "packetLossPercent": 0.004
+  "eventType": "OptimisationStatusChangeEvent",
+  "eventTime": "2026-04-18T12:03:30+10:00",
+  "timeOccurred": "2026-04-18T12:03:30+10:00",
+  "event": {
+    "optimisation": {
+      "id": "opt-hss-2026-001",
+      "href": "/optimisation/opt-hss-2026-001",
+      "previousLifecycleStatus": "PROCESSING",
+      "newLifecycleStatus": "COMPLETED",
+      "sourceContext": {
+        "domain": "intent-management",
+        "resource": {
+          "id": "INT-HOSP-2026-001",
+          "href": "/intentManagement/v5/intent/INT-HOSP-2026-001",
+          "@type": "IntentRef",
+          "@referredType": "Intent"
+        },
+        "correlationId": "corr-intent-create-001",
+        "intentVersion": "v1"
+      },
+      "resultSummary": {
+        "outcome": "COMPLETED",
+        "summary": "Optimisation completed successfully."
+      },
+      "selectedConfiguration": {
+        "orchestratorConfiguration": {
+          "target": "t7-network-orchestrator",
+          "profile": "hospital-surgical-slice-apply-v1",
+          "resources": [
+            {
+              "resourceId": "SYD-PRI-01",
+              "resourceType": "deliveryResource",
+              "resourceClass": "critical-gold",
+              "roles": ["primary"],
+              "accessTechnology": "fibre",
+              "relationships": [
+                {
+                  "type": "pairedSecondary",
+                  "resourceId": "SYD-SEC-01"
+                }
+              ]
+            },
+            {
+              "resourceId": "SYD-SEC-01",
+              "resourceType": "deliveryResource",
+              "resourceClass": "critical-gold",
+              "roles": ["secondary"],
+              "accessTechnology": "5G",
+              "relationships": [
+                {
+                  "type": "protects",
+                  "resourceId": "SYD-PRI-01"
+                }
+              ]
+            }
+          ]
+        },
+        "observerConfiguration": {
+          "target": "t7-observability-platform",
+          "profile": "critical-gold-assurance-observation-v1",
+          "resources": [
+            {"resourceId": "SYD-PRI-01", "resourceType": "deliveryResource", "resourceClass": "critical-gold", "roles": ["primary"], "metrics": ["latencyMs", "availabilityPercent", "jitterMs", "packetLossPercent"]},
+            {"resourceId": "SYD-PRI-02", "resourceType": "deliveryResource", "resourceClass": "critical-gold", "roles": ["primary"], "metrics": ["latencyMs", "availabilityPercent", "jitterMs", "packetLossPercent"]},
+            {"resourceId": "SYD-SEC-01", "resourceType": "deliveryResource", "resourceClass": "critical-gold", "roles": ["secondary"], "metrics": ["latencyMs", "availabilityPercent", "jitterMs", "packetLossPercent"]},
+            {"resourceId": "SYD-SEC-02", "resourceType": "deliveryResource", "resourceClass": "critical-gold", "roles": ["secondary"], "metrics": ["latencyMs", "availabilityPercent", "jitterMs", "packetLossPercent"]}
+          ]
         }
-      },
-      {
-        "resourceId": "SYD-SEC-01",
-        "roles": ["secondary"],
-        "resourceType": "deliveryResource",
-        "resourceClass": "critical-gold",
-        "accessTechnology": "5G",
-        "metrics": {
-          "latencyMs": 10,
-          "availabilityPercent": 99.994,
-          "jitterMs": 1.8,
-          "packetLossPercent": 0.006
-        }
-      }
-    ],
-    "optimisationRun": {
-      "status": "COMPLETED",
-      "statusReason": "Optimisation completed and selected a feasible primary/secondary resource set."
-    },
-    "targets": [
-      {
-        "name": "latency",
-        "status": "COMPLETED",
-        "target": 10,
-        "value": 7,
-        "unit": "ms"
-      },
-      {
-        "name": "availability",
-        "status": "COMPLETED",
-        "target": 99.99,
-        "value": 99.996,
-        "unit": "percent"
-      },
-      {
-        "name": "jitter",
-        "status": "COMPLETED",
-        "target": 2,
-        "value": 1.1,
-        "unit": "ms"
-      },
-      {
-        "name": "packetLoss",
-        "status": "COMPLETED",
-        "target": 0.01,
-        "value": 0.004,
-        "unit": "percent"
-      }
-    ],
-    "constraints": [
-      {
-        "name": "priority",
-        "status": "COMPLETED",
-        "statusReason": "Critical priority was accepted as an optimisation constraint."
-      },
-      {
-        "name": "redundancyRequired",
-        "status": "COMPLETED",
-        "statusReason": "Selected resources include primary and secondary roles."
-      }
-    ],
-    "preferences": [
-      {
-        "name": "preferredAccessTechnology",
-        "status": "COMPLETED",
-        "statusReason": "Selected secondary resource uses preferred access technology."
-      }
-    ],
-    "references": {
-      "correlationId": "corr-intent-create-001",
-      "intent": {
-        "id": "INT-HOSP-2026-001",
-        "href": "/intentManagement/v5/intent/INT-HOSP-2026-001"
-      },
-      "intentSpecification": {
-        "id": "hospital-surgical-slice-spec",
-        "version": "1.20",
-        "href": "/intentManagement/v5/intentSpecification/hospital-surgical-slice-spec?version=1.20"
-      },
-      "knowledgePlane": {
-        "configId": "hospital-surgical-slice-kp-v1",
-        "version": "1.0"
       }
     }
-  }
-}
-```
-
-### Infeasible optimisation example
-
-```json
-{
-  "body": {
-    "intentId": "INT-HOSP-2026-001",
-    "version": "v1",
-    "location": {
-      "locationId": "AU-NSW-SYD-HOSP-001",
-      "displayName": "Sydney-Main-Hospital"
-    },
-    "serviceType": "surgical-connectivity",
-    "serviceClass": "critical-gold",
-    "optimisationRun": {
-      "status": "INFEASIBLE",
-      "statusReason": "No resource set could satisfy all required targets and constraints."
-    },
-    "targets": [
-      {
-        "name": "latency",
-        "status": "INFEASIBLE",
-        "target": 10,
-        "bestValue": 18,
-        "unit": "ms",
-        "reasonCode": "OPTIMISATION_LATENCY_UNSATISFIABLE"
-      },
-      {
-        "name": "availability",
-        "status": "COMPLETED",
-        "target": 99.99,
-        "bestValue": 99.995,
-        "unit": "percent"
-      }
-    ],
-    "constraints": [
-      {
-        "name": "priority",
-        "status": "COMPLETED",
-        "statusReason": "Critical priority was accepted as an optimisation constraint."
-      },
-      {
-        "name": "redundancyRequired",
-        "status": "INFEASIBLE",
-        "statusReason": "No feasible primary/secondary resource set could satisfy the resolved targets."
-      }
-    ],
-    "preferences": [
-      {
-        "name": "preferredAccessTechnology",
-        "status": "COMPLETED",
-        "statusReason": "Preferred access technology was considered during infeasibility analysis."
-      }
-    ],
-    "references": {
-      "correlationId": "corr-intent-create-001",
-      "intent": {
-        "id": "INT-HOSP-2026-001",
-        "href": "/intentManagement/v5/intent/INT-HOSP-2026-001"
-      },
-      "intentSpecification": {
-        "id": "hospital-surgical-slice-spec",
-        "version": "1.20",
-        "href": "/intentManagement/v5/intentSpecification/hospital-surgical-slice-spec?version=1.20"
-      },
-      "knowledgePlane": {
-        "configId": "hospital-surgical-slice-kp-v1",
-        "version": "1.0"
-      }
-    }
-  }
+  },
+  "@type": "OptimisationStatusChangeEvent"
 }
 ```
 
 ### Event-specific rules
 
-- Use direct `location`, `serviceType`, and `serviceClass` fields; do not wrap them in `context` or `serviceContext`.
-- Use `resources` for optimiser-selected resources.
-- Use optimiser statuses such as `COMPLETED`, `INFEASIBLE`, and `FAILED`.
-- Use `targets`, `constraints`, and `preferences` in `IntentOptimisedEvent` as evaluated outcome buckets.
-- The event type and `optimisationRun.status` make clear that these buckets are optimisation results, not raw input.
-- Use neutral value comparison fields such as `target`, `value`, `bestValue`, and `observedValue` for measurable target evaluations.
-- For boolean/string constraints and preferences, use `name`, `status`, and `statusReason` unless the actual comparison value adds meaningful diagnostic value.
-- Do not use `targetEvaluations`, `constraintEvaluations`, `preferenceEvaluations`, or `contextEvaluations` by default.
-- Do not include optimiser objective/rule configuration in the event; optimiser owns that internally.
-- Do not send `IntentOptimisedEvent` directly to IA MS as an IA input; II MS consumes it and emits `IntentNetworkReadyEvent` after service-ready preparation.
+- `OptimisationStatusChangeEvent` is structurally relayed by ICB MS and consumed by II MS.
+- ICB MS does not interpret optimiser status, selected configuration, feasibility, or service meaning.
+- II MS owns correlation to the submitted `POST /optimisation` request and packaging of the selected configuration into `IntentNetworkReadyEvent`.
+- This event is not converted into the ICB-owned `body` callback fact shape used by `IntentCallbackEvent`.
+
 
 ## IntentNetworkReadyEvent
 
@@ -724,79 +558,49 @@ content-type: application/json
 {
   "body": {
     "intentId": "INT-HOSP-2026-001",
-    "version": "v1",
+    "intentVersion": "v1",
     "lifecycleStatus": "InProgress",
     "statusReason": "Service configuration has been prepared for change-execution/apply.",
-    "location": {
-      "locationId": "AU-NSW-SYD-HOSP-001",
-      "displayName": "Sydney-Main-Hospital"
+    "expression": {
+      "iri": "https://mycsp.com.au/tio/hospital-surgical-slice/v1.0",
+      "context": {
+        "targets": {
+          "maxLatencyMs": 10,
+          "minAvailabilityPercent": 99.99,
+          "maxJitterMs": 2,
+          "maxPacketLossPercent": 0.01
+        },
+        "constraints": {
+          "location": {"locationId": "AU-NSW-SYD-HOSP-001", "displayName": "Sydney-Main-Hospital"},
+          "serviceType": "surgical-connectivity",
+          "serviceClass": "critical-gold",
+          "priority": "critical",
+          "redundancyRequired": true
+        },
+        "preferences": {"preferredAccessTechnology": "5G"}
+      }
     },
-    "serviceType": "surgical-connectivity",
-    "serviceClass": "critical-gold",
     "serviceConfiguration": {
       "orchestratorConfiguration": {
         "target": "t7-network-orchestrator",
         "profile": "hospital-surgical-slice-apply-v1",
         "resources": [
-          {
-            "resourceId": "SYD-PRI-01",
-            "resourceType": "deliveryResource",
-            "resourceClass": "critical-gold",
-            "roles": ["primary"],
-            "accessTechnology": "fibre"
-          },
-          {
-            "resourceId": "SYD-SEC-01",
-            "resourceType": "deliveryResource",
-            "resourceClass": "critical-gold",
-            "roles": ["secondary"],
-            "accessTechnology": "5G"
-          }
+          {"resourceId": "SYD-PRI-01", "resourceType": "deliveryResource", "resourceClass": "critical-gold", "roles": ["primary"], "accessTechnology": "fibre", "relationships": [{"type": "pairedSecondary", "resourceId": "SYD-SEC-01"}]},
+          {"resourceId": "SYD-SEC-01", "resourceType": "deliveryResource", "resourceClass": "critical-gold", "roles": ["secondary"], "accessTechnology": "5G", "relationships": [{"type": "protects", "resourceId": "SYD-PRI-01"}]}
         ]
       },
       "observerConfiguration": {
         "target": "t7-observability-platform",
         "profile": "critical-gold-assurance-observation-v1",
         "resources": [
-          {
-            "resourceId": "SYD-PRI-01",
-            "roles": ["primary"],
-            "metrics": ["latencyMs", "availabilityPercent", "jitterMs", "packetLossPercent"]
-          },
-          {
-            "resourceId": "SYD-PRI-02",
-            "roles": ["primary"],
-            "metrics": ["latencyMs", "availabilityPercent", "jitterMs", "packetLossPercent"]
-          },
-          {
-            "resourceId": "SYD-SEC-01",
-            "roles": ["secondary"],
-            "metrics": ["latencyMs", "availabilityPercent", "jitterMs", "packetLossPercent"]
-          },
-          {
-            "resourceId": "SYD-SEC-02",
-            "roles": ["secondary"],
-            "metrics": ["latencyMs", "availabilityPercent", "jitterMs", "packetLossPercent"]
-          }
+          {"resourceId": "SYD-PRI-01", "resourceType": "deliveryResource", "resourceClass": "critical-gold", "roles": ["primary"], "metrics": ["latencyMs", "availabilityPercent", "jitterMs", "packetLossPercent"]},
+          {"resourceId": "SYD-PRI-02", "resourceType": "deliveryResource", "resourceClass": "critical-gold", "roles": ["primary"], "metrics": ["latencyMs", "availabilityPercent", "jitterMs", "packetLossPercent"]},
+          {"resourceId": "SYD-SEC-01", "resourceType": "deliveryResource", "resourceClass": "critical-gold", "roles": ["secondary"], "metrics": ["latencyMs", "availabilityPercent", "jitterMs", "packetLossPercent"]},
+          {"resourceId": "SYD-SEC-02", "resourceType": "deliveryResource", "resourceClass": "critical-gold", "roles": ["secondary"], "metrics": ["latencyMs", "availabilityPercent", "jitterMs", "packetLossPercent"]}
         ]
       }
     },
-    "references": {
-      "correlationId": "corr-intent-create-001",
-      "intent": {
-        "id": "INT-HOSP-2026-001",
-        "href": "/intentManagement/v5/intent/INT-HOSP-2026-001"
-      },
-      "intentSpecification": {
-        "id": "hospital-surgical-slice-spec",
-        "version": "1.20",
-        "href": "/intentManagement/v5/intentSpecification/hospital-surgical-slice-spec?version=1.20"
-      },
-      "knowledgePlane": {
-        "configId": "hospital-surgical-slice-kp-v1",
-        "version": "1.0"
-      }
-    }
+    "references": {"correlationId": "corr-intent-create-001", "intent": {"id": "INT-HOSP-2026-001", "href": "/intentManagement/v5/intent/INT-HOSP-2026-001"}, "intentSpecification": {"id": "ispec-hss-001", "specKey": "hospital-surgical-slice-spec", "version": "1.20", "href": "/intentManagement/v5/intentSpecification/ispec-hss-001?version=1.20"}, "knowledgePlane": {"configId": "hospital-surgical-slice-kp-v1", "version": "1.0"}}
   }
 }
 ```
@@ -804,7 +608,7 @@ content-type: application/json
 ### Event-specific rules
 
 - `IntentNetworkReadyEvent` means service configuration is ready for change-execution/apply, not that apply has succeeded.
-- Use direct `location`, `serviceType`, and `serviceClass` fields; do not wrap them in `context` or `serviceContext`.
+- Preserve resolved context under `body.expression.context`; do not flatten `location`, `serviceType`, `serviceClass`, `targets`, `constraints`, or `preferences` as top-level fields.
 - Use `serviceConfiguration` because the event carries the service apply and observation plan rather than low-level network configuration.
 - Use `serviceConfiguration.orchestratorConfiguration` for apply/change-execution details.
 - Use `serviceConfiguration.observerConfiguration` for assurance/monitoring details.
@@ -841,85 +645,22 @@ IA MS reports curated assurance/apply/runtime outcome truth. IC MS consumes this
 {
   "body": {
     "intentId": "INT-HOSP-2026-001",
-    "version": "v1",
+    "intentVersion": "v1",
     "lifecycleStatus": "Active",
     "statusReason": "All observed resources in the assurance scope are operating within resolved runtime targets.",
-    "location": {
-      "locationId": "AU-NSW-SYD-HOSP-001",
-      "displayName": "Sydney-Main-Hospital"
-    },
-    "serviceType": "surgical-connectivity",
-    "serviceClass": "critical-gold",
-    "targets": {
-      "maxLatencyMs": 10,
-      "minAvailabilityPercent": 99.99,
-      "maxJitterMs": 2,
-      "maxPacketLossPercent": 0.01
+    "expression": {
+      "context": {
+        "targets": {"maxLatencyMs": 10, "minAvailabilityPercent": 99.99, "maxJitterMs": 2, "maxPacketLossPercent": 0.01},
+        "constraints": {"location": {"locationId": "AU-NSW-SYD-HOSP-001", "displayName": "Sydney-Main-Hospital"}, "serviceType": "surgical-connectivity", "serviceClass": "critical-gold", "priority": "critical", "redundancyRequired": true},
+        "preferences": {"preferredAccessTechnology": "5G"}
+      }
     },
     "current": {
       "resources": [
-        {
-          "resourceId": "SYD-PRI-01",
-          "resourceType": "deliveryResource",
-          "resourceClass": "critical-gold",
-          "roles": ["primary"],
-          "metrics": {
-            "latencyMs": 8,
-            "availabilityPercent": 99.995,
-            "jitterMs": 1.5,
-            "packetLossPercent": 0.005
-          }
-        },
-        {
-          "resourceId": "SYD-PRI-02",
-          "resourceType": "deliveryResource",
-          "resourceClass": "critical-gold",
-          "roles": ["primary"],
-          "metrics": {
-            "latencyMs": 9,
-            "availabilityPercent": 99.996,
-            "jitterMs": 1.4,
-            "packetLossPercent": 0.004
-          }
-        },
-        {
-          "resourceId": "SYD-SEC-01",
-          "resourceType": "deliveryResource",
-          "resourceClass": "critical-gold",
-          "roles": ["secondary"],
-          "metrics": {
-            "latencyMs": 10,
-            "availabilityPercent": 99.994,
-            "jitterMs": 1.8,
-            "packetLossPercent": 0.006
-          }
-        },
-        {
-          "resourceId": "SYD-SEC-02",
-          "resourceType": "deliveryResource",
-          "resourceClass": "critical-gold",
-          "roles": ["secondary"],
-          "metrics": {
-            "latencyMs": 9,
-            "availabilityPercent": 99.997,
-            "jitterMs": 1.2,
-            "packetLossPercent": 0.003
-          }
-        }
+        {"resourceId": "SYD-PRI-01", "resourceType": "deliveryResource", "resourceClass": "critical-gold", "roles": ["primary"], "metrics": {"latencyMs": 8, "availabilityPercent": 99.995, "jitterMs": 1.5, "packetLossPercent": 0.005}}
       ]
     },
-    "references": {
-      "correlationId": "corr-intent-assurance-001",
-      "intent": {
-        "id": "INT-HOSP-2026-001",
-        "href": "/intentManagement/v5/intent/INT-HOSP-2026-001"
-      },
-      "intentSpecification": {
-        "id": "hospital-surgical-slice-spec",
-        "version": "1.20",
-        "href": "/intentManagement/v5/intentSpecification/hospital-surgical-slice-spec?version=1.20"
-      }
-    }
+    "references": {"correlationId": "corr-intent-assurance-001", "intent": {"id": "INT-HOSP-2026-001", "href": "/intentManagement/v5/intent/INT-HOSP-2026-001"}, "intentSpecification": {"id": "ispec-hss-001", "specKey": "hospital-surgical-slice-spec", "version": "1.20", "href": "/intentManagement/v5/intentSpecification/ispec-hss-001?version=1.20"}}
   }
 }
 ```
@@ -930,94 +671,31 @@ IA MS reports curated assurance/apply/runtime outcome truth. IC MS consumes this
 {
   "body": {
     "intentId": "INT-HOSP-2026-001",
-    "version": "v1",
+    "intentVersion": "v1",
     "lifecycleStatus": "Degraded",
     "statusReason": "Observed latency on one primary delivery resource is above the resolved target threshold.",
-    "location": {
-      "locationId": "AU-NSW-SYD-HOSP-001",
-      "displayName": "Sydney-Main-Hospital"
-    },
-    "serviceType": "surgical-connectivity",
-    "serviceClass": "critical-gold",
-    "targets": {
-      "maxLatencyMs": 10,
-      "minAvailabilityPercent": 99.99,
-      "maxJitterMs": 2,
-      "maxPacketLossPercent": 0.01
+    "expression": {
+      "context": {
+        "targets": {"maxLatencyMs": 10, "minAvailabilityPercent": 99.99, "maxJitterMs": 2, "maxPacketLossPercent": 0.01},
+        "constraints": {"location": {"locationId": "AU-NSW-SYD-HOSP-001", "displayName": "Sydney-Main-Hospital"}, "serviceType": "surgical-connectivity", "serviceClass": "critical-gold", "priority": "critical", "redundancyRequired": true},
+        "preferences": {"preferredAccessTechnology": "5G"}
+      }
     },
     "current": {
       "resources": [
-        {
-          "resourceId": "SYD-PRI-01",
-          "resourceType": "deliveryResource",
-          "resourceClass": "critical-gold",
-          "roles": ["primary"],
-          "metrics": {
-            "latencyMs": 18,
-            "availabilityPercent": 99.992,
-            "jitterMs": 1.8,
-            "packetLossPercent": 0.006
-          }
-        },
-        {
-          "resourceId": "SYD-PRI-02",
-          "resourceType": "deliveryResource",
-          "resourceClass": "critical-gold",
-          "roles": ["primary"],
-          "metrics": {
-            "latencyMs": 9,
-            "availabilityPercent": 99.996,
-            "jitterMs": 1.4,
-            "packetLossPercent": 0.004
-          }
-        },
-        {
-          "resourceId": "SYD-SEC-01",
-          "resourceType": "deliveryResource",
-          "resourceClass": "critical-gold",
-          "roles": ["secondary"],
-          "metrics": {
-            "latencyMs": 12,
-            "availabilityPercent": 99.994,
-            "jitterMs": 1.8,
-            "packetLossPercent": 0.006
-          }
-        },
-        {
-          "resourceId": "SYD-SEC-02",
-          "resourceType": "deliveryResource",
-          "resourceClass": "critical-gold",
-          "roles": ["secondary"],
-          "metrics": {
-            "latencyMs": 9,
-            "availabilityPercent": 99.997,
-            "jitterMs": 1.2,
-            "packetLossPercent": 0.003
-          }
-        }
+        {"resourceId": "SYD-PRI-01", "resourceType": "deliveryResource", "resourceClass": "critical-gold", "roles": ["primary"], "metrics": {"latencyMs": 18, "availabilityPercent": 99.995, "jitterMs": 1.5, "packetLossPercent": 0.005}}
       ]
     },
-    "references": {
-      "correlationId": "corr-intent-assurance-002",
-      "intent": {
-        "id": "INT-HOSP-2026-001",
-        "href": "/intentManagement/v5/intent/INT-HOSP-2026-001"
-      },
-      "intentSpecification": {
-        "id": "hospital-surgical-slice-spec",
-        "version": "1.20",
-        "href": "/intentManagement/v5/intentSpecification/hospital-surgical-slice-spec?version=1.20"
-      }
-    }
+    "references": {"correlationId": "corr-intent-assurance-002", "intent": {"id": "INT-HOSP-2026-001", "href": "/intentManagement/v5/intent/INT-HOSP-2026-001"}, "intentSpecification": {"id": "ispec-hss-001", "specKey": "hospital-surgical-slice-spec", "version": "1.20", "href": "/intentManagement/v5/intentSpecification/ispec-hss-001?version=1.20"}}
   }
 }
 ```
 
 ### Event-specific rules
 
-- Use direct `location`, `serviceType`, and `serviceClass` fields; do not wrap them in `context` or `serviceContext`.
-- Include `targets` so control-loop consumers know which runtime objectives the observed metrics relate to.
-- Do not include `constraints` or `preferences` in assurance by default unless a future control-loop consumer explicitly needs them.
+- Preserve resolved context under `body.expression.context`; do not flatten `location`, `serviceType`, `serviceClass`, `targets`, `constraints`, or `preferences` as top-level fields.
+- Include resolved targets under `body.expression.context.targets` so control-loop consumers know which runtime objectives the observed metrics relate to.
+- Preserve `constraints` and `preferences` under `body.expression.context` where useful for downstream decisions.
 - Do not include `assuranceStatus` or `selectionStatus` by default; `lifecycleStatus` carries the assurance outcome.
 - Use `current.resources[]` for the full observed resource/path set within assurance scope.
 - `current.resources[]` mirrors the observer scope received from `IntentNetworkReadyEvent.serviceConfiguration.observerConfiguration.resources[]`.
