@@ -499,7 +499,7 @@ Do not include `current.evaluations` or `body.evaluations` by default.
           "relationships": [
             {
               "type": "pairedSecondary",
-              "targetResourceId": "SYD-SEC-01"
+              "resourceId": "SYD-SEC-01"
             }
           ],
           "metrics": {
@@ -516,11 +516,11 @@ Do not include `current.evaluations` or `body.evaluations` by default.
           ],
           "resourceType": "deliveryResource",
           "resourceClass": "critical-gold",
-          "accessTechnology": "fibre",
+          "accessTechnology": "5G",
           "relationships": [
             {
               "type": "pairedSecondary",
-              "targetResourceId": "SYD-SEC-02"
+              "resourceId": "SYD-SEC-02"
             }
           ],
           "metrics": {
@@ -541,7 +541,7 @@ Do not include `current.evaluations` or `body.evaluations` by default.
           "relationships": [
             {
               "type": "alternativeTo",
-              "targetResourceId": "SYD-PRI-01"
+              "resourceId": "SYD-PRI-01"
             }
           ],
           "metrics": {
@@ -562,7 +562,7 @@ Do not include `current.evaluations` or `body.evaluations` by default.
           "relationships": [
             {
               "type": "alternativeTo",
-              "targetResourceId": "SYD-PRI-02"
+              "resourceId": "SYD-PRI-02"
             }
           ],
           "metrics": {
@@ -640,7 +640,7 @@ This shape lets II MS or another authorised decision component inspect the affec
           "relationships": [
             {
               "type": "pairedSecondary",
-              "targetResourceId": "SYD-SEC-01"
+              "resourceId": "SYD-SEC-01"
             }
           ],
           "metrics": {
@@ -657,11 +657,11 @@ This shape lets II MS or another authorised decision component inspect the affec
           ],
           "resourceType": "deliveryResource",
           "resourceClass": "critical-gold",
-          "accessTechnology": "fibre",
+          "accessTechnology": "5G",
           "relationships": [
             {
               "type": "pairedSecondary",
-              "targetResourceId": "SYD-SEC-02"
+              "resourceId": "SYD-SEC-02"
             }
           ],
           "metrics": {
@@ -682,7 +682,7 @@ This shape lets II MS or another authorised decision component inspect the affec
           "relationships": [
             {
               "type": "alternativeTo",
-              "targetResourceId": "SYD-PRI-01"
+              "resourceId": "SYD-PRI-01"
             }
           ],
           "metrics": {
@@ -703,7 +703,7 @@ This shape lets II MS or another authorised decision component inspect the affec
           "relationships": [
             {
               "type": "alternativeTo",
-              "targetResourceId": "SYD-PRI-02"
+              "resourceId": "SYD-PRI-02"
             }
           ],
           "metrics": {

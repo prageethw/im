@@ -196,7 +196,7 @@ Required handling fields:
 
 | Field / area | IA MS usage |
 |---|---|
-| `body.callbackId` | ICB callback submission/outbox identifier. |
+| `body.callbackId` | Optional ICB callback submission/outbox identifier where supplied. |
 | `body.intentId` | Primary IA correlation key. |
 | `body.callbackSource` | Raw source system identity supplied by ICB MS. |
 | `body.callbackTimestamp` | Source callback timestamp. |
@@ -335,7 +335,7 @@ Example active/degraded style payload:
           "relationships": [
             {
               "type": "pairedSecondary",
-              "targetResourceId": "SYD-SEC-01"
+              "resourceId": "SYD-SEC-01"
             }
           ],
           "metrics": {
@@ -485,12 +485,17 @@ The active IA event message shape is:
     "intentVersion": "...",
     "lifecycleStatus": "Active | Degraded | Failed | InProgress | Terminated",
     "statusReason": "...",
-    "location": {},
-    "serviceType": "...",
-    "serviceClass": "...",
-    "targets": {},
-    "constraints": {},
-    "preferences": {},
+    "expression": {
+      "context": {
+        "targets": {},
+        "constraints": {
+          "location": {},
+          "serviceType": "...",
+          "serviceClass": "..."
+        },
+        "preferences": {}
+      }
+    },
     "current": {
       "resources": []
     },
@@ -558,7 +563,7 @@ Other authorised internal decision components may consume `IntentAssuranceEvent`
 | Exact observation endpoint API contract | The solution brief assumes logical observation endpoint facts; the concrete endpoint API remains environment/platform specific. |
 | Dead-letter storage and replay implementation detail | DLQ handling is required as a minimum baseline; the exact storage/topic and replay runbook remain an implementation detail aligned to platform policy. |
 | Mapping policy ownership detail | IA owns mapping execution; final operational governance for mapping config should remain aligned with platform configuration management. |
-| Event example harmonisation | IA design brief and internal events baseline are metrics-first; older examples that show extra candidates/evaluations/benchmark wrappers should be treated as non-current until refreshed. |
+| Event example harmonisation | Closed for the active IA baseline. Future example changes must preserve the metrics-first `IntentAssuranceEvent` shape and must not reintroduce candidates, evaluations, benchmark wrappers, or `requiresReoptimisation` by default. |
 
 ## 25. Closed items:
 
