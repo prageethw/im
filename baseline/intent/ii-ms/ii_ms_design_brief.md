@@ -17,6 +17,7 @@
 - [7. Processing stages](#7-processing-stages)
 - [8. Semantic bucket handling](#8-semantic-bucket-handling)
 - [9. Knowledge Plane usage](#9-knowledge-plane-usage)
+  - [9.1. Required pre-resolution validation](#91-required-pre-resolution-validation)
 - [10. Resource and metric vocabulary](#10-resource-and-metric-vocabulary)
 - [11. Resolution rule](#11-resolution-rule)
 - [12. Service-ready preparation rule](#12-service-ready-preparation-rule)
@@ -33,9 +34,9 @@
 
 ## 1. Purpose
 
-Intent Intelligence MS, referred to as II MS, owns semantic interpretation, Knowledge Plane-backed validation, and semantic/service-ready preparation for admitted runtime intents.
+Intent Intelligence MS, referred to as II MS, owns semantic interpretation, Knowledge Plane and domain-authority-backed validation, and semantic/service-ready preparation for admitted runtime intents.
 
-II MS receives syntactically admitted intent facts from IC MS, interprets and validates them against Knowledge Plane/domain knowledge, and emits one of the II-owned internal outcome events:
+II MS receives syntactically admitted intent facts from IC MS, interprets and validates them against Knowledge Plane data, domain knowledge, and any additional pre-resolution validation sources required by the use case, and emits one of the II-owned internal outcome events:
 
 - `IntentRejectedEvent` for semantic, policy, or capability rejection
 - `IntentResolvedEvent` for candidate-level semantic resolution
@@ -53,7 +54,7 @@ It does not expose a TMF-compliant REST API and is not exposed through NGW, OEX,
 | Service name | `intent-intelligence-ms` |
 | Short name | II MS |
 | Domain | Intent Domain |
-| Main responsibility | Semantic interpretation, Knowledge Plane-backed validation, canonical resolution, and service-ready preparation |
+| Main responsibility | Semantic interpretation, Knowledge Plane and domain-authority-backed validation, canonical resolution, and service-ready preparation |
 | Primary event input | `IntentValidatedEvent` |
 | Main event outputs | `IntentRejectedEvent`, `IntentResolvedEvent`, `IntentNetworkReadyEvent` |
 | Event style | Internal CloudEvents headers with plain JSON `body` |
@@ -75,7 +76,7 @@ II MS owns:
 | Responsibility | Detail |
 |---|---|
 | Semantic interpretation | Interprets the admitted expression from `IntentValidatedEvent` |
-| KP-backed validation | Uses Knowledge Plane data to validate location, service, service class, capability, policy, and resource availability |
+| KP-backed and required pre-resolution validation | Uses Knowledge Plane data and, where required, approved T7 services or other governed sources to validate location, service, service class, capability, policy, resource availability, and other use-case-specific facts needed before resolution |
 | Canonicalisation | Normalises admitted values into canonical internal location, service, target, constraint, preference, and resource terms |
 | Rejection decision | Emits `IntentRejectedEvent` when semantic/policy/capability validation fails |
 | Resolution decision | Emits `IntentResolvedEvent` when the intent can be handed to the next internal fulfilment stage as a candidate-level semantic-resolution handoff |
@@ -145,7 +146,7 @@ The baseline surgical hospital slice is an illustrative runtime example used to 
 | Idempotency | Deduplicate by CloudEvents `ce-id` / event id and `intentId` |
 | Admission context check | Confirm the event carries `intentSpecification.id` and `expression.iri` from IC MS admission context |
 | Semantic parse | Interpret `expression.context.targets`, `expression.context.constraints`, and `expression.context.preferences` |
-| KP lookup | Resolve location/service capability from Knowledge Plane |
+| KP and authority lookup | Resolve location, service capability, policy, and other required domain facts from Knowledge Plane and approved use-case-specific authorities |
 | Capability validation | Confirm requested service/service class is available for the requested location |
 | Policy validation | Validate hard constraints such as priority and redundancy against KP/domain policy |
 | Canonicalisation | Normalise values into canonical internal terms |
@@ -188,6 +189,14 @@ II MS must not dump raw KP into events.
 It curates only the information required by the next stage. `provider` remains KP/resource-inventory metadata only and is not included by default in event-facing resource entries. KP remains a native knowledge/config source. KP may retain `metrics.benchmark.*` for resource reference/capability values, `benchmarks.*` for service/location target thresholds, and `t7-gurobi-optimiser` as the optimiser backend/solver target.
 
 II maps KP resource metric values into neutral event-facing `metrics` fields such as `latencyMs`, `availabilityPercent`, `jitterMs`, and `packetLossPercent`.
+
+### 9.1. Required pre-resolution validation
+
+Knowledge Plane is the primary governed knowledge source for the current hospital surgical slice baseline, but II MS must not be designed as if intent resolution can only use KP and optimiser-related inputs. Depending on the intent domain, II MS may need to perform additional pre-resolution validation required to meet the intent accurately. This validation may consult approved T7 platform services, inventory systems, policy services, catalogue services, topology services, capacity sources, fulfilment systems, or other governed domain sources.
+
+These sources provide pre-resolution facts only; they do not own the external runtime `Intent` lifecycle. II MS remains responsible for semantic resolution, curating the returned facts, applying the II MS contract rules, and emitting the correct II-owned internal outcome event. Raw source-system payloads must not be dumped into II events. Only the validated and consumer-safe facts required by the next internal stage should be carried forward.
+
+The active hospital surgical slice example mostly resolves from KP and optimiser-related references. Other intent types may require a wider authority chain while still following the same II MS event and semantic bucket rules.
 
 ## 10. Resource and metric vocabulary
 
@@ -380,7 +389,7 @@ ii_ms_duplicate_event_count
 
 II MS is the internal semantic interpretation, resolution, and service-ready preparation service.
 
-It consumes `IntentValidatedEvent`, validates and resolves the admitted expression using Knowledge Plane/domain knowledge, preserves the canonical `expression.context.targets`, `expression.context.constraints`, and `expression.context.preferences` buckets, and emits `IntentRejectedEvent`, `IntentResolvedEvent`, or `IntentNetworkReadyEvent` depending on the resolved milestone. II MS emits neutral event-facing resource and metric structures.
+It consumes `IntentValidatedEvent`, validates and resolves the admitted expression using Knowledge Plane data, domain knowledge, and any required use-case-specific pre-resolution validation sources, preserves the canonical `expression.context.targets`, `expression.context.constraints`, and `expression.context.preferences` buckets, and emits `IntentRejectedEvent`, `IntentResolvedEvent`, or `IntentNetworkReadyEvent` depending on the resolved milestone. II MS emits neutral event-facing resource and metric structures.
 
 `IntentResolvedEvent.resources[]` carries the full applicable/applyable resource set with metric values for downstream optimisation/selection. `IntentNetworkReadyEvent.serviceConfiguration.orchestratorConfiguration.resources[]` carries only the selected apply/change-execution configuration, while `serviceConfiguration.observerConfiguration.resources[]` carries the full IA observation scope with metric names to observe.
 

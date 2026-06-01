@@ -10,6 +10,7 @@
 
 - [1. Service identity](#1-service-identity)
 - [2. Boundary statement](#2-boundary-statement)
+  - [2.1. Required pre-resolution validation](#21-required-pre-resolution-validation)
 - [3. External API](#3-external-api)
 - [4. Event input: IntentValidatedEvent](#4-event-input-intentvalidatedevent)
   - [4.1. Topic](#41-topic)
@@ -68,14 +69,14 @@
 | Short name | II MS |
 | Service name | `intent-intelligence-ms` |
 | Domain | Intent Domain |
-| Primary responsibility | Semantic interpretation, Knowledge Plane-backed validation, candidate-level semantic resolution, and service-ready preparation |
+| Primary responsibility | Semantic interpretation, Knowledge Plane and domain-authority-backed validation, candidate-level semantic resolution, and service-ready preparation |
 | External API | None |
 | Primary input event | `IntentValidatedEvent` |
 | Output events | `IntentRejectedEvent`, `IntentResolvedEvent`, `IntentNetworkReadyEvent` |
 
 ## 2. Boundary statement
 
-II MS consumes syntactically admitted runtime intent facts from IC MS and performs semantic interpretation and Knowledge Plane-backed resolution.
+II MS consumes syntactically admitted runtime intent facts from IC MS and performs semantic interpretation plus Knowledge Plane and domain-authority-backed resolution.
 
 II MS emits:
 
@@ -85,7 +86,16 @@ II MS emits:
 
 II MS does not own runtime `Intent` REST APIs, external lifecycle projection, downstream selection/fulfilment decisions, assurance truth, callback ingestion, change execution, or KP governance.
 
-The baseline surgical hospital slice is an illustrative runtime example used to make the II MS semantic interpretation and Knowledge Plane-backed resolution contract concrete. It is not the only supported runtime Intent type, IntentSpecification, service class, schema, expression IRI, location, service type, Knowledge Plane profile, or deployment profile. Other runtime Intents may use different targets, constraints, preferences, expression schemas, service types, priorities, resources, and governance profiles while following the same II MS contract rules.
+The baseline surgical hospital slice is an illustrative runtime example used to make the II MS semantic interpretation and resolution contract concrete. It is not the only supported runtime Intent type, IntentSpecification, service class, schema, expression IRI, location, service type, Knowledge Plane profile, pre-resolution validation path, or deployment profile. Other runtime Intents may use different targets, constraints, preferences, expression schemas, service types, priorities, resources, governed validation sources, and governance profiles while following the same II MS contract rules.
+
+
+### 2.1. Required pre-resolution validation
+
+Knowledge Plane is the primary governed knowledge source in the current hospital surgical slice baseline, but II MS resolution is not limited to Knowledge Plane and optimiser-related references. Depending on the intent domain, II MS may need to perform additional pre-resolution validation required to meet the intent accurately. This validation may consult approved T7 platform services, inventory systems, policy services, topology services, capacity systems, service catalogues, fulfilment systems, or other governed domain sources before II MS emits a semantic outcome.
+
+These systems provide pre-resolution facts used by II MS during semantic interpretation, capability validation, policy validation, candidate discovery, or service-ready preparation. They do not own the external runtime `Intent` lifecycle and they do not change the II-owned event model.
+
+II MS must curate and normalise facts returned by pre-resolution validation sources before carrying them forward. Raw source-system payloads, credentials, endpoint details, internal error details, and implementation-specific fields must not be exposed in `IntentRejectedEvent`, `IntentResolvedEvent`, or `IntentNetworkReadyEvent`.
 
 ---
 
@@ -233,13 +243,13 @@ II MS does not expect the external TMF `Intent.expression` wrapper in internal e
 | 1 | Consume `IntentValidatedEvent` |
 | 2 | Check idempotency using CloudEvents `ce-id` and intent identity |
 | 3 | Parse admitted internal `expression.context` |
-| 4 | Resolve `context.constraints.location` from KP |
-| 5 | Resolve `context.constraints.serviceType` and `context.constraints.serviceClass` from KP |
+| 4 | Resolve `context.constraints.location` from KP or another approved location authority where required |
+| 5 | Resolve `context.constraints.serviceType` and `context.constraints.serviceClass` from KP, catalogue, policy, or another approved pre-resolution validation source where required |
 | 6 | Validate service capability/status |
 | 7 | Validate hard constraints, including priority, redundancy, and time window where present |
 | 8 | Validate requested targets are supported for the service class |
 | 9 | Preserve preferences for downstream selection guidance |
-| 10 | Resolve valid resource set from KP after scope/policy filtering |
+| 10 | Resolve valid resource set from KP, inventory, topology, capacity, or other approved pre-resolution validation sources after scope/policy filtering |
 | 11 | Emit `IntentRejectedEvent`, `IntentResolvedEvent`, or `IntentNetworkReadyEvent` through the II outbox, depending on the resolved milestone |
 
 ---
@@ -1029,7 +1039,7 @@ Suggested tables:
 | II DB unavailable | Do not process/acknowledge event beyond retry/dead-letter policy |
 | KP unavailable | Fail closed for semantic resolution and retry/dead-letter according to policy |
 | Kafka unavailable | Use outbox relay retry; do not lose resolved/rejected outcome |
-| Cache unavailable | Bypass cache and use KP/source where safe |
+| Cache unavailable | Bypass cache and use KP or the relevant authority/source where safe |
 | Downstream fulfilment stage unavailable | Not an II MS dependency for emitting `IntentResolvedEvent`; service-ready preparation must complete before emitting `IntentNetworkReadyEvent` |
 
 ---
@@ -1072,7 +1082,7 @@ Rules:
 
 ## 17. Contract summary
 
-II MS consumes `IntentValidatedEvent`, validates and resolves the admitted expression using Knowledge Plane/domain knowledge, preserves `expression.context.targets`, `expression.context.constraints`, and `expression.context.preferences`, and emits `IntentRejectedEvent`, `IntentResolvedEvent`, or `IntentNetworkReadyEvent` depending on the resolved milestone.
+II MS consumes `IntentValidatedEvent`, validates and resolves the admitted expression using Knowledge Plane data, domain knowledge, and any required use-case-specific pre-resolution validation sources, preserves `expression.context.targets`, `expression.context.constraints`, and `expression.context.preferences`, and emits `IntentRejectedEvent`, `IntentResolvedEvent`, or `IntentNetworkReadyEvent` depending on the resolved milestone.
 
 `IntentRejectedEvent` is the semantic/policy/capability rejection handoff. IC MS consumes it and projects the external runtime `Intent` lifecycle accordingly.
 

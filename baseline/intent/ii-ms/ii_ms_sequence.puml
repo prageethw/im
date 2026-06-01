@@ -15,10 +15,11 @@ skinparam sequenceGroupBackgroundColor #f9f9f9
 participant "Kafka\n(internal event backbone)" as KAFKA
 participant "Intent Intelligence MS\n(II MS)" as IIMS
 participant "Knowledge Plane\n(KP)" as KP
+participant "Other T7 services / governed sources\n(optional pre-resolution validation)" as AUTH
 database "II MS Store\n(semantic state + outbox)" as STORE
 participant "Outbox Relay\n(background worker)" as RELAY
 participant "IC MS" as ICMS
-participant "Downstream services\n(optimiser / IA / change execution)" as DS
+participant "Downstream services\n(optimiser, IA, change execution, other consumers)" as DS
 
 == 1. Consume IntentValidatedEvent ==
 
@@ -47,7 +48,7 @@ else not yet processed
   IIMS -> IIMS : parse body.expression.context.constraints\n(location, service class, priority,\nredundancy, time window, ...)
   IIMS -> IIMS : parse body.expression.context.preferences\n(soft selection guidance)
 
-  == 3. Knowledge Plane Resolution ==
+  == 3. Knowledge Plane and Resolution Authority Resolution ==
 
   IIMS -> KP : resolve location context
   KP --> IIMS : location scope + region metadata
@@ -59,6 +60,10 @@ else not yet processed
   KP --> IIMS : applicable policies + constraint promotion set
   IIMS -> KP : resolve resource context\n(candidate resource set pre-filter)
   KP --> IIMS : raw candidate resource set
+  opt use-case requires additional facts
+    IIMS -> AUTH : resolve additional domain facts\n(inventory, policy, topology, capacity, catalogue, fulfilment, etc.)
+    AUTH --> IIMS : validated facts / decision inputs
+  end
 
   == 4. Hard Constraint Validation ==
 
@@ -88,7 +93,8 @@ else not yet processed
 
     note over IIMS
       Targets are validated against known
-      capability context from KP.
+      capability context from KP and any
+      required pre-resolution validation sources.
     end note
 
     IIMS -> IIMS : validate latency target\nvs capability profile

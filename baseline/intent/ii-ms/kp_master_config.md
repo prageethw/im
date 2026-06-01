@@ -436,12 +436,29 @@ The baseline surgical hospital slice in this file is an illustrative Knowledge P
           "onConflict": "reject"
         }
       }
+    },
+    "resolutionAuthorities": {
+      "notes": "Illustrative pre-resolution validation references only. II MS may consult approved T7 services or other governed sources when a use case requires facts beyond KP. These entries are not endpoint, payload, credential, or ownership definitions.",
+      "authorityTypes": [
+        "knowledgePlane",
+        "inventorySystem",
+        "policyService",
+        "topologyService",
+        "capacitySource",
+        "serviceCatalogue",
+        "fulfilmentSystem",
+        "externalDomainAuthority"
+      ]
     }
   }
 }
 ```
 
 ## 2. Baseline notes
+
+- The hospital surgical slice KP data is illustrative. It shows one compact knowledge profile, not the only supported II MS resolution model. Other intent domains may require II MS to perform additional pre-resolution validation using approved T7 platform services, inventory systems, policy services, topology sources, capacity systems, service catalogues, fulfilment systems, or other governed domain sources to resolve an admitted intent accurately and meet the intent safely.
+- `resolutionAuthorities` contains illustrative logical authority categories only. It does not define endpoints, credentials, payload contracts, ownership transfer, or a mandatory integration chain. II MS remains responsible for curating and normalising authority facts before emitting internal events.
+
 - KP uses shared resource vocabulary where meaning is not lost: resource entries use `resourceType: "deliveryResource"`, `resourceClass: "critical-gold"`, and `roles`. KP-native reference/capability terminology remains valid for resource `metrics.benchmark.*`, location/service `benchmarks.*`, and `optimiserTarget: "t7-gurobi-optimiser"`.
 
 - KP contains current available knowledge, not optimiser/orchestrator execution logic.

@@ -12,6 +12,7 @@
 - [2. Logical View:](#2-logical-view)
 - [3. Process View:](#3-process-view)
 - [4. Solution Elaboration:](#4-solution-elaboration)
+  - [4.1. Required pre-resolution validation:](#41-required-pre-resolution-validation)
 - [5. Responsibilities:](#5-responsibilities)
 - [6. II MS does not:](#6-ii-ms-does-not)
 - [7. Contracts:](#7-contracts)
@@ -45,7 +46,7 @@
 
 ## 1. Summary:
 
-Intent Intelligence MS (II MS) is the internal semantic interpretation and resolution service for admitted runtime intents. It consumes syntactically admitted intent facts from Intent Controller MS (IC MS), interprets the admitted expression using governed Knowledge Plane data, validates semantic feasibility, policy, capability, and resource context, and emits the next internal milestone event.
+Intent Intelligence MS (II MS) is the internal semantic interpretation and resolution service for admitted runtime intents. It consumes syntactically admitted intent facts from Intent Controller MS (IC MS), interprets the admitted expression using governed Knowledge Plane data and any additional pre-resolution validation sources required by the use case, validates semantic feasibility, policy, capability, resource context, and other use-case-specific facts, and emits the next internal milestone event.
 
 II MS is not an external TMF-compliant API service. It does not expose runtime Intent REST APIs, design-time IntentSpecification APIs, customer-facing lifecycle projections, callback endpoints, network change execution, or assurance truth.
 
@@ -116,6 +117,14 @@ expression.context.preferences
 
 II MS must not flatten these buckets into unrelated top-level fields. Keeping the same semantic buckets from ID MS to IC MS to II MS reduces mapping, prevents drift, and allows IA MS and later control-loop components to interpret assurance outcomes against the same intent context.
 
+### 4.1. Required pre-resolution validation:
+
+The hospital surgical slice baseline mainly uses Knowledge Plane data and optimiser-related references, but II MS is not limited to Knowledge Plane and optimiser integration. Different intent domains may require II MS to perform additional pre-resolution validation before it can resolve an admitted intent accurately and meet the intent safely. This validation may consult approved T7 platform services, inventory systems, policy services, topology sources, catalogue services, capacity sources, fulfilment systems, or other governed domain sources.
+
+Those systems provide facts for semantic interpretation, capability validation, policy validation, candidate discovery, or service-ready preparation. They do not own the external `Intent` lifecycle, and they do not change the II MS event ownership model. II MS still curates the resolved facts and emits `IntentRejectedEvent`, `IntentResolvedEvent`, or `IntentNetworkReadyEvent` according to the same contract rules.
+
+II MS must not dump raw authority responses into events. Only validated, normalised, and next-stage-relevant facts should be carried forward in the canonical `targets`, `constraints`, `preferences`, `resources`, and `serviceConfiguration` structures.
+
 The baseline surgical hospital slice is an illustrative runtime example used to make the II MS semantic interpretation and Knowledge Plane-backed resolution contract concrete. It is not the only supported runtime Intent type, IntentSpecification, service class, schema, expression IRI, location, service type, Knowledge Plane profile, or deployment profile. Other runtime Intents may use different targets, constraints, preferences, expression schemas, service types, priorities, resources, and governance profiles while following the same II MS contract rules.
 
 ## 5. Responsibilities:
@@ -126,7 +135,7 @@ II MS owns:
 |---|---|
 | `IntentValidatedEvent` consumption | Consume admitted runtime intent events from IC MS. |
 | Semantic interpretation | Interpret admitted intent expression context into canonical domain meaning. |
-| KP-backed validation | Validate location, service type, service class, capability, policy, and resource availability. |
+| KP-backed and required pre-resolution validation | Validate location, service type, service class, capability, policy, resource availability, and other use-case-specific facts using KP and approved pre-resolution validation sources where required. |
 | Target validation | Validate supported measurable runtime objectives. |
 | Constraint validation | Validate hard requirements such as location, priority, redundancy, and time window. |
 | Preference preservation | Preserve soft selection guidance for downstream selection/optimisation. |
@@ -705,7 +714,7 @@ Where runtime versioning is active, state transitions are keyed by `intentId` an
 | II database unavailable | Do not acknowledge/process beyond retry/dead-letter policy. |
 | Knowledge Plane unavailable | Fail closed for semantic resolution and retry/dead-letter according to policy. |
 | Kafka unavailable | Persist to outbox and retry through relay. |
-| Cache unavailable | Bypass cache and use KP/source where safe. |
+| Cache unavailable | Bypass cache and use KP or the relevant authority/source where safe. |
 | Optimiser unavailable | Not a dependency for semantic resolution; downstream consumption handles its own availability. |
 | IA MS unavailable | Not a synchronous dependency; `IntentNetworkReadyEvent` remains the handoff. |
 
@@ -719,7 +728,7 @@ Suggested configuration areas:
 |---|---|
 | Kafka topics | Internal intent-management event topic names and consumer group id. |
 | Outbox relay | Batch size, retry backoff, maximum retry count, relay lock settings. |
-| KP access | KP endpoint, timeout, cache TTL, circuit-breaker settings. |
+| KP and pre-resolution validation access | KP endpoint, approved T7 or governed source endpoints where required, timeout, cache TTL, circuit-breaker settings. |
 | Semantic rules | Supported service types, service classes, target names, constraint names, and policy rule versions. |
 | Rejection mapping | Reason-code mapping and user/projectable `statusReason` templates. |
 | Observability | Log levels, metrics enablement, trace sampling. |
