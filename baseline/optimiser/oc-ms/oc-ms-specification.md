@@ -302,14 +302,15 @@ While `lifecycleStatus = CANCELLATIONFAILED`, the optimisation remains observabl
 
 OC MS exposes optimiser-domain platform resources using TMF-style resource conventions. `Optimisation` is not a native TMF Open API resource.
 
-All NGW-facing OC MS resource responses include:
+NGW-facing OC MS resource responses may include:
 
 ```http
 x-platform-extension: true
-x-tmf-native: false
 ```
 
-These headers are governance and documentation indicators only. Clients must not use them as runtime business-logic switches. They apply to runtime `Optimisation` resource responses and `/optimisation/hub` subscription responses where those endpoints are exposed through NGW.
+This header is a governance and documentation indicator only. Clients must not use it as a runtime business-logic switch. It applies to runtime `Optimisation` resource responses and `/optimisation/hub` subscription responses where those endpoints are exposed through NGW and where the route, method, response, field, lifecycle value, header, or behaviour includes a documented platform extension.
+
+OC MS exposes optimiser-domain platform resources using TMF-style conventions where useful. `Optimisation` and `/optimisation/hub` are not native TMF Open API resources, so no separate TMF-native response header is used in OC MS responses.
 
 `x-cb-triggered: true` may also be returned when a remote dependency circuit breaker changes the externally meaningful response path. It is diagnostic only and must not be used as a business-logic switch, subscription state indicator, or lifecycle/outcome indicator.
 
@@ -389,7 +390,6 @@ Location: /optimisation/opt-12345
 ETag: "opt-12345-rev1"
 Content-Type: application/json
 x-platform-extension: true
-x-tmf-native: false
 ```
 
 ```json
@@ -669,7 +669,6 @@ X-Total-Count: 1
 X-Result-Count: 1
 Content-Type: application/json
 x-platform-extension: true
-x-tmf-native: false
 ```
 
 ```json
@@ -712,7 +711,6 @@ HTTP/1.1 200 OK
 Content-Type: application/json
 ETag: "opt-12345-rev2"
 x-platform-extension: true
-x-tmf-native: false
 ```
 
 Active-state example:
@@ -895,11 +893,10 @@ If-Match: "opt-12345-rev3"
 Content-Type: application/json
 ```
 
-Cancellation and retrial responses include the OC external response governance headers:
+Cancellation and retrial responses include the OC external response governance header where applicable:
 
 ```http
 x-platform-extension: true
-x-tmf-native: false
 ```
 
 Cancellation request body:
@@ -926,7 +923,6 @@ HTTP/1.1 202 Accepted
 ETag: "opt-12345-rev3"
 Content-Type: application/json
 x-platform-extension: true
-x-tmf-native: false
 ```
 
 ```json
@@ -967,7 +963,6 @@ Location: /optimisation/opt-67890
 ETag: "opt-67890-rev1"
 Content-Type: application/json
 x-platform-extension: true
-x-tmf-native: false
 ```
 
 ```json
@@ -1067,11 +1062,10 @@ missing If-Match on an unsafe ETag-governed operation -> 428
 stale or wrong If-Match on an unsafe ETag-governed operation -> 412
 ```
 
-NGW-facing OC MS resource responses include:
+NGW-facing OC MS resource responses include the platform-extension governance header where applicable:
 
 ```http
 x-platform-extension: true
-x-tmf-native: false
 ```
 
 Strict content type rules:
@@ -1295,7 +1289,6 @@ Location: /optimisation/hub/sub-12345
 ETag: "sub-12345-rev1"
 Content-Type: application/json
 x-platform-extension: true
-x-tmf-native: false
 ```
 
 ```json
@@ -1330,7 +1323,6 @@ HTTP/1.1 200 OK
 ETag: "sub-12345-rev1"
 Content-Type: application/json
 x-platform-extension: true
-x-tmf-native: false
 ```
 
 ```json
