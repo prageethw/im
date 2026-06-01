@@ -47,7 +47,7 @@ IA MS consumes `IntentNetworkReadyEvent`, `IntentCallbackEvent`, and runtime met
 
 IA MS does not expose a TMF-compliant API. IC MS remains the owner of externally visible runtime `Intent` lifecycle projection and external `IntentReport` resources. IC MS consumes IA MS assurance outcomes and projects the public TMF-compliant state.
 
-`IntentDriftOccurredEvent` is retired in the active baseline. Drift, degradation, failure, active, and terminated outcomes are represented through `IntentAssuranceEvent.lifecycleStatus`, `statusReason`, and resource-level metrics.
+Drift, degradation, failure, active, and terminated outcomes are represented through `IntentAssuranceEvent.lifecycleStatus`, `statusReason`, and resource-level metrics.
 
 ## 2. Logical View:
 
@@ -170,8 +170,6 @@ Derived evaluation blocks such as `current.evaluations` or `body.evaluations` ar
 | Knowledge Plane config CRUD/governance | Knowledge Plane operating model owns this. |
 | OEX user experience | OEX layer owns this. |
 | `IntentNetworkReadyEvent` production | II MS owns and emits it. IA MS only consumes it. |
-| `IntentOptimisedEvent` consumption | Not an IA input in the active baseline. |
-| `IntentDriftOccurredEvent` publication | Retired; not used in the active baseline. |
 
 ## 7. Contracts:
 
@@ -409,7 +407,6 @@ IA MS must not include the following by default in `IntentAssuranceEvent`:
 | `body.evaluations` | Metrics-first event; no derived evaluation block by default. |
 | `requiresReoptimisation` | Decision components infer need from lifecycle/status/metrics. |
 | Optimiser scoring or solver internals | Optimiser-owned internals must not leak into IA event. |
-| `IntentDriftOccurredEvent` | Retired event; not used by default. |
 | Retired source-specific callback state/source/timestamp fields | Replaced by `sourceState`, `callbackSource`, and `callbackTimestamp`. |
 | `metrics.benchmark` / `metrics.telemetry` wrappers | Metric origin is inferred from event stage and processing context. |
 | `currentLatencyMs` / `observedLatencyMs` / similar context-encoded metric names | Use neutral metric names. |
@@ -603,12 +600,10 @@ Other authorised internal decision components may consume `IntentAssuranceEvent`
 | Event example harmonisation | Closed for the active IA baseline. Future example changes must preserve the metrics-first `IntentAssuranceEvent` shape and must not reintroduce candidates, evaluations, benchmark wrappers, or `requiresReoptimisation` by default. |
 | IA external API | IA MS has no external TMF-compliant API. |
 | IA input events | IA consumes `IntentNetworkReadyEvent`, `IntentCallbackEvent`, and runtime metrics/observation facts only. |
-| `IntentOptimisedEvent` as IA input | Not used. IA receives apply/assurance context through `IntentNetworkReadyEvent`. |
 | `IntentNetworkReadyEvent` owner | Produced by II MS, not IA MS. |
 | Callback field names | Use `callbackSource`, `callbackTimestamp`, and `sourceState.state`. |
 | Raw callback lifecycle mapping owner | IA MS owns mapping; ICB MS does not map lifecycle. |
 | IA output event | `IntentAssuranceEvent` only. |
-| Drift event | `IntentDriftOccurredEvent` is retired and not used by default. |
 | Re-optimisation flag | No default `requiresReoptimisation` flag. |
 | Evaluation blocks | No `current.evaluations` or `body.evaluations` by default. |
 | Metrics naming | Use neutral metric names such as `latencyMs`, `availabilityPercent`, `jitterMs`, and `packetLossPercent`. |
@@ -626,5 +621,4 @@ Other authorised internal decision components may consume `IntentAssuranceEvent`
 | Main input events | `IntentNetworkReadyEvent`, `IntentCallbackEvent` |
 | Main non-event input | Runtime metrics / observation facts from observability endpoints |
 | Main output event | `IntentAssuranceEvent` |
-| Retired event | `IntentDriftOccurredEvent` is not used |
 | Event style | Internal CloudEvents-style headers with plain JSON `body` |

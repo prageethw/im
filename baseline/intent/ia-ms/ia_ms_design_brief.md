@@ -29,7 +29,6 @@ Document authority: this design brief is authoritative for IA MS design decision
 
 Intent Assurance MS, referred to as IA MS, owns runtime assurance evaluation, callback state normalisation, assurance state updates, and assurance event publication for IME runtime intents. IA MS is the runtime assurance truth for IME. IC MS remains the owner of the externally visible runtime `Intent` lifecycle projection. IA MS consumes `IntentNetworkReadyEvent`, `IntentCallbackEvent`, and runtime metrics/observation facts only. For `IntentNetworkReadyEvent`, IA MS expects the final II MS shape using `body.intentVersion` and `body.expression.context`.
 
-IA MS does not consume `IntentOptimisedEvent` in the active baseline.
 
 ## 2. Service Identity
 
@@ -41,7 +40,6 @@ IA MS does not consume `IntentOptimisedEvent` in the active baseline.
 | Main responsibility | Runtime assurance truth, callback state normalisation, observation evaluation, drift/degradation detection, assurance state updates, and `IntentAssuranceEvent` publication |
 | Primary event inputs | `IntentNetworkReadyEvent`; `IntentCallbackEvent` from `t7.intent.management.events.callbacks` |
 | Main event output | `IntentAssuranceEvent` |
-| Retired event | `IntentDriftOccurredEvent` is not used in the active baseline |
 | Event style | Internal CloudEvents headers with plain JSON `body` |
 | External TMF API owner | No — IC MS owns external lifecycle projection |
 
@@ -145,7 +143,7 @@ The active generic body shape uses `intentVersion` for runtime intent versioning
 
 Reusable resource entries use `roles`, `resourceId`, `resourceType`, `resourceClass`, direct safe resource attributes such as `accessTechnology` where needed, `relationships`, and `metrics`.
 
-Metric names are neutral and use names such as `latencyMs`, `availabilityPercent`, `jitterMs`, and `packetLossPercent`. Do not use metric origin wrappers or context-encoded field names such as `metrics.benchmark`, `metrics.telemetry`, `latencyBenchmarkMs`, `currentLatencyMs`, or `observedLatencyMs` in `IntentAssuranceEvent`. IA MS does not emit `IntentDriftOccurredEvent` in the active baseline.
+Metric names are neutral and use names such as `latencyMs`, `availabilityPercent`, `jitterMs`, and `packetLossPercent`. Do not use metric origin wrappers or context-encoded field names such as `metrics.benchmark`, `metrics.telemetry`, `latencyBenchmarkMs`, `currentLatencyMs`, or `observedLatencyMs` in `IntentAssuranceEvent`.
 
 Drift/degradation is represented through `IntentAssuranceEvent.lifecycleStatus`, `statusReason`, `expression.context`, and resource-level `metrics` in `current.resources`. IA MS does not include raw callback payloads, raw telemetry dumps, optimiser scoring, solver internals, `provider`, `current.evaluations`, `body.evaluations`, default `requiresReoptimisation`, `selectionStatus`, `assuranceStatus`, or a default `candidates` block in `IntentAssuranceEvent`.
 

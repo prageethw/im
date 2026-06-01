@@ -50,7 +50,6 @@ Document authority: this specification is authoritative for IA MS field-level co
 | Main responsibility | Runtime assurance truth, callback state normalisation, observation evaluation, and `IntentAssuranceEvent` publication |
 | Main input events | `IntentNetworkReadyEvent`, `IntentCallbackEvent` |
 | Main output event | `IntentAssuranceEvent` |
-| Retired event | `IntentDriftOccurredEvent` is not used |
 
 ---
 
@@ -64,7 +63,6 @@ IA MS consumes only:
 - `IntentCallbackEvent`
 - runtime metrics / observation facts from observability endpoints
 
-IA MS does **not** consume `IntentOptimisedEvent` in the active baseline.
 
 Optimisation output may influence the service-ready configuration produced upstream, but IA receives its assurance/apply context through `IntentNetworkReadyEvent.serviceConfiguration` and IA stored/applied assurance state.
 
@@ -784,7 +782,6 @@ IntentReport remains fact-only by default. It does not require separate `degrada
 ## 8. Output event rules
 
 - `IntentAssuranceEvent` is the single IA-owned runtime assurance outcome event.
-- `IntentDriftOccurredEvent` is retired and must not be used by default.
 - Use `lifecycleStatus` and `statusReason` for state narrative.
 - Use internal `body.expression.context` where the event carries resolved runtime targets, constraints, and preferences.
 - Use `current.resources` for the full observed resource/path set within the assurance scope, including primary and all observed secondary/alternative resources.
