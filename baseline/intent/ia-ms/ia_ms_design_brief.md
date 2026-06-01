@@ -1,12 +1,34 @@
 # IA MS Design Brief
 
-## Purpose
+| **Document status** | **Value** |
+| --- | --- |
+| Status | Current baseline |
+| Scope | Intent Assurance MS design brief |
+| Source of truth after commit | GitHub `baseline/intent/ia-ms/ia_ms_design_brief.md` |
+
+## Table of contents:
+
+- [1. Purpose](#1-purpose)
+- [2. Service Identity](#2-service-identity)
+- [3. Core Responsibilities](#3-core-responsibilities)
+- [4. IA MS Does Not Own](#4-ia-ms-does-not-own)
+- [5. Main Inputs](#5-main-inputs)
+- [6. IntentNetworkReadyEvent source rule](#6-intentnetworkreadyevent-source-rule)
+- [7. Callback handling baseline](#7-callback-handling-baseline)
+- [8. Stale version and late-event handling](#8-stale-version-and-late-event-handling)
+- [9. IntentAssuranceEvent baseline](#9-intentassuranceevent-baseline)
+- [10. Observation endpoint baseline](#10-observation-endpoint-baseline)
+- [11. Observation gap and DLQ baseline](#11-observation-gap-and-dlq-baseline)
+- [12. Final baseline statement](#12-final-baseline-statement)
+- [13. Metrics-first IntentAssuranceEvent refinement](#13-metrics-first-intentassuranceevent-refinement)
+
+## 1. Purpose
 
 Intent Assurance MS, referred to as IA MS, owns runtime assurance evaluation, callback state normalisation, assurance state updates, and assurance event publication for IME runtime intents. IA MS is the runtime assurance truth for IME. IC MS remains the owner of the externally visible runtime `Intent` lifecycle projection. IA MS consumes `IntentNetworkReadyEvent`, `IntentCallbackEvent`, and runtime metrics/observation facts only. For `IntentNetworkReadyEvent`, IA MS expects the final II MS shape using `body.intentVersion` and `body.expression.context`.
 
 IA MS does not consume `IntentOptimisedEvent` in the active baseline.
 
-## Service Identity
+## 2. Service Identity
 
 | **Attribute** | **Value** |
 |---|---|
@@ -20,7 +42,7 @@ IA MS does not consume `IntentOptimisedEvent` in the active baseline.
 | Event style | Internal CloudEvents headers with plain JSON `body` |
 | External TMF API owner | No — IC MS owns external lifecycle projection |
 
-## Core Responsibilities
+## 3. Core Responsibilities
 
 | **Responsibility** | **Detail** |
 |---|---|
@@ -38,7 +60,7 @@ IA MS does not consume `IntentOptimisedEvent` in the active baseline.
 
 II MS or another authorised decision component reads the assurance event state and decides whether re-interpretation, re-optimisation, or no action is required.
 
-## IA MS Does Not Own
+## 4. IA MS Does Not Own
 
 | **Concern** | **Owner** |
 |---|---|
@@ -53,7 +75,7 @@ II MS or another authorised decision component reads the assurance event state a
 | Knowledge Plane config CRUD/governance | Knowledge Plane operating model |
 | OEX user experience | OEX layer |
 
-## Main Inputs
+## 5. Main Inputs
 
 | **Input** | **Source** | **Purpose** |
 |---|---|---|
@@ -62,7 +84,7 @@ II MS or another authorised decision component reads the assurance event state a
 | Runtime metrics from observation endpoints | Observability platform endpoints informed by `IntentNetworkReadyEvent.serviceConfiguration.observerConfiguration` | Runtime metrics such as latency, availability, packet loss, and jitter for observer-scope resources |
 | IA state | IA MS DB | Correlation, current assurance/projection state, idempotency |
 
-## IntentNetworkReadyEvent source rule
+## 6. IntentNetworkReadyEvent source rule
 
 `IntentNetworkReadyEvent` is produced by `intent-intelligence-ms`.
 
@@ -76,7 +98,7 @@ ce-source: intent-intelligence-ms
 
 Within `serviceConfiguration.observerConfiguration.resources[]`, `metrics` is a list of metric names to observe, not metric values. Example metric names are `latencyMs`, `availabilityPercent`, `jitterMs`, and `packetLossPercent`.
 
-## Callback handling baseline
+## 7. Callback handling baseline
 
 | **Concern** | **Owner** |
 |---|---|
@@ -96,11 +118,11 @@ The canonical `IntentCallbackEvent` fields consumed by IA are `callbackSource`, 
 
 `sourceState.state` carries the raw source/change-execution state value. IA maps `sourceState.state` into lifecycle/assurance meaning.
 
-## Stale version and late-event handling
+## 8. Stale version and late-event handling
 
 IA MS must key assurance state by `intentId` and `intentVersion` where runtime versioning is supplied. A stale `IntentNetworkReadyEvent`, `IntentCallbackEvent`, or observation result for an older intent version must not overwrite newer IA state. Late callbacks or late observations for a superseded, terminated, or otherwise inactive version should be recorded for audit or dead-letter handling according to policy, but must not publish misleading `IntentAssuranceEvent` outcomes for the current version.
 
-## IntentAssuranceEvent baseline
+## 9. IntentAssuranceEvent baseline
 
 `IntentAssuranceEvent` is the single IA-owned runtime assurance event. It carries curated assurance facts using the internal event contract, not the external TMF expression wrapper.
 
@@ -124,19 +146,25 @@ Drift/degradation is represented through `IntentAssuranceEvent.lifecycleStatus`,
 
 For `Active`, `Degraded`, and `Failed`, `current.resources[]` should carry the full observer scope where applicable. `lifecycleStatus` and `statusReason` explain the interpreted outcome; each resource entry remains factual.
 
-## Observation endpoint baseline
+## 10. Observation endpoint baseline
 
 IA MS obtains runtime metrics from observability/observation endpoints. The observation endpoints are informed by `IntentNetworkReadyEvent.serviceConfiguration.observerConfiguration`.
 
 IA evaluates returned metric facts against resolved runtime targets and the IA stored applied assurance baseline. KP/rules may support mapping and evaluation policy but are not the source of truth for every assurance decision.
 
-## Final baseline statement
+## 11. Observation gap and DLQ baseline
+
+IA MS must treat observation collection gaps as explicit operational facts. If the observability platform is unavailable, returns incomplete data, or returns stale observations beyond the configured freshness window, IA MS must not infer a healthy `Active` state from missing telemetry. IA MS should retry according to platform policy, retain the previous assurance state where safe, and publish or record an operational gap outcome where policy requires.
+
+DLQ handling is a required minimum baseline for exhausted `IntentNetworkReadyEvent` and `IntentCallbackEvent` processing, unknown `intentId`, unknown or unmapped `sourceState.state`, invalid event shape, stale or superseded version handling that cannot be safely ignored, and repeated observation collection failures after retry policy is exhausted.
+
+## 12. Final baseline statement
 
 IA MS is the runtime assurance truth service.
 
 It consumes `IntentNetworkReadyEvent`, `IntentCallbackEvent`, and observation facts only; rejects stale or superseded event versions where needed; maps raw callback state; evaluates runtime observations against resolved runtime targets and the stored applied assurance baseline; and emits curated generic `IntentAssuranceEvent` outcomes. IC MS consumes `IntentAssuranceEvent` to project external TMF-compliant `Intent` lifecycle and `IntentReport` resources.
 
-## Metrics-first IntentAssuranceEvent refinement
+## 13. Metrics-first IntentAssuranceEvent refinement
 
 `IntentAssuranceEvent` is metrics-first by default.
 

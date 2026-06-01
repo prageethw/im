@@ -1,6 +1,41 @@
 # Intent Assurance MS Solution Brief
 
-## Summary:
+| **Document status** | **Value** |
+| --- | --- |
+| Status | Current baseline |
+| Scope | Intent Assurance MS solution brief |
+| Source of truth after commit | GitHub `baseline/intent/ia-ms/ia_ms_solution_brief.md` |
+
+## Table of contents:
+
+- [1. Summary:](#1-summary)
+- [2. Logical View:](#2-logical-view)
+- [3. Process View:](#3-process-view)
+- [4. Solution Elaboration:](#4-solution-elaboration)
+- [5. Responsibilities:](#5-responsibilities)
+- [6. IA MS does not:](#6-ia-ms-does-not)
+- [7. Contracts:](#7-contracts)
+- [8. IntentNetworkReadyEvent input shape:](#8-intentnetworkreadyevent-input-shape)
+- [9. IntentCallbackEvent input shape:](#9-intentcallbackevent-input-shape)
+- [10. Observation metric shape:](#10-observation-metric-shape)
+- [11. Callback state mapping:](#11-callback-state-mapping)
+- [12. IntentAssuranceEvent output shape:](#12-intentassuranceevent-output-shape)
+- [13. Fields not accepted:](#13-fields-not-accepted)
+- [14. Authorisation:](#14-authorisation)
+- [15. Persistence / state / outbox model:](#15-persistence-state-outbox-model)
+- [16. Internal Kafka publication:](#16-internal-kafka-publication)
+- [17. Internal Kafka topics:](#17-internal-kafka-topics)
+- [18. Event identity:](#18-event-identity)
+- [19. Internal Kafka CloudEvents headers:](#19-internal-kafka-cloudevents-headers)
+- [20. Internal Kafka message body:](#20-internal-kafka-message-body)
+- [21. Behaviour:](#21-behaviour)
+- [22. Configuration:](#22-configuration)
+- [23. Consumer contract:](#23-consumer-contract)
+- [24. Open items:](#24-open-items)
+- [25. Closed items:](#25-closed-items)
+- [26. MS identity:](#26-ms-identity)
+
+## 1. Summary:
 
 Intent Assurance MS (IA MS) is the internal runtime assurance truth service for Intent Management. It owns assurance evaluation after network-ready service configuration, raw callback relay events, and runtime observation metrics are available.
 
@@ -10,7 +45,7 @@ IA MS does not expose a TMF-compliant API. IC MS remains the owner of externally
 
 `IntentDriftOccurredEvent` is retired in the active baseline. Drift, degradation, failure, active, and terminated outcomes are represented through `IntentAssuranceEvent.lifecycleStatus`, `statusReason`, and resource-level metrics.
 
-## Logical View:
+## 2. Logical View:
 
 IA MS sits after service-ready preparation and callback ingestion in the Intent Management runtime flow.
 
@@ -38,7 +73,7 @@ Primary collaborators:
 
 IA MS persists its own assurance state, idempotency records, observation snapshots, mapping audit, and outbox records. It does not depend on IC MS for its internal event publication path.
 
-## Process View:
+## 3. Process View:
 
 The normal IA MS runtime process is:
 
@@ -57,7 +92,7 @@ The normal IA MS runtime process is:
 
 `IntentNetworkReadyEvent` alone never proves apply success. Active state requires apply/callback confirmation and/or runtime observations according to the workflow policy.
 
-## Solution Elaboration:
+## 4. Solution Elaboration:
 
 IA MS is deliberately narrow. It turns service-ready configuration, callback facts, and observation facts into curated assurance outcomes. It does not expose raw callback payloads or raw telemetry dumps to downstream services.
 
@@ -74,7 +109,7 @@ The assurance event is metrics-first. `lifecycleStatus` and `statusReason` expla
 
 Derived evaluation blocks such as `current.evaluations` or `body.evaluations` are not included by default. IA MS also does not include a default `requiresReoptimisation` flag. II MS or another authorised decision component reads lifecycle state, status reason, and resource metrics to decide whether re-interpretation, re-optimisation, reselection, or no action is required.
 
-## Responsibilities:
+## 5. Responsibilities:
 
 | Responsibility | IA MS behaviour |
 |---|---|
@@ -89,7 +124,7 @@ Derived evaluation blocks such as `current.evaluations` or `body.evaluations` ar
 | Assurance publication | Publishes `IntentAssuranceEvent` to the internal event backbone. |
 | Outbox ownership | Owns IA outbox and relay for reliable event publication. |
 
-## IA MS does not:
+## 6. IA MS does not:
 
 | Concern | Owner / reason |
 |---|---|
@@ -108,7 +143,7 @@ Derived evaluation blocks such as `current.evaluations` or `body.evaluations` ar
 | `IntentOptimisedEvent` consumption | Not an IA input in the active baseline. |
 | `IntentDriftOccurredEvent` publication | Retired; not used in the active baseline. |
 
-## Contracts:
+## 7. Contracts:
 
 IA MS has no external TMF-compliant REST API in the active baseline.
 
@@ -121,7 +156,7 @@ IA MS internal contracts are:
 | Observation endpoint metric facts | Input | Observability platform | Runtime metrics for observer-scope resources. |
 | `IntentAssuranceEvent` | Output | Internal event backbone, consumed by IC MS | Curated assurance outcome used for external projection. |
 
-## IntentNetworkReadyEvent input shape:
+## 8. IntentNetworkReadyEvent input shape:
 
 `IntentNetworkReadyEvent` is produced by `intent-intelligence-ms`. IA MS must not show `ce-source: intent-assurance-ms` for this event.
 
@@ -146,7 +181,7 @@ Required handling fields:
 
 `IntentNetworkReadyEvent` means service configuration is ready for change-execution/apply. It does not mean the service has already been applied.
 
-## IntentCallbackEvent input shape:
+## 9. IntentCallbackEvent input shape:
 
 IA MS consumes raw callback relay events emitted by ICB MS. The canonical callback fields are:
 
@@ -174,7 +209,7 @@ Required handling fields:
 
 Do not use retired source-specific callback state/source/timestamp field names as baseline callback field names.
 
-## Observation metric shape:
+## 10. Observation metric shape:
 
 IA MS obtains runtime metrics from observability/observation endpoints informed by `IntentNetworkReadyEvent.serviceConfiguration.observerConfiguration`.
 
@@ -200,7 +235,7 @@ Logical metric facts should be treated as factual observations, for example:
 
 Metric names must remain neutral. Use names such as `latencyMs`, `availabilityPercent`, `jitterMs`, and `packetLossPercent`. Do not encode metric origin into event-facing wrappers or field names such as `metrics.benchmark`, `metrics.telemetry`, `currentLatencyMs`, or `observedLatencyMs`.
 
-## Callback state mapping:
+## 11. Callback state mapping:
 
 IA MS owns raw callback state mapping. ICB MS must not map raw source states into lifecycle states.
 
@@ -217,7 +252,7 @@ IA MS owns raw callback state mapping. ICB MS must not map raw source states int
 
 Mapping must be auditable. Unknown or unmapped values should not be silently converted into misleading healthy or failed states.
 
-## IntentAssuranceEvent output shape:
+## 12. IntentAssuranceEvent output shape:
 
 `IntentAssuranceEvent` is the single IA-owned runtime assurance outcome event. It carries curated assurance facts using the internal event contract, not an external TMF `IntentExpression` wrapper.
 
@@ -325,7 +360,7 @@ Example active/degraded style payload:
 }
 ```
 
-## Fields not accepted:
+## 13. Fields not accepted:
 
 IA MS must not include the following by default in `IntentAssuranceEvent`:
 
@@ -344,7 +379,7 @@ IA MS must not include the following by default in `IntentAssuranceEvent`:
 | `metrics.benchmark` / `metrics.telemetry` wrappers | Metric origin is inferred from event stage and processing context. |
 | `currentLatencyMs` / `observedLatencyMs` / similar context-encoded metric names | Use neutral metric names. |
 
-## Authorisation:
+## 14. Authorisation:
 
 IA MS is an internal service. It does not expose an external TMF-compliant API or OEX-facing user operation.
 
@@ -356,7 +391,7 @@ Authorisation should follow internal service-to-service controls:
 - callback source trust is not established by IA alone; ICB MS owns callback endpoint admission and relay, while IA owns state correlation and mapping;
 - downstream consumers must not treat IA event payloads as public TMF events.
 
-## Persistence / state / outbox model:
+## 15. Persistence / state / outbox model:
 
 IA MS owns its own PostgreSQL-compatible persistence boundary.
 
@@ -367,7 +402,7 @@ IA MS owns its own PostgreSQL-compatible persistence boundary.
 | `intent_assurance_idempotency` | Consumed event deduplication. |
 | `intent_assurance_mapping_audit` | Callback mapping and skip/dead-letter decisions. |
 | `intent_assurance_outbox` | Durable publication of `IntentAssuranceEvent`. |
-| `intent_assurance_dead_letter` | Optional dead-letter table if selected by platform policy. |
+| `intent_assurance_dead_letter` | Required minimum dead-letter handling for exhausted input processing, unknown or invalid callbacks, stale/superseded event handling that cannot be safely ignored, and repeated observation collection failures after retry policy is exhausted. |
 | `shedlock` | Relay coordination if an embedded clustered relay is used. |
 
 Persistence rules:
@@ -379,7 +414,7 @@ Persistence rules:
 - IA state updates and outbox writes should be transactional where possible;
 - unpublished outbox rows must remain durable until successfully published or governed by explicit operational policy.
 
-## Internal Kafka publication:
+## 16. Internal Kafka publication:
 
 IA MS publishes `IntentAssuranceEvent` to the internal event backbone through its outbox relay.
 
@@ -393,7 +428,7 @@ Publication rules:
 - breaking changes require versioning;
 - payloads must not include secrets, tokens, credentials, or raw internal stack traces.
 
-## Internal Kafka topics:
+## 17. Internal Kafka topics:
 
 | Topic | Direction | Purpose |
 |---|---|---|
@@ -402,7 +437,7 @@ Publication rules:
 
 Exact topic naming should remain aligned with the environment-specific platform Kafka naming convention, but the dedicated callback topic must remain separate from ordinary internal workflow events.
 
-## Event identity:
+## 18. Event identity:
 
 `IntentAssuranceEvent` identity rules:
 
@@ -417,7 +452,7 @@ Exact topic naming should remain aligned with the environment-specific platform 
 | Delivery model | At-least-once |
 | Consumer behaviour | Idempotent consumption required |
 
-## Internal Kafka CloudEvents headers:
+## 19. Internal Kafka CloudEvents headers:
 
 IA MS uses CloudEvents-style metadata in Kafka/message headers with a plain JSON body.
 
@@ -435,7 +470,7 @@ content-type: application/json
 
 Internal events are not external TMF listener events and are not wrapped in TMF event structures.
 
-## Internal Kafka message body:
+## 20. Internal Kafka message body:
 
 The active IA event message shape is:
 
@@ -462,7 +497,9 @@ The active IA event message shape is:
 
 `current.resources[]` should carry the full observed resource/path set in the IA assurance scope where applicable. `lifecycleStatus` and `statusReason` explain the interpreted outcome; each resource entry remains factual and metrics-oriented.
 
-## Behaviour:
+## 21. Behaviour:
+
+IA MS must treat observation gaps, stale observations, and exhausted retries as explicit operational facts. Missing telemetry must not be converted into a healthy assurance state.
 
 | Scenario | IA MS behaviour |
 |---|---|
@@ -474,18 +511,18 @@ The active IA event message shape is:
 | Unknown `sourceState.state` | Record mapping audit and skip/dead-letter/operational handling decision; no default lifecycle event unless policy requires. |
 | Observed metrics inside target | Publish or maintain `Active`/healthy assurance state as policy requires. |
 | Observed metrics outside target | Publish `Degraded` or `Failed` according to policy and severity. |
-| Observability unavailable | Mark observation collection gap operationally; do not invent healthy state from missing telemetry. |
+| Observability unavailable, stale, or incomplete | Retry according to configured policy, mark the observation collection gap operationally, retain previous assurance state where safe, and do not invent healthy state from missing or stale telemetry. |
 | Kafka unavailable | Keep unpublished events in the IA outbox and retry later. |
 | IA DB unavailable | Hard fail processing; do not acknowledge consumed events until retry/DLQ policy applies. |
 
-## Configuration:
+## 22. Configuration:
 
 IA MS configuration should include:
 
 | Configuration area | Purpose |
 |---|---|
 | Callback state mapping | Maps raw `sourceState.state` values to IA lifecycle/assurance meaning. |
-| Skip/dead-letter policy | Controls unknown intent, unknown state, invalid callback, and replay handling. |
+| Skip/dead-letter policy | Controls unknown intent, unknown state, invalid callback, stale or superseded version handling, replay handling, and repeated observation collection failure after retry policy is exhausted. |
 | Observation endpoint profiles | Maps observer configuration targets/profiles to actual observability endpoints. |
 | Metric threshold/evaluation policy | Defines how target breaches become `Active`, `Degraded`, `Failed`, or operational gaps. |
 | Outbox relay policy | Controls retry/backoff, batch size, and relay scheduling. |
@@ -494,7 +531,7 @@ IA MS configuration should include:
 
 Configuration must not make IA MS the owner of optimiser decisions or external lifecycle projection. It should only support IA-owned assurance interpretation and publication.
 
-## Consumer contract:
+## 23. Consumer contract:
 
 Primary consumer of `IntentAssuranceEvent` is IC MS.
 
@@ -510,16 +547,16 @@ Consumer expectations:
 
 Other authorised internal decision components may consume `IntentAssuranceEvent` to decide whether re-interpretation, re-optimisation, reselection, or no action is required.
 
-## Open items:
+## 24. Open items:
 
 | Item | Note |
 |---|---|
 | Exact observation endpoint API contract | The solution brief assumes logical observation endpoint facts; the concrete endpoint API remains environment/platform specific. |
-| Dead-letter implementation choice | The baseline allows optional IA dead-letter persistence/topic handling according to platform policy. |
+| Dead-letter storage and replay implementation detail | DLQ handling is required as a minimum baseline; the exact storage/topic and replay runbook remain an implementation detail aligned to platform policy. |
 | Mapping policy ownership detail | IA owns mapping execution; final operational governance for mapping config should remain aligned with platform configuration management. |
 | Event example harmonisation | IA design brief and internal events baseline are metrics-first; older examples that show extra candidates/evaluations/benchmark wrappers should be treated as non-current until refreshed. |
 
-## Closed items:
+## 25. Closed items:
 
 | Item | Decision |
 |---|---|
@@ -535,7 +572,7 @@ Other authorised internal decision components may consume `IntentAssuranceEvent`
 | Evaluation blocks | No `current.evaluations` or `body.evaluations` by default. |
 | Metrics naming | Use neutral metric names such as `latencyMs`, `availabilityPercent`, `jitterMs`, and `packetLossPercent`. |
 
-## MS identity:
+## 26. MS identity:
 
 | Attribute | Value |
 |---|---|
@@ -550,4 +587,3 @@ Other authorised internal decision components may consume `IntentAssuranceEvent`
 | Main output event | `IntentAssuranceEvent` |
 | Retired event | `IntentDriftOccurredEvent` is not used |
 | Event style | Internal CloudEvents-style headers with plain JSON `body` |
-

@@ -1,5 +1,39 @@
 # IA MS Specification
 
+| **Document status** | **Value** |
+| --- | --- |
+| Status | Current baseline |
+| Scope | Intent Assurance MS internal event specification |
+| Source of truth after commit | GitHub `baseline/intent/ia-ms/ia_ms_specification.md` |
+
+## Table of contents:
+
+- [1. Service identity](#1-service-identity)
+- [2. Boundary statement](#2-boundary-statement)
+- [3. Internal event style](#3-internal-event-style)
+- [4. Input event contracts](#4-input-event-contracts)
+  - [4.1. IntentNetworkReadyEvent input](#41-intentnetworkreadyevent-input)
+    - [4.1.1. Example headers](#411-example-headers)
+    - [4.1.2. Example body](#412-example-body)
+    - [4.1.3. IA handling rules](#413-ia-handling-rules)
+  - [4.2. IntentCallbackEvent input](#42-intentcallbackevent-input)
+    - [4.2.1. Example headers](#421-example-headers)
+    - [4.2.2. Example body — apply success callback](#422-example-body-apply-success-callback)
+    - [4.2.3. IA handling rules](#423-ia-handling-rules)
+  - [4.3. Metrics collection through observation endpoints](#43-metrics-collection-through-observation-endpoints)
+    - [4.3.1. Logical metrics returned to IA MS](#431-logical-metrics-returned-to-ia-ms)
+- [5. Callback state mapping](#5-callback-state-mapping)
+- [6. Output event contract — IntentAssuranceEvent](#6-output-event-contract-intentassuranceevent)
+  - [6.1. Common headers](#61-common-headers)
+  - [6.2. Generic payload model](#62-generic-payload-model)
+  - [6.3. Active outcome](#63-active-outcome)
+  - [6.4. Degraded outcome](#64-degraded-outcome)
+- [7. IntentReport projection support](#7-intentreport-projection-support)
+- [8. Output event rules](#8-output-event-rules)
+- [9. Persistence](#9-persistence)
+- [10. Dependency behaviour](#10-dependency-behaviour)
+- [11. Final baseline statement](#11-final-baseline-statement)
+
 ## 1. Service identity
 
 | **Item** | **Baseline** |
@@ -57,13 +91,13 @@ Internal IA events must not use external TMF `IntentExpression` wrappers. Those 
 
 ## 4. Input event contracts
 
-### 4.1 IntentNetworkReadyEvent input
+### 4.1. IntentNetworkReadyEvent input
 
 IA MS consumes `IntentNetworkReadyEvent` to learn the apply plan and observer scope.
 
 `IntentNetworkReadyEvent` is produced by `intent-intelligence-ms`. IA MS must not emit `IntentNetworkReadyEvent`.
 
-#### Example headers
+#### 4.1.1. Example headers
 
 ```http
 ce-specversion: 1.0
@@ -75,7 +109,7 @@ ce-subject: INT-HOSP-2026-001
 content-type: application/json
 ```
 
-#### Example body
+#### 4.1.2. Example body
 
 ```json
 {
@@ -212,7 +246,7 @@ content-type: application/json
 }
 ```
 
-#### IA handling rules
+#### 4.1.3. IA handling rules
 
 - Treat `IntentNetworkReadyEvent` as service configuration prepared for apply, not as apply success.
 - Store selected apply resources from `serviceConfiguration.orchestratorConfiguration.resources`.
@@ -224,7 +258,7 @@ content-type: application/json
 
 ---
 
-### 4.2 IntentCallbackEvent input
+### 4.2. IntentCallbackEvent input
 
 IA MS consumes raw callback relay events emitted by ICB MS.
 
@@ -238,7 +272,7 @@ The canonical callback fields are:
 
 Do not use retired source-specific callback state/source/timestamp field names as the baseline callback field names.
 
-#### Example headers
+#### 4.2.1. Example headers
 
 ```http
 ce-specversion: 1.0
@@ -250,7 +284,7 @@ ce-subject: INT-HOSP-2026-001
 content-type: application/json
 ```
 
-#### Example body — apply success callback
+#### 4.2.2. Example body — apply success callback
 
 ```json
 {
@@ -273,7 +307,7 @@ content-type: application/json
 }
 ```
 
-#### IA handling rules
+#### 4.2.3. IA handling rules
 
 - Validate/correlate `intentId` against IA state and platform context.
 - Derive source/change-execution type from IA/platform context where required, not from ICB MS.
@@ -283,13 +317,13 @@ content-type: application/json
 
 ---
 
-### 4.3 Metrics collection through observation endpoints
+### 4.3. Metrics collection through observation endpoints
 
 IA MS does not consume a separately named observation snapshot event in the active baseline.
 
 IA MS obtains runtime metrics from observability/observation endpoints that are selected or informed by `IntentNetworkReadyEvent.serviceConfiguration.observerConfiguration`.
 
-#### Logical metrics returned to IA MS
+#### 4.3.1. Logical metrics returned to IA MS
 
 ```json
 {
@@ -339,6 +373,9 @@ IA MS obtains runtime metrics from observability/observation endpoints that are 
 }
 ```
 
+
+IA MS must apply configured observation freshness and retry policy to metrics collected from observability endpoints. Stale or incomplete observations must not produce a misleading healthy state. When observation collection fails after retry policy is exhausted, IA MS must record the operational gap and route to DLQ or operational handling according to policy.
+
 ---
 
 ## 5. Callback state mapping
@@ -362,7 +399,7 @@ IA MS must also treat callback and observation inputs as version-aware where `in
 
 ## 6. Output event contract — IntentAssuranceEvent
 
-### 6.1 Common headers
+### 6.1. Common headers
 
 ```http
 ce-specversion: 1.0
@@ -374,7 +411,7 @@ ce-subject: INT-HOSP-2026-001
 content-type: application/json
 ```
 
-### 6.2 Generic payload model
+### 6.2. Generic payload model
 
 `IntentAssuranceEvent` uses the generic assurance model below.
 
@@ -413,7 +450,7 @@ Do not encode metric origin or evaluation context in field names or wrappers. Do
 
 For `Terminated`, `current.resources` is normally not required unless reporting final resource facts.
 
-### 6.3 Active outcome
+### 6.3. Active outcome
 
 For `Active`, IA MS uses `body.current.resources` to report the full observed resource/path set within the assurance scope, not only the primary path. The event remains fact-based: lifecycle/status reason plus neutral resource metrics.
 
@@ -544,7 +581,7 @@ Do not include `current.evaluations` or `body.evaluations` by default.
 }
 ```
 
-### 6.4 Degraded outcome
+### 6.4. Degraded outcome
 
 For `Degraded`, IA MS still uses `body.current.resources` to report the full observed resource/path set within the assurance scope. The set includes the degraded resource and all monitored alternatives supplied through `IntentNetworkReadyEvent.serviceConfiguration.observerConfiguration.resources`.
 
@@ -726,8 +763,10 @@ IA MS owns its own PostgreSQL-compatible persistence boundary.
 | `intent_assurance_idempotency` | Consumed event deduplication |
 | `intent_assurance_mapping_audit` | Callback mapping and skip/dead-letter decisions |
 | `intent_assurance_outbox` | Durable publication of `IntentAssuranceEvent` |
-| `intent_assurance_dead_letter` | Optional dead-letter table if selected by platform policy |
+| `intent_assurance_dead_letter` | Required minimum dead-letter handling for exhausted input processing, unknown or invalid callbacks, stale/superseded event handling that cannot be safely ignored, and repeated observation collection failures after retry policy is exhausted |
 | `shedlock` | Relay coordination if an embedded clustered relay is used |
+
+DLQ handling is a required minimum baseline for exhausted `IntentNetworkReadyEvent` and `IntentCallbackEvent` processing, unknown `intentId`, unknown or unmapped `sourceState.state`, invalid event shape, stale or superseded version handling that cannot be safely ignored, and repeated observation collection failures after retry policy is exhausted.
 
 ---
 
@@ -737,7 +776,7 @@ IA MS owns its own PostgreSQL-compatible persistence boundary.
 |---|---|
 | IA DB unavailable | Hard fail processing; do not acknowledge consumed event until retry/DLQ policy applies |
 | Kafka unavailable | IA outbox retains unpublished events; relay retries later |
-| Observability platform unavailable | Mark observation collection gap operationally; do not invent healthy state from missing telemetry |
+| Observability platform unavailable, stale, or incomplete | Retry according to configured policy, mark the observation collection gap operationally, retain previous assurance state where safe, and do not invent healthy state from missing or stale telemetry |
 | Callback topic unavailable | No new callbacks consumed; existing IA state remains unchanged |
 | IC MS unavailable | IA still publishes to event backbone; IC catches up through its consumer/idempotency path |
 | KP unavailable | IA uses stored applied configuration/resolved targets where available; do not query KP for every assurance decision by default |
