@@ -73,7 +73,7 @@
 | Domain | Intent Domain |
 | Primary responsibility | Semantic interpretation, Knowledge Plane-backed validation, required pre-resolution validation, candidate-level semantic resolution, and service-ready preparation |
 | External API | None |
-| Primary input event | `IntentValidatedEvent` |
+| Primary input events | `IntentValidatedEvent`; `OptimisationStatusChangeEvent` after ICB MS callback ingestion |
 | Output events | `IntentRejectedEvent`, `IntentResolvedEvent`, `IntentNetworkReadyEvent` |
 
 ## 2. Boundary statement
@@ -315,11 +315,101 @@ content-type: application/json
       "selectedConfiguration": {
         "orchestratorConfiguration": {
           "target": "t7-network-orchestrator",
-          "profile": "hospital-surgical-slice-apply-v1"
+          "profile": "hospital-surgical-slice-apply-v1",
+          "resources": [
+            {
+              "resourceId": "SYD-PRI-01",
+              "resourceType": "deliveryResource",
+              "resourceClass": "critical-gold",
+              "roles": [
+                "primary"
+              ],
+              "accessTechnology": "fibre",
+              "relationships": [
+                {
+                  "type": "pairedSecondary",
+                  "resourceId": "SYD-SEC-01"
+                }
+              ]
+            },
+            {
+              "resourceId": "SYD-SEC-01",
+              "resourceType": "deliveryResource",
+              "resourceClass": "critical-gold",
+              "roles": [
+                "secondary"
+              ],
+              "accessTechnology": "5G",
+              "relationships": [
+                {
+                  "type": "protects",
+                  "resourceId": "SYD-PRI-01"
+                }
+              ]
+            }
+          ]
         },
         "observerConfiguration": {
           "target": "t7-observability-platform",
-          "profile": "critical-gold-assurance-observation-v1"
+          "profile": "critical-gold-assurance-observation-v1",
+          "resources": [
+            {
+              "resourceId": "SYD-PRI-01",
+              "resourceType": "deliveryResource",
+              "resourceClass": "critical-gold",
+              "roles": [
+                "primary"
+              ],
+              "metrics": [
+                "latencyMs",
+                "availabilityPercent",
+                "jitterMs",
+                "packetLossPercent"
+              ]
+            },
+            {
+              "resourceId": "SYD-PRI-02",
+              "resourceType": "deliveryResource",
+              "resourceClass": "critical-gold",
+              "roles": [
+                "primary"
+              ],
+              "metrics": [
+                "latencyMs",
+                "availabilityPercent",
+                "jitterMs",
+                "packetLossPercent"
+              ]
+            },
+            {
+              "resourceId": "SYD-SEC-01",
+              "resourceType": "deliveryResource",
+              "resourceClass": "critical-gold",
+              "roles": [
+                "secondary"
+              ],
+              "metrics": [
+                "latencyMs",
+                "availabilityPercent",
+                "jitterMs",
+                "packetLossPercent"
+              ]
+            },
+            {
+              "resourceId": "SYD-SEC-02",
+              "resourceType": "deliveryResource",
+              "resourceClass": "critical-gold",
+              "roles": [
+                "secondary"
+              ],
+              "metrics": [
+                "latencyMs",
+                "availabilityPercent",
+                "jitterMs",
+                "packetLossPercent"
+              ]
+            }
+          ]
         }
       }
     }
@@ -350,7 +440,7 @@ II MS must process this event idempotently. Duplicate optimiser status events mu
 
 | Step | Action |
 |---|---|
-| 1 | Consume `IntentValidatedEvent` |
+| 1 | Consume `IntentValidatedEvent`; for optimisation-backed selection, also consume `OptimisationStatusChangeEvent` from Kafka after ICB MS callback ingestion |
 | 2 | Check idempotency using CloudEvents `ce-id` and intent identity |
 | 3 | Parse admitted internal `expression.context` |
 | 4 | Resolve `context.constraints.location` from KP or another approved pre-resolution validation source where required |
@@ -1137,6 +1227,8 @@ The Optimiser platform performs optimisation execution and returns the selected 
 
 II MS does not own the optimisation algorithm, optimiser backend, solver model, or optimiser lifecycle. II MS owns submitting the governed optimisation request, correlating the Kafka-delivered optimiser outcome, and packaging the returned selected configuration into `IntentNetworkReadyEvent` for IA MS.
 
+The optimisation expression may transform the canonical `body.expression.context` object into an optimiser-specific problem expression shape. Any such transformation must be explicit, traceable, and must not change the semantic meaning of targets, constraints, preferences, or resources.
+
 Example `POST /optimisation` request body:
 
 ```json
@@ -1473,6 +1565,9 @@ II MS must support at-least-once event delivery.
 Rules:
 
 - Deduplicate consumed `IntentValidatedEvent` by `ce-id` / event id.
+- Deduplicate consumed `OptimisationStatusChangeEvent` by CloudEvents `ce-id`, optimisation id, event type, and intentId/intentVersion where available.
+- Duplicate `OptimisationStatusChangeEvent` instances must not produce duplicate `IntentNetworkReadyEvent` publications.
+- A stale optimiser outcome must not overwrite newer semantic or service-ready state for the same intentId and intentVersion.
 - Store semantic decision state per `intentId` and runtime version.
 - Avoid emitting duplicate `IntentRejectedEvent`, `IntentResolvedEvent`, or `IntentNetworkReadyEvent` for the same input event or milestone.
 - If a newer runtime intent version exists, stale events must not overwrite newer resolution state.
@@ -1487,6 +1582,7 @@ Suggested tables:
 |---|---|
 | `intent_resolution_state` | Current semantic resolution state per intent/version |
 | `intent_resolution_idempotency` | Consumed event deduplication |
+| `intent_optimisation_correlation` | Tracks II-submitted optimisation requests, optimisation id, intentId, intentVersion, correlationId, ICB callback submission target reference where applicable, optimiser outcome state, and correlation of ICB-relayed `OptimisationStatusChangeEvent` outcomes back to the originating `POST /optimisation` request. |
 | `intent_resolution_audit` | KP lookup, policy, semantic, and rejection decision trail |
 | `intent_resolution_outbox` | Reliable publication of II-owned events, including `IntentRejectedEvent`, `IntentResolvedEvent`, and `IntentNetworkReadyEvent` |
 | `intent_resolution_dead_letter` | Optional failed/unprocessable event handling |
@@ -1502,6 +1598,7 @@ Suggested tables:
 | KP unavailable | Fail closed for semantic resolution and retry/dead-letter according to policy |
 | Kafka unavailable | Use outbox relay retry; do not lose resolved/rejected outcome |
 | Cache unavailable | Bypass cache and use KP or the relevant approved pre-resolution validation source where safe |
+| Optimiser / ICB optimiser callback path unavailable | Not a dependency for semantic resolution or `IntentResolvedEvent` emission. For optimisation-backed selection, `POST /optimisation` failure, missing optimiser callback through ICB MS, or missing `OptimisationStatusChangeEvent` from Kafka prevents `IntentNetworkReadyEvent` emission until retry, timeout, governed failure/rejection policy, or operational handling applies. |
 | Downstream fulfilment stage unavailable | Not an II MS dependency for emitting `IntentResolvedEvent`; service-ready preparation must complete before emitting `IntentNetworkReadyEvent` |
 
 ---

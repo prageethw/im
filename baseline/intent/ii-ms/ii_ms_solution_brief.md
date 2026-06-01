@@ -189,7 +189,7 @@ II MS workflow events remain internal Kafka event contracts. The exact ICB optim
 
 ## 8. Event delivery path:
 
-II MS has one event-delivery model in the active baseline: internal Kafka event processing. It consumes `IntentValidatedEvent` from the internal intent-management event topic and publishes II-owned milestone events through the II internal outbox relay to Kafka.
+II MS has one event-delivery model in the active baseline: internal Kafka event processing. It consumes `IntentValidatedEvent` from IC MS and, for optimisation-backed selection, consumes `OptimisationStatusChangeEvent` from Kafka after ICB MS callback ingestion. II MS publishes II-owned milestone events through the II internal outbox relay to Kafka.
 
 These events use CloudEvents-style Kafka/platform headers and JSON bodies. External optimiser callback ingestion is handled by ICB MS and then relayed to Kafka for II MS consumption.
 
@@ -310,11 +310,101 @@ content-type: application/json
       "selectedConfiguration": {
         "orchestratorConfiguration": {
           "target": "t7-network-orchestrator",
-          "profile": "hospital-surgical-slice-apply-v1"
+          "profile": "hospital-surgical-slice-apply-v1",
+          "resources": [
+            {
+              "resourceId": "SYD-PRI-01",
+              "resourceType": "deliveryResource",
+              "resourceClass": "critical-gold",
+              "roles": [
+                "primary"
+              ],
+              "accessTechnology": "fibre",
+              "relationships": [
+                {
+                  "type": "pairedSecondary",
+                  "resourceId": "SYD-SEC-01"
+                }
+              ]
+            },
+            {
+              "resourceId": "SYD-SEC-01",
+              "resourceType": "deliveryResource",
+              "resourceClass": "critical-gold",
+              "roles": [
+                "secondary"
+              ],
+              "accessTechnology": "5G",
+              "relationships": [
+                {
+                  "type": "protects",
+                  "resourceId": "SYD-PRI-01"
+                }
+              ]
+            }
+          ]
         },
         "observerConfiguration": {
           "target": "t7-observability-platform",
-          "profile": "critical-gold-assurance-observation-v1"
+          "profile": "critical-gold-assurance-observation-v1",
+          "resources": [
+            {
+              "resourceId": "SYD-PRI-01",
+              "resourceType": "deliveryResource",
+              "resourceClass": "critical-gold",
+              "roles": [
+                "primary"
+              ],
+              "metrics": [
+                "latencyMs",
+                "availabilityPercent",
+                "jitterMs",
+                "packetLossPercent"
+              ]
+            },
+            {
+              "resourceId": "SYD-PRI-02",
+              "resourceType": "deliveryResource",
+              "resourceClass": "critical-gold",
+              "roles": [
+                "primary"
+              ],
+              "metrics": [
+                "latencyMs",
+                "availabilityPercent",
+                "jitterMs",
+                "packetLossPercent"
+              ]
+            },
+            {
+              "resourceId": "SYD-SEC-01",
+              "resourceType": "deliveryResource",
+              "resourceClass": "critical-gold",
+              "roles": [
+                "secondary"
+              ],
+              "metrics": [
+                "latencyMs",
+                "availabilityPercent",
+                "jitterMs",
+                "packetLossPercent"
+              ]
+            },
+            {
+              "resourceId": "SYD-SEC-02",
+              "resourceType": "deliveryResource",
+              "resourceClass": "critical-gold",
+              "roles": [
+                "secondary"
+              ],
+              "metrics": [
+                "latencyMs",
+                "availabilityPercent",
+                "jitterMs",
+                "packetLossPercent"
+              ]
+            }
+          ]
         }
       }
     }
@@ -387,6 +477,7 @@ Suggested tables:
 |---|---|
 | `intent_resolution_state` | Current semantic resolution state per `intentId` and runtime version. |
 | `intent_resolution_idempotency` | Consumed event deduplication keyed by CloudEvents id and/or intent/version identity. |
+| `intent_optimisation_correlation` | Tracks II-submitted optimisation requests, optimisation id, intentId, intentVersion, correlationId, ICB callback submission target reference where applicable, optimiser outcome state, and correlation of ICB-relayed `OptimisationStatusChangeEvent` outcomes back to the originating `POST /optimisation` request. |
 | `intent_resolution_audit` | Decision audit for KP lookup, policy validation, semantic rejection, and resolution outcomes. |
 | `intent_resolution_outbox` | Reliable publication queue for `IntentRejectedEvent`, `IntentResolvedEvent`, and `IntentNetworkReadyEvent`. |
 | `intent_resolution_dead_letter` | Optional failed/unprocessable event tracking. |
@@ -864,6 +955,8 @@ This event carries `serviceConfiguration.orchestratorConfiguration` and `service
 
 II MS must support at-least-once delivery. It deduplicates consumed events by CloudEvents id and runtime intent identity, and avoids duplicate output milestone events for the same input event and semantic decision.
 
+II MS also deduplicates consumed `OptimisationStatusChangeEvent` instances by CloudEvents id, optimisation id, event type, and intent/version identity where available, and must not publish duplicate `IntentNetworkReadyEvent` outcomes for duplicate optimiser status events.
+
 ### 21.5. Ordering:
 
 II MS must not allow stale events for older runtime intent versions to overwrite newer semantic resolution state.
@@ -878,7 +971,7 @@ Where runtime versioning is active, state transitions are keyed by `intentId` an
 | Knowledge Plane unavailable | Fail closed for semantic resolution and retry/dead-letter according to policy. |
 | Kafka unavailable | Persist to outbox and retry through relay. |
 | Cache unavailable | Bypass cache and use KP or the relevant approved pre-resolution validation source where safe. |
-| Optimiser unavailable | Not a dependency for semantic resolution; downstream consumption handles its own availability. |
+| Optimiser / ICB optimiser callback path unavailable | Not a dependency for semantic resolution or `IntentResolvedEvent` emission. For optimisation-backed selection, `POST /optimisation` failure, missing optimiser callback through ICB MS, or missing `OptimisationStatusChangeEvent` from Kafka prevents `IntentNetworkReadyEvent` emission until retry, timeout, governed failure/rejection policy, or operational handling applies. |
 | IA MS unavailable | Not a synchronous dependency; `IntentNetworkReadyEvent` remains the handoff. |
 
 ## 22. Configuration:
@@ -916,7 +1009,7 @@ Consumer rules:
 
 | Item | Status |
 |---|---|
-| Finalise whether optimiser consumes `IntentResolvedEvent` directly or via an optimiser-specific inbox abstraction in implementation. | Open implementation detail. |
+| Finalise implementation-level details for the approved Optimiser integration path: II MS submits `POST /optimisation`, registers or supplies the ICB-owned callback submission URL, and consumes ICB-relayed `OptimisationStatusChangeEvent` from Kafka. | Open implementation detail. |
 | Finalise exact KP lookup and cache policy values per environment. | Open implementation detail. |
 | Finalise DLQ operational runbook and replay controls. | Open implementation detail. |
 | Confirm whether future topic split is needed for `IntentResolvedEvent` and `IntentNetworkReadyEvent` as volume grows. | Open scalability decision. |
@@ -945,7 +1038,7 @@ Consumer rules:
 | Service name | `intent-intelligence-ms` |
 | Domain | Intent Domain |
 | External API | None |
-| Primary input event | `IntentValidatedEvent` |
+| Primary input events | `IntentValidatedEvent`; `OptimisationStatusChangeEvent` after ICB MS callback ingestion |
 | Output events | `IntentRejectedEvent`, `IntentResolvedEvent`, `IntentNetworkReadyEvent` |
 | Primary persistence | PostgreSQL / PostgreSQL-compatible RDBMS |
 | Event style | Internal Kafka events with CloudEvents-style Kafka/platform headers and plain JSON `body` |
