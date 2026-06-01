@@ -1,6 +1,6 @@
 <mxfile host="65bd71144e">
     <diagram name="ID MS - Logical View" id="id-ms-logical-view">
-        <mxGraphModel dx="592" dy="639" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1654" pageHeight="1169" math="0" shadow="0" adaptiveColors="none">
+        <mxGraphModel dx="651" dy="638" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1654" pageHeight="1169" math="0" shadow="0" adaptiveColors="none">
             <root>
                 <mxCell id="0"/>
                 <mxCell id="1" parent="0"/>
@@ -163,7 +163,10 @@
                 <mxCell id="legend_new" value="New" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=default;" parent="1" vertex="1">
                     <mxGeometry x="340" y="920" width="160" height="30" as="geometry"/>
                 </mxCell>
-            <mxCell id="draftid_provenance_note" value="draftId provenance lookup&#xa;Before activation: mutable DRAFT candidate&#xa;After activation: read-only produced version lookup&#xa;Runtime admission uses official ACTIVE id, not draftId" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;fontSize=10;" vertex="1" parent="1"><mxGeometry x="40" y="760" width="300" height="90" as="geometry" /></mxCell></root>
+                <mxCell id="draftid_provenance_note" value="draftId provenance lookup&#xa;Before activation: mutable DRAFT candidate&#xa;After activation: read-only produced version lookup&#xa;Runtime admission uses official ACTIVE id, not draftId" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=default;fontSize=10;" parent="1" vertex="1">
+                    <mxGeometry x="40" y="669" width="300" height="90" as="geometry"/>
+                </mxCell>
+            </root>
         </mxGraphModel>
     </diagram>
 </mxfile>
