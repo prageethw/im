@@ -1034,6 +1034,8 @@ IntentNetworkReadyEvent may be emitted only after II MS has received or derived 
 
 For optimisation-backed selection, II MS uses the approved Optimiser platform integration pattern: a governed REST request to `POST /optimisation`, with the ICB-owned callback submission URL, `POST /intent-callback/v1/submissions`, registered or supplied as the optimiser outcome target. The Optimiser platform sends `OptimisationStatusChangeEvent` to ICB MS. ICB MS ingests the callback and publishes `OptimisationStatusChangeEvent` to Kafka for II MS consumption. The Optimiser platform owns optimisation execution, selection logic, solver models, and optimiser lifecycle. II MS owns submitting the governed request, correlating the Kafka-delivered optimiser outcome, and packaging that selected configuration into `IntentNetworkReadyEvent` for IA MS.
 
+The governed `POST /optimisation` request must be submitted through the II MS optimisation API outbox pattern. II MS persists the semantic decision, `intent_optimisation_correlation` state, and pending optimisation API outbox entry before any outbound REST attempt. A dedicated optimisation API outbox worker submits the request, applies bounded retries and circuit-breaker behaviour, records the accepted optimisation id or failure state, and updates the correlation record used later when `OptimisationStatusChangeEvent` arrives from Kafka.
+
 ### 10.5. Example headers
 
 ```http
@@ -1221,7 +1223,7 @@ content-type: application/json
 
 ### 10.8. Optimiser integration pattern for selected configuration
 
-When an intent requires optimisation-backed resource selection, II MS submits the resolved candidate context to the Optimiser platform using `POST /optimisation`. The request carries the resolved `body.expression.context`, candidate resources, targets, constraints, preferences, and correlation metadata from the admitted and resolved intent.
+When an intent requires optimisation-backed resource selection, II MS records a pending optimisation request in the optimisation API outbox for submission to the Optimiser platform using `POST /optimisation`. The request carries the resolved `body.expression.context`, candidate resources, targets, constraints, preferences, and correlation metadata from the admitted and resolved intent. The outbound REST submission is performed by an API outbox worker using a stable idempotency key, not directly inside the inbound event consumer transaction.
 
 The Optimiser platform performs optimisation execution and returns the selected configuration asynchronously by sending `OptimisationStatusChangeEvent` to the ICB-owned callback submission URL, `POST /intent-callback/v1/submissions`, registered or supplied by II MS. ICB MS ingests the callback and relays `OptimisationStatusChangeEvent` to Kafka for II MS consumption.
 
@@ -1556,6 +1558,12 @@ II MS maps KP data into event-facing resource entries.
 | `relationships` | Include only downstream-relevant relationships |
 | `provider` | Do not include by default; KP inventory metadata only |
 
+KP freshness rules:
+
+- II MS must apply a configured KP freshness policy before using KP facts for safety-critical semantic resolution or service-ready packaging.
+- If KP data is stale, missing, or cannot be refreshed within the configured freshness window, II MS must fail closed for the affected runtime version and use an intent-domain reason such as `KNOWLEDGE_LOOKUP_ERROR`.
+- If optimisation or callback wait time exceeds the configured KP freshness threshold, II MS must re-check the current KP snapshot/version before packaging `IntentNetworkReadyEvent`.
+
 ---
 
 ## 12. Idempotency and ordering
@@ -1568,6 +1576,7 @@ Rules:
 - Deduplicate consumed `OptimisationStatusChangeEvent` by CloudEvents `ce-id`, optimisation id, event type, and intentId/intentVersion where available.
 - Duplicate `OptimisationStatusChangeEvent` instances must not produce duplicate `IntentNetworkReadyEvent` publications.
 - A stale optimiser outcome must not overwrite newer semantic or service-ready state for the same intentId and intentVersion.
+- If IC MS supersedes, updates, or cancels a runtime intent while II MS or Optimiser processing is in flight, II MS must not publish a milestone event for the older/non-current runtime version. Late optimiser outcomes for that version are audit/correlation records only.
 - Store semantic decision state per `intentId` and runtime version.
 - Avoid emitting duplicate `IntentRejectedEvent`, `IntentResolvedEvent`, or `IntentNetworkReadyEvent` for the same input event or milestone.
 - If a newer runtime intent version exists, stale events must not overwrite newer resolution state.
@@ -1583,9 +1592,10 @@ Suggested tables:
 | `intent_resolution_state` | Current semantic resolution state per intent/version |
 | `intent_resolution_idempotency` | Consumed event deduplication |
 | `intent_optimisation_correlation` | Tracks II-submitted optimisation requests, optimisation id, intentId, intentVersion, correlationId, ICB callback submission target reference where applicable, optimiser outcome state, and correlation of ICB-relayed `OptimisationStatusChangeEvent` outcomes back to the originating `POST /optimisation` request. |
+| `intent_optimisation_api_outbox` | Durable API outbox for II-submitted `POST /optimisation` requests, including request body, idempotency key, callback submission URL, request status, retry count, next retry time, accepted optimisation id, and error/failure state. |
 | `intent_resolution_audit` | KP lookup, policy, semantic, and rejection decision trail |
 | `intent_resolution_outbox` | Reliable publication of II-owned events, including `IntentRejectedEvent`, `IntentResolvedEvent`, and `IntentNetworkReadyEvent` |
-| `intent_resolution_dead_letter` | Optional failed/unprocessable event handling |
+| `intent_resolution_dead_letter` | Required minimum failed/unprocessable event handling for exhausted `IntentValidatedEvent` and `OptimisationStatusChangeEvent` processing, including event id, event type, intentId, intentVersion where available, failure reason, retry count, payload hash, and replay/operational status. |
 | `shedlock` | Relay coordination if clustered outbox relay is used |
 
 ---
@@ -1595,10 +1605,11 @@ Suggested tables:
 | Dependency | Behaviour |
 |---|---|
 | II DB unavailable | Do not process/acknowledge event beyond retry/dead-letter policy |
-| KP unavailable | Fail closed for semantic resolution and retry/dead-letter according to policy |
+| KP unavailable or stale | Fail closed for semantic resolution or service-ready packaging when fresh KP facts are required; refresh, retry, or dead-letter according to policy |
 | Kafka unavailable | Use outbox relay retry; do not lose resolved/rejected outcome |
 | Cache unavailable | Bypass cache and use KP or the relevant approved pre-resolution validation source where safe |
-| Optimiser / ICB optimiser callback path unavailable | Not a dependency for semantic resolution or `IntentResolvedEvent` emission. For optimisation-backed selection, `POST /optimisation` failure, missing optimiser callback through ICB MS, or missing `OptimisationStatusChangeEvent` from Kafka prevents `IntentNetworkReadyEvent` emission until retry, timeout, governed failure/rejection policy, or operational handling applies. |
+| Optimisation API outbox unavailable | Prevents outbound `POST /optimisation` submission for optimisation-backed selection. II MS keeps the optimisation request pending and must not emit `IntentNetworkReadyEvent` until the API outbox worker successfully submits the request and the correlated optimiser outcome is received through ICB MS and Kafka. |
+| Optimiser / ICB optimiser callback path unavailable | Not a dependency for semantic resolution or `IntentResolvedEvent` emission. For optimisation-backed selection, `POST /optimisation` failure from the API outbox worker, missing optimiser callback through ICB MS, or missing `OptimisationStatusChangeEvent` from Kafka prevents `IntentNetworkReadyEvent` emission until configured retry, callback timeout, governed failure/rejection policy, or operational handling applies. |
 | Downstream fulfilment stage unavailable | Not an II MS dependency for emitting `IntentResolvedEvent`; service-ready preparation must complete before emitting `IntentNetworkReadyEvent` |
 
 ---
@@ -1617,6 +1628,10 @@ ii_ms_resolution_failure_count
 ii_ms_outbox_pending_count
 ii_ms_outbox_publish_failure_count
 ii_ms_duplicate_event_count
+ii_ms_optimisation_timeout_count
+ii_ms_stale_event_ignored_count
+ii_ms_kp_stale_or_refresh_failure_count
+ii_ms_dead_letter_count
 ```
 
 All logs and traces must include `correlationId` and `intentId` where available.
@@ -1641,7 +1656,9 @@ Rules:
 
 ## 17. Contract summary
 
-II MS consumes `IntentValidatedEvent`, validates and resolves the admitted expression using Knowledge Plane data, domain knowledge, and any required use-case-specific pre-resolution validation sources, preserves `expression.context.targets`, `expression.context.constraints`, and `expression.context.preferences`, and emits `IntentRejectedEvent`, `IntentResolvedEvent`, or `IntentNetworkReadyEvent` depending on the resolved milestone.
+II MS consumes `IntentValidatedEvent` and, for optimisation-backed selection, `OptimisationStatusChangeEvent` after ICB MS callback ingestion. It validates and resolves the admitted expression using Knowledge Plane data, domain knowledge, and any required use-case-specific pre-resolution validation sources, preserves `expression.context.targets`, `expression.context.constraints`, and `expression.context.preferences`, and emits `IntentRejectedEvent`, `IntentResolvedEvent`, or `IntentNetworkReadyEvent` depending on the resolved milestone.
+
+II MS must fail closed for stale KP facts, stale runtime versions, duplicate optimiser outcomes, missing optimiser callbacks, failed optimisation outcomes, and cancelled/superseded intents. These conditions must not produce unsafe or duplicate `IntentNetworkReadyEvent` publications.
 
 `IntentRejectedEvent` is the semantic/policy/capability rejection handoff. IC MS consumes it and projects the external runtime `Intent` lifecycle accordingly.
 
