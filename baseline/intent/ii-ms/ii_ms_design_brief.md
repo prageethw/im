@@ -236,7 +236,7 @@ II MS emits `IntentNetworkReadyEvent` when service-ready preparation has produce
 
 IntentNetworkReadyEvent may be emitted only after II MS has received or derived a governed selected configuration from the authorised downstream selection or optimisation path. II MS does not own the optimisation algorithm or optimiser backend. II MS owns packaging the selected configuration into the service-ready event for IA MS.
 
-For optimisation-backed selection, II MS submits the resolved intent context and candidate resources to the Optimiser platform using `POST /optimisation`. The Optimiser platform returns the governed selected configuration through the approved internal optimiser event ingestion path, represented in this baseline as `POST /intent-intelligence/v1/optimisation/events` carrying `OptimisationStatusChangeEvent`. II MS then packages that selected configuration into `IntentNetworkReadyEvent` for IA MS.
+For optimisation-backed selection, II MS submits the resolved intent context and candidate resources to the Optimiser platform using `POST /optimisation`. II MS registers or supplies the ICB-owned callback submission URL as the optimiser outcome target. The Optimiser platform returns the governed selected configuration by sending `OptimisationStatusChangeEvent` to ICB MS. ICB MS ingests the callback and publishes `OptimisationStatusChangeEvent` to Kafka for II MS consumption. II MS then packages that selected configuration into `IntentNetworkReadyEvent` for IA MS.
 
 `IntentNetworkReadyEvent`:
 
@@ -310,13 +310,7 @@ Internal II events do not use the TMF external `Intent.expression` wrapper, but 
 
 II MS has no external TMF-compliant API and no consumer-facing REST contract. It is not exposed through NGW, OEX, public API gateways, or partner-facing API channels.
 
-II MS exposes one platform-internal optimiser event ingestion endpoint for the approved Optimiser integration path:
-
-```http
-POST /intent-intelligence/v1/optimisation/events
-```
-
-This endpoint receives approved optimiser outcome events for optimisation requests previously submitted by II MS using `POST /optimisation`. It is not a TMF921 API, not exposed through NGW or OEX, and not available to external consumers. II MS validates the caller identity, event shape, optimisation id, source context, `intentId`, `intentVersion`, and `correlationId`; persists the outcome idempotently; and packages the governed selected configuration into `IntentNetworkReadyEvent` through the II outbox.
+For optimiser-backed selection, II MS uses the ICB-owned callback ingestion path for optimiser outcome events. II MS registers or supplies the ICB submission URL to the Optimiser platform, and ICB MS publishes the received `OptimisationStatusChangeEvent` to Kafka for II MS consumption. The exact ICB ingestion and relay contract must be confirmed during ICB MS refinement.
 
 Operational probes such as `/health`, `/ready`, and `/metrics`, if implemented, are platform-internal only. They are for Kubernetes/platform operations and must not be presented as TMF921 resource APIs or externally exposed service APIs.
 
