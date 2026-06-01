@@ -1,5 +1,5 @@
 @startuml
-title Intent Intelligence MS (II MS) — Semantic Interpretation Sequence Flow
+title Intent Intelligence MS (II MS) - Semantic Interpretation Sequence Flow
 
 !theme plain
 skinparam sequenceMessageAlign center
@@ -28,16 +28,14 @@ IIMS -> STORE : check deduplication record\n(cloudEventsId + intentId)
 
 alt already processed (duplicate)
   STORE --> IIMS : duplicate found
-  IIMS -> KAFKA : ack (idempotent — no reprocessing)
+  IIMS -> KAFKA : ack (idempotent - no reprocessing)
 else not yet processed
-  STORE --> IIMS : no duplicate — proceed
+  STORE --> IIMS : no duplicate - proceed
 
   == 2. Check Admission Context and Parse Expression Context ==
 
-  IIMS -> IIMS : confirm body.intentSpecification.id is present
-(selected active spec from IC MS)
-  IIMS -> IIMS : confirm body.expression.iri is present
-(admitted semantic/expression contract)
+  IIMS -> IIMS : confirm body.intentSpecification.id is present\n(selected active spec from IC MS)
+  IIMS -> IIMS : confirm body.expression.iri is present\n(admitted semantic/expression contract)
   note over IIMS
     II MS treats intentSpecification.id and expression.iri
     as carried-forward admission facts from IC MS.
@@ -48,7 +46,7 @@ else not yet processed
   IIMS -> IIMS : parse body.expression.context.constraints\n(location, service class, priority,\nredundancy, time window, ...)
   IIMS -> IIMS : parse body.expression.context.preferences\n(soft selection guidance)
 
-  == 3. Knowledge Plane and Resolution Authority Resolution ==
+  == 3. Knowledge Plane and Required Pre-Resolution Validation ==
 
   IIMS -> KP : resolve location context
   KP --> IIMS : location scope + region metadata
@@ -79,12 +77,12 @@ else not yet processed
   IIMS -> IIMS : validate time window constraint
 
   alt any hard constraint unsatisfiable
-    IIMS -> IIMS : semantic rejection — hard constraint failure
+    IIMS -> IIMS : semantic rejection - hard constraint failure
     group Atomic DB transaction
       IIMS -> STORE : persist semantic decision trail\n{ reason: CONSTRAINT_VIOLATION, detail }
       IIMS -> STORE : write IntentRejectedEvent to outbox\n{ intentId, rejectionClass: CONSTRAINT, reason }
     end
-    RELAY -> STORE : poll → IntentRejectedEvent
+    RELAY -> STORE : poll -> IntentRejectedEvent
     RELAY -> KAFKA : publish IntentRejectedEvent
     ICMS -> KAFKA : consume event
   else all hard constraints satisfiable
@@ -103,12 +101,12 @@ else not yet processed
     IIMS -> IIMS : validate packet loss target\nvs capability profile
 
     alt any measurable target outside capability context
-      IIMS -> IIMS : semantic rejection — capability not met
+      IIMS -> IIMS : semantic rejection - capability not met
       group Atomic DB transaction
         IIMS -> STORE : persist semantic decision trail\n{ reason: CAPABILITY_EXCEEDED, detail }
         IIMS -> STORE : write IntentRejectedEvent to outbox\n{ intentId, rejectionClass: CAPABILITY, reason }
       end
-      RELAY -> STORE : poll → IntentRejectedEvent
+      RELAY -> STORE : poll -> IntentRejectedEvent
       RELAY -> KAFKA : publish IntentRejectedEvent
       ICMS -> KAFKA : consume event
     else all targets within capability context
@@ -130,7 +128,7 @@ else not yet processed
 
       == 7. Canonicalisation ==
 
-      IIMS -> IIMS : normalise canonical semantic buckets\n• targets → normalised measurement set\n• constraints → validated hard set\n• preferences → ranked soft guidance set
+      IIMS -> IIMS : normalise canonical semantic buckets\n- targets -> normalised measurement set\n- constraints -> validated hard set\n- preferences -> ranked soft guidance set
 
       == 8. Candidate Discovery ==
 
@@ -138,12 +136,12 @@ else not yet processed
       IIMS -> IIMS : resolve complete valid candidate resource set\nfor current semantic context
 
       alt no valid candidates found after filtering
-        IIMS -> IIMS : semantic rejection — no candidates
+        IIMS -> IIMS : semantic rejection - no candidates
         group Atomic DB transaction
           IIMS -> STORE : persist semantic decision trail\n{ reason: NO_CANDIDATES, detail }
           IIMS -> STORE : write IntentRejectedEvent to outbox\n{ intentId, rejectionClass: POLICY, reason }
         end
-        RELAY -> STORE : poll → IntentRejectedEvent
+        RELAY -> STORE : poll -> IntentRejectedEvent
         RELAY -> KAFKA : publish IntentRejectedEvent
         ICMS -> KAFKA : consume event
       else valid candidates resolved
@@ -153,10 +151,10 @@ else not yet processed
         group Atomic DB transaction
           IIMS -> STORE : persist semantic decision trail\n{ candidateSet, canonicalTargets,\n canonicalConstraints, canonicalPreferences }
           IIMS -> STORE : write IntentResolvedEvent to outbox\n{ intentId, candidateSet, canonicalContext }
-          IIMS -> STORE : write deduplication record\n(cloudEventsId + intentId → PROCESSED)
+          IIMS -> STORE : write deduplication record\n(cloudEventsId + intentId -> PROCESSED)
         end
 
-        == 10. Outbox Relay — Publish to Kafka ==
+        == 10. Outbox Relay - Publish to Kafka ==
 
         RELAY -> STORE : poll PENDING outbox rows
         STORE --> RELAY : [IntentResolvedEvent]
@@ -177,7 +175,7 @@ else not yet processed
           IIMS -> STORE : write IntentNetworkReadyEvent to outbox\n{ intentId, context, serviceConfiguration, references }
         end
 
-        RELAY -> STORE : poll → IntentNetworkReadyEvent
+        RELAY -> STORE : poll -> IntentNetworkReadyEvent
         RELAY -> KAFKA : publish IntentNetworkReadyEvent
         STORE <- RELAY : mark row DELIVERED
 
