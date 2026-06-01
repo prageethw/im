@@ -714,7 +714,7 @@ Where runtime versioning is active, state transitions are keyed by `intentId` an
 | II database unavailable | Do not acknowledge/process beyond retry/dead-letter policy. |
 | Knowledge Plane unavailable | Fail closed for semantic resolution and retry/dead-letter according to policy. |
 | Kafka unavailable | Persist to outbox and retry through relay. |
-| Cache unavailable | Bypass cache and use KP or the relevant approved validation source where safe. |
+| Cache unavailable | Bypass cache and use KP or the relevant approved pre-resolution validation source where safe. |
 | Optimiser unavailable | Not a dependency for semantic resolution; downstream consumption handles its own availability. |
 | IA MS unavailable | Not a synchronous dependency; `IntentNetworkReadyEvent` remains the handoff. |
 

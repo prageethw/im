@@ -34,7 +34,7 @@
 
 ## 1. Purpose
 
-Intent Intelligence MS, referred to as II MS, owns semantic interpretation, Knowledge Plane-backed and required pre-resolution validation, and semantic/service-ready preparation for admitted runtime intents.
+Intent Intelligence MS, referred to as II MS, owns semantic interpretation, Knowledge Plane-backed validation and required pre-resolution validation, and semantic/service-ready preparation for admitted runtime intents.
 
 II MS receives syntactically admitted intent facts from IC MS, interprets and validates them against Knowledge Plane data, domain knowledge, and any additional pre-resolution validation sources required by the use case, and emits one of the II-owned internal outcome events:
 
@@ -54,7 +54,7 @@ It does not expose a TMF-compliant REST API and is not exposed through NGW, OEX,
 | Service name | `intent-intelligence-ms` |
 | Short name | II MS |
 | Domain | Intent Domain |
-| Main responsibility | Semantic interpretation, Knowledge Plane-backed and required pre-resolution validation, canonical resolution, and service-ready preparation |
+| Main responsibility | Semantic interpretation, Knowledge Plane-backed validation and required pre-resolution validation, canonical resolution, and service-ready preparation |
 | Primary event input | `IntentValidatedEvent` |
 | Main event outputs | `IntentRejectedEvent`, `IntentResolvedEvent`, `IntentNetworkReadyEvent` |
 | Event style | Internal CloudEvents headers with plain JSON `body` |
@@ -146,7 +146,7 @@ The baseline surgical hospital slice is an illustrative runtime example used to 
 | Idempotency | Deduplicate by CloudEvents `ce-id` / event id and `intentId` |
 | Admission context check | Confirm the event carries `intentSpecification.id` and `expression.iri` from IC MS admission context |
 | Semantic parse | Interpret `expression.context.targets`, `expression.context.constraints`, and `expression.context.preferences` |
-| KP and pre-resolution validation lookup | Resolve location, service capability, policy, and other required domain facts from Knowledge Plane and approved use-case-specific validation sources |
+| KP and required pre-resolution validation lookup | Resolve location, service capability, policy, and other required domain facts from Knowledge Plane and approved use-case-specific pre-resolution validation sources |
 | Capability validation | Confirm requested service/service class is available for the requested location |
 | Policy validation | Validate hard constraints such as priority and redundancy against KP/domain policy |
 | Canonicalisation | Normalise values into canonical internal terms |
@@ -196,7 +196,7 @@ Knowledge Plane is the primary governed knowledge source for the current hospita
 
 These sources provide pre-resolution facts only; they do not own the external runtime `Intent` lifecycle. II MS remains responsible for semantic resolution, curating the returned facts, applying the II MS contract rules, and emitting the correct II-owned internal outcome event. Raw source-system payloads must not be dumped into II events. Only the validated and consumer-safe facts required by the next internal stage should be carried forward.
 
-The active hospital surgical slice example mostly resolves from KP and optimiser-related references. Other intent types may require a wider authority chain while still following the same II MS event and semantic bucket rules.
+The active hospital surgical slice example mostly resolves from KP and optimiser-related references. Other intent types may require a wider pre-resolution validation chain while still following the same II MS event and semantic bucket rules.
 
 ## 10. Resource and metric vocabulary
 
