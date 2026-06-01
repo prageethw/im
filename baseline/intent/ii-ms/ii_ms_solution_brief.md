@@ -19,6 +19,7 @@
 - [8. Event delivery path:](#8-event-delivery-path)
 - [9. Inbound internal Kafka event shape:](#9-inbound-internal-kafka-event-shape)
   - [9.1. IntentValidatedEvent:](#91-intentvalidatedevent)
+  - [9.2. OptimisationStatusChangeEvent:](#92-optimisationstatuschangeevent)
 - [10. Field specification:](#10-field-specification)
 - [11. Fields not accepted:](#11-fields-not-accepted)
 - [12. Authorisation:](#12-authorisation)
@@ -266,6 +267,62 @@ content-type: application/json
 }
 ```
 
+### 9.2. OptimisationStatusChangeEvent:
+
+For optimisation-backed selection, II MS consumes `OptimisationStatusChangeEvent` from Kafka after ICB MS has ingested the external optimiser callback. The event uses CloudEvents-style Kafka/platform headers and a plain JSON body.
+
+```http
+ce-specversion: 1.0
+ce-type: OptimisationStatusChangeEvent
+ce-source: intent-callback-ms
+ce-id: evt-optimisation-status-001
+ce-time: 2026-04-18T12:03:30+10:00
+ce-subject: INT-HOSP-2026-001
+content-type: application/json
+```
+
+```json
+{
+  "eventType": "OptimisationStatusChangeEvent",
+  "eventTime": "2026-04-18T12:03:30+10:00",
+  "timeOccurred": "2026-04-18T12:03:30+10:00",
+  "event": {
+    "optimisation": {
+      "id": "opt-hss-2026-001",
+      "href": "/optimisation/opt-hss-2026-001",
+      "previousLifecycleStatus": "PROCESSING",
+      "newLifecycleStatus": "COMPLETED",
+      "sourceContext": {
+        "domain": "intent-management",
+        "resource": {
+          "id": "INT-HOSP-2026-001",
+          "href": "/intentManagement/v5/intent/INT-HOSP-2026-001",
+          "@type": "IntentRef",
+          "@referredType": "Intent"
+        },
+        "correlationId": "corr-intent-create-001",
+        "intentVersion": "v1"
+      },
+      "resultSummary": {
+        "outcome": "COMPLETED",
+        "summary": "Optimisation completed successfully. Selected primary and secondary resources for the Sydney hospital surgical slice."
+      },
+      "selectedConfiguration": {
+        "orchestratorConfiguration": {
+          "target": "t7-network-orchestrator",
+          "profile": "hospital-surgical-slice-apply-v1"
+        },
+        "observerConfiguration": {
+          "target": "t7-observability-platform",
+          "profile": "critical-gold-assurance-observation-v1"
+        }
+      }
+    }
+  },
+  "@type": "OptimisationStatusChangeEvent"
+}
+```
+
 ## 10. Field specification:
 
 | Field | Requirement | Notes |
@@ -355,7 +412,7 @@ Publication rules:
 
 | Topic | Event types | Direction for II MS |
 |---|---|---|
-| `t7.intent.management.events` | `IntentValidatedEvent`, `IntentRejectedEvent`, `IntentResolvedEvent`, `IntentNetworkReadyEvent` | Consume and publish internal intent workflow events. |
+| `t7.intent.management.events` | `IntentValidatedEvent`, `OptimisationStatusChangeEvent`, `IntentRejectedEvent`, `IntentResolvedEvent`, `IntentNetworkReadyEvent` | Consume admitted intent and optimiser outcome events; publish II-owned workflow events. |
 
 The shared topic is the current baseline; event type and `ce-source` provide ownership boundaries. Future topic splitting may be introduced without changing II MS event payload contracts.
 
@@ -368,8 +425,8 @@ CloudEvents identity must be stable and suitable for deduplication.
 | Field | Rule |
 |---|---|
 | `ce-id` | Globally unique event id. Stable for the same event publication attempt. |
-| `ce-source` | `intent-intelligence-ms` for II-owned outbound events. |
-| `ce-type` | One of `IntentRejectedEvent`, `IntentResolvedEvent`, or `IntentNetworkReadyEvent`. |
+| `ce-source` | `intent-intelligence-ms` for II-owned outbound events; `intent-callback-ms` for ICB-relayed `OptimisationStatusChangeEvent` consumed by II MS. |
+| `ce-type` | One of `IntentValidatedEvent`, `OptimisationStatusChangeEvent`, `IntentRejectedEvent`, `IntentResolvedEvent`, or `IntentNetworkReadyEvent`, depending on direction and producer. |
 | `ce-subject` | Runtime `intentId`. |
 | `ce-time` | Event creation time. |
 | `body.intentId` | Same runtime intent identity as `ce-subject`. |
@@ -377,6 +434,18 @@ CloudEvents identity must be stable and suitable for deduplication.
 | `body.references.correlationId` | End-to-end trace/correlation id. |
 
 ## 17. Internal Kafka CloudEvents headers:
+
+Example inbound headers for `OptimisationStatusChangeEvent` consumed by II MS after ICB MS relay:
+
+```http
+ce-specversion: 1.0
+ce-type: OptimisationStatusChangeEvent
+ce-source: intent-callback-ms
+ce-id: evt-optimisation-status-001
+ce-time: 2026-04-18T12:03:30+10:00
+ce-subject: INT-HOSP-2026-001
+content-type: application/json
+```
 
 Example outbound headers for `IntentResolvedEvent`:
 

@@ -20,6 +20,7 @@
   - [4.5. Example headers](#45-example-headers)
   - [4.6. Example body consumed by II MS](#46-example-body-consumed-by-ii-ms)
   - [4.7. Input validation rules](#47-input-validation-rules)
+  - [4.8. Event input: OptimisationStatusChangeEvent](#48-event-input-optimisationstatuschangeevent)
 - [5. Semantic processing flow](#5-semantic-processing-flow)
 - [6. Target, constraint, and preference handling](#6-target-constraint-and-preference-handling)
   - [6.1. Targets](#61-targets)
@@ -242,6 +243,108 @@ II MS expects:
 II MS does not expect the external TMF `Intent.expression` wrapper in internal events. Internal events carry native JSON under `body.expression`, but that native expression must include the admitted `expression.iri` and preserve the canonical `context.targets`, `context.constraints`, and `context.preferences` grouping established by ID MS and IC MS. II MS must not re-resolve the governing `IntentSpecification` by IRI alone; `intentSpecification.id` remains the selected specification reference.
 
 ---
+
+### 4.8. Event input: OptimisationStatusChangeEvent
+
+For optimisation-backed selection, II MS consumes `OptimisationStatusChangeEvent` from Kafka after ICB MS has ingested the external optimiser callback and relayed the event internally. This is an inbound internal Kafka event for II MS, not an external II MS endpoint.
+
+#### Topic
+
+```text
+t7.intent.management.events
+```
+
+#### Producer
+
+```text
+intent-callback-ms
+```
+
+#### Consumer
+
+```text
+intent-intelligence-ms
+```
+
+#### Meaning
+
+`OptimisationStatusChangeEvent` means the approved Optimiser platform has returned an optimisation outcome for a previously submitted `POST /optimisation` request. II MS consumes the event, correlates it to the original `intentId`, `intentVersion`, `correlationId`, and optimisation id, and packages the governed selected configuration into `IntentNetworkReadyEvent` when the outcome is complete and valid.
+
+It does not mean network apply has succeeded, and it does not make II MS the owner of the optimiser lifecycle or optimisation algorithm.
+
+#### Example Kafka headers
+
+```http
+ce-specversion: 1.0
+ce-type: OptimisationStatusChangeEvent
+ce-source: intent-callback-ms
+ce-id: evt-optimisation-status-001
+ce-time: 2026-04-18T12:03:30+10:00
+ce-subject: INT-HOSP-2026-001
+content-type: application/json
+```
+
+#### Example body consumed by II MS
+
+```json
+{
+  "eventType": "OptimisationStatusChangeEvent",
+  "eventTime": "2026-04-18T12:03:30+10:00",
+  "timeOccurred": "2026-04-18T12:03:30+10:00",
+  "event": {
+    "optimisation": {
+      "id": "opt-hss-2026-001",
+      "href": "/optimisation/opt-hss-2026-001",
+      "previousLifecycleStatus": "PROCESSING",
+      "newLifecycleStatus": "COMPLETED",
+      "sourceContext": {
+        "domain": "intent-management",
+        "resource": {
+          "id": "INT-HOSP-2026-001",
+          "href": "/intentManagement/v5/intent/INT-HOSP-2026-001",
+          "@type": "IntentRef",
+          "@referredType": "Intent"
+        },
+        "correlationId": "corr-intent-create-001",
+        "intentVersion": "v1"
+      },
+      "resultSummary": {
+        "outcome": "COMPLETED",
+        "summary": "Optimisation completed successfully. Selected primary and secondary resources for the Sydney hospital surgical slice."
+      },
+      "selectedConfiguration": {
+        "orchestratorConfiguration": {
+          "target": "t7-network-orchestrator",
+          "profile": "hospital-surgical-slice-apply-v1"
+        },
+        "observerConfiguration": {
+          "target": "t7-observability-platform",
+          "profile": "critical-gold-assurance-observation-v1"
+        }
+      }
+    }
+  },
+  "@type": "OptimisationStatusChangeEvent"
+}
+```
+
+#### Input validation rules
+
+II MS expects:
+
+| Field | Rule |
+|---|---|
+| Kafka `ce-type` | Must be `OptimisationStatusChangeEvent` |
+| Kafka `ce-source` | Must identify ICB MS, normally `intent-callback-ms` |
+| Kafka `ce-subject` | Must carry the related runtime `intentId` |
+| `event.optimisation.id` | Required optimisation id for correlation |
+| `event.optimisation.newLifecycleStatus` | Required optimiser lifecycle state |
+| `event.optimisation.sourceContext.resource.id` | Required runtime `intentId` |
+| `event.optimisation.sourceContext.intentVersion` | Required where runtime intent versioning is used |
+| `event.optimisation.sourceContext.correlationId` | Required correlation id |
+| `event.optimisation.selectedConfiguration` | Required when `newLifecycleStatus` is `COMPLETED` |
+
+II MS must process this event idempotently. Duplicate optimiser status events must not produce duplicate `IntentNetworkReadyEvent` publications.
 
 ## 5. Semantic processing flow
 
@@ -1198,7 +1301,19 @@ Example `POST /optimisation` request body:
 }
 ```
 
-Example optimiser outcome event ingested by ICB MS and relayed to Kafka for II MS consumption:
+Example Kafka headers for the optimiser outcome event consumed by II MS after ICB MS relay:
+
+```http
+ce-specversion: 1.0
+ce-type: OptimisationStatusChangeEvent
+ce-source: intent-callback-ms
+ce-id: evt-optimisation-status-001
+ce-time: 2026-04-18T12:03:30+10:00
+ce-subject: INT-HOSP-2026-001
+content-type: application/json
+```
+
+Example optimiser outcome event body ingested by ICB MS and relayed to Kafka for II MS consumption:
 
 ```json
 {

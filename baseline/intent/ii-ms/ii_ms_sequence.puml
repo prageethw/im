@@ -178,7 +178,10 @@ else not yet processed
         IIMS -> OPT : POST /optimisation\n{ body.expression.context, candidate resources,\n targets, constraints, preferences, correlation,\n ICB callback URL }
         OPT -> ICB : POST callback submission\nOptimisationStatusChangeEvent { selectedConfiguration }
         ICB -> KAFKA : publish OptimisationStatusChangeEvent
+with CloudEvents headers
+{ ce-type, ce-source, ce-subject }
         IIMS -> KAFKA : consume OptimisationStatusChangeEvent
+with CloudEvents headers
         IIMS -> IIMS : correlate + persist optimiser outcome idempotently\nthen package selected configuration into IntentNetworkReadyEvent
 
         group Atomic DB transaction

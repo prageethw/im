@@ -55,7 +55,7 @@ It does not expose a TMF-compliant REST API and is not exposed through NGW, OEX,
 | Short name | II MS |
 | Domain | Intent Domain |
 | Main responsibility | Semantic interpretation, Knowledge Plane-backed validation and required pre-resolution validation, canonical resolution, and service-ready preparation |
-| Primary event input | `IntentValidatedEvent` |
+| Primary event inputs | `IntentValidatedEvent`; `OptimisationStatusChangeEvent` after ICB MS callback ingestion |
 | Main event outputs | `IntentRejectedEvent`, `IntentResolvedEvent`, `IntentNetworkReadyEvent` |
 | Event style | Internal CloudEvents headers with plain JSON `body` |
 | Source-of-truth persistence | Managed PostgreSQL / PostgreSQL-compatible RDBMS |
@@ -105,7 +105,7 @@ II MS owns:
 
 ## 5. Main input
 
-II MS consumes `IntentValidatedEvent` from the internal event backbone.
+II MS consumes `IntentValidatedEvent` from the internal event backbone. For optimisation-backed selection, II MS also consumes `OptimisationStatusChangeEvent` from Kafka after ICB MS has ingested the external optimiser callback and relayed the event internally.
 
 `IntentValidatedEvent` contains the admitted runtime expression in native internal JSON form. IC MS has already translated the external TMF-compliant `Intent.expression.expressionValue` into internal event form.
 
@@ -127,6 +127,8 @@ expression.context.preferences
 ```
 
 Domain inputs such as `location`, `serviceType`, and `serviceClass` are carried under `expression.context.constraints`.
+
+For optimiser outcomes, II MS expects `OptimisationStatusChangeEvent` to be published to Kafka by ICB MS with CloudEvents-style Kafka headers, including `ce-type: OptimisationStatusChangeEvent`, `ce-source: intent-callback-ms`, `ce-subject` set to the related runtime `intentId`, and a plain JSON body containing the optimiser outcome and `selectedConfiguration`.
 
 The baseline surgical hospital slice is an illustrative runtime example used to make the II MS semantic interpretation and Knowledge Plane-backed resolution contract concrete. It is not the only supported runtime Intent type, IntentSpecification, service class, schema, expression IRI, location, service type, Knowledge Plane profile, or deployment profile. Other runtime Intents may use different targets, constraints, preferences, expression schemas, service types, priorities, resources, and governance profiles while following the same II MS contract rules.
 
