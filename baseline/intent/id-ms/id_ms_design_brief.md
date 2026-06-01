@@ -127,28 +127,24 @@ ID MS does not validate runtime semantic feasibility, policy fulfilment, network
 
 ## 4. Response classification headers:
 
-The service returns response classification headers on external REST API responses so callers can distinguish strict TMF-native behaviour from documented platform-extension behaviour.
+The service returns a response classification header on external REST API responses so callers can distinguish strict TMF-compatible behaviour from documented platform-extension behaviour.
 
-These are response headers only. Clients do not send these headers in requests.
+This is a response header only. Clients do not send this header in requests.
 
 | **Response header** | **Meaning** |
 |---|---|
-| `X-TMF-Native: true` | The response is for a TMF-native operation or behaviour. |
-| `X-TMF-Native: false` | The response is for an operation or behaviour that includes platform-specific semantics. |
 | `X-Platform-Extension: true` | The route, method, response, or behaviour includes a documented platform extension. |
 | `X-Platform-Extension: false` | No platform extension is used for the response. |
 
 Use canonical header casing in examples:
 
 ```http
-X-TMF-Native: true
 X-Platform-Extension: false
 ```
 
 or:
 
 ```http
-X-TMF-Native: false
 X-Platform-Extension: true
 ```
 
@@ -570,7 +566,6 @@ Accept: application/json
 ```http
 HTTP/1.1 204 No Content
 Content-Language: en-AU
-X-TMF-Native: true
 X-Platform-Extension: false
 ```
 
@@ -917,8 +912,7 @@ Meaning:
 - `If-None-Match` is not baselined
 - `304 Not Modified` is not baselined
 
-
-### 24.5 GET response cache lookup and refresh behaviour:
+### 24.6 GET response cache lookup and refresh behaviour:
 
 For cacheable GET operations, ID MS uses a deterministic cache key derived from the effective request shape. The cache key includes the request path, query parameters, selected `fields` projection, caller-safe response context where applicable, and any other input that can change the returned representation. The implementation may hash this cache key internally, but the architecture baseline is based on the deterministic cache key, not on an externally visible request hash.
 
@@ -1138,9 +1132,7 @@ Rules:
 
 **ID MS caching applies only to GET responses.
 GET responses may use bounded private caching, with longer TTL for single-resource GETs and shorter TTL for list GETs.
-ID MS uses a deterministic cache key derived from the effective GET request shape.
 Clients either use the cached response within TTL or request a fresh copy using `Cache-Control: no-cache`.
-A no-cache request bypasses cached serving, reads from the source-of-truth store, and refreshes the cache entry where safe.
 ETag is not used for GET revalidation; `If-None-Match` and `304 Not Modified` are not baselined.
 ETag is used only for unsafe operation concurrency through `If-Match`.**
 

@@ -242,40 +242,36 @@ The baseline surgical hospital slice is an illustrative example used to make the
 
 ### 3.6 Response classification headers:
 
-ID MS returns response classification headers on external REST API responses so callers can distinguish strict TMF-native behaviour from documented platform-extension behaviour.
+ID MS returns a response classification header on external REST API responses so callers can distinguish strict TMF-compatible behaviour from documented platform-extension behaviour.
 
-These are response headers only. Clients do not send these headers in requests.
+This is a response header only. Clients do not send this header in requests.
 
 | **Response header** | **Meaning** |
 |---|---|
-| `X-TMF-Native: true` | The response is for a TMF-native operation or behaviour. |
-| `X-TMF-Native: false` | The response is for an operation or behaviour that includes platform-specific semantics. |
 | `X-Platform-Extension: true` | The route, method, response, or behaviour includes a documented platform extension. |
 | `X-Platform-Extension: false` | No platform extension is used for the response. |
 
 Header classification guidance:
 
-| **ID MS response area** | **X-TMF-Native** | **X-Platform-Extension** | **Reason** |
-|---|---:|---:|---|
-| `POST /intentSpecification`, `GET /intentSpecification`, `GET /intentSpecification/{id}`, and `DELETE /intentSpecification/{id}` using strict TMF-compatible behaviour | `true` | `false` | TMF-compatible official IntentSpecification resource operations. |
-| `GET /intentSpecification/draft/{draftId}`, `PUT /intentSpecification/draft/{draftId}`, `PATCH /intentSpecification/draft/{draftId}`, and `DELETE /intentSpecification/draft/{draftId}` | `false` | `true` | DRAFT-candidate route family is a platform extension used to retrieve, edit, activate, or delete mutable draft candidates before activation. |
-| `PATCH /intentSpecification/draft/{draftId}` used for tightly controlled activation | `false` | `true` | Uses TMF-compatible partial-update semantics on the platform-extension DRAFT-candidate route. |
-| `PUT /intentSpecification/draft/{draftId}` used for full-resource finalisation/activation | `false` | `true` | Full-resource finalisation through PUT on the DRAFT-candidate route is a platform extension. |
-| Strict `/hub` create and delete responses | `true` | `false` | Strict TMF hub route family. |
-| Domain-scoped `/intentSpecification/hub` responses | `false` | `true` | Domain-owned hub route family is a platform extension. |
-| `GET /intentSpecification/hub/{id}` | `false` | `true` | Subscription retrieval is an operational convenience extension. |
+| **ID MS response area** | **X-Platform-Extension** | **Reason** |
+|---|---:|---|
+| `POST /intentSpecification`, `GET /intentSpecification`, `GET /intentSpecification/{id}`, and `DELETE /intentSpecification/{id}` using strict TMF-compatible behaviour | `false` | TMF-compatible official IntentSpecification resource operations. |
+| `GET /intentSpecification/draft/{draftId}`, `PUT /intentSpecification/draft/{draftId}`, `PATCH /intentSpecification/draft/{draftId}`, and `DELETE /intentSpecification/draft/{draftId}` | `true` | DRAFT-candidate route family is a platform extension used to retrieve, edit, activate, or delete mutable draft candidates before activation. |
+| `PATCH /intentSpecification/draft/{draftId}` used for tightly controlled activation | `true` | Uses TMF-compatible partial-update semantics on the platform-extension DRAFT-candidate route. |
+| `PUT /intentSpecification/draft/{draftId}` used for full-resource finalisation/activation | `true` | Full-resource finalisation through PUT on the DRAFT-candidate route is a platform extension. |
+| Strict `/hub` create and delete responses | `false` | Strict TMF hub route family. |
+| Domain-scoped `/intentSpecification/hub` responses | `true` | Domain-owned hub route family is a platform extension. |
+| `GET /intentSpecification/hub/{id}` | `true` | Subscription retrieval is an operational convenience extension. |
 
-Example TMF-native response headers:
+Example strict TMF-compatible response classification header:
 
 ```http
-X-TMF-Native: true
 X-Platform-Extension: false
 ```
 
-Example platform-extension response headers:
+Example platform-extension response classification header:
 
 ```http
-X-TMF-Native: false
 X-Platform-Extension: true
 ```
 
@@ -423,6 +419,7 @@ Additional rules:
 - `If-None-Match` and `304 Not Modified` are not baselined.
 - ETag is used only for unsafe operation concurrency through `If-Match`.
 
+
 ### 3.13 Query parameter conventions:
 
 The following query parameters are supported where applicable:
@@ -473,7 +470,6 @@ The following query parameters are supported where applicable:
 HTTP/1.1 428 Precondition Required
 Content-Type: application/json
 Content-Language: en-AU
-X-TMF-Native: true
 X-Platform-Extension: false
 Cache-Control: no-store
 ```
@@ -495,7 +491,6 @@ Cache-Control: no-store
 HTTP/1.1 412 Precondition Failed
 Content-Type: application/json
 Content-Language: en-AU
-X-TMF-Native: true
 X-Platform-Extension: false
 Cache-Control: no-store
 ```
@@ -517,7 +512,6 @@ Cache-Control: no-store
 HTTP/1.1 500 Internal Server Error
 Content-Type: application/json
 Content-Language: en-AU
-X-TMF-Native: true
 X-Platform-Extension: false
 Cache-Control: no-store
 ```
@@ -614,13 +608,12 @@ HTTP/1.1 201 Created
 Location: /intentManagement/v5/intentSpecification/draft/id-draft-hospital-surgical-slice-a
 Content-Type: application/json
 Content-Language: en-AU
-X-TMF-Native: true
 X-Platform-Extension: false
 ETag: "id-draft-hospital-surgical-slice-a-r1"
 Last-Modified: Sat, 18 Apr 2026 02:00:00 GMT
 ```
 
-The response is classified as TMF-native because `POST /intentSpecification` is the TMF-aligned create operation. The `Location` points to the platform DRAFT candidate route because the created resource is a mutable DRAFT candidate addressed by `draftId` until activation.
+The response is classified with `X-Platform-Extension: false` because `POST /intentSpecification` is the TMF-aligned create operation. The `Location` points to the platform DRAFT candidate route because the created resource is a mutable DRAFT candidate addressed by `draftId` until activation.
 
 ```json
 {
@@ -690,7 +683,6 @@ Accept: application/json
 HTTP/1.1 200 OK
 Content-Type: application/json
 Content-Language: en-AU
-X-TMF-Native: true
 X-Platform-Extension: false
 X-Total-Count: 1
 X-Result-Count: 1
@@ -774,7 +766,6 @@ Cache-Control: no-cache
 HTTP/1.1 200 OK
 Content-Type: application/json
 Content-Language: en-AU
-X-TMF-Native: true
 X-Platform-Extension: false
 Content-Location: /intentManagement/v5/intentSpecification/ispec-hss-001
 ETag: "intent-spec-ispec-hss-001-v1.19-r1"
@@ -907,7 +898,6 @@ After activation, the same `GET /intentSpecification/draft/{draftId}` route may 
 HTTP/1.1 200 OK
 Content-Type: application/json
 Content-Language: en-AU
-X-TMF-Native: false
 X-Platform-Extension: true
 Content-Location: /intentManagement/v5/intentSpecification/draft/id-draft-hospital-surgical-slice-a
 ETag: "id-draft-hospital-surgical-slice-a-r1"
@@ -999,7 +989,6 @@ Accept: application/json
 HTTP/1.1 200 OK
 Content-Type: application/json
 Content-Language: en-AU
-X-TMF-Native: false
 X-Platform-Extension: true
 Content-Location: /intentManagement/v5/intentSpecification/ispec-hss-001?version=1.20
 ETag: "intent-spec-ispec-hss-001-v1.20-r1"
@@ -1051,7 +1040,6 @@ Cache-Control: private, max-age=300
 HTTP/1.1 404 Not Found
 Content-Type: application/json
 Content-Language: en-AU
-X-TMF-Native: true
 X-Platform-Extension: false
 ```
 
@@ -1136,7 +1124,6 @@ If-Match: "id-draft-hospital-surgical-slice-a-r1"
 HTTP/1.1 200 OK
 Content-Type: application/json
 Content-Language: en-AU
-X-TMF-Native: false
 X-Platform-Extension: true
 Content-Location: /intentManagement/v5/intentSpecification/draft/id-draft-hospital-surgical-slice-a
 ETag: "id-draft-hospital-surgical-slice-a-r2"
@@ -1251,7 +1238,6 @@ Last-Modified: Sat, 18 Apr 2026 03:00:00 GMT
 HTTP/1.1 409 Conflict
 Content-Type: application/json
 Content-Language: en-AU
-X-TMF-Native: false
 X-Platform-Extension: true
 Cache-Control: no-store
 ```
@@ -1273,7 +1259,6 @@ Cache-Control: no-store
 HTTP/1.1 428 Precondition Required
 Content-Type: application/json
 Content-Language: en-AU
-X-TMF-Native: false
 X-Platform-Extension: true
 Cache-Control: no-store
 ```
@@ -1295,7 +1280,6 @@ Cache-Control: no-store
 HTTP/1.1 412 Precondition Failed
 Content-Type: application/json
 Content-Language: en-AU
-X-TMF-Native: false
 X-Platform-Extension: true
 Cache-Control: no-store
 ```
@@ -1342,7 +1326,6 @@ If-Match: "id-draft-hospital-surgical-slice-a-r1"
 HTTP/1.1 200 OK
 Content-Type: application/json
 Content-Language: en-AU
-X-TMF-Native: false
 X-Platform-Extension: true
 Content-Location: /intentManagement/v5/intentSpecification/draft/id-draft-hospital-surgical-slice-a
 ETag: "id-draft-hospital-surgical-slice-a-r2"
@@ -1409,7 +1392,6 @@ Accept: application/json
 ```http
 HTTP/1.1 204 No Content
 Content-Language: en-AU
-X-TMF-Native: false
 X-Platform-Extension: true
 ```
 
@@ -1436,7 +1418,6 @@ No response body is returned.
 HTTP/1.1 409 Conflict
 Content-Type: application/json
 Content-Language: en-AU
-X-TMF-Native: false
 X-Platform-Extension: true
 Cache-Control: no-store
 ```
@@ -1458,7 +1439,6 @@ Cache-Control: no-store
 HTTP/1.1 428 Precondition Required
 Content-Type: application/json
 Content-Language: en-AU
-X-TMF-Native: false
 X-Platform-Extension: true
 Cache-Control: no-store
 ```
@@ -1480,7 +1460,6 @@ Cache-Control: no-store
 HTTP/1.1 412 Precondition Failed
 Content-Type: application/json
 Content-Language: en-AU
-X-TMF-Native: false
 X-Platform-Extension: true
 Cache-Control: no-store
 ```
@@ -1515,7 +1494,6 @@ Accept: application/json
 ```http
 HTTP/1.1 204 No Content
 Content-Language: en-AU
-X-TMF-Native: true
 X-Platform-Extension: false
 ```
 
@@ -1540,7 +1518,6 @@ No response body is returned.
 HTTP/1.1 409 Conflict
 Content-Type: application/json
 Content-Language: en-AU
-X-TMF-Native: true
 X-Platform-Extension: false
 Cache-Control: no-store
 ```
@@ -1563,7 +1540,6 @@ Cache-Control: no-store
 HTTP/1.1 428 Precondition Required
 Content-Type: application/json
 Content-Language: en-AU
-X-TMF-Native: true
 X-Platform-Extension: false
 Cache-Control: no-store
 ```
@@ -1585,7 +1561,6 @@ Cache-Control: no-store
 HTTP/1.1 412 Precondition Failed
 Content-Type: application/json
 Content-Language: en-AU
-X-TMF-Native: true
 X-Platform-Extension: false
 Cache-Control: no-store
 ```
@@ -1656,7 +1631,6 @@ Activation returns the full promoted ACTIVE `IntentSpecification` resource repre
 HTTP/1.1 200 OK
 Content-Type: application/json
 Content-Language: en-AU
-X-TMF-Native: false
 X-Platform-Extension: true
 Content-Location: /intentManagement/v5/intentSpecification/ispec-hss-001
 ETag: "intent-spec-hospital-surgical-slice-r4"
@@ -1772,7 +1746,6 @@ The status-change event type identifies that the lifecycle status changed. The e
 HTTP/1.1 409 Conflict
 Content-Type: application/json
 Content-Language: en-AU
-X-TMF-Native: false
 X-Platform-Extension: true
 Cache-Control: no-store
 ```
@@ -1794,7 +1767,6 @@ Cache-Control: no-store
 HTTP/1.1 428 Precondition Required
 Content-Type: application/json
 Content-Language: en-AU
-X-TMF-Native: false
 X-Platform-Extension: true
 Cache-Control: no-store
 ```
@@ -1816,7 +1788,6 @@ Cache-Control: no-store
 HTTP/1.1 412 Precondition Failed
 Content-Type: application/json
 Content-Language: en-AU
-X-TMF-Native: false
 X-Platform-Extension: true
 Cache-Control: no-store
 ```
@@ -1875,7 +1846,6 @@ HTTP/1.1 201 Created
 Location: /intentManagement/v5/intentSpecification/hub/sub-001
 Content-Type: application/json
 Content-Language: en-AU
-X-TMF-Native: false
 X-Platform-Extension: true
 ETag: "subscription-sub-001-v1"
 ```
@@ -1929,7 +1899,6 @@ Accept: application/json
 HTTP/1.1 200 OK
 Content-Type: application/json
 Content-Language: en-AU
-X-TMF-Native: false
 X-Platform-Extension: true
 ETag: "subscription-sub-001-v1"
 Cache-Control: private, max-age=300
@@ -1971,7 +1940,6 @@ Accept: application/json
 ```http
 HTTP/1.1 204 No Content
 Content-Language: en-AU
-X-TMF-Native: false
 X-Platform-Extension: true
 ```
 
@@ -1983,7 +1951,6 @@ No response body is returned.
 HTTP/1.1 428 Precondition Required
 Content-Type: application/json
 Content-Language: en-AU
-X-TMF-Native: false
 X-Platform-Extension: true
 Cache-Control: no-store
 ```
@@ -2005,7 +1972,6 @@ Cache-Control: no-store
 HTTP/1.1 412 Precondition Failed
 Content-Type: application/json
 Content-Language: en-AU
-X-TMF-Native: false
 X-Platform-Extension: true
 Cache-Control: no-store
 ```
@@ -2049,7 +2015,6 @@ Cache-Control: no-store
 HTTP/1.1 503 Service Unavailable
 Content-Type: application/json
 Content-Language: en-AU
-X-TMF-Native: true
 X-Platform-Extension: false
 Retry-After: 30
 ```

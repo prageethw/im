@@ -171,28 +171,24 @@ ID MS does not:
 
 ## 8. Response classification headers:
 
-The service returns response classification headers on external REST API responses so callers can distinguish strict TMF-native behaviour from documented platform-extension behaviour.
+The service returns a response classification header on external REST API responses so callers can distinguish strict TMF-compatible behaviour from documented platform-extension behaviour.
 
-These are response headers only. Clients do not send these headers in requests.
+This is a response header only. Clients do not send this header in requests.
 
 | **Response header** | **Meaning** |
 |---|---|
-| `X-TMF-Native: true` | The response is for a TMF-native operation or behaviour. |
-| `X-TMF-Native: false` | The response is for an operation or behaviour that includes platform-specific semantics. |
 | `X-Platform-Extension: true` | The route, method, response, or behaviour includes a documented platform extension. |
 | `X-Platform-Extension: false` | No platform extension is used for the response. |
 
 Use canonical header casing in examples:
 
 ```http
-X-TMF-Native: true
 X-Platform-Extension: false
 ```
 
 or:
 
 ```http
-X-TMF-Native: false
 X-Platform-Extension: true
 ```
 
@@ -252,7 +248,6 @@ Accept: application/json
 HTTP/1.1 200 OK
 Content-Type: application/json
 Content-Language: en-AU
-X-TMF-Native: false
 X-Platform-Extension: true
 ETag: "subscription-sub-001-v1"
 Cache-Control: private, max-age=300
@@ -588,8 +583,7 @@ Delete events are emitted only after successful delete and show the last known l
 - Retrieve GET may use private caching.
 - Clients may request a fresh response with `Cache-Control: no-cache`.
 
-
-### 25.4 GET response caching behaviour:
+### 25.5 GET response caching behaviour:
 
 For cacheable GET operations, ID MS builds a deterministic cache key from the effective request shape, including the path, query parameters, selected `fields` projection, and other inputs that can change the returned representation.
 
@@ -748,4 +742,3 @@ Consumers of ID MS should rely on these behaviours:
 | HTTP | Code | Meaning |
 |---:|---|---|
 | `409` | `VERSION_CONFLICT` | Requested version or activation conflicts with current specification lineage/version governance. |
-
