@@ -823,7 +823,7 @@ The mapping configuration belongs to IA MS. It is not an ICB MS configuration co
 | 5 | Main event topic usage | ICB MS does not emit change-execution/apply `IntentCallbackEvent` facts to the main internal events topic. Change-execution/apply callbacks are published only to `t7.intent.management.events.callbacks`. Approved optimiser outcome callbacks are published as `OptimisationStatusChangeEvent` to `t7.intent.management.events` for II MS. |
 | 6 | Outbox pattern | Accepted callback submission and callback outbox record are written transactionally. |
 | 7 | Gateway protection | ICB MS sits behind API Gateway and trusts only gateway-forwarded identity/claims. |
-| 8 | Event body style | Internal event value uses top-level `body`. |
+| 8 | Event body style | `IntentCallbackEvent` uses the ICB-owned top-level `body` callback fact shape. `OptimisationStatusChangeEvent` uses the approved optimiser event payload shape consumed by II MS and is not converted into an ICB-owned `body.callback` fact shape. |
 | 9 | Internal event exposure | `IntentCallbackEvent` is internal and not directly exposed as a TMF listener event. |
 | 10 | Sensitive data | Secrets, tokens, credentials, and raw stack traces are excluded from events and errors. |
 | 11 | Optimiser/KP payloads | Optimiser scoring, solver internals, KP internals, and TMF expression wrappers are excluded from callback events. |

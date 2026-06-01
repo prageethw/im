@@ -67,7 +67,7 @@ External system / Optimiser -> API Gateway -> ICB MS -> Outbox DB -> Kafka -> IA
 
 **ICB MS carries raw callback facts only. IA MS interprets callback state and owns lifecycle/assurance meaning.**
 
-ICB MS must not decide whether a callback means `Active`, `Failed`, `Terminated`, `Degraded`, `Completed`, `Infeasible`, or any other intent or optimisation lifecycle state. ICB MS must not classify callback meaning through a field such as `callbackType`; raw callback meaning is carried by source-owned state such as `sourceState.state`, and IA MS owns interpretation, correlation, skip/dead-letter decisions, and lifecycle-driving assurance outcomes.
+ICB MS must not decide whether a callback means `Active`, `Failed`, `Terminated`, `Degraded`, `Completed`, `Infeasible`, or any other intent or optimisation lifecycle state. ICB MS must not classify callback meaning through a field such as `callbackType`. For change-execution/apply callbacks, raw callback meaning is carried by source-owned state such as `sourceState.state`, and IA MS owns interpretation, correlation, skip/dead-letter decisions, and lifecycle-driving assurance outcomes. For optimiser outcome callbacks, optimiser meaning is carried by `OptimisationStatusChangeEvent`, and II MS owns optimiser outcome correlation, interpretation, and selected-configuration packaging.
 
 ## 5. Core responsibilities:
 
