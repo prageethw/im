@@ -1,4 +1,4 @@
-@startuml ICB MS - Sequence Flow
+@startuml ICB_MS_Sequence_Flow
 !theme plain
 skinparam sequenceMessageAlign center
 skinparam backgroundColor #FFFFFF
@@ -10,28 +10,31 @@ skinparam noteBackgroundColor #fff2cc
 skinparam dividerBackgroundColor #f0f0f0
 skinparam sequenceGroupBackgroundColor #f9f9f9
 
-title Intent Callback MS (ICB MS) — Callback Submission Sequence Flow
+title Intent Callback MS (ICB MS) — Callback and Optimiser Outcome Relay Sequence Flow
 
-actor "External Change Execution\n/ Apply System" as EXT
+actor "External Change Execution\n/ Apply System or Optimiser" as EXT
 participant "NGW" as GW
 participant "Intent Callback MS\n(ICB MS)" as ICBMS
 database "ICB MS Store\n(submissions + outbox)" as STORE
 participant "Outbox Relay\n(background worker)" as RELAY
-participant "Kafka\nt7.intent.management.events.callbacks" as KAFKA
+participant "Kafka\ncallbacks + main events topics" as KAFKA
 participant "Intent Assurance MS\n(IA MS)" as IAMS
+participant "Intent Intelligence MS\n(II MS)" as IIMS
 participant "Intent Creation MS\n(IC MS)" as ICMS
 
-note over ICBMS, IAMS
+note over ICBMS, IIMS
 ICB MS validates structure only and relays raw callback facts.
-It does not validate intent existence or map lifecycle meaning.
-IA MS owns intent correlation, raw state mapping, and assurance outcomes.
+It does not validate intent existence or map lifecycle/optimisation meaning.
+IA MS owns change-execution callback interpretation.
+II MS owns OptimisationStatusChangeEvent correlation and selected configuration packaging.
 end note
 
 == 1. External Callback Submission ==
-EXT -> GW : POST /intent-callback/v1/submissions\n{ intentId, callbackSource, callbackTimestamp,\n  sourceState.state, sourceReference, details, ... }
+EXT -> GW : POST /intent-callback/v1/submissions\nIntentCallbackSubmission or OptimisationStatusChangeEvent
 
 == 2. API Gateway — Authentication + Trusted Context ==
 GW -> GW : authenticate caller\n(mTLS / OAuth2 / platform token)
+
 alt authentication fails
     GW --> EXT : 401 Unauthorized
 else authenticated
@@ -39,67 +42,74 @@ else authenticated
 
     == 3. ICB MS — Authorisation ==
     ICBMS -> ICBMS : authorise callback submission\nfor caller / source context
+
     alt not authorised
         ICBMS --> GW : 403 Forbidden
         GW --> EXT : 403 Forbidden
     else authorised
 
         == 4. Structure and Syntax Validation ==
-        ICBMS -> ICBMS : validate structure and syntax only\n(no semantic interpretation,\n no intentId correlation here)
+        ICBMS -> ICBMS : validate structure and syntax only\n(no semantic interpretation,\n no intentId / optimisation correlation here)
+
         alt structure / syntax invalid
             ICBMS --> GW : 400 Bad Request { validationErrors }
             GW --> EXT : 400 Bad Request
         else structure valid
 
             == 5. Durable Persistence — Single DB Transaction ==
-            note over ICBMS, STORE : Callback submission and outbox record written\nin one atomic DB transaction.\nIf persistence is unavailable, ICB MS fails fast\nand does not accept the callback.
+            note over ICBMS, STORE
+Callback submission and outbox record are written
+in one atomic DB transaction. If persistence is unavailable,
+ICB MS fails fast and does not accept the callback.
+            end note
+
             group Atomic DB transaction
-                ICBMS -> STORE : write callback submission record\n{ intentId, callbackSource, callbackTimestamp,\n  sourceState.state, callerId, raw payload }
-                ICBMS -> STORE : write ICB outbox record\n{ eventType: IntentCallbackEvent,\n  status: PENDING, payload }
-                alt DB commit succeeds
-                    STORE --> ICBMS : committed
-                else DB unavailable / commit fails
-                    STORE --> ICBMS : error
-                    ICBMS --> GW : 503 Service Unavailable\n(fail fast — callback not accepted)
-                    GW --> EXT : 503 Service Unavailable
-                end
+                ICBMS -> STORE : write callback submission record
+                ICBMS -> STORE : write ICB outbox record\n{ eventType: IntentCallbackEvent or\n  OptimisationStatusChangeEvent }
             end
 
-            == 6. Return 202 Accepted ==
-            note over ICBMS : 202 Accepted is returned ONLY after\ndurable commit succeeds.
-            ICBMS --> GW : 202 Accepted { correlationId }
-            GW --> EXT : 202 Accepted { correlationId }
+            alt DB commit succeeds
+                STORE --> ICBMS : committed
+                ICBMS --> GW : 202 Accepted { correlationId }
+                GW --> EXT : 202 Accepted { correlationId }
+            else DB unavailable / commit fails
+                STORE --> ICBMS : error
+                ICBMS --> GW : 503 Service Unavailable
+                GW --> EXT : 503 Service Unavailable
+            end
 
-            == 7. Outbox Relay Publishes IntentCallbackEvent ==
-            note over RELAY, KAFKA : Kafka availability does not affect the 202 response.\nIf Kafka is unavailable, the relay retries publication\nfrom the durable outbox later.
+            == 6. Outbox Relay Publishes Internal Event ==
             RELAY -> STORE : poll PENDING outbox records
-            STORE --> RELAY : [ICB outbox record { IntentCallbackEvent }]
-            RELAY -> KAFKA : publish IntentCallbackEvent\nt7.intent.management.events.callbacks\n{ intentId, callbackSource, callbackTimestamp,\n  sourceState.state, sourceReference, receivedAt }
+            STORE --> RELAY : outbox record { event type + payload }
+
+            alt eventType == IntentCallbackEvent
+                RELAY -> KAFKA : publish IntentCallbackEvent\nt7.intent.management.events.callbacks
+            else eventType == OptimisationStatusChangeEvent
+                RELAY -> KAFKA : publish OptimisationStatusChangeEvent\nt7.intent.management.events
+            end
+
             alt Kafka available
                 KAFKA --> RELAY : ack
                 RELAY -> STORE : mark outbox record DELIVERED
             else Kafka unavailable
                 KAFKA --> RELAY : error / timeout
                 RELAY -> STORE : increment retry count\n(exponential back-off)
-                note over RELAY : Retries until Kafka recovers.\nCallback already durably stored.
             end
 
-            == 8. IA MS Consumes and Correlates ==
-            IAMS -> KAFKA : consume event
-            IAMS -> IAMS : validate intentId against IA-owned state
-            alt intentId not found in IA state
-                IAMS -> IAMS : log unresolvable callback (audit)
-            else intentId resolved
-                IAMS -> IAMS : map raw sourceState.state\n→ lifecycleStatus + statusReason
-                IAMS -> IAMS : correlate with observer scope + runtime context
-                IAMS -> IAMS : evaluate assurance outcome
-                IAMS -> IAMS : write IntentAssuranceEvent to IA outbox
-                IAMS -> KAFKA : publish IntentAssuranceEvent\n(via IA outbox relay)
-
-                == 9. IC MS Projects External State ==
-                ICMS -> KAFKA : consume event
-                ICMS -> ICMS : update external Intent lifecycle state projection
-                ICMS -> ICMS : create / update IntentReport projection\n(TMF-compliant)
+            == 7. Downstream Consumer Processes Event ==
+            alt IntentCallbackEvent
+                IAMS -> KAFKA : consume IntentCallbackEvent
+                IAMS -> IAMS : validate/correlate intentId\nagainst IA-owned state
+                IAMS -> IAMS : map raw sourceState.state\ninto assurance meaning
+                IAMS -> IAMS : write IntentAssuranceEvent\nto IA outbox
+                IAMS -> KAFKA : publish IntentAssuranceEvent
+                ICMS -> KAFKA : consume IntentAssuranceEvent
+                ICMS -> ICMS : project external Intent lifecycle\nand IntentReport state
+            else OptimisationStatusChangeEvent
+                IIMS -> KAFKA : consume OptimisationStatusChangeEvent
+                IIMS -> IIMS : correlate optimisationId, intentId,\nintentVersion, correlationId
+                IIMS -> IIMS : package selectedConfiguration\ninto IntentNetworkReadyEvent
+                IIMS -> KAFKA : publish IntentNetworkReadyEvent
             end
         end
     end
