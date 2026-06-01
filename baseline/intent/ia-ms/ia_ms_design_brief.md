@@ -2,7 +2,7 @@
 
 ## Purpose
 
-Intent Assurance MS, referred to as IA MS, owns runtime assurance evaluation, callback state normalisation, assurance state updates, and assurance event publication for IME runtime intents. IA MS is the runtime assurance truth for IME. IC MS remains the owner of the externally visible runtime `Intent` lifecycle projection. IA MS consumes `IntentNetworkReadyEvent`, `IntentCallbackEvent`, and runtime metrics/observation facts only.
+Intent Assurance MS, referred to as IA MS, owns runtime assurance evaluation, callback state normalisation, assurance state updates, and assurance event publication for IME runtime intents. IA MS is the runtime assurance truth for IME. IC MS remains the owner of the externally visible runtime `Intent` lifecycle projection. IA MS consumes `IntentNetworkReadyEvent`, `IntentCallbackEvent`, and runtime metrics/observation facts only. For `IntentNetworkReadyEvent`, IA MS expects the final II MS shape using `body.intentVersion` and `body.expression.context`.
 
 IA MS does not consume `IntentOptimisedEvent` in the active baseline.
 
@@ -14,8 +14,7 @@ IA MS does not consume `IntentOptimisedEvent` in the active baseline.
 | Service name | `intent-assurance-ms` |
 | Short name | IA MS |
 | Main responsibility | Runtime assurance, callback state normalisation, drift/degradation detection, assurance event publication |
-| Primary event input | `IntentCallbackEvent` from `t7.intent.management.events.callbacks` |
-| Other event input | `IntentNetworkReadyEvent` |
+| Primary event inputs | `IntentNetworkReadyEvent`; `IntentCallbackEvent` from `t7.intent.management.events.callbacks` |
 | Main event output | `IntentAssuranceEvent` |
 | Retired event | `IntentDriftOccurredEvent` is not used in the active baseline |
 | Event style | Internal CloudEvents headers with plain JSON `body` |
@@ -73,7 +72,7 @@ IA MS currently consumes it, but consumer identity is not part of the event owne
 ce-source: intent-intelligence-ms
 ```
 
-`IntentNetworkReadyEvent.serviceConfiguration.orchestratorConfiguration.resources[]` carries the selected apply configuration. `IntentNetworkReadyEvent.serviceConfiguration.observerConfiguration.resources[]` carries the full assurance observation scope that IA MS must observe.
+`IntentNetworkReadyEvent.body.expression.context` carries the resolved runtime targets, constraints, and preferences. `IntentNetworkReadyEvent.serviceConfiguration.orchestratorConfiguration.resources[]` carries the selected apply configuration. `IntentNetworkReadyEvent.serviceConfiguration.observerConfiguration.resources[]` carries the full assurance observation scope that IA MS must observe.
 
 Within `serviceConfiguration.observerConfiguration.resources[]`, `metrics` is a list of metric names to observe, not metric values. Example metric names are `latencyMs`, `availabilityPercent`, `jitterMs`, and `packetLossPercent`.
 
@@ -97,11 +96,15 @@ The canonical `IntentCallbackEvent` fields consumed by IA are `callbackSource`, 
 
 `sourceState.state` carries the raw source/change-execution state value. IA maps `sourceState.state` into lifecycle/assurance meaning.
 
+## Stale version and late-event handling
+
+IA MS must key assurance state by `intentId` and `intentVersion` where runtime versioning is supplied. A stale `IntentNetworkReadyEvent`, `IntentCallbackEvent`, or observation result for an older intent version must not overwrite newer IA state. Late callbacks or late observations for a superseded, terminated, or otherwise inactive version should be recorded for audit or dead-letter handling according to policy, but must not publish misleading `IntentAssuranceEvent` outcomes for the current version.
+
 ## IntentAssuranceEvent baseline
 
 `IntentAssuranceEvent` is the single IA-owned runtime assurance event. It carries curated assurance facts using the internal event contract, not the external TMF expression wrapper.
 
-The active generic body shape uses:
+The active generic body shape uses `intentVersion` for runtime intent versioning and a nested `context` object for targets, constraints, and preferences:
 
 | **Field / area** | **Purpose** |
 |---|---|
@@ -113,7 +116,7 @@ The active generic body shape uses:
 | `current.resources` | Full observed resource/path set in the IA assurance scope, mirroring `IntentNetworkReadyEvent.serviceConfiguration.observerConfiguration.resources[]` |
 | `references` | Correlation and external resource references |
 
-Reusable resource entries use `roles`, `resourceId`, `resourceType`, `resourceClass`, `resourceAttributes`, `relationships`, and `metrics`.
+Reusable resource entries use `roles`, `resourceId`, `resourceType`, `resourceClass`, direct safe resource attributes such as `accessTechnology` where needed, `relationships`, and `metrics`.
 
 Metric names are neutral and use names such as `latencyMs`, `availabilityPercent`, `jitterMs`, and `packetLossPercent`. Do not use metric origin wrappers or context-encoded field names such as `metrics.benchmark`, `metrics.telemetry`, `latencyBenchmarkMs`, `currentLatencyMs`, or `observedLatencyMs` in `IntentAssuranceEvent`. IA MS does not emit `IntentDriftOccurredEvent` in the active baseline.
 
@@ -131,7 +134,7 @@ IA evaluates returned metric facts against resolved runtime targets and the IA s
 
 IA MS is the runtime assurance truth service.
 
-It consumes `IntentNetworkReadyEvent`, `IntentCallbackEvent`, and observation facts only; maps raw callback state; evaluates runtime observations against resolved runtime targets and the stored applied assurance baseline; and emits curated generic `IntentAssuranceEvent` outcomes. IC MS consumes `IntentAssuranceEvent` to project external TMF-compliant `Intent` lifecycle and `IntentReport` resources.
+It consumes `IntentNetworkReadyEvent`, `IntentCallbackEvent`, and observation facts only; rejects stale or superseded event versions where needed; maps raw callback state; evaluates runtime observations against resolved runtime targets and the stored applied assurance baseline; and emits curated generic `IntentAssuranceEvent` outcomes. IC MS consumes `IntentAssuranceEvent` to project external TMF-compliant `Intent` lifecycle and `IntentReport` resources.
 
 ## Metrics-first IntentAssuranceEvent refinement
 

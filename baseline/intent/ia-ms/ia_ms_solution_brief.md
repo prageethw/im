@@ -130,12 +130,13 @@ Required handling fields:
 | Field / area | IA MS usage |
 |---|---|
 | `body.intentId` | Primary correlation key. |
-| `body.version` | Runtime intent version context where supplied. |
+| `body.intentVersion` | Runtime intent version context where supplied. |
 | `body.lifecycleStatus` | Upstream milestone state, normally `InProgress`. |
 | `body.statusReason` | Human-readable service-ready milestone reason. |
-| `body.location` | Location context for assurance. |
-| `body.serviceType` | Service type context for assurance. |
-| `body.serviceClass` | Service class context for assurance. |
+| `body.expression.context` | Resolved runtime context for assurance, including targets, constraints, and preferences. |
+| `body.expression.context.constraints.location` | Location context for assurance. |
+| `body.expression.context.constraints.serviceType` | Service type context for assurance. |
+| `body.expression.context.constraints.serviceClass` | Service class context for assurance. |
 | `body.serviceConfiguration.orchestratorConfiguration` | Selected apply/change-execution configuration. |
 | `body.serviceConfiguration.orchestratorConfiguration.resources[]` | Optimiser-selected resources/configuration ready for apply. |
 | `body.serviceConfiguration.observerConfiguration` | Assurance/monitoring configuration. |
@@ -237,15 +238,10 @@ Payload field specification:
 | Field / area | Purpose |
 |---|---|
 | `body.intentId` | Runtime intent identifier. |
-| `body.version` | Runtime intent version context where supplied. |
+| `body.intentVersion` | Runtime intent version context where supplied. |
 | `body.lifecycleStatus` | Lifecycle-driving assurance state that IC MS projects externally. |
 | `body.statusReason` | Human-readable explanation of the assurance outcome. |
-| `body.location` | Location context where needed by downstream consumers. |
-| `body.serviceType` | Service type context. |
-| `body.serviceClass` | Service class context. |
-| `body.targets` | Runtime targets used to interpret observations. |
-| `body.constraints` | Runtime hard constraints where needed. |
-| `body.preferences` | Runtime preferences where useful for downstream decisions. |
+| `body.context` | Resolved runtime context with targets, constraints, and preferences. |
 | `body.current.resources[]` | Full observed resource/path set in IA assurance scope where applicable. |
 | `body.references` | Correlation and resource references. |
 
@@ -255,7 +251,7 @@ Reusable resource entries use:
 - `resourceId`
 - `resourceType`
 - `resourceClass`
-- `resourceAttributes`
+- direct safe resource attributes such as `accessTechnology` where needed
 - `relationships`
 - `metrics`
 
@@ -265,27 +261,29 @@ Example active/degraded style payload:
 {
   "body": {
     "intentId": "INT-HOSP-2026-001",
-    "version": "v1",
+    "intentVersion": "v1",
     "lifecycleStatus": "Degraded",
     "statusReason": "Current primary path latency is outside resolved runtime targets.",
-    "location": {
-      "locationId": "AU-NSW-SYD-HOSP-001",
-      "displayName": "Sydney-Main-Hospital"
-    },
-    "serviceType": "surgical-connectivity",
-    "serviceClass": "critical-gold",
-    "targets": {
-      "maxLatencyMs": 10,
-      "minAvailabilityPercent": 99.99,
-      "maxJitterMs": 2,
-      "maxPacketLossPercent": 0.01
-    },
-    "constraints": {
-      "priority": "critical",
-      "redundancyRequired": true
-    },
-    "preferences": {
-      "preferredAccessTechnology": "5G"
+    "context": {
+      "targets": {
+        "maxLatencyMs": 10,
+        "minAvailabilityPercent": 99.99,
+        "maxJitterMs": 2,
+        "maxPacketLossPercent": 0.01
+      },
+      "constraints": {
+        "location": {
+          "locationId": "AU-NSW-SYD-HOSP-001",
+          "displayName": "Sydney-Main-Hospital"
+        },
+        "serviceType": "surgical-connectivity",
+        "serviceClass": "critical-gold",
+        "priority": "critical",
+        "redundancyRequired": true
+      },
+      "preferences": {
+        "preferredAccessTechnology": "5G"
+      }
     },
     "current": {
       "resources": [
@@ -294,10 +292,7 @@ Example active/degraded style payload:
           "roles": ["primary"],
           "resourceType": "deliveryResource",
           "resourceClass": "critical-gold",
-          "resourceAttributes": {
-            "accessTechnology": "fibre",
-            "locationId": "AU-NSW-SYD-HOSP-001"
-          },
+          "accessTechnology": "fibre",
           "relationships": [
             {
               "type": "pairedSecondary",
@@ -320,9 +315,10 @@ Example active/degraded style payload:
         "href": "/intentManagement/v5/intent/INT-HOSP-2026-001"
       },
       "intentSpecification": {
-        "id": "hospital-surgical-slice-spec",
+        "id": "ispec-hss-001",
+        "specKey": "hospital-surgical-slice-spec",
         "version": "1.20",
-        "href": "/intentManagement/v5/intentSpecification/hospital-surgical-slice-spec?version=1.20"
+        "href": "/intentManagement/v5/intentSpecification/ispec-hss-001"
       }
     }
   }
@@ -447,7 +443,7 @@ The active IA event message shape is:
 {
   "body": {
     "intentId": "...",
-    "version": "...",
+    "intentVersion": "...",
     "lifecycleStatus": "Active | Degraded | Failed | InProgress | Terminated",
     "statusReason": "...",
     "location": {},
@@ -470,7 +466,8 @@ The active IA event message shape is:
 
 | Scenario | IA MS behaviour |
 |---|---|
-| `IntentNetworkReadyEvent` received | Store service-ready apply resources, observer scope, references, and runtime context. Do not mark intent `Active` solely from this event. |
+| `IntentNetworkReadyEvent` received | Store service-ready apply resources, observer scope, references, and `body.expression.context`. Do not mark intent `Active` solely from this event. |
+| Stale or superseded event version received | Do not overwrite newer IA state or publish misleading current-version assurance outcomes. Record audit/dead-letter handling according to policy. |
 | Apply callback received with `APPLIED` | Correlate `intentId`, map state, update assurance state, and publish an assurance outcome according to workflow policy. |
 | Apply callback received with `APPLY_FAILED` | Correlate, map to failure meaning, update state, publish `IntentAssuranceEvent` with `Failed` where policy requires. |
 | Unknown `intentId` callback | Record skip/dead-letter decision according to IA policy; do not publish misleading assurance state. |

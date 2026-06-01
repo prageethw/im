@@ -10,6 +10,7 @@
 | Domain | Intent Domain |
 | External API owner | No external TMF-compliant API |
 | Main responsibility | Runtime assurance truth, callback state normalisation, observation evaluation, and `IntentAssuranceEvent` publication |
+| Main input events | `IntentNetworkReadyEvent`, `IntentCallbackEvent` |
 | Main output event | `IntentAssuranceEvent` |
 | Retired event | `IntentDriftOccurredEvent` is not used |
 
@@ -80,10 +81,11 @@ content-type: application/json
 {
   "body": {
     "intentId": "INT-HOSP-2026-001",
-    "version": "v1",
+    "intentVersion": "v1",
     "lifecycleStatus": "InProgress",
     "statusReason": "Service configuration has been prepared for change-execution/apply.",
-    "context": {
+    "expression": {
+      "context": {
       "targets": {
         "maxLatencyMs": 10,
         "minAvailabilityPercent": 99.99,
@@ -103,6 +105,7 @@ content-type: application/json
       "preferences": {
         "preferredAccessTechnology": "5G"
       }
+    }
     },
     "serviceConfiguration": {
       "orchestratorConfiguration": {
@@ -113,19 +116,33 @@ content-type: application/json
             "resourceId": "SYD-PRI-01",
             "resourceType": "deliveryResource",
             "resourceClass": "critical-gold",
-            "roles": ["primary"]
+            "roles": ["primary"],
+            "accessTechnology": "fibre",
+            "relationships": [
+              {
+                "type": "pairedSecondary",
+                "resourceId": "SYD-SEC-01"
+              }
+            ]
           },
           {
             "resourceId": "SYD-SEC-01",
             "resourceType": "deliveryResource",
             "resourceClass": "critical-gold",
-            "roles": ["secondary"]
+            "roles": ["secondary"],
+            "accessTechnology": "5G",
+            "relationships": [
+              {
+                "type": "protects",
+                "resourceId": "SYD-PRI-01"
+              }
+            ]
           }
         ]
       },
       "observerConfiguration": {
         "target": "t7-observability-platform",
-        "profile": "surgical-critical-gold-observe",
+        "profile": "critical-gold-assurance-observation-v1",
         "resources": [
           {
             "resourceId": "SYD-PRI-01",
@@ -185,9 +202,10 @@ content-type: application/json
         "href": "/intentManagement/v5/intent/INT-HOSP-2026-001"
       },
       "intentSpecification": {
-        "id": "hospital-surgical-slice-spec",
+        "id": "ispec-hss-001",
+        "specKey": "hospital-surgical-slice-spec",
         "version": "1.20",
-        "href": "/intentManagement/v5/intentSpecification/hospital-surgical-slice-spec?version=1.20"
+        "href": "/intentManagement/v5/intentSpecification/ispec-hss-001"
       }
     }
   }
@@ -199,9 +217,10 @@ content-type: application/json
 - Treat `IntentNetworkReadyEvent` as service configuration prepared for apply, not as apply success.
 - Store selected apply resources from `serviceConfiguration.orchestratorConfiguration.resources`.
 - Store monitored resource scope from `serviceConfiguration.observerConfiguration.resources`; later `IntentAssuranceEvent.body.current.resources[]` mirrors that observer scope when reporting observed resource metrics.
-- Store resolved runtime `body.context` as the assurance context.
+- Store resolved runtime `body.expression.context` as the assurance context.
 - Do not emit `Active` solely because `IntentNetworkReadyEvent` was consumed.
 - Active state requires apply/callback confirmation and/or runtime observations according to the workflow.
+- Key state by `intentId` and `intentVersion` where supplied; stale `IntentNetworkReadyEvent` instances must not overwrite newer assurance state.
 
 ---
 
@@ -337,6 +356,8 @@ IA MS obtains runtime metrics from observability/observation endpoints that are 
 
 This mapping is intentionally IA-owned. ICB MS must not map source states into lifecycle states.
 
+IA MS must also treat callback and observation inputs as version-aware where `intentVersion` is available. Late callbacks, stale observations, or events for a superseded or terminated intent version must be recorded for audit or dead-letter handling according to policy and must not overwrite current-version assurance state.
+
 ---
 
 ## 6. Output event contract — IntentAssuranceEvent
@@ -359,7 +380,7 @@ content-type: application/json
 
 | **Field / area** | **Purpose** |
 |---|---|
-| `body.context` | Resolved runtime context with targets, constraints, and preferences where relevant |
+| `body.context` | Resolved runtime context with targets, constraints, and preferences where relevant, derived from `IntentNetworkReadyEvent.body.expression.context` |
 | `body.current.resources` | Full observed resource/path set within the assurance scope, including primary and all secondary/alternative resources supplied through `IntentNetworkReadyEvent.serviceConfiguration.observerConfiguration.resources` |
 | `body.references` | Correlation and resource references |
 
@@ -369,7 +390,7 @@ Reusable resource entries use:
 - `resourceId`
 - `resourceType`
 - `resourceClass`
-- `resourceAttributes`
+- direct safe resource attributes such as `accessTechnology` where needed
 - `relationships`
 - `metrics`
 
@@ -387,7 +408,6 @@ Metric names stay neutral and describe the measurement itself, such as `latencyM
 
 Do not encode metric origin or evaluation context in field names or wrappers. Do not use wrappers or names such as `benchmark`, `telemetry`, `observed`, `current`, `latencyBenchmarkMs`, or `currentLatencyMs` by default. The event type and lifecycle stage provide the context for interpreting the metric values.
 
-Do not duplicate `resourceId` into `resourceAttributes.pathId` when they are identical.
 
 `requiresReoptimisation` is not included by default. II MS or another authorised decision component reads `lifecycleStatus`, `statusReason`, and the full observed resource metrics, then decides whether re-interpretation, re-optimisation, reselection, or no action is required.
 
@@ -403,7 +423,7 @@ Do not include `current.evaluations` or `body.evaluations` by default.
 {
   "body": {
     "intentId": "INT-HOSP-2026-001",
-    "version": "v1",
+    "intentVersion": "v1",
     "lifecycleStatus": "Active",
     "statusReason": "All monitored delivery resources are operating within resolved runtime targets.",
     "context": {
@@ -434,10 +454,7 @@ Do not include `current.evaluations` or `body.evaluations` by default.
           "roles": ["primary"],
           "resourceType": "deliveryResource",
           "resourceClass": "critical-gold",
-          "resourceAttributes": {
-            "accessTechnology": "fibre",
-            "locationId": "AU-NSW-SYD-HOSP-001"
-          },
+          "accessTechnology": "fibre",
           "relationships": [
             {
               "type": "pairedSecondary",
@@ -456,10 +473,7 @@ Do not include `current.evaluations` or `body.evaluations` by default.
           "roles": ["primary"],
           "resourceType": "deliveryResource",
           "resourceClass": "critical-gold",
-          "resourceAttributes": {
-            "accessTechnology": "fibre",
-            "locationId": "AU-NSW-SYD-HOSP-001"
-          },
+          "accessTechnology": "fibre",
           "relationships": [
             {
               "type": "pairedSecondary",
@@ -478,10 +492,7 @@ Do not include `current.evaluations` or `body.evaluations` by default.
           "roles": ["secondary"],
           "resourceType": "deliveryResource",
           "resourceClass": "critical-gold",
-          "resourceAttributes": {
-            "accessTechnology": "5G",
-            "locationId": "AU-NSW-SYD-HOSP-001"
-          },
+          "accessTechnology": "5G",
           "relationships": [
             {
               "type": "alternativeTo",
@@ -500,10 +511,7 @@ Do not include `current.evaluations` or `body.evaluations` by default.
           "roles": ["secondary"],
           "resourceType": "deliveryResource",
           "resourceClass": "critical-gold",
-          "resourceAttributes": {
-            "accessTechnology": "fibre",
-            "locationId": "AU-NSW-SYD-HOSP-001"
-          },
+          "accessTechnology": "fibre",
           "relationships": [
             {
               "type": "alternativeTo",
@@ -526,9 +534,10 @@ Do not include `current.evaluations` or `body.evaluations` by default.
         "href": "/intentManagement/v5/intent/INT-HOSP-2026-001"
       },
       "intentSpecification": {
-        "id": "hospital-surgical-slice-spec",
+        "id": "ispec-hss-001",
+        "specKey": "hospital-surgical-slice-spec",
         "version": "1.20",
-        "href": "/intentManagement/v5/intentSpecification/hospital-surgical-slice-spec?version=1.20"
+        "href": "/intentManagement/v5/intentSpecification/ispec-hss-001"
       }
     }
   }
@@ -545,7 +554,7 @@ This shape lets II MS or another authorised decision component inspect the affec
 {
   "body": {
     "intentId": "INT-HOSP-2026-001",
-    "version": "v1",
+    "intentVersion": "v1",
     "lifecycleStatus": "Degraded",
     "statusReason": "Current primary path latency is outside resolved runtime targets.",
     "context": {
@@ -576,10 +585,7 @@ This shape lets II MS or another authorised decision component inspect the affec
           "roles": ["primary"],
           "resourceType": "deliveryResource",
           "resourceClass": "critical-gold",
-          "resourceAttributes": {
-            "accessTechnology": "fibre",
-            "locationId": "AU-NSW-SYD-HOSP-001"
-          },
+          "accessTechnology": "fibre",
           "relationships": [
             {
               "type": "pairedSecondary",
@@ -598,10 +604,7 @@ This shape lets II MS or another authorised decision component inspect the affec
           "roles": ["primary"],
           "resourceType": "deliveryResource",
           "resourceClass": "critical-gold",
-          "resourceAttributes": {
-            "accessTechnology": "fibre",
-            "locationId": "AU-NSW-SYD-HOSP-001"
-          },
+          "accessTechnology": "fibre",
           "relationships": [
             {
               "type": "pairedSecondary",
@@ -620,10 +623,7 @@ This shape lets II MS or another authorised decision component inspect the affec
           "roles": ["secondary"],
           "resourceType": "deliveryResource",
           "resourceClass": "critical-gold",
-          "resourceAttributes": {
-            "accessTechnology": "5G",
-            "locationId": "AU-NSW-SYD-HOSP-001"
-          },
+          "accessTechnology": "5G",
           "relationships": [
             {
               "type": "alternativeTo",
@@ -642,10 +642,7 @@ This shape lets II MS or another authorised decision component inspect the affec
           "roles": ["secondary"],
           "resourceType": "deliveryResource",
           "resourceClass": "critical-gold",
-          "resourceAttributes": {
-            "accessTechnology": "fibre",
-            "locationId": "AU-NSW-SYD-HOSP-001"
-          },
+          "accessTechnology": "fibre",
           "relationships": [
             {
               "type": "alternativeTo",
@@ -668,9 +665,10 @@ This shape lets II MS or another authorised decision component inspect the affec
         "href": "/intentManagement/v5/intent/INT-HOSP-2026-001"
       },
       "intentSpecification": {
-        "id": "hospital-surgical-slice-spec",
+        "id": "ispec-hss-001",
+        "specKey": "hospital-surgical-slice-spec",
         "version": "1.20",
-        "href": "/intentManagement/v5/intentSpecification/hospital-surgical-slice-spec?version=1.20"
+        "href": "/intentManagement/v5/intentSpecification/ispec-hss-001"
       }
     }
   }
