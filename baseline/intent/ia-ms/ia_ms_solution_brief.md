@@ -80,7 +80,7 @@ The normal IA MS runtime process is:
 1. Consume `IntentNetworkReadyEvent` produced by `intent-intelligence-ms`.
 2. Store the selected apply resources from `serviceConfiguration.orchestratorConfiguration.resources`.
 3. Store the full observer scope from `serviceConfiguration.observerConfiguration.resources`.
-4. Store the resolved runtime context needed for assurance, including location/service context, targets, constraints, and preferences where relevant.
+4. Store the resolved runtime `body.expression.context` needed for assurance, including location/service context, targets, constraints, and preferences where relevant.
 5. Consume `IntentCallbackEvent` from the dedicated callback topic.
 6. Validate and correlate `intentId` against IA-owned state and platform context.
 7. Map raw `sourceState.state` values into IA-owned lifecycle and assurance meaning.
@@ -276,7 +276,7 @@ Payload field specification:
 | `body.intentVersion` | Runtime intent version context where supplied. |
 | `body.lifecycleStatus` | Lifecycle-driving assurance state that IC MS projects externally. |
 | `body.statusReason` | Human-readable explanation of the assurance outcome. |
-| `body.context` | Resolved runtime context with targets, constraints, and preferences. |
+| `body.expression.context` | Resolved runtime context with targets, constraints, and preferences. |
 | `body.current.resources[]` | Full observed resource/path set in IA assurance scope where applicable. |
 | `body.references` | Correlation and resource references. |
 
@@ -299,32 +299,36 @@ Example active/degraded style payload:
     "intentVersion": "v1",
     "lifecycleStatus": "Degraded",
     "statusReason": "Current primary path latency is outside resolved runtime targets.",
-    "context": {
-      "targets": {
-        "maxLatencyMs": 10,
-        "minAvailabilityPercent": 99.99,
-        "maxJitterMs": 2,
-        "maxPacketLossPercent": 0.01
-      },
-      "constraints": {
-        "location": {
-          "locationId": "AU-NSW-SYD-HOSP-001",
-          "displayName": "Sydney-Main-Hospital"
+    "expression": {
+      "context": {
+        "targets": {
+          "maxLatencyMs": 10,
+          "minAvailabilityPercent": 99.99,
+          "maxJitterMs": 2,
+          "maxPacketLossPercent": 0.01
         },
-        "serviceType": "surgical-connectivity",
-        "serviceClass": "critical-gold",
-        "priority": "critical",
-        "redundancyRequired": true
-      },
-      "preferences": {
-        "preferredAccessTechnology": "5G"
+        "constraints": {
+          "location": {
+            "locationId": "AU-NSW-SYD-HOSP-001",
+            "displayName": "Sydney-Main-Hospital"
+          },
+          "serviceType": "surgical-connectivity",
+          "serviceClass": "critical-gold",
+          "priority": "critical",
+          "redundancyRequired": true
+        },
+        "preferences": {
+          "preferredAccessTechnology": "5G"
+        }
       }
     },
     "current": {
       "resources": [
         {
           "resourceId": "SYD-PRI-01",
-          "roles": ["primary"],
+          "roles": [
+            "primary"
+          ],
           "resourceType": "deliveryResource",
           "resourceClass": "critical-gold",
           "accessTechnology": "fibre",
@@ -368,7 +372,7 @@ IA MS must not include the following by default in `IntentAssuranceEvent`:
 |---|---|
 | Raw callback payloads | IA emits curated outcomes, not callback dumps. |
 | Raw telemetry dumps | IA emits curated assurance facts, not full telemetry streams. |
-| External TMF `IntentExpression` wrappers | Internal events use plain JSON `body`. |
+| External TMF `IntentExpression` wrappers | Internal events use plain JSON `body.expression.context`, not external TMF expression wrappers. |
 | `provider` | Not part of the IA event baseline. |
 | `current.evaluations` | Metrics-first event; no derived evaluation block by default. |
 | `body.evaluations` | Metrics-first event; no derived evaluation block by default. |

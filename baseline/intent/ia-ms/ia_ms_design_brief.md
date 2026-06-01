@@ -126,15 +126,15 @@ IA MS must key assurance state by `intentId` and `intentVersion` where runtime v
 
 `IntentAssuranceEvent` is the single IA-owned runtime assurance event. It carries curated assurance facts using the internal event contract, not the external TMF expression wrapper.
 
-The active generic body shape uses `intentVersion` for runtime intent versioning and a nested `context` object for targets, constraints, and preferences:
+The active generic body shape uses `intentVersion` for runtime intent versioning and `expression.context` for targets, constraints, and preferences:
 
 | **Field / area** | **Purpose** |
 |---|---|
 | `lifecycleStatus` | Lifecycle-driving state that IC MS projects externally |
 | `statusReason` | Human-readable reason for the current assurance outcome |
-| `context.targets` | Runtime targets used to interpret observations |
-| `context.constraints` | Location/service/priority/redundancy context where needed |
-| `context.preferences` | Preference context where useful for downstream decisions |
+| `expression.context.targets` | Runtime targets used to interpret observations |
+| `expression.context.constraints` | Location/service/priority/redundancy context where needed |
+| `expression.context.preferences` | Preference context where useful for downstream decisions |
 | `current.resources` | Full observed resource/path set in the IA assurance scope, mirroring `IntentNetworkReadyEvent.serviceConfiguration.observerConfiguration.resources[]` |
 | `references` | Correlation and external resource references |
 
@@ -142,7 +142,7 @@ Reusable resource entries use `roles`, `resourceId`, `resourceType`, `resourceCl
 
 Metric names are neutral and use names such as `latencyMs`, `availabilityPercent`, `jitterMs`, and `packetLossPercent`. Do not use metric origin wrappers or context-encoded field names such as `metrics.benchmark`, `metrics.telemetry`, `latencyBenchmarkMs`, `currentLatencyMs`, or `observedLatencyMs` in `IntentAssuranceEvent`. IA MS does not emit `IntentDriftOccurredEvent` in the active baseline.
 
-Drift/degradation is represented through `IntentAssuranceEvent.lifecycleStatus`, `statusReason`, `context`, and resource-level `metrics` in `current.resources`. IA MS does not include raw callback payloads, raw telemetry dumps, optimiser scoring, solver internals, `provider`, `current.evaluations`, `body.evaluations`, default `requiresReoptimisation`, `selectionStatus`, `assuranceStatus`, or a default `candidates` block in `IntentAssuranceEvent`.
+Drift/degradation is represented through `IntentAssuranceEvent.lifecycleStatus`, `statusReason`, `expression.context`, and resource-level `metrics` in `current.resources`. IA MS does not include raw callback payloads, raw telemetry dumps, optimiser scoring, solver internals, `provider`, `current.evaluations`, `body.evaluations`, default `requiresReoptimisation`, `selectionStatus`, `assuranceStatus`, or a default `candidates` block in `IntentAssuranceEvent`.
 
 For `Active`, `Degraded`, and `Failed`, `current.resources[]` should carry the full observer scope where applicable. `lifecycleStatus` and `statusReason` explain the interpreted outcome; each resource entry remains factual.
 

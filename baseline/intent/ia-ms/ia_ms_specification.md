@@ -417,7 +417,7 @@ content-type: application/json
 
 | **Field / area** | **Purpose** |
 |---|---|
-| `body.context` | Resolved runtime context with targets, constraints, and preferences where relevant, derived from `IntentNetworkReadyEvent.body.expression.context` |
+| `body.expression.context` | Resolved runtime context with targets, constraints, and preferences where relevant, derived from `IntentNetworkReadyEvent.body.expression.context` |
 | `body.current.resources` | Full observed resource/path set within the assurance scope, including primary and all secondary/alternative resources supplied through `IntentNetworkReadyEvent.serviceConfiguration.observerConfiguration.resources` |
 | `body.references` | Correlation and resource references |
 
@@ -463,32 +463,36 @@ Do not include `current.evaluations` or `body.evaluations` by default.
     "intentVersion": "v1",
     "lifecycleStatus": "Active",
     "statusReason": "All monitored delivery resources are operating within resolved runtime targets.",
-    "context": {
-      "targets": {
-        "maxLatencyMs": 10,
-        "minAvailabilityPercent": 99.99,
-        "maxJitterMs": 2,
-        "maxPacketLossPercent": 0.01
-      },
-      "constraints": {
-        "location": {
-          "locationId": "AU-NSW-SYD-HOSP-001",
-          "displayName": "Sydney-Main-Hospital"
+    "expression": {
+      "context": {
+        "targets": {
+          "maxLatencyMs": 10,
+          "minAvailabilityPercent": 99.99,
+          "maxJitterMs": 2,
+          "maxPacketLossPercent": 0.01
         },
-        "serviceType": "surgical-connectivity",
-        "serviceClass": "critical-gold",
-        "priority": "critical",
-        "redundancyRequired": true
-      },
-      "preferences": {
-        "preferredAccessTechnology": "5G"
+        "constraints": {
+          "location": {
+            "locationId": "AU-NSW-SYD-HOSP-001",
+            "displayName": "Sydney-Main-Hospital"
+          },
+          "serviceType": "surgical-connectivity",
+          "serviceClass": "critical-gold",
+          "priority": "critical",
+          "redundancyRequired": true
+        },
+        "preferences": {
+          "preferredAccessTechnology": "5G"
+        }
       }
     },
     "current": {
       "resources": [
         {
           "resourceId": "SYD-PRI-01",
-          "roles": ["primary"],
+          "roles": [
+            "primary"
+          ],
           "resourceType": "deliveryResource",
           "resourceClass": "critical-gold",
           "accessTechnology": "fibre",
@@ -507,7 +511,9 @@ Do not include `current.evaluations` or `body.evaluations` by default.
         },
         {
           "resourceId": "SYD-PRI-02",
-          "roles": ["primary"],
+          "roles": [
+            "primary"
+          ],
           "resourceType": "deliveryResource",
           "resourceClass": "critical-gold",
           "accessTechnology": "fibre",
@@ -526,7 +532,9 @@ Do not include `current.evaluations` or `body.evaluations` by default.
         },
         {
           "resourceId": "SYD-SEC-01",
-          "roles": ["secondary"],
+          "roles": [
+            "secondary"
+          ],
           "resourceType": "deliveryResource",
           "resourceClass": "critical-gold",
           "accessTechnology": "5G",
@@ -545,7 +553,9 @@ Do not include `current.evaluations` or `body.evaluations` by default.
         },
         {
           "resourceId": "SYD-SEC-02",
-          "roles": ["secondary"],
+          "roles": [
+            "secondary"
+          ],
           "resourceType": "deliveryResource",
           "resourceClass": "critical-gold",
           "accessTechnology": "fibre",
@@ -594,32 +604,36 @@ This shape lets II MS or another authorised decision component inspect the affec
     "intentVersion": "v1",
     "lifecycleStatus": "Degraded",
     "statusReason": "Current primary path latency is outside resolved runtime targets.",
-    "context": {
-      "targets": {
-        "maxLatencyMs": 10,
-        "minAvailabilityPercent": 99.99,
-        "maxJitterMs": 2,
-        "maxPacketLossPercent": 0.01
-      },
-      "constraints": {
-        "location": {
-          "locationId": "AU-NSW-SYD-HOSP-001",
-          "displayName": "Sydney-Main-Hospital"
+    "expression": {
+      "context": {
+        "targets": {
+          "maxLatencyMs": 10,
+          "minAvailabilityPercent": 99.99,
+          "maxJitterMs": 2,
+          "maxPacketLossPercent": 0.01
         },
-        "serviceType": "surgical-connectivity",
-        "serviceClass": "critical-gold",
-        "priority": "critical",
-        "redundancyRequired": true
-      },
-      "preferences": {
-        "preferredAccessTechnology": "5G"
+        "constraints": {
+          "location": {
+            "locationId": "AU-NSW-SYD-HOSP-001",
+            "displayName": "Sydney-Main-Hospital"
+          },
+          "serviceType": "surgical-connectivity",
+          "serviceClass": "critical-gold",
+          "priority": "critical",
+          "redundancyRequired": true
+        },
+        "preferences": {
+          "preferredAccessTechnology": "5G"
+        }
       }
     },
     "current": {
       "resources": [
         {
           "resourceId": "SYD-PRI-01",
-          "roles": ["primary"],
+          "roles": [
+            "primary"
+          ],
           "resourceType": "deliveryResource",
           "resourceClass": "critical-gold",
           "accessTechnology": "fibre",
@@ -638,7 +652,9 @@ This shape lets II MS or another authorised decision component inspect the affec
         },
         {
           "resourceId": "SYD-PRI-02",
-          "roles": ["primary"],
+          "roles": [
+            "primary"
+          ],
           "resourceType": "deliveryResource",
           "resourceClass": "critical-gold",
           "accessTechnology": "fibre",
@@ -657,7 +673,9 @@ This shape lets II MS or another authorised decision component inspect the affec
         },
         {
           "resourceId": "SYD-SEC-01",
-          "roles": ["secondary"],
+          "roles": [
+            "secondary"
+          ],
           "resourceType": "deliveryResource",
           "resourceClass": "critical-gold",
           "accessTechnology": "5G",
@@ -676,7 +694,9 @@ This shape lets II MS or another authorised decision component inspect the affec
         },
         {
           "resourceId": "SYD-SEC-02",
-          "roles": ["secondary"],
+          "roles": [
+            "secondary"
+          ],
           "resourceType": "deliveryResource",
           "resourceClass": "critical-gold",
           "accessTechnology": "fibre",
@@ -724,9 +744,9 @@ IA MS emits enough curated facts for IC MS to build the external report expressi
 |---|---|
 | `lifecycleStatus` | `IntentReport.expression.expressionValue.lifecycleStatus` |
 | `statusReason` | `IntentReport.expression.expressionValue.statusReason` |
-| `context.constraints.location`, `context.constraints.serviceType`, `context.constraints.serviceClass` | `serviceSummary` |
+| `expression.context.constraints.location`, `expression.context.constraints.serviceType`, `expression.context.constraints.serviceClass` | `serviceSummary` |
 | `current.resources` | `resourceSummary`, including the full observed resource/path set within the assurance scope |
-| `context.targets` + `current.resources.metrics` | fact-only `targetSummary` and `observationSummary` |
+| `expression.context.targets` + `current.resources.metrics` | fact-only `targetSummary` and `observationSummary` |
 
 IntentReport remains fact-only by default. It does not require separate `degradationSummary`, `reoptimisationSummary`, aggregate compliance `result`, or per-target `status` fields.
 
@@ -737,7 +757,7 @@ IntentReport remains fact-only by default. It does not require separate `degrada
 - `IntentAssuranceEvent` is the single IA-owned runtime assurance outcome event.
 - `IntentDriftOccurredEvent` is retired and must not be used by default.
 - Use `lifecycleStatus` and `statusReason` for state narrative.
-- Use internal `context` where the event carries resolved runtime targets, constraints, and preferences.
+- Use internal `body.expression.context` where the event carries resolved runtime targets, constraints, and preferences.
 - Use `current.resources` for the full observed resource/path set within the assurance scope, including primary and all observed secondary/alternative resources.
 - Do not include `current.evaluations` or `body.evaluations` by default.
 - For `Degraded` and `Failed`, keep the affected resource and all observed alternatives together in `current.resources` by default.
@@ -747,7 +767,7 @@ IntentReport remains fact-only by default. It does not require separate `degrada
 - Do not include raw telemetry dumps.
 - Do not include optimiser scoring or solver internals.
 - Do not include `provider`.
-- Do not include external TMF `IntentExpression` wrappers in internal events.
+- Do not include external TMF `IntentExpression` wrappers in internal events; use the internal `body.expression.context` wrapper only.
 - Do not include a default `requiresReoptimisation` flag. II MS or another authorised decision component reads the assurance event state and decides whether re-interpretation or re-optimisation is required.
 
 ---
