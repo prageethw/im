@@ -3,8 +3,12 @@
 | **Document status** | **Value** |
 | --- | --- |
 | Status | Current baseline |
+| Document version | v1.0 |
+| Last updated | 2026-06-01 |
 | Scope | Intent Assurance MS internal event specification |
 | Source of truth after commit | GitHub `baseline/intent/ia-ms/ia_ms_specification.md` |
+
+Document authority: this specification is authoritative for IA MS field-level contracts, event shapes, and payload rules. Design decisions are captured in the IA MS design brief; operational and configuration guidance is captured in the IA MS solution brief.
 
 ## Table of contents:
 
@@ -95,6 +99,8 @@ Internal IA events must not use external TMF `IntentExpression` wrappers. Those 
 
 IA MS consumes `IntentNetworkReadyEvent` to learn the apply plan and observer scope.
 
+`body.intentVersion` is a runtime intent version token assigned upstream by IC MS. The baseline treats it as an opaque string, such as `v1`, that is compared for equality and ordering only where IC MS supplies ordering semantics. A new `intentVersion` is produced when the runtime Intent is materially updated, superseded, cancelled/recreated, or otherwise moved to a new versioned runtime decision context. IA MS must not infer semantic meaning from the token format.
+
 `IntentNetworkReadyEvent` is produced by `intent-intelligence-ms`. IA MS must not emit `IntentNetworkReadyEvent`.
 
 #### 4.1.1. Example headers
@@ -111,6 +117,8 @@ content-type: application/json
 
 #### 4.1.2. Example body
 
+The observer scope may intentionally be wider than the selected orchestrator apply scope. In the surgical hospital slice example, the orchestrator apply scope contains the selected primary/secondary resources to apply, while `observerConfiguration.resources[]` contains the full assurance observation scope, including monitored alternatives.
+
 ```json
 {
   "body": {
@@ -120,26 +128,26 @@ content-type: application/json
     "statusReason": "Service configuration has been prepared for change-execution/apply.",
     "expression": {
       "context": {
-      "targets": {
-        "maxLatencyMs": 10,
-        "minAvailabilityPercent": 99.99,
-        "maxJitterMs": 2,
-        "maxPacketLossPercent": 0.01
-      },
-      "constraints": {
-        "location": {
-          "locationId": "AU-NSW-SYD-HOSP-001",
-          "displayName": "Sydney-Main-Hospital"
+        "targets": {
+          "maxLatencyMs": 10,
+          "minAvailabilityPercent": 99.99,
+          "maxJitterMs": 2,
+          "maxPacketLossPercent": 0.01
         },
-        "serviceType": "surgical-connectivity",
-        "serviceClass": "critical-gold",
-        "priority": "critical",
-        "redundancyRequired": true
-      },
-      "preferences": {
-        "preferredAccessTechnology": "5G"
+        "constraints": {
+          "location": {
+            "locationId": "AU-NSW-SYD-HOSP-001",
+            "displayName": "Sydney-Main-Hospital"
+          },
+          "serviceType": "surgical-connectivity",
+          "serviceClass": "critical-gold",
+          "priority": "critical",
+          "redundancyRequired": true
+        },
+        "preferences": {
+          "preferredAccessTechnology": "5G"
+        }
       }
-    }
     },
     "serviceConfiguration": {
       "orchestratorConfiguration": {
@@ -150,7 +158,9 @@ content-type: application/json
             "resourceId": "SYD-PRI-01",
             "resourceType": "deliveryResource",
             "resourceClass": "critical-gold",
-            "roles": ["primary"],
+            "roles": [
+              "primary"
+            ],
             "accessTechnology": "fibre",
             "relationships": [
               {
@@ -163,7 +173,9 @@ content-type: application/json
             "resourceId": "SYD-SEC-01",
             "resourceType": "deliveryResource",
             "resourceClass": "critical-gold",
-            "roles": ["secondary"],
+            "roles": [
+              "secondary"
+            ],
             "accessTechnology": "5G",
             "relationships": [
               {
@@ -182,7 +194,9 @@ content-type: application/json
             "resourceId": "SYD-PRI-01",
             "resourceType": "deliveryResource",
             "resourceClass": "critical-gold",
-            "roles": ["primary"],
+            "roles": [
+              "primary"
+            ],
             "metrics": [
               "latencyMs",
               "availabilityPercent",
@@ -194,7 +208,9 @@ content-type: application/json
             "resourceId": "SYD-PRI-02",
             "resourceType": "deliveryResource",
             "resourceClass": "critical-gold",
-            "roles": ["primary"],
+            "roles": [
+              "primary"
+            ],
             "metrics": [
               "latencyMs",
               "availabilityPercent",
@@ -206,7 +222,9 @@ content-type: application/json
             "resourceId": "SYD-SEC-01",
             "resourceType": "deliveryResource",
             "resourceClass": "critical-gold",
-            "roles": ["secondary"],
+            "roles": [
+              "secondary"
+            ],
             "metrics": [
               "latencyMs",
               "availabilityPercent",
@@ -218,7 +236,9 @@ content-type: application/json
             "resourceId": "SYD-SEC-02",
             "resourceType": "deliveryResource",
             "resourceClass": "critical-gold",
-            "roles": ["secondary"],
+            "roles": [
+              "secondary"
+            ],
             "metrics": [
               "latencyMs",
               "availabilityPercent",
@@ -331,7 +351,9 @@ IA MS obtains runtime metrics from observability/observation endpoints that are 
   "resourceMetrics": [
     {
       "resourceId": "SYD-PRI-01",
-      "roles": ["primary"],
+      "roles": [
+        "primary"
+      ],
       "metrics": {
         "latencyMs": 18,
         "availabilityPercent": 99.992,
@@ -341,7 +363,9 @@ IA MS obtains runtime metrics from observability/observation endpoints that are 
     },
     {
       "resourceId": "SYD-PRI-02",
-      "roles": ["primary"],
+      "roles": [
+        "primary"
+      ],
       "metrics": {
         "latencyMs": 14,
         "availabilityPercent": 99.993,
@@ -351,7 +375,9 @@ IA MS obtains runtime metrics from observability/observation endpoints that are 
     },
     {
       "resourceId": "SYD-SEC-01",
-      "roles": ["secondary"],
+      "roles": [
+        "secondary"
+      ],
       "metrics": {
         "latencyMs": 12,
         "availabilityPercent": 99.994,
@@ -361,7 +387,9 @@ IA MS obtains runtime metrics from observability/observation endpoints that are 
     },
     {
       "resourceId": "SYD-SEC-02",
-      "roles": ["secondary"],
+      "roles": [
+        "secondary"
+      ],
       "metrics": {
         "latencyMs": 13,
         "availabilityPercent": 99.993,
@@ -387,6 +415,7 @@ IA MS must apply configured observation freshness and retry policy to metrics co
 | `APPLIED` | Apply completed; runtime observations may further confirm health | `Active` |
 | `APPLY_REJECTED` | Apply request rejected before successful application | `Failed` |
 | `APPLY_FAILED` | Apply failed after attempt | `Failed` |
+| `PARTIALLY_APPLIED` | Some selected resources were applied while others failed or remain unconfirmed; preserve factual resource state and map according to policy severity | `Degraded` or `Failed` |
 | `TERMINATION_ACCEPTED` | Termination accepted | `InProgress` |
 | `TERMINATED` | Termination confirmed | `Terminated` |
 | Unknown/unmapped | Record skip/dead-letter/operational handling decision | No default lifecycle event unless policy requires one |
@@ -736,7 +765,7 @@ This shape lets II MS or another authorised decision component inspect the affec
 
 ## 7. IntentReport projection support
 
-IA MS does not create external `IntentReport` resources. IC MS owns external report projection.
+IA MS does not create external `IntentReport` resources. IC MS owns external report projection. The downstream IC MS projection contract is defined in the IC MS specification; this IA MS specification only defines the curated internal facts IA emits for IC MS to project.
 
 IA MS emits enough curated facts for IC MS to build the external report expression:
 
@@ -776,6 +805,8 @@ IntentReport remains fact-only by default. It does not require separate `degrada
 
 IA MS owns its own PostgreSQL-compatible persistence boundary.
 
+Canonical IA DLQ trigger conditions include exhausted retries for malformed or unprocessable `IntentNetworkReadyEvent`, unknown or unmapped callback state after mapping policy is applied, unknown `intentId` callback where no valid IA state can be found, stale or superseded event attempts that require operational review, and repeated observation collection failures where policy requires durable fallout tracking.
+
 | **Table** | **Purpose** |
 |---|---|
 | `intent_assurance_state` | Current assurance/projection state per intent |
@@ -797,7 +828,7 @@ DLQ handling is a required minimum baseline for exhausted `IntentNetworkReadyEve
 | IA DB unavailable | Hard fail processing; do not acknowledge consumed event until retry/DLQ policy applies |
 | Kafka unavailable | IA outbox retains unpublished events; relay retries later |
 | Observability platform unavailable, stale, or incomplete | Retry according to configured policy, mark the observation collection gap operationally, retain previous assurance state where safe, and do not invent healthy state from missing or stale telemetry |
-| Callback topic unavailable | No new callbacks consumed; existing IA state remains unchanged |
+| Callback topic unavailable | No new callbacks consumed; existing IA state remains unchanged. Use the canonical DLQ trigger conditions in Section 9 rather than redefining DLQ policy in dependency handling. |
 | IC MS unavailable | IA still publishes to event backbone; IC catches up through its consumer/idempotency path |
 | KP unavailable | IA uses stored applied configuration/resolved targets where available; do not query KP for every assurance decision by default |
 

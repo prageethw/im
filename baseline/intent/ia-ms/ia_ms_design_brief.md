@@ -3,8 +3,12 @@
 | **Document status** | **Value** |
 | --- | --- |
 | Status | Current baseline |
+| Document version | v1.0 |
+| Last updated | 2026-06-01 |
 | Scope | Intent Assurance MS design brief |
 | Source of truth after commit | GitHub `baseline/intent/ia-ms/ia_ms_design_brief.md` |
+
+Document authority: this design brief is authoritative for IA MS design decisions, responsibility boundaries, and ownership rules. Field-level contracts are defined in the IA MS specification; operational and configuration guidance is captured in the IA MS solution brief.
 
 ## Table of contents:
 
@@ -20,7 +24,6 @@
 - [10. Observation endpoint baseline](#10-observation-endpoint-baseline)
 - [11. Observation gap and DLQ baseline](#11-observation-gap-and-dlq-baseline)
 - [12. Final baseline statement](#12-final-baseline-statement)
-- [13. Metrics-first IntentAssuranceEvent refinement](#13-metrics-first-intentassuranceevent-refinement)
 
 ## 1. Purpose
 
@@ -35,7 +38,7 @@ IA MS does not consume `IntentOptimisedEvent` in the active baseline.
 | Display name | Intent Assurance MS |
 | Service name | `intent-assurance-ms` |
 | Short name | IA MS |
-| Main responsibility | Runtime assurance, callback state normalisation, drift/degradation detection, assurance event publication |
+| Main responsibility | Runtime assurance truth, callback state normalisation, observation evaluation, drift/degradation detection, assurance state updates, and `IntentAssuranceEvent` publication |
 | Primary event inputs | `IntentNetworkReadyEvent`; `IntentCallbackEvent` from `t7.intent.management.events.callbacks` |
 | Main event output | `IntentAssuranceEvent` |
 | Retired event | `IntentDriftOccurredEvent` is not used in the active baseline |
@@ -118,6 +121,8 @@ The canonical `IntentCallbackEvent` fields consumed by IA are `callbackSource`, 
 
 `sourceState.state` carries the raw source/change-execution state value. IA maps `sourceState.state` into lifecycle/assurance meaning.
 
+Partial apply failure is treated as an IA mapping scenario: if the source/change-execution layer reports that some resources were applied and others failed, IA MS must preserve the factual callback/observation context, map the outcome to `Degraded` or `Failed` according to policy severity, and publish a curated `IntentAssuranceEvent` without exposing raw callback payloads.
+
 ## 8. Stale version and late-event handling
 
 IA MS must key assurance state by `intentId` and `intentVersion` where runtime versioning is supplied. A stale `IntentNetworkReadyEvent`, `IntentCallbackEvent`, or observation result for an older intent version must not overwrite newer IA state. Late callbacks or late observations for a superseded, terminated, or otherwise inactive version should be recorded for audit or dead-letter handling according to policy, but must not publish misleading `IntentAssuranceEvent` outcomes for the current version.
@@ -146,6 +151,8 @@ Drift/degradation is represented through `IntentAssuranceEvent.lifecycleStatus`,
 
 For `Active`, `Degraded`, and `Failed`, `current.resources[]` should carry the full observer scope where applicable. `lifecycleStatus` and `statusReason` explain the interpreted outcome; each resource entry remains factual.
 
+`IntentAssuranceEvent` is metrics-first by default. Do not include `current.evaluations` or `body.evaluations` unless a future policy explicitly requires derived evaluation objects. `lifecycleStatus` and `statusReason` explain the outcome; resource-level `metrics` provide the factual observed data needed by IC MS, II MS, and authorised decision components.
+
 ## 10. Observation endpoint baseline
 
 IA MS obtains runtime metrics from observability/observation endpoints. The observation endpoints are informed by `IntentNetworkReadyEvent.serviceConfiguration.observerConfiguration`.
@@ -164,8 +171,3 @@ IA MS is the runtime assurance truth service.
 
 It consumes `IntentNetworkReadyEvent`, `IntentCallbackEvent`, and observation facts only; rejects stale or superseded event versions where needed; maps raw callback state; evaluates runtime observations against resolved runtime targets and the stored applied assurance baseline; and emits curated generic `IntentAssuranceEvent` outcomes. IC MS consumes `IntentAssuranceEvent` to project external TMF-compliant `Intent` lifecycle and `IntentReport` resources.
 
-## 13. Metrics-first IntentAssuranceEvent refinement
-
-`IntentAssuranceEvent` is metrics-first by default.
-
-Do not include `current.evaluations` or `body.evaluations` unless a future policy explicitly requires derived evaluation objects. `lifecycleStatus` and `statusReason` explain the outcome; resource-level `metrics` provide the factual observed data needed by IC MS, II MS, and authorised decision components.

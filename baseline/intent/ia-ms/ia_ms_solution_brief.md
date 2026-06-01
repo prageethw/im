@@ -3,8 +3,12 @@
 | **Document status** | **Value** |
 | --- | --- |
 | Status | Current baseline |
+| Document version | v1.0 |
+| Last updated | 2026-06-01 |
 | Scope | Intent Assurance MS solution brief |
 | Source of truth after commit | GitHub `baseline/intent/ia-ms/ia_ms_solution_brief.md` |
+
+Document authority: this solution brief is authoritative for IA MS operational flow, configuration guidance, and implementation-facing behaviour. Field-level contracts are defined in the IA MS specification; design decisions and ownership boundaries are captured in the IA MS design brief.
 
 ## Table of contents:
 
@@ -91,6 +95,32 @@ The normal IA MS runtime process is:
 12. IC MS consumes the event and updates external `Intent` lifecycle and `IntentReport` projection.
 
 `IntentNetworkReadyEvent` alone never proves apply success. Active state requires apply/callback confirmation and/or runtime observations according to the workflow policy.
+
+Onboarding sequence view:
+
+```mermaid
+sequenceDiagram
+    participant II as II MS
+    participant ICB as ICB MS
+    participant IA as IA MS
+    participant OBS as Observability platform
+    participant IC as IC MS
+
+    II->>IA: IntentNetworkReadyEvent\nbody.intentVersion + body.expression.context + serviceConfiguration
+    ICB->>IA: IntentCallbackEvent\nraw sourceState.state after callback ingestion
+    IA->>IA: Correlate intentId + intentVersion\nstore apply resources and observer scope
+    IA->>OBS: Collect runtime metrics\nusing observerConfiguration
+    OBS-->>IA: Metric facts for observer scope
+    IA->>IA: Map callback state + evaluate observations
+    IA->>IC: IntentAssuranceEvent\nbody.expression.context + current.resources
+    IC->>IC: Project external Intent lifecycle and IntentReport
+```
+
+Ordering constraints:
+
+- `IntentNetworkReadyEvent` establishes the assurance context and observer scope; it does not prove apply success.
+- `IntentCallbackEvent` may arrive before, after, or between observation attempts, so IA MS must correlate and process events idempotently by `intentId`, `intentVersion`, and event identity.
+- IA MS must not emit misleading `IntentAssuranceEvent` outcomes for stale, superseded, or unmatched versions.
 
 ## 4. Solution Elaboration:
 
@@ -246,6 +276,7 @@ IA MS owns raw callback state mapping. ICB MS must not map raw source states int
 | `APPLIED` | Apply completed; runtime observations may further confirm health. | `Active` |
 | `APPLY_REJECTED` | Apply request rejected before successful application. | `Failed` |
 | `APPLY_FAILED` | Apply failed after attempt. | `Failed` |
+| `PARTIALLY_APPLIED` | Some selected resources applied while others failed or remain unconfirmed. Preserve factual resource state and map to `Degraded` or `Failed` according to policy severity. | `Degraded` or `Failed` |
 | `TERMINATION_ACCEPTED` | Termination accepted. | `InProgress` |
 | `TERMINATED` | Termination confirmed. | `Terminated` |
 | Unknown / unmapped | Record skip, dead-letter, or operational handling decision. | No default lifecycle event unless policy requires one. |
@@ -290,7 +321,7 @@ Reusable resource entries use:
 - `relationships`
 - `metrics`
 
-Example active/degraded style payload:
+Representative degraded outcome snippet. The IA MS specification is the canonical reference for full `IntentAssuranceEvent` examples:
 
 ```json
 {
@@ -385,7 +416,7 @@ IA MS must not include the following by default in `IntentAssuranceEvent`:
 
 ## 14. Authorisation:
 
-IA MS is an internal service. It does not expose an external TMF-compliant API or OEX-facing user operation.
+IA MS is an internal service. It does not expose an external TMF-compliant API or OEX-facing user operation. IA MS must follow the platform internal service authentication and authorisation policy for service identity, topic access, mTLS or workload identity, and least-privilege persistence access.
 
 Authorisation should follow internal service-to-service controls:
 
@@ -439,7 +470,7 @@ Publication rules:
 | `t7.intent.management.events.callbacks` | Input | Dedicated callback topic carrying `IntentCallbackEvent` from ICB MS. |
 | `t7.intent.management.events` | Input/output | Main internal event backbone for `IntentNetworkReadyEvent` input and `IntentAssuranceEvent` output. |
 
-Exact topic naming should remain aligned with the environment-specific platform Kafka naming convention, but the dedicated callback topic must remain separate from ordinary internal workflow events.
+Exact topic naming should remain aligned with the environment-specific platform Kafka naming convention, but the dedicated callback topic must remain separate from ordinary internal workflow events. The `t7` topic prefix is an environment-specific example and must be parameterised through Section 22 configuration rather than hard-coded in deployable components.
 
 ## 18. Event identity:
 
@@ -516,6 +547,7 @@ IA MS must treat observation gaps, stale observations, and exhausted retries as 
 | Stale or superseded event version received | Do not overwrite newer IA state or publish misleading current-version assurance outcomes. Record audit/dead-letter handling according to policy. |
 | Apply callback received with `APPLIED` | Correlate `intentId`, map state, update assurance state, and publish an assurance outcome according to workflow policy. |
 | Apply callback received with `APPLY_FAILED` | Correlate, map to failure meaning, update state, publish `IntentAssuranceEvent` with `Failed` where policy requires. |
+| Partial apply callback received | Correlate selected resources, preserve factual applied/failed/unconfirmed resource context, and publish `IntentAssuranceEvent` with `Degraded` or `Failed` according to policy severity. |
 | Unknown `intentId` callback | Record skip/dead-letter decision according to IA policy; do not publish misleading assurance state. |
 | Unknown `sourceState.state` | Record mapping audit and skip/dead-letter/operational handling decision; no default lifecycle event unless policy requires. |
 | Observed metrics inside target | Publish or maintain `Active`/healthy assurance state as policy requires. |
@@ -560,7 +592,7 @@ Other authorised internal decision components may consume `IntentAssuranceEvent`
 
 | Item | Note |
 |---|---|
-| Exact observation endpoint API contract | The solution brief assumes logical observation endpoint facts; the concrete endpoint API remains environment/platform specific. |
+| Exact observation endpoint API contract | Controlled environment-specific decision. The solution brief assumes logical observation endpoint facts; concrete observation API endpoints, credentials, and endpoint profiles are supplied through platform configuration. |
 | Dead-letter storage and replay implementation detail | DLQ handling is required as a minimum baseline; the exact storage/topic and replay runbook remain an implementation detail aligned to platform policy. |
 | Mapping policy ownership detail | IA owns mapping execution; final operational governance for mapping config should remain aligned with platform configuration management. |
 
