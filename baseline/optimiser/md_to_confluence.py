@@ -1158,17 +1158,166 @@ def validate_publish_payload(
     # --- 1. Image existence + readability ----------------------------------
     missing: List[ImageRef] = []
     unreadable: List[Tuple[ImageRef, str]] = []
+    empty: List[ImageRef] = []
+    bad_svg: List[Tuple[ImageRef, str]] = []
+    bad_raster: List[Tuple[ImageRef, str]] = []
+
+    # Magic-byte signatures for raster formats we care about. Each entry is
+    # (extension, list of acceptable header byte sequences).
+    _RASTER_MAGIC = {
+        ".png":  [b"\x89PNG\r\n\x1a\n"],
+        ".jpg":  [b"\xff\xd8\xff"],
+        ".jpeg": [b"\xff\xd8\xff"],
+        ".gif":  [b"GIF87a", b"GIF89a"],
+        ".webp": [b"RIFF"],   # full check also requires 'WEBP' at offset 8
+        ".bmp":  [b"BM"],
+    }
+
     for ref in image_refs:
         if not ref.abs_path.is_file():
             missing.append(ref)
             continue
         try:
-            # Open + read 1 byte to catch permission errors and dangling
-            # symlinks. Cheap and short-circuits early.
             with open(ref.abs_path, "rb") as fh:
-                _ = fh.read(1)
+                head = fh.read(4096)
         except OSError as exc:
             unreadable.append((ref, str(exc)))
+            continue
+
+        # Zero-byte file is never valid — catches truncated downloads /
+        # git-lfs pointers that weren't fetched.
+        size = ref.abs_path.stat().st_size
+        if size == 0:
+            empty.append(ref)
+            continue
+
+        ext = ref.abs_path.suffix.lower()
+
+        # --- SVG: must parse as XML and have an <svg> root element. ---------
+        # ALSO catch "valid XML but semantically broken" SVGs — the most
+        # common case is a PlantUML/Mermaid/Graphviz error frame, which IS
+        # well-formed XML but displays a stack-trace instead of the diagram.
+        if ext == ".svg":
+            try:
+                with open(ref.abs_path, "rb") as fh:
+                    raw_bytes = fh.read()
+                raw_text = raw_bytes.decode("utf-8", errors="replace")
+                import xml.etree.ElementTree as _ET
+                root = _ET.fromstring(raw_bytes)
+                # Root tag may be namespaced: '{http://www.w3.org/2000/svg}svg'.
+                local = root.tag.rsplit("}", 1)[-1].lower()
+                if local != "svg":
+                    bad_svg.append(
+                        (ref, f"root element is <{local}>, expected <svg>")
+                    )
+                    continue
+
+                # --- Diagram-tool error-frame heuristics ---------------------
+                # Collect every text-node payload (decoded, lower-cased) and
+                # the set of element tag names actually present.
+                text_blobs = []
+                tag_counts: Dict[str, int] = {}
+                for el in root.iter():
+                    tag = el.tag.rsplit("}", 1)[-1].lower()
+                    tag_counts[tag] = tag_counts.get(tag, 0) + 1
+                    if el.text:
+                        text_blobs.append(el.text)
+                combined_text = " ".join(text_blobs).lower()
+
+                # PlantUML stamps every error frame with these exact phrases.
+                plantuml_error_markers = (
+                    "syntax error?",
+                    "plantuml ",         # 'PlantUML 1.2024.3'
+                    "[from string (line",
+                )
+                # Mermaid renders 'Syntax error in graph' or 'mermaid version'
+                # into an SVG that otherwise has no diagram geometry.
+                mermaid_error_markers = (
+                    "syntax error in graph",
+                    "syntax error in text",
+                    "mermaid version",
+                )
+                # Graphviz/dot dumps the raw source on parse failure.
+                graphviz_error_markers = (
+                    "syntax error in line",
+                    "error: syntax error",
+                )
+
+                hit_marker = None
+                for marker in plantuml_error_markers:
+                    if marker in combined_text:
+                        hit_marker = ("PlantUML", marker)
+                        break
+                if not hit_marker:
+                    for marker in mermaid_error_markers:
+                        if marker in combined_text:
+                            hit_marker = ("Mermaid", marker)
+                            break
+                if not hit_marker:
+                    for marker in graphviz_error_markers:
+                        if marker in combined_text:
+                            hit_marker = ("Graphviz", marker)
+                            break
+
+                if hit_marker:
+                    tool, marker = hit_marker
+                    bad_svg.append((
+                        ref,
+                        f"{tool} error frame detected (contains "
+                        f"{marker!r}) — the diagram source failed to "
+                        f"render. Fix the source and regenerate the SVG."
+                    ))
+                    continue
+
+                # Even without a tool signature, an SVG with ZERO geometry
+                # (no <path>, <line>, <polyline>, <polygon>, <circle>, <ellipse>,
+                # <rect> beyond a trivial background, no <image>) is almost
+                # certainly not a real diagram. Require at least one geometry
+                # element of meaningful count.
+                geometry_tags = {
+                    "path", "line", "polyline", "polygon",
+                    "circle", "ellipse", "image", "use",
+                }
+                geometry_count = sum(
+                    tag_counts.get(t, 0) for t in geometry_tags
+                )
+                # <rect> is allowed but a single tiny rect = background only.
+                rect_count = tag_counts.get("rect", 0)
+                text_count = tag_counts.get("text", 0)
+
+                # A real diagram has SOME geometry, or at minimum multiple
+                # rects (boxes). An SVG that is 90%+ <text> with no paths/
+                # lines/polygons is a text dump masquerading as a diagram.
+                if geometry_count == 0 and rect_count <= 1 and text_count >= 5:
+                    bad_svg.append((
+                        ref,
+                        f"SVG has no diagram geometry "
+                        f"(0 paths/lines/polygons, {rect_count} rect, "
+                        f"{text_count} text nodes) — looks like an error "
+                        f"dump rather than a real diagram."
+                    ))
+                    continue
+            except _ET.ParseError as exc:
+                bad_svg.append((ref, f"XML parse error: {exc}"))
+            except Exception as exc:  # pragma: no cover
+                bad_svg.append((ref, f"unexpected error: {exc}"))
+            continue
+
+        # --- Raster formats: sniff magic bytes against extension. ----------
+        if ext in _RASTER_MAGIC:
+            sigs = _RASTER_MAGIC[ext]
+            if not any(head.startswith(sig) for sig in sigs):
+                # Show first few bytes as hex so the user can diagnose.
+                preview = head[:8].hex(" ") if head else "(empty)"
+                bad_raster.append(
+                    (ref, f"header bytes [{preview}] don't match {ext} signature")
+                )
+                continue
+            # WebP needs an extra check: 'WEBP' at offset 8.
+            if ext == ".webp" and head[8:12] != b"WEBP":
+                bad_raster.append(
+                    (ref, "RIFF container is not WebP (missing 'WEBP' tag at offset 8)")
+                )
 
     if missing:
         for m in missing:
@@ -1183,6 +1332,30 @@ def validate_publish_payload(
         problems.append(
             f"{len(unreadable)} image file(s) exist but cannot be read: "
             + ", ".join(f"{r.src} ({e})" for r, e in unreadable)
+        )
+    if empty:
+        for e in empty:
+            LOG.error("Image is zero bytes: %s", e.abs_path)
+        problems.append(
+            f"{len(empty)} image file(s) are zero bytes (truncated / unfetched "
+            f"git-lfs pointer?): " + ", ".join(e.src for e in empty)
+        )
+    if bad_svg:
+        for ref, err in bad_svg:
+            LOG.error("Malformed SVG: %s — %s", ref.abs_path, err)
+        problems.append(
+            f"{len(bad_svg)} SVG file(s) are not valid XML or have the wrong "
+            f"root element — Confluence would render them as broken "
+            f"attachments:\n      "
+            + "\n      ".join(f"{r.src}: {e}" for r, e in bad_svg)
+        )
+    if bad_raster:
+        for ref, err in bad_raster:
+            LOG.error("Malformed raster image: %s — %s", ref.abs_path, err)
+        problems.append(
+            f"{len(bad_raster)} raster image(s) have headers that don't match "
+            f"their file extension (corrupt or mis-named):\n      "
+            + "\n      ".join(f"{r.src}: {e}" for r, e in bad_raster)
         )
 
     # --- 2. Renderer sentinel leakage --------------------------------------
