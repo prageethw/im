@@ -21,12 +21,13 @@
 - [6. ICB MS does not own:](#6-icb-ms-does-not-own)
 - [7. Callback submission model:](#7-callback-submission-model)
 - [8. Idempotency baseline:](#8-idempotency-baseline)
-- [9. Persistence baseline:](#9-persistence-baseline)
-- [10. Outbox baseline:](#10-outbox-baseline)
-- [11. Dependency behaviour:](#11-dependency-behaviour)
-- [12. Security baseline:](#12-security-baseline)
-- [13. Observability baseline:](#13-observability-baseline)
-- [14. Design baseline statement:](#14-design-baseline-statement)
+- [9. Reference and correlation construction baseline:](#9-reference-and-correlation-construction-baseline)
+- [10. Persistence baseline:](#10-persistence-baseline)
+- [11. Outbox baseline:](#11-outbox-baseline)
+- [12. Dependency behaviour:](#12-dependency-behaviour)
+- [13. Security baseline:](#13-security-baseline)
+- [14. Observability baseline:](#14-observability-baseline)
+- [15. Design baseline statement:](#15-design-baseline-statement)
 
 ## 1. Purpose:
 
@@ -139,9 +140,15 @@ ICB MS should also use stable callback fields to protect against duplicates wher
 - `sourceReference`
 - `callbackTimestamp`
 
-Duplicate submissions should not create duplicate internal callback relay facts, whether the output event is `IntentCallbackEvent` or `OptimisationStatusChangeEvent`.
+Duplicate submissions should not create duplicate internal callback relay facts, whether the output event is `IntentCallbackEvent` or `OptimisationStatusChangeEvent`. The default duplicate response is idempotent `202 Accepted` referencing or representing the existing accepted submission where safe; `409 DUPLICATE_CALLBACK` is available only when an integration-specific idempotency policy explicitly requires conflict-style duplicate signalling.
 
-## 9. Persistence baseline:
+## 9. Reference and correlation construction baseline:
+
+ICB MS must not trust caller-supplied platform `href` values. Where ICB MS creates safe platform references such as `body.references.intent.href`, it constructs them from configured platform route templates, for example `/intentManagement/v5/intent/{intentId}`.
+
+`X-Correlation-ID` is propagated into the internal relay contract. For `IntentCallbackEvent`, ICB MS stores it in `body.references.correlationId` and may also publish it as an internal Kafka/message header such as `x-correlation-id`. For `OptimisationStatusChangeEvent`, ICB MS preserves the approved optimiser event correlation fields, including `event.optimisation.sourceContext.correlationId`, and may also publish the same value as `x-correlation-id`. The payload correlation field remains the durable contract.
+
+## 10. Persistence baseline:
 
 ICB MS follows the IME DB baseline: managed PostgreSQL / PostgreSQL-compatible RDBMS, owned by ICB MS only.
 
@@ -150,19 +157,19 @@ Suggested tables:
 | **Table** | **Purpose** |
 |---|---|
 | `callback_submission` | Stores accepted callback submission metadata and current submission publication state |
-| `callback_submission_payload` | Optional separate table for raw/structured payload body where retention policy requires separation |
+| `callback_submission_payload` | Optional separate table for raw/structured payload body. Use when payload size, data classification, retention separation, or audit policy requires payload separation; otherwise the accepted payload may be stored inline in `callback_submission` or `callback_outbox` according to the implementation data model. |
 | `callback_idempotency` | Deduplication and external retry protection |
 | `callback_outbox` | Durable internal `IntentCallbackEvent` and `OptimisationStatusChangeEvent` publication records |
 | `callback_audit` | Audit of accept/reject/duplicate decisions |
 | `shedlock` | Relay coordination if clustered outbox relay is used |
 
-## 10. Outbox baseline:
+## 11. Outbox baseline:
 
 ICB MS must write the accepted callback submission and callback outbox record in the same DB transaction.
 
 The API returns success only after DB and outbox write succeed. Kafka publication is asynchronous through the outbox relay. The target topic and event type are determined by the approved source integration profile. If Kafka is unavailable, the API may still return success when DB/outbox commit succeeded, and the relay retries publication later.
 
-## 11. Dependency behaviour:
+## 12. Dependency behaviour:
 
 | **Dependency** | **Baseline behaviour** |
 |---|---|
@@ -173,7 +180,7 @@ The API returns success only after DB and outbox write succeed. Kafka publicatio
 | IA MS / II MS unavailable | ICB MS API unaffected; downstream consumers catch up later from Kafka topics |
 | Unknown `intentId` | ICB MS does not reject solely for unknown intent; IA MS owns correlation/dead-letter decision |
 
-## 12. Security baseline:
+## 13. Security baseline:
 
 ICB MS is protected behind API Gateway.
 
@@ -194,7 +201,7 @@ ICB MS responsibilities:
 
 No secrets, tokens, credentials, or raw internal stack traces are written into callback events.
 
-## 13. Observability baseline:
+## 14. Observability baseline:
 
 ICB MS must emit:
 
@@ -220,6 +227,6 @@ icb_ms_callback_db_error_count
 icb_ms_callback_validation_error_count
 ```
 
-## 14. Design baseline statement:
+## 15. Design baseline statement:
 
 **ICB MS is a thin callback ingestion service. It receives callback submissions from external systems through API Gateway, authorises and structurally validates them, stores them durably through an outbox pattern, and publishes raw `IntentCallbackEvent` facts to the callback Kafka topic for IA MS and approved `OptimisationStatusChangeEvent` facts to the main internal topic for II MS. ICB MS must not interpret lifecycle, assurance, optimisation, selected-configuration, feasibility, or service meaning. IA MS owns change-execution callback correlation and state interpretation; II MS owns optimiser outcome correlation and selected-configuration packaging.**

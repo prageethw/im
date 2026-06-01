@@ -373,13 +373,15 @@ Idempotency-Key: cb-OPT-HSS-2026-001-0001
 | `event.optimisation.sourceContext.resource.id` | Yes for `OptimisationStatusChangeEventRequest` | Required non-empty string | Related runtime intentId used for Kafka subject/key and II MS correlation. |
 | `event.optimisation.sourceContext.correlationId` | Yes for `OptimisationStatusChangeEventRequest` | Required non-empty string | Correlation id propagated to II MS. |
 | `event.optimisation.sourceContext.intentVersion` | Required where runtime intent versioning is used | Non-empty string when supplied | Runtime intent version context. |
-| `event.optimisation.selectedConfiguration` | Required when `newLifecycleStatus` is `COMPLETED` and outcome drives service-ready packaging | Object | ICB validates structure only; II MS interprets and packages selected configuration. |
+| `event.optimisation.selectedConfiguration` | Required when `newLifecycleStatus` is `COMPLETED` | Object | ICB MS requires the field to be structurally present when the optimiser reports `COMPLETED`; II MS determines whether it drives service-ready packaging and owns selected-configuration interpretation. |
 | `sourceState.reason` | No | String when supplied | Human-readable source reason or explanatory detail. |
 | `sourceReference` | No | Object when supplied | External source reference only. Must not be treated as a platform resource reference. |
 | `details` | No | Structured JSON object subject to size and policy limits | Raw or structured callback detail where safe. Must not contain secrets or credentials. |
 | `@type` | Yes | `IntentCallbackEventRequest` for change-execution/apply callbacks; `OptimisationStatusChangeEventRequest` for approved optimiser outcome callbacks. | Type marker for the submitted REST callback request payload. Internal Kafka event names remain `IntentCallbackEvent` and `OptimisationStatusChangeEvent`. |
 | `Idempotency-Key` header | Strongly recommended / may be required | Non-empty string | Protects external retry safety and duplicate callback handling. |
-| `X-Correlation-ID` header | Recommended | Non-empty string | Propagated for tracing and operational correlation. |
+| `X-Correlation-ID` header | Recommended | Non-empty string | Propagated for tracing and operational correlation. For `IntentCallbackEvent`, ICB MS copies it to `body.references.correlationId` and may also emit `x-correlation-id` as an internal Kafka/message header. For `OptimisationStatusChangeEvent`, ICB MS preserves `event.optimisation.sourceContext.correlationId` and may also emit the same value as `x-correlation-id`. |
+
+ICB MS must not trust caller-supplied platform `href` values. Where ICB MS creates safe platform references such as `body.references.intent.href`, it constructs them from configured platform route templates, for example `/intentManagement/v5/intent/{intentId}`.
 
 #### 5.1.5. Fields not accepted:
 
@@ -447,7 +449,7 @@ ICB MS follows the IME DB baseline: managed PostgreSQL or PostgreSQL-compatible 
 | Table | Purpose |
 |---|---|
 | `callback_submission` | Accepted submission metadata, status, source, idempotency key, and timestamps. |
-| `callback_submission_payload` | Optional payload body store where payload retention or separation is required. |
+| `callback_submission_payload` | Optional payload body store. Use when payload size, data classification, retention separation, or audit policy requires payload separation; otherwise the accepted payload may be stored inline in `callback_submission` or `callback_outbox` according to the implementation data model. |
 | `callback_idempotency` | Deduplication and external retry-safety records. |
 | `callback_outbox` | Pending/published callback events for Kafka relay, including `IntentCallbackEvent` and `OptimisationStatusChangeEvent`. |
 | `callback_audit` | Audit of accepted, rejected, duplicate, and failed callback decisions. |
@@ -503,7 +505,7 @@ ICB MS follows the IME DB baseline: managed PostgreSQL or PostgreSQL-compatible 
 
 ### 8.2. Promotion rules ConfigMap (`icb-relay-promotion-rules`):
 
-The ConfigMap governs relay operational behaviour only. It must not express semantic filtering, lifecycle mapping, or skip rules.
+The ConfigMap governs relay operational behaviour only. It must not express semantic filtering, lifecycle mapping, or skip rules. ShedLock, or an equivalent distributed lock, is the coordination primitive that ensures only one relay instance promotes and publishes eligible outbox rows at a time. The promotion rules ConfigMap is layered on top of that coordination primitive to control batch size, polling, retry, age threshold, and ordering.
 
 ```yaml
 relay:
@@ -686,6 +688,8 @@ ce-subject: INT-HOSP-2026-001
 content-type: application/json
 ```
 
+The full `OptimisationStatusChangeEvent` payload example is canonical in `icb_ms_specification.md` section 11.2. The solution brief intentionally focuses on delivery and consumer contract rules. Unlike `IntentCallbackEvent`, this event is not converted into the ICB-owned top-level `body` callback fact shape; ICB MS relays the approved optimiser event payload shape consumed by II MS.
+
 #### 9.4.3. Event-specific rules:
 
 - `OptimisationStatusChangeEvent` carries the approved optimiser outcome callback fact.
@@ -711,7 +715,7 @@ content-type: application/json
 
 ### 10.2. Duplicate behaviour:
 
-Duplicate submissions must not create duplicate internal callback facts. The service may either return the existing accepted status or a `409 DUPLICATE_CALLBACK` response depending on the platform idempotency policy for that integration.
+Duplicate submissions must not create duplicate internal callback facts. The default duplicate response is idempotent `202 Accepted`, referencing or representing the existing accepted submission where safe. `409 DUPLICATE_CALLBACK` is available only when an integration-specific idempotency policy explicitly requires conflict-style duplicate signalling.
 
 ### 10.3. Failure behaviour:
 
@@ -767,6 +771,8 @@ Duplicate submissions must not create duplicate internal callback facts. The ser
 | Delivery | At least once. |
 | Idempotency | II MS must deduplicate and correlate using `ce-id`, optimisation id, intentId/intentVersion, and correlation id where available. |
 | Interpretation | II MS owns optimiser outcome correlation and selected-configuration packaging. ICB MS validates and relays structure only. |
+
+IC MS is not a direct consumer of ICB MS callback relay events. IC MS receives externally projectable lifecycle and report facts through IA MS `IntentAssuranceEvent` outcomes for change-execution/apply callbacks, and through the wider intent workflow where II MS later emits service-ready events based on optimiser outcomes.
 
 ### 12.2. IA MS lifecycle mapping steps:
 

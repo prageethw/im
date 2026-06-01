@@ -38,15 +38,18 @@
   - [11.1. CloudEvents headers:](#111-cloudevents-headers)
   - [11.2. Event body — optimisation completed:](#112-event-body-optimisation-completed)
 - [12. Event-specific rules:](#12-event-specific-rules)
-- [13. Structural validation rules:](#13-structural-validation-rules)
-- [14. Standard errors:](#14-standard-errors)
-  - [14.1. Common errors:](#141-common-errors)
-  - [14.2. Validation failure example:](#142-validation-failure-example)
-  - [14.3. DB unavailable example:](#143-db-unavailable-example)
-- [15. Persistence tables:](#15-persistence-tables)
-- [16. Outbox relay rules:](#16-outbox-relay-rules)
-- [17. Security rules:](#17-security-rules)
-- [18. Observability rules:](#18-observability-rules)
+- [13. Reference and correlation construction rules:](#13-reference-and-correlation-construction-rules)
+- [14. Structural validation rules:](#14-structural-validation-rules)
+  - [14.1. IntentCallbackEvent change-execution/apply callback profile:](#141-intentcallbackevent-change-executionapply-callback-profile)
+  - [14.2. OptimisationStatusChangeEvent optimiser outcome callback profile:](#142-optimisationstatuschangeevent-optimiser-outcome-callback-profile)
+- [15. Standard errors:](#15-standard-errors)
+  - [15.1. Common errors:](#151-common-errors)
+  - [15.2. Validation failure example:](#152-validation-failure-example)
+  - [15.3. DB unavailable example:](#153-db-unavailable-example)
+- [16. Persistence tables:](#16-persistence-tables)
+- [17. Outbox relay rules:](#17-outbox-relay-rules)
+- [18. Security rules:](#18-security-rules)
+- [19. Observability rules:](#19-observability-rules)
 
 ## 1. Service identity:
 
@@ -671,11 +674,17 @@ content-type: application/json
 - Do not use TMF expression wrappers inside internal callback events.
 - IA MS owns mapping from `sourceState.state` to lifecycle-driving `IntentAssuranceEvent` outcomes.
 
-## 13. Structural validation rules:
+## 13. Reference and correlation construction rules:
+
+ICB MS must not trust caller-supplied platform `href` values. Where ICB MS creates safe platform references such as `body.references.intent.href`, it constructs them from configured platform route templates, for example `/intentManagement/v5/intent/{intentId}`.
+
+`X-Correlation-ID` is copied into the internal relay contract where supplied. For `IntentCallbackEvent`, ICB MS stores it in `body.references.correlationId` and may also publish it as an internal Kafka/message header such as `x-correlation-id`. For `OptimisationStatusChangeEvent`, ICB MS preserves the approved optimiser event correlation fields, including `event.optimisation.sourceContext.correlationId`, and may also publish the same value as `x-correlation-id`. The payload correlation field remains the durable contract.
+
+## 14. Structural validation rules:
 
 Required request fields depend on the approved callback profile.
 
-### 13.1. IntentCallbackEvent change-execution/apply callback profile:
+### 14.1. IntentCallbackEvent change-execution/apply callback profile:
 
 | **Field** | **Rule** |
 |---|---|
@@ -686,7 +695,7 @@ Required request fields depend on the approved callback profile.
 | `@type` | Required, normally `IntentCallbackEventRequest` |
 | `Idempotency-Key` | Strongly recommended for external retry safety; may be required by platform policy |
 
-### 13.2. OptimisationStatusChangeEvent optimiser outcome callback profile:
+### 14.2. OptimisationStatusChangeEvent optimiser outcome callback profile:
 
 | **Field** | **Rule** |
 |---|---|
@@ -696,7 +705,7 @@ Required request fields depend on the approved callback profile.
 | `event.optimisation.sourceContext.correlationId` | Required correlation id |
 | `event.optimisation.sourceContext.intentVersion` | Required where runtime intent versioning is used |
 | `event.optimisation.newLifecycleStatus` | Required optimiser lifecycle state |
-| `event.optimisation.selectedConfiguration` | Required when `newLifecycleStatus` is `COMPLETED` and the optimiser outcome is intended to drive service-ready packaging |
+| `event.optimisation.selectedConfiguration` | Required when `newLifecycleStatus` is `COMPLETED`; ICB MS validates structural presence only, and II MS determines whether the outcome drives service-ready packaging |
 | `@type` | Required, normally `OptimisationStatusChangeEventRequest` |
 | `Idempotency-Key` | Strongly recommended for external retry safety; may be required by platform policy |
 
@@ -704,7 +713,7 @@ ICB MS validates syntax and structure only. It does not validate service feasibi
 
 Do not use `callbackType` as an ICB contract field. Raw change-execution/apply callback meaning is carried by `sourceState.state` and interpreted by IA MS. Optimiser outcome meaning is carried by `OptimisationStatusChangeEvent` and interpreted by II MS.
 
-## 14. Standard errors:
+## 15. Standard errors:
 
 All ICB MS errors use the common cross-MS error body shape:
 
@@ -719,20 +728,20 @@ All ICB MS errors use the common cross-MS error body shape:
 }
 ```
 
-### 14.1. Common errors:
+### 15.1. Common errors:
 
 | **HTTP** | **Code** | **Scenario** |
 |---:|---|---|
 | `400` | `BAD_REQUEST` | Invalid JSON or malformed request |
 | `401` | `UNAUTHENTICATED` | Caller identity not authenticated by gateway |
 | `403` | `FORBIDDEN` | Caller not authorised to submit callback |
-| `409` | `DUPLICATE_CALLBACK` | Duplicate callback when platform chooses conflict response rather than idempotent success |
+| `409` | `DUPLICATE_CALLBACK` | Duplicate callback only when an integration-specific idempotency policy explicitly requires conflict-style duplicate signalling; default duplicate handling is idempotent `202 Accepted` where safe |
 | `413` | `PAYLOAD_TOO_LARGE` | Callback payload exceeds configured size limit |
 | `422` | `VALIDATION_FAILED` | Required callback fields are missing or structurally invalid |
 | `503` | `SERVICE_UNAVAILABLE` | ICB MS persistence path is unavailable |
 | `500` | `INTERNAL_ERROR` | Unexpected server error |
 
-### 14.2. Validation failure example:
+### 15.2. Validation failure example:
 
 ```http
 HTTP/1.1 422 Unprocessable Entity
@@ -750,7 +759,7 @@ Content-Type: application/json
 }
 ```
 
-### 14.3. DB unavailable example:
+### 15.3. DB unavailable example:
 
 ```http
 HTTP/1.1 503 Service Unavailable
@@ -769,18 +778,18 @@ Retry-After: 30
 }
 ```
 
-## 15. Persistence tables:
+## 16. Persistence tables:
 
 | **Table** | **Purpose** |
 |---|---|
 | `callback_submission` | Accepted submission metadata, status, source, idempotency key, and timestamps |
-| `callback_submission_payload` | Optional payload body store when payload retention is separated |
+| `callback_submission_payload` | Optional payload body store. Use when payload size, data classification, retention separation, or audit policy requires payload separation; otherwise the accepted payload may be stored inline in `callback_submission` or `callback_outbox` according to the implementation data model |
 | `callback_idempotency` | Deduplication and retry-safety records |
 | `callback_outbox` | Pending/published callback events for Kafka relay, including `IntentCallbackEvent` and `OptimisationStatusChangeEvent` |
 | `callback_audit` | Audit of accepted/rejected/duplicate decisions |
 | `shedlock` | Optional clustered relay coordination |
 
-## 16. Outbox relay rules:
+## 17. Outbox relay rules:
 
 - Write callback submission and outbox record in one DB transaction.
 - Return API success after DB/outbox commit succeeds.
@@ -789,7 +798,7 @@ Retry-After: 30
 - If DB/outbox commit fails, return API failure because durable callback publication cannot be guaranteed.
 - Outbox relay must be idempotent and safe to retry. The relay publishes `IntentCallbackEvent` to the callback topic and `OptimisationStatusChangeEvent` to the main internal event topic according to the outbox record event type.
 
-## 17. Security rules:
+## 18. Security rules:
 
 - API Gateway authenticates external caller.
 - ICB MS trusts only gateway-forwarded identity/claims according to platform policy.
@@ -798,7 +807,7 @@ Retry-After: 30
 - Sensitive values, credentials, tokens, and raw internal stack traces must not be stored in events or returned in errors.
 - Audit all accepted, rejected, and duplicate callback submissions.
 
-## 18. Observability rules:
+## 19. Observability rules:
 
 ICB MS emits structured logs, metrics, and traces for:
 
