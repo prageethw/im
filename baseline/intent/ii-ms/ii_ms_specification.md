@@ -69,14 +69,14 @@
 | Short name | II MS |
 | Service name | `intent-intelligence-ms` |
 | Domain | Intent Domain |
-| Primary responsibility | Semantic interpretation, Knowledge Plane and domain-authority-backed validation, candidate-level semantic resolution, and service-ready preparation |
+| Primary responsibility | Semantic interpretation, Knowledge Plane-backed and required pre-resolution validation, candidate-level semantic resolution, and service-ready preparation |
 | External API | None |
 | Primary input event | `IntentValidatedEvent` |
 | Output events | `IntentRejectedEvent`, `IntentResolvedEvent`, `IntentNetworkReadyEvent` |
 
 ## 2. Boundary statement
 
-II MS consumes syntactically admitted runtime intent facts from IC MS and performs semantic interpretation plus Knowledge Plane and domain-authority-backed resolution.
+II MS consumes syntactically admitted runtime intent facts from IC MS and performs semantic interpretation plus Knowledge Plane-backed and required pre-resolution validation.
 
 II MS emits:
 
@@ -1039,7 +1039,7 @@ Suggested tables:
 | II DB unavailable | Do not process/acknowledge event beyond retry/dead-letter policy |
 | KP unavailable | Fail closed for semantic resolution and retry/dead-letter according to policy |
 | Kafka unavailable | Use outbox relay retry; do not lose resolved/rejected outcome |
-| Cache unavailable | Bypass cache and use KP or the relevant authority/source where safe |
+| Cache unavailable | Bypass cache and use KP or the relevant approved validation source where safe |
 | Downstream fulfilment stage unavailable | Not an II MS dependency for emitting `IntentResolvedEvent`; service-ready preparation must complete before emitting `IntentNetworkReadyEvent` |
 
 ---

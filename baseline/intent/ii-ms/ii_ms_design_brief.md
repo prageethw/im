@@ -34,7 +34,7 @@
 
 ## 1. Purpose
 
-Intent Intelligence MS, referred to as II MS, owns semantic interpretation, Knowledge Plane and domain-authority-backed validation, and semantic/service-ready preparation for admitted runtime intents.
+Intent Intelligence MS, referred to as II MS, owns semantic interpretation, Knowledge Plane-backed and required pre-resolution validation, and semantic/service-ready preparation for admitted runtime intents.
 
 II MS receives syntactically admitted intent facts from IC MS, interprets and validates them against Knowledge Plane data, domain knowledge, and any additional pre-resolution validation sources required by the use case, and emits one of the II-owned internal outcome events:
 
@@ -54,7 +54,7 @@ It does not expose a TMF-compliant REST API and is not exposed through NGW, OEX,
 | Service name | `intent-intelligence-ms` |
 | Short name | II MS |
 | Domain | Intent Domain |
-| Main responsibility | Semantic interpretation, Knowledge Plane and domain-authority-backed validation, canonical resolution, and service-ready preparation |
+| Main responsibility | Semantic interpretation, Knowledge Plane-backed and required pre-resolution validation, canonical resolution, and service-ready preparation |
 | Primary event input | `IntentValidatedEvent` |
 | Main event outputs | `IntentRejectedEvent`, `IntentResolvedEvent`, `IntentNetworkReadyEvent` |
 | Event style | Internal CloudEvents headers with plain JSON `body` |
@@ -146,7 +146,7 @@ The baseline surgical hospital slice is an illustrative runtime example used to 
 | Idempotency | Deduplicate by CloudEvents `ce-id` / event id and `intentId` |
 | Admission context check | Confirm the event carries `intentSpecification.id` and `expression.iri` from IC MS admission context |
 | Semantic parse | Interpret `expression.context.targets`, `expression.context.constraints`, and `expression.context.preferences` |
-| KP and authority lookup | Resolve location, service capability, policy, and other required domain facts from Knowledge Plane and approved use-case-specific authorities |
+| KP and pre-resolution validation lookup | Resolve location, service capability, policy, and other required domain facts from Knowledge Plane and approved use-case-specific validation sources |
 | Capability validation | Confirm requested service/service class is available for the requested location |
 | Policy validation | Validate hard constraints such as priority and redundancy against KP/domain policy |
 | Canonicalisation | Normalise values into canonical internal terms |
