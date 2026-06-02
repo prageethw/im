@@ -1047,7 +1047,7 @@ X-Platform-Extension: false
 {
   "code": "RESOURCE_NOT_FOUND",
   "reason": "INTENT_SPECIFICATION_NOT_FOUND",
-  "message": "IntentSpecification hospital-surgical-slice-spec was not found.",
+  "message": "IntentSpecification ispec-hss-001 was not found.",
   "status": 404,
   "referenceError": "https://mycsp.com.au/errors/RESOURCE_NOT_FOUND",
   "@type": "Error"

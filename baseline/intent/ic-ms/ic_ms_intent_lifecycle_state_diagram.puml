@@ -30,7 +30,7 @@ state Acknowledged #d4e6f1 : Schema and request-shape admitted\nawaiting fulfilm
 state InProgress   #d5f5e3 : Change execution\nunderway
 state Active       #2ecc71 : Change applied and\nassurance confirmed
 state Degraded     #f9e79f : Assurance degradation\ndetected
-state Paused       #e8daef : Paused outcome\nreported by IA MS
+state Paused       #e8daef : Paused outcome\nprojected by IC MS
 state Failed       #f1948a : Change or runtime\nfailure reported
 state Rejected     #f5cba7 : Semantic and policy\nrejection
 state Terminated   #aab7b8 : Retained — no longer\nruntime-active
@@ -54,7 +54,7 @@ InProgress --> Terminated : termination request accepted
 
 ' ── Active ────────────────────────────────────────────────────────────────
 Active --> Degraded   : IA MS reports degraded assurance
-Active --> Paused     : IA MS reports paused outcome
+Active --> Paused     : IC MS accepts governed pause decision
 Active --> Failed     : IA MS reports runtime failure
 Active --> Terminated : termination request accepted
 
@@ -65,7 +65,7 @@ Degraded --> Failed     : IA MS reports failure
 Degraded --> Terminated : termination request accepted
 
 ' ── Paused ────────────────────────────────────────────────────────────────
-Paused --> Active     : IA MS reports resumed / active
+Paused --> Active     : IC MS accepts governed resume decision
 Paused --> Failed     : IA MS reports failure
 Paused --> Terminated : termination request accepted
 

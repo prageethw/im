@@ -20,7 +20,7 @@ participant "Outbox Relay\n(background worker)" as RELAY
 participant "Kafka\ncallbacks + main events topics" as KAFKA
 participant "Intent Assurance MS\n(IA MS)" as IAMS
 participant "Intent Intelligence MS\n(II MS)" as IIMS
-participant "Intent Creation MS\n(IC MS)" as ICMS
+participant "Intent Controller MS\n(IC MS)" as ICMS
 
 note over ICBMS, IIMS
 ICB MS validates structure only and relays raw callback facts.
@@ -30,7 +30,7 @@ II MS owns OptimisationStatusChangeEvent correlation and selected configuration 
 end note
 
 == 1. External Callback Submission ==
-EXT -> GW : POST /intent-callback/v1/submissions\nIntentCallbackSubmission or OptimisationStatusChangeEvent
+EXT -> GW : POST /intent-callback/v1/submissions\nIntentCallbackEventRequest or OptimisationStatusChangeEventRequest
 
 == 2. API Gateway — Authentication + Trusted Context ==
 GW -> GW : authenticate caller\n(mTLS / OAuth2 / platform token)
