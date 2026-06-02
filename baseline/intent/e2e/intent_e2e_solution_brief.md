@@ -109,7 +109,7 @@ A consumer requests `DELETE /intentManagement/v5/intent/{id}`. IC MS treats this
 
 ### Handle failed or degraded runtime state:
 
-IA MS may emit `IntentAssuranceEvent` with lifecycle outcomes such as `Degraded` or `Failed`. IC MS projects the external status. Any re-interpretation, re-optimisation, rollback, or recovery decision remains a separate authorised workflow and is not hidden inside IA or ICB.
+IA MS may emit `IntentAssuranceEvent` with lifecycle outcomes such as `Degraded` or `Failed`. IC MS projects the external status. Any re-interpretation, re-optimisation, rollback, or recovery decision remains a separate authorised workflow and is not hidden inside IA or ICB. `Paused` is handled through the separate IC MS-governed pause/resume lifecycle path and must be explicitly resumed or redirected before retry-style workflow continues.
 
 ## Logical view:
 
@@ -219,6 +219,7 @@ ID MS and IC MS hub notifications are REST webhook callbacks with TMF-aligned ev
 15. IA MS consumes IntentNetworkReadyEvent, IntentCallbackEvent, and observation metrics.
 16. IA MS emits IntentAssuranceEvent.
 17. IC MS updates external Intent and IntentReport projection.
+18. At any point after admission, IC MS may place the runtime intent into Paused through an authorised lifecycle operation or platform policy action; resume, retry, recovery, or termination then follows the governed IC MS lifecycle rules.
 ```
 
 ## Discover intent capability:
@@ -701,6 +702,7 @@ Outbox workers and event consumers should follow these rules:
 | Termination confirmed | `Terminated` |
 | Source or observation indicates still progressing | `InProgress` |
 | Rejection from semantic/policy/apply workflow | `Rejected` |
+| Authorised pause or resume governance decision | `Paused` is not normally projected from IA evidence; it is controlled by IC MS lifecycle policy. |
 
 This table is conceptual. Concrete raw `sourceState.state` mapping belongs to IA MS configuration and audit.
 

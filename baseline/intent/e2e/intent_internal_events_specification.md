@@ -46,6 +46,10 @@ Do not encode source/context into event-facing metric wrappers or field names su
 
 Internal event `references` should use named resource reference objects with `id` and `href` where available. Use `correlationId` as a common scalar reference.
 
+### Shared location vocabulary
+
+Where a location is present inside `expression.context.constraints.location`, the stable baseline fields are `locationId`, optional `displayName`, optional `locationType`, and optional `geographicScope`. Service-specific events may carry the subset that is relevant to the stage; absence of optional fields must not change the location identity when `locationId` is present.
+
 ### Admission context carry-through rule
 
 `IntentValidatedEvent` must carry both `intentSpecification.id` and `expression.iri` from IC MS admission. `intentSpecification.id` identifies the selected active specification. `expression.iri` identifies the admitted semantic/expression contract. II MS treats both as carried-forward admission facts and must not re-resolve the governing `IntentSpecification` by IRI alone.
@@ -122,7 +126,7 @@ content-type: application/json
 |---|---|---|---|
 | `IntentValidatedEvent` | `intent-controller-ms` | `intent-intelligence-ms` | Runtime Intent passed IC MS admission validation and was admitted into the lifecycle |
 | `IntentRejectedEvent` | `intent-intelligence-ms` | `intent-controller-ms` | Semantic/policy validation rejected the admitted Intent |
-| `IntentResolvedEvent` | `intent-intelligence-ms` | `optimiser-controller-ms` | Intent was semantically resolved into a canonical internal handoff with applicable resources for optimisation |
+| `IntentResolvedEvent` | `intent-intelligence-ms` | `optimiser-controller-ms` / approved optimisation path | Intent was semantically resolved into a canonical internal handoff with applicable resources for optimisation. The optimiser may be an approved platform component reached through the optimiser integration path, not a public Intent Enabler API. |
 | `OptimisationStatusChangeEvent` | `intent-callback-ms` | `intent-intelligence-ms` | Approved optimiser outcome callback relayed by ICB MS after durable callback ingestion. |
 | `IntentNetworkReadyEvent` | `intent-intelligence-ms` | `intent-assurance-ms` | Optimised resource set has been projected into service configuration ready for change-execution/apply; apply success is not yet confirmed |
 | `IntentAssuranceEvent` | `intent-assurance-ms` | `intent-controller-ms` | Assurance/apply/runtime outcome truth for external Intent and IntentReport projection |
@@ -301,6 +305,7 @@ content-type: application/json
 - Do not include a `serviceContext` or generic `context` wrapper.
 - Do not include an `evaluations` block unless multiple checks or detailed rejection evidence is genuinely useful.
 - Do not include optimiser, change-execution, or assurance payloads.
+- Include `references.knowledgePlane` when Knowledge Plane configuration or capability state materially contributed to the rejection decision. Do not include it for rejection outcomes that do not depend on KP context.
 
 ## IntentResolvedEvent
 
@@ -960,7 +965,21 @@ IA MS reports curated assurance/apply/runtime outcome truth. IC MS consumes this
           "metrics": {}
         },
         {
+          "resourceId": "SYD-PRI-02",
+          "resourceType": "deliveryResource",
+          "resourceClass": "critical-gold",
+          "roles": ["primary"],
+          "metrics": {}
+        },
+        {
           "resourceId": "SYD-SEC-01",
+          "resourceType": "deliveryResource",
+          "resourceClass": "critical-gold",
+          "roles": ["secondary"],
+          "metrics": {}
+        },
+        {
+          "resourceId": "SYD-SEC-02",
           "resourceType": "deliveryResource",
           "resourceClass": "critical-gold",
           "roles": ["secondary"],
