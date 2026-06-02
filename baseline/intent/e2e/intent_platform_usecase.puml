@@ -37,8 +37,8 @@ title <b>Intent Management Platform — Use Case Diagram</b>
 
 actor "Specification Owner" as SpecOwner
 actor "Governance Owner" as GovActor
-actor "External Consumer / OEX" as Consumer
-actor "Apply / Orchestration System" as ApplySystem
+actor "External Consumer " as Consumer
+actor "Target System" as ApplySystem
 actor "Optimiser Platform" as Optimiser
 actor "Platform Administrator" as Admin
 

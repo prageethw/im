@@ -146,6 +146,7 @@ The canonical runtime semantic model uses the same buckets through the pipeline:
 `targets` are measurable goals, `constraints` are hard requirements, and `preferences` are soft selection guidance. This structure should remain consistent across ID MS, IC MS, II MS, IA MS, and future control-loop extensions.
 
 ## 6. Use case view:
+![view](intent_platform_usecase.svg)
 
 ### 6.1. Define intent capability:
 
@@ -193,46 +194,7 @@ IA MS may emit `IntentAssuranceEvent` with lifecycle outcomes such as `Degraded`
 
 ## 7. Logical view:
 
-```text
-External Consumer / OEX / Authorised Platform
-        |
-        | REST over NGW / API Gateway
-        v
-+----------------------------+
-| Intent Definition MS       |
-| owns IntentSpecification   |
-+----------------------------+
-        |
-        | active specification discovery/validation support
-        v
-+----------------------------+        Internal Kafka event backbone
-| Intent Controller MS       | -----> IntentValidatedEvent
-| owns Intent, IntentReport  | <----- IntentRejectedEvent / IntentAssuranceEvent
-+----------------------------+
-        |
-        v
-+----------------------------+
-| Intent Intelligence MS     |
-| semantic interpretation    |
-| candidate resolution       |
-| network-ready preparation  |
-+----------------------------+
-        |
-        | IntentResolvedEvent / IntentNetworkReadyEvent
-        v
-+----------------------------+        +----------------------------+
-| Intent Assurance MS        | <----- | Intent Callback MS          |
-| assurance truth            |        | thin callback ingestion     |
-| lifecycle-driving outcome  |        | raw callback relay          |
-+----------------------------+        +----------------------------+
-        |
-        | IntentAssuranceEvent
-        v
-+----------------------------+
-| Intent Controller MS       |
-| external projection        |
-+----------------------------+
-```
+![view](intent_enabler_logical_view.svg)
 
 Optimisation-backed selection uses the same callback ingress boundary: II MS calls `POST /optimisation`, the Optimiser calls `POST /intent-callback/v1/submissions`, ICB MS publishes `OptimisationStatusChangeEvent` to the main internal event topic, and II MS consumes it before emitting `IntentNetworkReadyEvent`.
 
