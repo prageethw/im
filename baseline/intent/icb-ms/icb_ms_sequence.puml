@@ -1,4 +1,4 @@
-@startuml ICB_MS_Sequence_Flow
+@startuml icb_ms_sequence
 !theme plain
 skinparam sequenceMessageAlign center
 skinparam backgroundColor #FFFFFF
