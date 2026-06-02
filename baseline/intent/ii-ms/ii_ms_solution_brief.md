@@ -61,7 +61,7 @@ Its responsibility is to convert a syntactically accepted runtime intent into on
 
 `IntentResolvedEvent` and `IntentNetworkReadyEvent` are intentionally different milestones. `IntentResolvedEvent` is the candidate-level semantic-resolution handoff. `IntentNetworkReadyEvent` is the service-ready preparation handoff to IA MS and means the service configuration/resource set has been prepared for change execution and assurance observation. It does not mean the network application has succeeded. IntentNetworkReadyEvent may be emitted only after II MS has received or derived a governed selected configuration from the authorised downstream selection or optimisation path. II MS does not own the optimisation algorithm or optimiser backend. II MS owns packaging the selected configuration into the service-ready event for IA MS.
 
-For optimisation-backed selection, II MS uses the approved Optimiser platform integration pattern: `POST /optimisation` for the governed REST request, with the ICB-owned callback submission URL, `POST /intent-callback/v1/submissions`, registered or supplied as the optimiser outcome target. The Optimiser platform sends `OptimisationStatusChangeEventRequest` to ICB MS. ICB MS ingests the callback and publishes `OptimisationStatusChangeEvent` to Kafka for II MS consumption. The Optimiser platform owns optimisation execution, selection logic, solver models, and optimiser lifecycle. II MS owns submitting the governed request, correlating the Kafka-delivered optimiser outcome, and packaging that selected configuration into `IntentNetworkReadyEvent` for IA MS.
+For optimisation-backed selection, II MS uses the approved Optimiser platform integration pattern: `POST /optimisation` for the governed REST request, with the ICB-owned callback submission URL, `POST /intent-callback/v1/submissions`, registered or supplied as the optimiser outcome target. The optimisation request focuses on the optimisation problem and candidate resources. The Optimiser platform sends `OptimisationStatusChangeEventRequest` to ICB MS with the selected best-match resources. ICB MS ingests the callback and publishes `OptimisationStatusChangeEvent` to Kafka for II MS consumption. The Optimiser platform owns optimisation execution, selection logic, solver models, and optimiser lifecycle. II MS owns submitting the governed request, correlating the Kafka-delivered optimiser outcome, deriving observer configuration from KP or governed configuration, and packaging the service-ready configuration into `IntentNetworkReadyEvent` for IA MS.
 
 ## 2. Logical View:
 
@@ -104,8 +104,9 @@ Logical responsibilities:
 9. It records the semantic decision and writes the output event to the II outbox.
 10. The II outbox relay publishes the event to the internal event backbone.
 11. For optimisation-backed selection, II MS submits `POST /optimisation` and registers or supplies the ICB-owned callback submission URL, `POST /intent-callback/v1/submissions`.
-12. ICB MS ingests the external optimiser callback and publishes `OptimisationStatusChangeEvent` to Kafka.
-13. II MS consumes and correlates the Kafka-delivered `OptimisationStatusChangeEvent` before emitting `IntentNetworkReadyEvent`.
+12. ICB MS ingests the external optimiser callback request and publishes `OptimisationStatusChangeEvent` to Kafka.
+13. II MS consumes and correlates the Kafka-delivered `OptimisationStatusChangeEvent`.
+14. II MS derives observer configuration from KP or governed configuration before emitting `IntentNetworkReadyEvent`.
 14. Consumers continue the workflow according to the milestone event emitted.
 
 ## 4. Solution Elaboration:
@@ -275,7 +276,7 @@ content-type: application/json
 
 ### 9.2. OptimisationStatusChangeEvent:
 
-For optimisation-backed selection, II MS consumes `OptimisationStatusChangeEvent` from Kafka after ICB MS has ingested the external optimiser callback. The event uses CloudEvents-style Kafka/platform headers and a plain JSON body.
+For optimisation-backed selection, II MS consumes `OptimisationStatusChangeEvent` from Kafka after ICB MS has ingested the external optimiser callback. The event uses CloudEvents-style Kafka/platform headers and a plain JSON body. It carries optimiser status and selected best-match resources. It must not carry `observerConfiguration`, observer target, observer profile, or metric names to observe by default.
 
 ```http
 ce-specversion: 1.0
@@ -313,11 +314,7 @@ content-type: application/json
         "outcome": "COMPLETED",
         "summary": "Optimisation completed successfully. Selected primary and secondary resources for the Sydney hospital surgical slice."
       },
-      "selectedConfiguration": {
-        "orchestratorConfiguration": {
-          "target": "t7-network-orchestrator",
-          "profile": "hospital-surgical-slice-apply-v1",
-          "resources": [
+      "selectedResources": [
             {
               "resourceId": "SYD-PRI-01",
               "resourceType": "deliveryResource",
@@ -348,71 +345,8 @@ content-type: application/json
                 }
               ]
             }
-          ]
-        },
-        "observerConfiguration": {
-          "target": "t7-observability-platform",
-          "profile": "critical-gold-assurance-observation-v1",
-          "resources": [
-            {
-              "resourceId": "SYD-PRI-01",
-              "resourceType": "deliveryResource",
-              "resourceClass": "critical-gold",
-              "roles": [
-                "primary"
-              ],
-              "metrics": [
-                "latencyMs",
-                "availabilityPercent",
-                "jitterMs",
-                "packetLossPercent"
-              ]
-            },
-            {
-              "resourceId": "SYD-PRI-02",
-              "resourceType": "deliveryResource",
-              "resourceClass": "critical-gold",
-              "roles": [
-                "primary"
-              ],
-              "metrics": [
-                "latencyMs",
-                "availabilityPercent",
-                "jitterMs",
-                "packetLossPercent"
-              ]
-            },
-            {
-              "resourceId": "SYD-SEC-01",
-              "resourceType": "deliveryResource",
-              "resourceClass": "critical-gold",
-              "roles": [
-                "secondary"
-              ],
-              "metrics": [
-                "latencyMs",
-                "availabilityPercent",
-                "jitterMs",
-                "packetLossPercent"
-              ]
-            },
-            {
-              "resourceId": "SYD-SEC-02",
-              "resourceType": "deliveryResource",
-              "resourceClass": "critical-gold",
-              "roles": [
-                "secondary"
-              ],
-              "metrics": [
-                "latencyMs",
-                "availabilityPercent",
-                "jitterMs",
-                "packetLossPercent"
-              ]
-            }
-          ]
-        }
-      }
+          
+      ]
     }
   },
   "@type": "OptimisationStatusChangeEvent"
@@ -970,7 +904,7 @@ When the service configuration required for change execution and assurance obser
 
 IntentNetworkReadyEvent may be emitted only after II MS has received or derived a governed selected configuration from the authorised downstream selection or optimisation path. II MS does not own the optimisation algorithm or optimiser backend. II MS owns packaging the selected configuration into the service-ready event for IA MS.
 
-This event carries `serviceConfiguration.orchestratorConfiguration` and `serviceConfiguration.observerConfiguration`.
+This event carries `serviceConfiguration.orchestratorConfiguration` and `serviceConfiguration.observerConfiguration`. II MS builds the observer configuration from KP or governed configuration after it receives the optimiser-selected resources.
 
 For optimisation-backed selection, II MS emits `IntentNetworkReadyEvent` only after the approved Optimiser path returns a complete, correlated, current selected configuration through ICB-relayed `OptimisationStatusChangeEvent`. If `POST /optimisation` fails, the optimiser outcome is `FAILED` or `INFEASIBLE`, the callback is missing beyond the configured deadline, or the outcome is stale for the current runtime version, II MS must not emit `IntentNetworkReadyEvent`; it records the outcome in correlation state and follows governed retry, timeout, failure, or rejection policy.
 

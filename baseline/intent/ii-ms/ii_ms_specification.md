@@ -107,7 +107,7 @@ II MS must curate and normalise facts returned by pre-resolution validation sour
 
 II MS has no external TMF-compliant API and no consumer-facing REST contract in the active baseline. II MS is not exposed through NGW, OEX, public API gateways, or partner-facing API channels.
 
-II MS registers or supplies the ICB-owned callback submission URL, `POST /intent-callback/v1/submissions`, to the Optimiser platform for optimisation outcome delivery. Optimiser callback ingestion is owned by ICB MS. ICB MS places the received `OptimisationStatusChangeEvent` on Kafka for II MS consumption. The exact ICB optimiser-callback ingestion and relay contract must be confirmed during ICB MS refinement.
+II MS registers or supplies the ICB-owned callback submission URL, `POST /intent-callback/v1/submissions`, to the Optimiser platform for optimisation outcome delivery. Optimiser callback ingestion is owned by ICB MS. The Optimiser platform sends `OptimisationStatusChangeEventRequest` to ICB MS, and ICB MS places the received `OptimisationStatusChangeEvent` on Kafka for II MS consumption. Optimisation request and outcome payloads do not carry observability configuration by default; II MS derives observer configuration from KP or governed configuration when preparing `IntentNetworkReadyEvent`. The exact ICB optimiser-callback ingestion and relay contract must be confirmed during ICB MS refinement.
 
 Operational probes such as health, readiness, and metrics are platform-internal only. They are for Kubernetes/platform operations and must not be treated as external product APIs or TMF921 resource APIs.
 
@@ -270,7 +270,7 @@ intent-intelligence-ms
 
 #### Meaning
 
-`OptimisationStatusChangeEvent` means the approved Optimiser platform has returned an optimisation outcome for a previously submitted `POST /optimisation` request. II MS consumes the event, correlates it to the original `intentId`, `intentVersion`, `correlationId`, and optimisation id, and packages the governed selected configuration into `IntentNetworkReadyEvent` when the outcome is complete and valid.
+`OptimisationStatusChangeEvent` means the approved Optimiser platform has returned an optimisation outcome for a previously submitted `POST /optimisation` request. II MS consumes the event, correlates it to the original `intentId`, `intentVersion`, `correlationId`, and optimisation id, and uses the selected best-match resources to prepare `IntentNetworkReadyEvent` when the outcome is complete and valid. Observer configuration is derived separately from KP or governed configuration.
 
 It does not mean network apply has succeeded, and it does not make II MS the owner of the optimiser lifecycle or optimisation algorithm.
 
@@ -314,11 +314,7 @@ content-type: application/json
         "outcome": "COMPLETED",
         "summary": "Optimisation completed successfully. Selected primary and secondary resources for the Sydney hospital surgical slice."
       },
-      "selectedConfiguration": {
-        "orchestratorConfiguration": {
-          "target": "t7-network-orchestrator",
-          "profile": "hospital-surgical-slice-apply-v1",
-          "resources": [
+      "selectedResources": [
             {
               "resourceId": "SYD-PRI-01",
               "resourceType": "deliveryResource",
@@ -349,71 +345,8 @@ content-type: application/json
                 }
               ]
             }
-          ]
-        },
-        "observerConfiguration": {
-          "target": "t7-observability-platform",
-          "profile": "critical-gold-assurance-observation-v1",
-          "resources": [
-            {
-              "resourceId": "SYD-PRI-01",
-              "resourceType": "deliveryResource",
-              "resourceClass": "critical-gold",
-              "roles": [
-                "primary"
-              ],
-              "metrics": [
-                "latencyMs",
-                "availabilityPercent",
-                "jitterMs",
-                "packetLossPercent"
-              ]
-            },
-            {
-              "resourceId": "SYD-PRI-02",
-              "resourceType": "deliveryResource",
-              "resourceClass": "critical-gold",
-              "roles": [
-                "primary"
-              ],
-              "metrics": [
-                "latencyMs",
-                "availabilityPercent",
-                "jitterMs",
-                "packetLossPercent"
-              ]
-            },
-            {
-              "resourceId": "SYD-SEC-01",
-              "resourceType": "deliveryResource",
-              "resourceClass": "critical-gold",
-              "roles": [
-                "secondary"
-              ],
-              "metrics": [
-                "latencyMs",
-                "availabilityPercent",
-                "jitterMs",
-                "packetLossPercent"
-              ]
-            },
-            {
-              "resourceId": "SYD-SEC-02",
-              "resourceType": "deliveryResource",
-              "resourceClass": "critical-gold",
-              "roles": [
-                "secondary"
-              ],
-              "metrics": [
-                "latencyMs",
-                "availabilityPercent",
-                "jitterMs",
-                "packetLossPercent"
-              ]
-            }
-          ]
-        }
-      }
+          
+      ]
     }
   },
   "@type": "OptimisationStatusChangeEvent"
@@ -434,7 +367,7 @@ II MS expects:
 | `event.optimisation.sourceContext.resource.id` | Required runtime `intentId` |
 | `event.optimisation.sourceContext.intentVersion` | Required where runtime intent versioning is used |
 | `event.optimisation.sourceContext.correlationId` | Required correlation id |
-| `event.optimisation.selectedConfiguration` | Required when `newLifecycleStatus` is `COMPLETED` |
+| `event.optimisation.selectedResources` | Required when `newLifecycleStatus` is `COMPLETED`; carries the optimiser-selected best-match resources only |
 
 II MS must process this event idempotently. Duplicate optimiser status events must not produce duplicate `IntentNetworkReadyEvent` publications.
 
@@ -1216,7 +1149,7 @@ content-type: application/json
 - `IntentNetworkReadyEvent` means service configuration is ready for change execution/apply, not that apply has succeeded.
 - Carry the resolved runtime `body.expression.context` with `targets`, `constraints`, and `preferences`; IA MS stores this as assurance context.
 - Use `serviceConfiguration.orchestratorConfiguration` for apply and change-execution details.
-- Use `serviceConfiguration.observerConfiguration` for assurance/monitoring details.
+- Use `serviceConfiguration.observerConfiguration` for assurance and monitoring details derived by II MS from KP or governed configuration.
 - `serviceConfiguration.orchestratorConfiguration.resources[]` carries only the optimiser-selected network-ready configuration/resources that must be applied by the change-execution layer; it includes resource details, topology, roles, and change-execution-relevant information, but not metric values.
 - `serviceConfiguration.observerConfiguration.resources[]` carries the full assurance observation scope, including selected resources and any additional primary/secondary alternatives that IA must observe; it uses `metrics` as a list of metric names IA should observe, not a value object.
 - When optimisation-backed selection is required, the selected configuration must come from the approved Optimiser path: `POST /optimisation` followed by ICB-ingested `OptimisationStatusChangeEvent` on Kafka or the approved optimiser completion/status event.
@@ -1226,11 +1159,11 @@ content-type: application/json
 
 ### 10.8. Optimiser integration pattern for selected configuration
 
-When an intent requires optimisation-backed resource selection, II MS records a pending optimisation request in the optimisation API outbox for submission to the Optimiser platform using `POST /optimisation`. The request carries the resolved `body.expression.context`, candidate resources, targets, constraints, preferences, and correlation metadata from the admitted and resolved intent. The outbound REST submission is performed by an API outbox worker using a stable idempotency key, not directly inside the inbound event consumer transaction.
+When an intent requires optimisation-backed resource selection, II MS records a pending optimisation request in the optimisation API outbox for submission to the Optimiser platform using `POST /optimisation`. The request carries the resolved `body.expression.context`, candidate resources, targets, constraints, preferences, and correlation metadata from the admitted and resolved intent. It does not carry `observerConfiguration`, observer target, observer profile, or metric names to observe by default. The outbound REST submission is performed by an API outbox worker using a stable idempotency key, not directly inside the inbound event consumer transaction.
 
 The Optimiser platform performs optimisation execution and returns the selected configuration asynchronously by sending `OptimisationStatusChangeEventRequest` to the ICB-owned callback submission URL, `POST /intent-callback/v1/submissions`, registered or supplied by II MS. ICB MS ingests the callback and relays `OptimisationStatusChangeEvent` to Kafka for II MS consumption.
 
-II MS does not own the optimisation algorithm, optimiser backend, solver model, or optimiser lifecycle. II MS owns submitting the governed optimisation request, correlating the Kafka-delivered optimiser outcome, and packaging the returned selected configuration into `IntentNetworkReadyEvent` for IA MS.
+II MS does not own the optimisation algorithm, optimiser backend, solver model, or optimiser lifecycle. II MS owns submitting the governed optimisation request, correlating the Kafka-delivered optimiser outcome, and deriving observer configuration from KP or governed configuration, and packaging the service-ready configuration into `IntentNetworkReadyEvent` for IA MS.
 
 The optimisation expression may transform the canonical `body.expression.context` object into an optimiser-specific problem expression shape. Any such transformation must be explicit, traceable, and must not change the semantic meaning of targets, constraints, preferences, or resources.
 
@@ -1410,7 +1343,7 @@ ce-subject: INT-HOSP-2026-001
 content-type: application/json
 ```
 
-Example optimiser outcome event body ingested by ICB MS and relayed to Kafka for II MS consumption:
+Example optimiser outcome event body ingested by ICB MS and relayed to Kafka for II MS consumption. The event carries selected resources only; observer configuration is added later by II MS when building `IntentNetworkReadyEvent`:
 
 ```json
 {
@@ -1438,11 +1371,7 @@ Example optimiser outcome event body ingested by ICB MS and relayed to Kafka for
         "outcome": "COMPLETED",
         "summary": "Optimisation completed successfully. Selected primary and secondary resources for the Sydney hospital surgical slice."
       },
-      "selectedConfiguration": {
-        "orchestratorConfiguration": {
-          "target": "t7-network-orchestrator",
-          "profile": "hospital-surgical-slice-apply-v1",
-          "resources": [
+      "selectedResources": [
             {
               "resourceId": "SYD-PRI-01",
               "resourceType": "deliveryResource",
@@ -1473,71 +1402,8 @@ Example optimiser outcome event body ingested by ICB MS and relayed to Kafka for
                 }
               ]
             }
-          ]
-        },
-        "observerConfiguration": {
-          "target": "t7-observability-platform",
-          "profile": "critical-gold-assurance-observation-v1",
-          "resources": [
-            {
-              "resourceId": "SYD-PRI-01",
-              "resourceType": "deliveryResource",
-              "resourceClass": "critical-gold",
-              "roles": [
-                "primary"
-              ],
-              "metrics": [
-                "latencyMs",
-                "availabilityPercent",
-                "jitterMs",
-                "packetLossPercent"
-              ]
-            },
-            {
-              "resourceId": "SYD-PRI-02",
-              "resourceType": "deliveryResource",
-              "resourceClass": "critical-gold",
-              "roles": [
-                "primary"
-              ],
-              "metrics": [
-                "latencyMs",
-                "availabilityPercent",
-                "jitterMs",
-                "packetLossPercent"
-              ]
-            },
-            {
-              "resourceId": "SYD-SEC-01",
-              "resourceType": "deliveryResource",
-              "resourceClass": "critical-gold",
-              "roles": [
-                "secondary"
-              ],
-              "metrics": [
-                "latencyMs",
-                "availabilityPercent",
-                "jitterMs",
-                "packetLossPercent"
-              ]
-            },
-            {
-              "resourceId": "SYD-SEC-02",
-              "resourceType": "deliveryResource",
-              "resourceClass": "critical-gold",
-              "roles": [
-                "secondary"
-              ],
-              "metrics": [
-                "latencyMs",
-                "availabilityPercent",
-                "jitterMs",
-                "packetLossPercent"
-              ]
-            }
-          ]
-        }
-      }
+          
+      ]
     }
   },
   "@type": "OptimisationStatusChangeEvent"
@@ -1667,4 +1533,4 @@ II MS must fail closed for stale KP facts, stale runtime versions, duplicate opt
 
 `IntentResolvedEvent` is the candidate-level semantic-resolution handoff. It carries canonical service context and the full valid, applicable, apply-capable resource set for observability, audit, replay, or future authorised internal consumers. It includes generic metric values for applicable resources using neutral metric names such as `latencyMs`, `availabilityPercent`, `jitterMs`, and `packetLossPercent`. It is not the final service-ready or apply-ready handoff.
 
-`IntentNetworkReadyEvent` is the service-ready preparation handoff to IA MS. It carries the optimiser-selected apply and change-execution configuration in `serviceConfiguration.orchestratorConfiguration` and the full assurance observation scope in `serviceConfiguration.observerConfiguration`, and it does not mean network apply has succeeded. It does not carry metric values in `serviceConfiguration.orchestratorConfiguration.resources[]`; `serviceConfiguration.observerConfiguration.resources[].metrics` names the metrics IA should observe.
+`IntentNetworkReadyEvent` is the service-ready preparation handoff to IA MS. It carries the optimiser-selected apply and change-execution configuration in `serviceConfiguration.orchestratorConfiguration` and the IA observation scope derived from KP or governed configuration in `serviceConfiguration.observerConfiguration`, and it does not mean network apply has succeeded. It does not carry metric values in `serviceConfiguration.orchestratorConfiguration.resources[]`; `serviceConfiguration.observerConfiguration.resources[].metrics` names the metrics IA should observe.

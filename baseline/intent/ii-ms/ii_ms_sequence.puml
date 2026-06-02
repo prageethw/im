@@ -188,18 +188,18 @@ else not yet processed
           the Optimiser platform using POST /optimisation.
           II MS registers or supplies the ICB callback URL.
           Optimiser owns selection logic and returns the
-          governed selected configuration as an event to ICB.
+          governed selected best-match resources as an event to ICB.
           ICB relays OptimisationStatusChangeEvent to Kafka.
         end note
 
         IIMS -> OPT : POST /optimisation\n{ body.expression.context, candidate resources,\n targets, constraints, preferences, correlation,\n ICB callback URL }
-        OPT -> ICB : POST /intent-callback/v1/submissions\nOptimisationStatusChangeEventRequest { selectedConfiguration }
+        OPT -> ICB : POST /intent-callback/v1/submissions\nOptimisationStatusChangeEventRequest { selectedResources }
         ICB -> KAFKA : publish OptimisationStatusChangeEvent\nwith CloudEvents headers\n{ ce-type, ce-source, ce-subject }
         IIMS -> KAFKA : consume OptimisationStatusChangeEvent\nwith CloudEvents headers
-        IIMS -> IIMS : correlate + persist optimiser outcome idempotently\nthen package selected configuration into IntentNetworkReadyEvent
+        IIMS -> IIMS : correlate + persist optimiser outcome idempotently\nthen package selected best-match resources into IntentNetworkReadyEvent
 
         group Atomic DB transaction
-          IIMS -> STORE : update semantic decision trail\n{ optimisationId, selectedConfiguration, readyState }
+          IIMS -> STORE : update semantic decision trail\n{ optimisationId, selectedResources, readyState }
           IIMS -> STORE : write IntentNetworkReadyEvent to outbox\n{ intentId, expression.context, serviceConfiguration, references }
         end
 

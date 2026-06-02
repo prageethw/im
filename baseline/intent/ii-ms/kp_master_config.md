@@ -474,6 +474,7 @@ The hospital surgical slice in this file is an illustrative Knowledge Plane exam
 - Resource entries do not repeat `locationId`; location-resource association is derived from `locationBasedServices[locationId].resourceIds`.
 - `capabilityStatus` uses `available` or `unknown`.
 - KP uses `redundancyAvailable` to describe current redundant resource capability. Human/NLP input may map `redundancyRequired`, but II MS validates it against `redundancyAvailable` and `roles`.
-- Logical references such as `optimiserTarget`, `optimiserModel`, `orchestratorTarget`, `orchestratorProfile`, `observerTarget`, and `observerProfile` are names only, not endpoint/payload/credential details.
+- Logical references such as `optimiserTarget`, `optimiserModel`, `orchestratorTarget`, `orchestratorProfile`, `observerTarget`, and `observerProfile` are names only, not endpoint, payload, or credential details.
+- II MS uses observer references when building `IntentNetworkReadyEvent`; optimisation request and outcome payloads do not carry observability configuration by default.
 - Events may map these logical references into nested event-specific configuration structures such as `serviceConfiguration.orchestratorConfiguration.target/profile` and `serviceConfiguration.observerConfiguration.target/profile`.
 - KP does not include `semanticProfile`, `assuranceProfiles`, optimiser objective rules, hops, or service attributes by default.
