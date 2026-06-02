@@ -6,6 +6,8 @@
 | Scope | Intent Intelligence MS solution brief |
 | Source of truth after commit | GitHub `baseline/intent/ii-ms/ii_ms_solution_brief.md` |
 
+The hospital surgical slice examples in this document are example use cases only. They do not limit the II MS baseline to a single service domain, location model, service class, resource profile, optimiser profile, or deployment pattern.
+
 ## Table of contents:
 
 - [1. Summary:](#1-summary)
@@ -80,7 +82,7 @@ Logical responsibilities:
 | Knowledge Plane validation | Resolve and validate location, service type, service class, targets, constraints, preferences, policy, and capability context using KP and approved external pre-resolution validation sources where required. |
 | Suitability and proceedability validation | Decide whether the admitted intent has enough trusted semantic, policy, capability, availability, freshness, and pre-resolution facts to proceed safely. If KP or approved validation sources show the intent is unsupported, contradictory, unsafe, unavailable, stale, or insufficiently validated, II MS emits `IntentRejectedEvent` or records a governed processing failure instead of proceeding to candidate discovery or optimisation. |
 | Canonicalisation | Preserve and normalise canonical semantic buckets: `targets`, `constraints`, and `preferences`. |
-| Candidate discovery | Resolve the full valid candidate resource set known for the resolved context after scope & policy filtering. |
+| Candidate discovery | Resolve the full valid candidate resource set known for the resolved context after scope/policy filtering. |
 | Rejection decision | Emit `IntentRejectedEvent` for semantic, policy, capability, or processing rejection. |
 | Resolution observability milestone | Optionally emit `IntentResolvedEvent` after candidate-level semantic resolution for observability, audit, replay, or future consumers. |
 | Service-ready handoff | Emit `IntentNetworkReadyEvent` when service configuration is prepared for change execution and assurance observation. |
@@ -126,13 +128,13 @@ II MS must not flatten these buckets into unrelated top-level fields. Keeping th
 
 ### 4.1. Required pre-resolution validation:
 
-The hospital surgical slice baseline mainly uses Knowledge Plane data and optimiser-related references, but II MS is not limited to Knowledge Plane and optimiser integration. Different intent domains may require II MS to perform additional pre-resolution validation before it can resolve an admitted intent accurately and meet the intent safely. This validation may consult approved T7 platform services, inventory systems, policy services, topology sources, catalogue services, capacity sources, fulfilment systems, or other governed domain sources.
+The hospital surgical slice example use case mainly uses Knowledge Plane data and optimiser-related references, but II MS is not limited to Knowledge Plane and optimiser integration. Different intent domains may require II MS to perform additional pre-resolution validation before it can resolve an admitted intent accurately and meet the intent safely. This validation may consult approved T7 platform services, inventory systems, policy services, topology sources, catalogue services, capacity sources, fulfilment systems, or other governed domain sources.
 
 Those systems provide facts for semantic interpretation, capability validation, policy validation, candidate discovery, or service-ready preparation. They do not own the external `Intent` lifecycle, and they do not change the II MS event ownership model. II MS still curates the resolved facts and emits `IntentRejectedEvent`, `IntentResolvedEvent`, or `IntentNetworkReadyEvent` according to the same contract rules.
 
 II MS must not dump raw source-system responses into events. Only validated, normalised, and next-stage-relevant facts should be carried forward in the canonical `targets`, `constraints`, `preferences`, `resources`, and `serviceConfiguration` structures.
 
-The baseline surgical hospital slice is an illustrative runtime example used to make the II MS semantic interpretation and Knowledge Plane-backed resolution contract concrete. It is not the only supported runtime Intent type, IntentSpecification, service class, schema, expression IRI, location, service type, Knowledge Plane profile, or deployment profile. Other runtime Intents may use different targets, constraints, preferences, expression schemas, service types, priorities, resources, and governance profiles while following the same II MS contract rules.
+The hospital surgical slice is an illustrative example use case used to make the II MS semantic interpretation and Knowledge Plane-backed resolution contract concrete. It is not the only supported runtime Intent type, IntentSpecification, service class, schema, expression IRI, location, service type, Knowledge Plane profile, or deployment profile. Other runtime Intents may use different targets, constraints, preferences, expression schemas, service types, priorities, resources, and governance profiles while following the same II MS contract rules.
 
 ## 5. Responsibilities:
 

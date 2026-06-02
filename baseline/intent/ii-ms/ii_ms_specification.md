@@ -6,6 +6,8 @@
 | Scope | Intent Intelligence MS internal event specification |
 | Source of truth after commit | GitHub `baseline/intent/ii-ms/ii_ms_specification.md` |
 
+The hospital surgical slice examples in this document are example use cases only. They do not limit the II MS baseline to a single service domain, location model, service class, resource profile, optimiser profile, or deployment pattern.
+
 ## Table of contents:
 
 - [1. Service identity](#1-service-identity)
@@ -88,12 +90,12 @@ II MS emits:
 
 II MS does not own runtime `Intent` REST APIs, external lifecycle projection, downstream selection/fulfilment decisions, assurance truth, callback ingestion, change execution, or KP governance.
 
-The baseline surgical hospital slice is an illustrative runtime example used to make the II MS semantic interpretation and resolution contract concrete. It is not the only supported runtime Intent type, IntentSpecification, service class, schema, expression IRI, location, service type, Knowledge Plane profile, pre-resolution validation path, or deployment profile. Other runtime Intents may use different targets, constraints, preferences, expression schemas, service types, priorities, resources, governed validation sources, and governance profiles while following the same II MS contract rules.
+The hospital surgical slice is an illustrative example use case used to make the II MS semantic interpretation and resolution contract concrete. It is not the only supported runtime Intent type, IntentSpecification, service class, schema, expression IRI, location, service type, Knowledge Plane profile, pre-resolution validation path, or deployment profile. Other runtime Intents may use different targets, constraints, preferences, expression schemas, service types, priorities, resources, governed validation sources, and governance profiles while following the same II MS contract rules.
 
 
 ### 2.1. Required pre-resolution validation
 
-Knowledge Plane is the primary governed knowledge source in the current hospital surgical slice baseline, but II MS resolution is not limited to Knowledge Plane and optimiser-related references. Depending on the intent domain, II MS may need to perform additional pre-resolution validation required to meet the intent accurately. This validation may consult approved T7 platform services, inventory systems, policy services, topology services, capacity systems, service catalogues, fulfilment systems, or other governed domain sources before II MS emits a semantic outcome.
+Knowledge Plane is the primary governed knowledge source in the hospital surgical slice example use case, but II MS resolution is not limited to Knowledge Plane and optimiser-related references. Depending on the intent domain, II MS may need to perform additional pre-resolution validation required to meet the intent accurately. This validation may consult approved T7 platform services, inventory systems, policy services, topology services, capacity systems, service catalogues, fulfilment systems, or other governed domain sources before II MS emits a semantic outcome.
 
 These systems provide pre-resolution facts used by II MS during semantic interpretation, capability validation, policy validation, candidate discovery, or service-ready preparation. They do not own the external runtime `Intent` lifecycle and they do not change the II-owned event model.
 

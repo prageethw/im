@@ -6,6 +6,8 @@
 | Scope | Intent Intelligence MS design brief |
 | Source of truth after commit | GitHub `baseline/intent/ii-ms/ii_ms_design_brief.md` |
 
+The hospital surgical slice examples in this document are example use cases only. They do not limit the II MS baseline to a single service domain, location model, service class, resource profile, optimiser profile, or deployment pattern.
+
 ## Table of contents:
 
 - [1. Purpose](#1-purpose)
@@ -130,7 +132,7 @@ Domain inputs such as `location`, `serviceType`, and `serviceClass` are carried 
 
 For optimiser outcomes, II MS expects `OptimisationStatusChangeEvent` to be published to Kafka by ICB MS with CloudEvents-style Kafka headers, including `ce-type: OptimisationStatusChangeEvent`, `ce-source: intent-callback-ms`, `ce-subject` set to the related runtime `intentId`, and a plain JSON body containing the optimiser outcome and `selectedConfiguration`.
 
-The baseline surgical hospital slice is an illustrative runtime example used to make the II MS semantic interpretation and Knowledge Plane-backed resolution contract concrete. It is not the only supported runtime Intent type, IntentSpecification, service class, schema, expression IRI, location, service type, Knowledge Plane profile, or deployment profile. Other runtime Intents may use different targets, constraints, preferences, expression schemas, service types, priorities, resources, and governance profiles while following the same II MS contract rules.
+The hospital surgical slice is an illustrative example use case used to make the II MS semantic interpretation and Knowledge Plane-backed resolution contract concrete. It is not the only supported runtime Intent type, IntentSpecification, service class, schema, expression IRI, location, service type, Knowledge Plane profile, or deployment profile. Other runtime Intents may use different targets, constraints, preferences, expression schemas, service types, priorities, resources, and governance profiles while following the same II MS contract rules.
 
 ## 6. Main outputs
 
@@ -201,11 +203,11 @@ II MS must apply a configured KP freshness policy before using KP facts for safe
 
 ### 9.1. Required pre-resolution validation
 
-Knowledge Plane is the primary governed knowledge source for the current hospital surgical slice baseline, but II MS must not be designed as if intent resolution can only use KP and optimiser-related inputs. Depending on the intent domain, II MS may need to perform additional pre-resolution validation required to meet the intent accurately. This validation may consult approved T7 platform services, inventory systems, policy services, catalogue services, topology services, capacity sources, fulfilment systems, or other governed domain sources.
+Knowledge Plane is the primary governed knowledge source for the hospital surgical slice example use case, but II MS must not be designed as if intent resolution can only use KP and optimiser-related inputs. Depending on the intent domain, II MS may need to perform additional pre-resolution validation required to meet the intent accurately. This validation may consult approved T7 platform services, inventory systems, policy services, catalogue services, topology services, capacity sources, fulfilment systems, or other governed domain sources.
 
 These sources provide pre-resolution facts only; they do not own the external runtime `Intent` lifecycle. II MS remains responsible for semantic resolution, curating the returned facts, applying the II MS contract rules, and emitting the correct II-owned internal outcome event. Raw source-system payloads must not be dumped into II events. Only the validated and consumer-safe facts required by the next internal stage should be carried forward.
 
-The active hospital surgical slice example mostly resolves from KP and optimiser-related references. Other intent types may require a wider pre-resolution validation chain while still following the same II MS event and semantic bucket rules.
+The hospital surgical slice example mostly resolves from KP and optimiser-related references. Other intent types may require a wider pre-resolution validation chain while still following the same II MS event and semantic bucket rules.
 
 ## 10. Resource and metric vocabulary
 

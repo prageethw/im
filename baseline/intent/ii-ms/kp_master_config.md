@@ -6,6 +6,8 @@
 | Scope | II MS lightweight Knowledge Plane master config example |
 | Source of truth after commit | GitHub `baseline/intent/ii-ms/kp_master_config.md` |
 
+The hospital surgical slice content in this file is example Knowledge Plane data only. It does not limit II MS or KP to a single use case, service domain, location model, resource profile, optimiser target, orchestrator target, or observer profile.
+
 ## Table of contents:
 
 - [1. KP master config baseline](#1-kp-master-config-baseline)
@@ -14,7 +16,7 @@
 
 ## 1. KP master config baseline
 
-The baseline surgical hospital slice in this file is an illustrative Knowledge Plane example used to make the II MS lookup and mapping behaviour concrete. It is not the only supported service domain, location model, service class, resource class, expression mapping profile, optimiser target, orchestrator target, observer target, or deployment profile. Other Knowledge Plane configurations may use different targets, constraints, preferences, resources, service types, and governance profiles while following the same mapping and ownership rules.
+The hospital surgical slice in this file is an illustrative Knowledge Plane example use case used to make the II MS lookup and mapping behaviour concrete. It is not the only supported service domain, location model, service class, resource class, expression mapping profile, optimiser target, orchestrator target, observer target, or deployment profile. Other Knowledge Plane configurations may use different targets, constraints, preferences, resources, service types, and governance profiles while following the same mapping and ownership rules.
 
 ```json
 {
@@ -456,7 +458,7 @@ The baseline surgical hospital slice in this file is an illustrative Knowledge P
 
 ## 2. Baseline notes
 
-- The hospital surgical slice KP data is illustrative. It shows one compact knowledge profile, not the only supported II MS resolution model. Other intent domains may require II MS to perform additional pre-resolution validation using approved T7 platform services, inventory systems, policy services, topology sources, capacity systems, service catalogues, fulfilment systems, or other governed domain sources to resolve an admitted intent accurately and meet the intent safely.
+- The hospital surgical slice KP data is illustrative example data. It shows one compact knowledge profile, not the only supported II MS resolution model. Other intent domains may require II MS to perform additional pre-resolution validation using approved T7 platform services, inventory systems, policy services, topology sources, capacity systems, service catalogues, fulfilment systems, or other governed domain sources to resolve an admitted intent accurately and meet the intent safely.
 - `preResolutionValidationSources` contains illustrative logical pre-resolution validation categories only. It does not define endpoints, credentials, payload contracts, ownership transfer, or a mandatory integration chain. II MS remains responsible for curating and normalising pre-resolution validation facts before emitting internal events.
 
 - KP uses shared resource vocabulary where meaning is not lost: resource entries use `resourceType: "deliveryResource"`, `resourceClass: "critical-gold"`, and `roles`. KP-native reference/capability terminology remains valid for resource `metrics.benchmark.*`, location/service `benchmarks.*`, and `optimiserTarget: "t7-gurobi-optimiser"`.
