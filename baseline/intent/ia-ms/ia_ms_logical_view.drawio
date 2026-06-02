@@ -104,7 +104,7 @@
                 <mxCell id="zone_icms" value="Downstream — IC MS" style="swimlane;startSize=30;fillColor=#d5e8d4;strokeColor=default;fontStyle=1;fontSize=13;" parent="1" vertex="1">
                     <mxGeometry x="1300" y="40" width="220" height="180" as="geometry"/>
                 </mxCell>
-                <mxCell id="icms_box" value="Intent Creation MS (IC MS)&#xa;&#xa;Consumes IntentAssuranceEvent.&#xa;Projects external Intent lifecycle&#xa;+ IntentReport view." style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=default;fontSize=11;align=left;spacingLeft=8;" parent="zone_icms" vertex="1">
+                <mxCell id="icms_box" value="Intent Controller MS (IC MS)&#xa;&#xa;Consumes IntentAssuranceEvent.&#xa;Projects external Intent lifecycle&#xa;+ IntentReport view." style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=default;fontSize=11;align=left;spacingLeft=8;" parent="zone_icms" vertex="1">
                     <mxGeometry x="15" y="45" width="190" height="105" as="geometry"/>
                 </mxCell>
                 <mxCell id="a1" style="edgeStyle=orthogonalEdgeStyle;rounded=0;" parent="1" source="iims_box" target="kafka_in" edge="1">
