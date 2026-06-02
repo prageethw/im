@@ -82,7 +82,7 @@ Logical responsibilities:
 | Knowledge Plane validation | Resolve and validate location, service type, service class, targets, constraints, preferences, policy, and capability context using KP and approved external pre-resolution validation sources where required. |
 | Suitability and proceedability validation | Decide whether the admitted intent has enough trusted semantic, policy, capability, availability, freshness, and pre-resolution facts to proceed safely. If KP or approved validation sources show the intent is unsupported, contradictory, unsafe, unavailable, stale, or insufficiently validated, II MS emits `IntentRejectedEvent` or records a governed processing failure instead of proceeding to candidate discovery or optimisation. |
 | Canonicalisation | Preserve and normalise canonical semantic buckets: `targets`, `constraints`, and `preferences`. |
-| Candidate discovery | Resolve the full valid candidate resource set known for the resolved context after scope/policy filtering. |
+| Candidate discovery | Resolve the full valid candidate resource set known for the resolved context after scope & policy filtering. |
 | Rejection decision | Emit `IntentRejectedEvent` for semantic, policy, capability, or processing rejection. |
 | Resolution observability milestone | Optionally emit `IntentResolvedEvent` after candidate-level semantic resolution for observability, audit, replay, or future consumers. |
 | Service-ready handoff | Emit `IntentNetworkReadyEvent` when service configuration is prepared for change execution and assurance observation. |
