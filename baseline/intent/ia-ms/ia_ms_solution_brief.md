@@ -53,17 +53,7 @@ Drift, degradation, failure, active, and terminated outcomes are represented thr
 
 IA MS sits after service-ready preparation and callback ingestion in the Intent Management runtime flow.
 
-```text
-IntentNetworkReadyEvent
-        |
-        v
-Intent Assurance MS <--- IntentCallbackEvent from ICB MS
-        |
-        +--- observation endpoint calls / metric facts
-        |
-        v
-IntentAssuranceEvent ---> IC MS external lifecycle and report projection
-```
+![view](ia_ms_logical_view.svg)
 
 Primary collaborators:
 

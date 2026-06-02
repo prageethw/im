@@ -1,4 +1,4 @@
-@startuml IA MS - Sequence Flow
+@startuml ia_ms_process_view
 !theme plain
 skinparam sequenceMessageAlign center
 skinparam backgroundColor #FFFFFF
