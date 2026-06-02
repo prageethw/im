@@ -1,5 +1,6 @@
-@startuml ia_ms_process_view
+@startuml ia_ms_process_flow
 !theme plain
+
 skinparam sequenceMessageAlign center
 skinparam backgroundColor #FFFFFF
 skinparam participantBackgroundColor #dae8fc
@@ -10,7 +11,7 @@ skinparam noteBackgroundColor #fff2cc
 skinparam dividerBackgroundColor #f0f0f0
 skinparam sequenceGroupBackgroundColor #f9f9f9
 
-title Intent Assurance MS (IA MS) — Runtime Assurance Sequence Flow
+title Intent Assurance MS (IA MS) — Runtime Assurance Sequence
 
 participant "Kafka\n(internal event backbone)" as KAFKA
 participant "Intent Assurance MS\n(IA MS)" as IAMS
@@ -20,110 +21,116 @@ participant "Outbox Relay\n(background worker)" as RELAY
 participant "IC MS" as ICMS
 
 == 1. Consume IntentNetworkReadyEvent ==
-IAMS -> KAFKA : consume event
-
-IAMS -> STORE : check idempotency record (intentId + eventId)
-alt already processed (duplicate)
-    STORE --> IAMS : duplicate — skip
-    IAMS -> KAFKA : ack (idempotent)
+IAMS -> KAFKA : consume IntentNetworkReadyEvent
+IAMS -> STORE : check idempotency record\n(intentId + eventId)
+alt already processed duplicate
+  STORE --> IAMS : duplicate — skip
+  IAMS -> KAFKA : ack idempotently
 else not yet processed
-    STORE --> IAMS : proceed
-
-    == 2. Persist Service Configuration and Runtime Context ==
-    group Atomic DB transaction
-        IAMS -> STORE : store apply resources\n← serviceConfiguration.orchestratorConfiguration.resources
-        IAMS -> STORE : store observer scope\n← serviceConfiguration.observerConfiguration.resources
-        IAMS -> STORE : store resolved runtime context\n{ location/service context, targets,\n  constraints, preferences }
-        IAMS -> STORE : write idempotency record (intentId + eventId → STORED)
-        IAMS -> STORE : set assurance state → AwaitingApply
-    end
-    note over IAMS : IntentNetworkReadyEvent alone does NOT prove apply success.\nActive state requires apply/callback confirmation and/or\nruntime observations per workflow policy.
+  STORE --> IAMS : proceed
 end
 
+== 2. Persist Service Configuration and Runtime Context ==
+group Atomic DB transaction
+  IAMS -> STORE : store apply resources\nfrom serviceConfiguration.orchestratorConfiguration.resources
+  IAMS -> STORE : store observer scope\nfrom serviceConfiguration.observerConfiguration.resources
+  IAMS -> STORE : store resolved runtime context\nbody.expression.context
+  IAMS -> STORE : write idempotency record\n(intentId + eventId → STORED)
+  IAMS -> STORE : set assurance state → AwaitingApply
+end
+
+note over IAMS
+IntentNetworkReadyEvent alone does not prove apply success.
+Active state requires apply/callback confirmation and/or runtime observations according to workflow policy.
+end note
+
 == 3. Consume IntentCallbackEvent ==
-IAMS -> KAFKA : consume event
-
-IAMS -> STORE : check idempotency record (intentId + callbackEventId)
+IAMS -> KAFKA : consume IntentCallbackEvent
+IAMS -> STORE : check idempotency record\n(intentId + callbackEventId)
 alt duplicate callback
-    STORE --> IAMS : duplicate — skip
-    IAMS -> KAFKA : ack (idempotent)
+  STORE --> IAMS : duplicate — skip
+  IAMS -> KAFKA : ack idempotently
 else new callback event
-    STORE --> IAMS : proceed
+  STORE --> IAMS : proceed
+end
 
-    == 4. Validate and Correlate ==
-    IAMS -> STORE : fetch IA-owned state for intentId
-    STORE --> IAMS : { applyResources, observerScope, runtimeContext,\n  currentAssuranceState }
+== 4. Validate and Correlate ==
+IAMS -> STORE : fetch IA-owned state for intentId
+STORE --> IAMS : applyResources, observerScope, runtimeContext, currentAssuranceState
+alt intentId not found in IA state
+  IAMS -> STORE : log unresolvable callback for audit
+  IAMS -> KAFKA : ack with no further processing
+else intentId resolved
+  IAMS -> IAMS : continue assurance evaluation
+end
 
-    alt intentId not found in IA state
-        IAMS -> STORE : log unresolvable callback (audit)
-        IAMS -> KAFKA : ack (no further processing)
-    else intentId resolved
+== 5. Map Raw sourceState.state ==
+IAMS -> IAMS : map sourceState.state to lifecycleStatus\nfor example InProgress, Active, Failed, Terminated
+IAMS -> IAMS : derive statusReason from callback state,\nruntime metrics, and IA mapping policy
 
-        == 5. Map Raw sourceState.state ==
-        IAMS -> IAMS : map sourceState.state → lifecycleStatus\n(e.g. InProgress / Active / Failed / Terminated)
-        IAMS -> IAMS : derive statusReason from callback state,\nruntime metrics, and IA mapping policy
-        note over IAMS : IA MS owns the mapping from raw callback state\nvalues into platform assurance semantics.
+note over IAMS
+IA MS owns mapping from raw callback state values into platform assurance semantics.
+ICB MS remains thin and does not interpret service meaning.
+end note
 
-        == 6. Obtain Runtime Metric Facts ==
-        IAMS -> OBS : query observability endpoints\n(informed by observerConfiguration.resources)
-        OBS --> IAMS : runtime metric facts\n{ latency, availability, jitter, packetLoss,\n  resource utilisation, ... }
+== 6. Obtain Runtime Metric Facts ==
+IAMS -> OBS : query observability endpoints\ninformed by observerConfiguration.resources
+OBS --> IAMS : runtime metric facts\nlatency, availability, jitter, packet loss, utilisation
 
-        == 7. Evaluate Metrics Against Targets ==
-        IAMS -> IAMS : evaluate observed latency vs stored target
-        IAMS -> IAMS : evaluate observed availability vs stored target
-        IAMS -> IAMS : evaluate observed jitter vs stored target
-        IAMS -> IAMS : evaluate observed packet loss vs stored target
-        IAMS -> IAMS : compare against IA-stored applied assurance baseline
-
-        alt all targets satisfied
-            IAMS -> IAMS : assurance outcome → lifecycleStatus Active
-        else one or more targets degraded (within tolerance)
-            IAMS -> IAMS : assurance outcome → lifecycleStatus Degraded
-        else target violated (outside tolerance)
-            IAMS -> IAMS : assurance outcome → lifecycleStatus Failed or Degraded\naccording to severity policy
-        end
+== 7. Evaluate Metrics Against Targets ==
+IAMS -> IAMS : evaluate observed latency, availability, jitter, and packet loss
+IAMS -> IAMS : compare metrics against stored body.expression.context targets
+alt all targets satisfied
+  IAMS -> IAMS : assurance outcome → lifecycleStatus Active
+else degraded within tolerance
+  IAMS -> IAMS : assurance outcome → lifecycleStatus Degraded
+else violated outside tolerance
+  IAMS -> IAMS : assurance outcome → lifecycleStatus Failed or Degraded\naccording to severity policy
+end
 
 note over IAMS, STORE
 IntentAssuranceEvent is metrics-first.
-Use lifecycleStatus, statusReason, context,
-current.resources.metrics, and references.
+Use lifecycleStatus, statusReason, expression.context, current.resources.metrics, and references.
 Do not use separate derived evaluation blocks by default.
 end note
 
-        == 8. Update IA-Owned Assurance State ==
-        group Atomic DB transaction
-            IAMS -> STORE : update assurance state\n{ lifecycleStatus, statusReason,\n  current.resources.metrics, mappingAudit }
-            IAMS -> STORE : write idempotency record (callbackEventId → PROCESSED)
-            IAMS -> STORE : write IntentAssuranceEvent to IA outbox\n{ intentId, lifecycleStatus, statusReason,\n  context, current.resources.metrics, references }
-        end
-
-        == 9. Outbox Relay Publishes IntentAssuranceEvent ==
-        RELAY -> STORE : poll PENDING outbox rows
-        STORE --> RELAY : [IntentAssuranceEvent]
-        RELAY -> KAFKA : publish IntentAssuranceEvent
-        RELAY -> STORE : mark row DELIVERED
-
-        == 10. IC MS Consumes and Projects ==
-        ICMS -> KAFKA : consume event
-        ICMS -> ICMS : update external Intent lifecycle state projection
-        ICMS -> ICMS : create / update IntentReport projection
-        note over ICMS : IC MS does not feed back into IA MS.\nIA MS has an independent internal event publication path.
-    end
-end
-
-== Ongoing: Periodic Observation (without callback trigger) ==
-note over IAMS, OBS : IA MS may also independently poll observability endpoints\nfor active observer-scope resources on a scheduled basis.
-IAMS -> STORE : fetch active observer scopes
-STORE --> IAMS : [{ intentId, observerConfiguration.resources }]
-IAMS -> OBS : query observability endpoints (scheduled)
-OBS --> IAMS : updated metric facts
-IAMS -> IAMS : re-evaluate metrics vs stored targets
+== 8. Update IA-Owned Assurance State ==
 group Atomic DB transaction
-    IAMS -> STORE : update observation metrics + assurance state
-    IAMS -> STORE : write IntentAssuranceEvent to IA outbox (if state changed)
+  IAMS -> STORE : update assurance state\nlifecycleStatus, statusReason, current.resources.metrics, mapping audit
+  IAMS -> STORE : write idempotency record\n(callbackEventId → PROCESSED)
+  IAMS -> STORE : write IntentAssuranceEvent to IA outbox
 end
-RELAY -> STORE : poll → deliver updated IntentAssuranceEvent to Kafka
-RELAY -> KAFKA : publish IntentAssuranceEvent (state change)
-ICMS -> KAFKA : consume event
+
+== 9. Outbox Relay Publishes IntentAssuranceEvent ==
+RELAY -> STORE : poll PENDING outbox rows
+STORE --> RELAY : IntentAssuranceEvent
+RELAY -> KAFKA : publish IntentAssuranceEvent
+RELAY -> STORE : mark row DELIVERED
+
+== 10. IC MS Consumes and Projects ==
+ICMS -> KAFKA : consume IntentAssuranceEvent
+ICMS -> ICMS : update external Intent lifecycle projection
+ICMS -> ICMS : create or update IntentReport projection
+
+note over ICMS
+IC MS does not feed back into IA MS.
+IA MS has an independent internal event publication path.
+end note
+
+== Ongoing. Periodic Observation Without Callback Trigger ==
+IAMS -> STORE : fetch active observer scopes
+STORE --> IAMS : intentId + observerConfiguration.resources
+IAMS -> OBS : query observability endpoints on schedule
+OBS --> IAMS : updated metric facts
+IAMS -> IAMS : re-evaluate metrics against stored targets
+
+group Atomic DB transaction
+  IAMS -> STORE : update observation metrics and assurance state
+  IAMS -> STORE : write IntentAssuranceEvent to IA outbox if state changed
+end
+
+RELAY -> STORE : poll PENDING outbox rows
+RELAY -> KAFKA : publish IntentAssuranceEvent if state changed
+ICMS -> KAFKA : consume IntentAssuranceEvent
 
 @enduml

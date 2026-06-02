@@ -68,7 +68,7 @@ Primary collaborators:
 IA MS persists its own assurance state, idempotency records, observation snapshots, mapping audit, and outbox records. It does not depend on IC MS for its internal event publication path.
 
 ## 3. Process View:
-
+![view](ia_ms_process_flow.svg)
 The normal IA MS runtime process is:
 
 1. Consume `IntentNetworkReadyEvent` produced by `intent-intelligence-ms`.
@@ -85,29 +85,6 @@ The normal IA MS runtime process is:
 12. IC MS consumes the event and updates external `Intent` lifecycle and `IntentReport` projection.
 
 `IntentNetworkReadyEvent` alone never proves apply success. Active state requires apply/callback confirmation and/or runtime observations according to the workflow policy.
-
-Onboarding sequence view:
-
-```mermaid
-sequenceDiagram
-    participant II as II MS
-    participant ICB as ICB MS
-    participant IA as IA MS
-    participant OBS as Observability platform
-    participant IC as IC MS
-
-    II->>IA: IntentNetworkReadyEvent\nbody.intentVersion + body.expression.context + serviceConfiguration
-    ICB->>IA: IntentCallbackEvent\nraw sourceState.state after callback ingestion
-    IA->>IA: Correlate intentId + intentVersion\nstore apply resources and observer scope
-    IA->>OBS: Collect runtime metrics\nusing observerConfiguration
-    OBS-->>IA: Metric facts for observer scope
-    IA->>IA: Map callback state + evaluate observations
-    IA->>IC: IntentAssuranceEvent\nbody.expression.context + current.resources
-    IC->>IC: Project external Intent lifecycle and IntentReport
-```
-
-Ordering constraints:
-
 - `IntentNetworkReadyEvent` establishes the assurance context and observer scope; it does not prove apply success.
 - `IntentCallbackEvent` may arrive before, after, or between observation attempts, so IA MS must correlate and process events idempotently by `intentId`, `intentVersion`, and event identity.
 - IA MS must not emit misleading `IntentAssuranceEvent` outcomes for stale, superseded, or unmatched versions.
