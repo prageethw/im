@@ -1,6 +1,6 @@
 <mxfile host="65bd71144e">
     <diagram id="intent-enabler-logical-view-v3" name="Intent Enabler Logical View">
-        <mxGraphModel dx="651" dy="638" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1920" pageHeight="1400" math="0" shadow="0" adaptiveColors="none">
+        <mxGraphModel dx="552" dy="638" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1920" pageHeight="1400" math="0" shadow="0" adaptiveColors="none">
             <root>
                 <mxCell id="0"/>
                 <mxCell id="1" parent="0"/>
@@ -124,26 +124,29 @@
                 <mxCell id="db5" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=none;dashed=1;strokeColor=#b85450;" parent="1" source="ia-ms" target="ia-db" edge="1">
                     <mxGeometry relative="1" as="geometry"/>
                 </mxCell>
-                <mxCell id="2" value="" style="endArrow=classic;html=1;fillColor=#fff2cc;strokeColor=#d6b656;strokeWidth=3;" edge="1" parent="1">
+                <mxCell id="2" value="" style="endArrow=classic;html=1;fillColor=#fff2cc;strokeColor=#d6b656;strokeWidth=3;" parent="1" edge="1">
                     <mxGeometry width="50" height="50" relative="1" as="geometry">
                         <mxPoint x="50" y="130" as="sourcePoint"/>
                         <mxPoint x="140" y="130" as="targetPoint"/>
                     </mxGeometry>
                 </mxCell>
-                <mxCell id="3" value="Events" style="edgeLabel;html=1;align=center;verticalAlign=middle;resizable=0;points=[];" vertex="1" connectable="0" parent="2">
+                <mxCell id="3" value="Events" style="edgeLabel;html=1;align=center;verticalAlign=middle;resizable=0;points=[];" parent="2" vertex="1" connectable="0">
                     <mxGeometry x="-0.0667" y="-1" relative="1" as="geometry">
-                        <mxPoint as="offset"/>
+                        <mxPoint y="-10" as="offset"/>
                     </mxGeometry>
                 </mxCell>
-                <mxCell id="4" value="" style="endArrow=classic;html=1;strokeWidth=3;" edge="1" parent="1">
+                <mxCell id="4" value="" style="endArrow=classic;html=1;strokeWidth=3;" parent="1" edge="1">
                     <mxGeometry width="50" height="50" relative="1" as="geometry">
                         <mxPoint x="50" y="150" as="sourcePoint"/>
                         <mxPoint x="140" y="150" as="targetPoint"/>
+                        <Array as="points">
+                            <mxPoint x="90" y="150"/>
+                        </Array>
                     </mxGeometry>
                 </mxCell>
-                <mxCell id="5" value="Https" style="edgeLabel;html=1;align=center;verticalAlign=middle;resizable=0;points=[];" vertex="1" connectable="0" parent="4">
+                <mxCell id="5" value="Https" style="edgeLabel;html=1;align=center;verticalAlign=middle;resizable=0;points=[];" parent="4" vertex="1" connectable="0">
                     <mxGeometry x="-0.0667" y="-1" relative="1" as="geometry">
-                        <mxPoint as="offset"/>
+                        <mxPoint y="7" as="offset"/>
                     </mxGeometry>
                 </mxCell>
             </root>
