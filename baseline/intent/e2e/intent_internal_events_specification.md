@@ -1,87 +1,97 @@
 # Intent Event Specification
 
-**Document status:** Intent Architecture 3.5 baseline-aligned internal event specification. GitHub `main/baseline/intent` remains the source of truth; this copy adds document status and table of contents only.
+## 1. Document status:
 
-## Table of contents:
+| Field | Value |
+|---|---|
+| Document status | Intent Architecture 3.5 baseline-aligned internal event specification. |
+| Source of truth | GitHub `main/baseline/intent`. |
+| Baseline tag | `intent-3.5-baseline`. |
+| Scope | Internal Intent Enabler event contracts, CloudEvents headers, topics, payload rules, and event-specific examples. |
+| Change note | Adds numbered headings, numbered table of contents, and status table only. |
 
-- [Intent internal events specification](#intent-internal-events-specification)
-  - [Purpose](#purpose)
-  - [Event style](#event-style)
-  - [Common internal event rules](#common-internal-event-rules)
-  - [Stable event ontology rule](#stable-event-ontology-rule)
-  - [Common references shape](#common-references-shape)
-  - [Shared location vocabulary](#shared-location-vocabulary)
-  - [Admission context carry-through rule](#admission-context-carry-through-rule)
-  - [Optimiser status and evaluation rule](#optimiser-status-and-evaluation-rule)
-  - [Service configuration structure rule](#service-configuration-structure-rule)
-  - [Service-ready configuration rule](#service-ready-configuration-rule)
-- [Common CloudEvents headers](#common-cloudevents-headers)
-  - [Header and topic deviations by event:](#header-and-topic-deviations-by-event)
-- [Internal event catalogue](#internal-event-catalogue)
-- [IntentValidatedEvent](#intentvalidatedevent)
-  - [Producer](#producer)
-  - [Current primary consumer](#current-primary-consumer)
-  - [Meaning](#meaning)
-  - [Example headers](#example-headers)
-  - [Example body](#example-body)
-  - [Event-specific rules](#event-specific-rules)
-- [IntentRejectedEvent](#intentrejectedevent)
-  - [Producer](#producer)
-  - [Current primary consumer](#current-primary-consumer)
-  - [Meaning](#meaning)
-  - [Example headers](#example-headers)
-  - [Example body](#example-body)
-  - [Event-specific rules](#event-specific-rules)
-- [IntentResolvedEvent](#intentresolvedevent)
-  - [Producer](#producer)
-  - [Current primary consumer](#current-primary-consumer)
-  - [Meaning](#meaning)
-  - [Example headers](#example-headers)
-  - [Example body](#example-body)
-  - [Event-specific rules](#event-specific-rules)
-- [OptimisationStatusChangeEvent](#optimisationstatuschangeevent)
-  - [Producer](#producer)
-  - [Current primary consumer](#current-primary-consumer)
-  - [Meaning](#meaning)
-  - [Topic](#topic)
-  - [Example headers](#example-headers)
-  - [Example payload](#example-payload)
-  - [Event-specific rules](#event-specific-rules)
-- [IntentNetworkReadyEvent](#intentnetworkreadyevent)
-  - [Producer](#producer)
-  - [Current primary consumer](#current-primary-consumer)
-  - [Meaning](#meaning)
-  - [Example headers](#example-headers)
-  - [Example body](#example-body)
-  - [Event-specific rules](#event-specific-rules)
-- [IntentAssuranceEvent](#intentassuranceevent)
-  - [Producer](#producer)
-  - [Current primary consumer](#current-primary-consumer)
-  - [Meaning](#meaning)
-  - [Example body — active outcome](#example-body-active-outcome)
-  - [Example body — degraded outcome](#example-body-degraded-outcome)
-  - [Example body — failed outcome](#example-body-failed-outcome)
-  - [Example body — terminated outcome](#example-body-terminated-outcome)
-  - [Event-specific rules](#event-specific-rules)
-- [IntentCallbackEvent](#intentcallbackevent)
-  - [Producer](#producer)
-  - [Current primary consumer](#current-primary-consumer)
-  - [Topic](#topic)
-  - [Kafka key](#kafka-key)
-  - [CloudEvents type](#cloudevents-type)
-  - [Meaning](#meaning)
-  - [Example headers](#example-headers)
-  - [Example body](#example-body)
-  - [Event-specific rules](#event-specific-rules)
-  - [ICB MS ownership boundary](#icb-ms-ownership-boundary)
+## 2. Table of contents:
 
-## Intent internal events specification
+- [1. Document status:](#1-document-status)
+- [2. Table of contents:](#2-table-of-contents)
+- [3. Intent internal events specification](#3-intent-internal-events-specification)
+  - [3.1. Purpose](#31-purpose)
+  - [3.2. Event style](#32-event-style)
+  - [3.3. Common internal event rules](#33-common-internal-event-rules)
+  - [3.4. Stable event ontology rule](#34-stable-event-ontology-rule)
+  - [3.5. Common references shape](#35-common-references-shape)
+  - [3.6. Shared location vocabulary](#36-shared-location-vocabulary)
+  - [3.7. Admission context carry-through rule](#37-admission-context-carry-through-rule)
+  - [3.8. Optimiser status and evaluation rule](#38-optimiser-status-and-evaluation-rule)
+  - [3.9. Service configuration structure rule](#39-service-configuration-structure-rule)
+  - [3.10. Service-ready configuration rule](#310-service-ready-configuration-rule)
+- [4. Common CloudEvents headers](#4-common-cloudevents-headers)
+  - [4.1. Header and topic deviations by event:](#41-header-and-topic-deviations-by-event)
+- [5. Internal event catalogue](#5-internal-event-catalogue)
+- [6. IntentValidatedEvent](#6-intentvalidatedevent)
+  - [6.1. Producer](#61-producer)
+  - [6.2. Current primary consumer](#62-current-primary-consumer)
+  - [6.3. Meaning](#63-meaning)
+  - [6.4. Example headers](#64-example-headers)
+  - [6.5. Example body](#65-example-body)
+  - [6.6. Event-specific rules](#66-event-specific-rules)
+- [7. IntentRejectedEvent](#7-intentrejectedevent)
+  - [7.1. Producer](#71-producer)
+  - [7.2. Current primary consumer](#72-current-primary-consumer)
+  - [7.3. Meaning](#73-meaning)
+  - [7.4. Example headers](#74-example-headers)
+  - [7.5. Example body](#75-example-body)
+  - [7.6. Event-specific rules](#76-event-specific-rules)
+- [8. IntentResolvedEvent](#8-intentresolvedevent)
+  - [8.1. Producer](#81-producer)
+  - [8.2. Current primary consumer](#82-current-primary-consumer)
+  - [8.3. Meaning](#83-meaning)
+  - [8.4. Example headers](#84-example-headers)
+  - [8.5. Example body](#85-example-body)
+  - [8.6. Event-specific rules](#86-event-specific-rules)
+- [9. OptimisationStatusChangeEvent](#9-optimisationstatuschangeevent)
+  - [9.1. Producer](#91-producer)
+  - [9.2. Current primary consumer](#92-current-primary-consumer)
+  - [9.3. Meaning](#93-meaning)
+  - [9.4. Topic](#94-topic)
+  - [9.5. Example headers](#95-example-headers)
+  - [9.6. Example payload](#96-example-payload)
+  - [9.7. Event-specific rules](#97-event-specific-rules)
+- [10. IntentNetworkReadyEvent](#10-intentnetworkreadyevent)
+  - [10.1. Producer](#101-producer)
+  - [10.2. Current primary consumer](#102-current-primary-consumer)
+  - [10.3. Meaning](#103-meaning)
+  - [10.4. Example headers](#104-example-headers)
+  - [10.5. Example body](#105-example-body)
+  - [10.6. Event-specific rules](#106-event-specific-rules)
+- [11. IntentAssuranceEvent](#11-intentassuranceevent)
+  - [11.1. Producer](#111-producer)
+  - [11.2. Current primary consumer](#112-current-primary-consumer)
+  - [11.3. Meaning](#113-meaning)
+  - [11.4. Example body — active outcome](#114-example-body-active-outcome)
+  - [11.5. Example body — degraded outcome](#115-example-body-degraded-outcome)
+  - [11.6. Example body — failed outcome](#116-example-body-failed-outcome)
+  - [11.7. Example body — terminated outcome](#117-example-body-terminated-outcome)
+  - [11.8. Event-specific rules](#118-event-specific-rules)
+- [12. IntentCallbackEvent](#12-intentcallbackevent)
+  - [12.1. Producer](#121-producer)
+  - [12.2. Current primary consumer](#122-current-primary-consumer)
+  - [12.3. Topic](#123-topic)
+  - [12.4. Kafka key](#124-kafka-key)
+  - [12.5. CloudEvents type](#125-cloudevents-type)
+  - [12.6. Meaning](#126-meaning)
+  - [12.7. Example headers](#127-example-headers)
+  - [12.8. Example body](#128-example-body)
+  - [12.9. Event-specific rules](#129-event-specific-rules)
+  - [12.10. ICB MS ownership boundary](#1210-icb-ms-ownership-boundary)
 
-### Purpose
+## 3. Intent internal events specification
+
+### 3.1. Purpose
 
 This document defines the current baseline internal event contracts for the Intent Enabler workflow. Internal events are platform events exchanged between Intent Enabler microservices and internal platform components. They are not external TMF listener events.
 
-### Event style
+### 3.2. Event style
 
 Internal events use CloudEvents-style metadata in transport headers and a plain JSON payload. Most Intent Enabler internal events use a top-level `body` object.
 
@@ -89,7 +99,7 @@ Internal events use CloudEvents-style metadata in transport headers and a plain 
 
 Internal events are state/progress/outcome facts, not point-to-point commands for one specific consumer.
 
-### Common internal event rules
+### 3.3. Common internal event rules
 
 | **Rule** | **Baseline** |
 |---|---|
@@ -104,7 +114,7 @@ Internal events are state/progress/outcome facts, not point-to-point commands fo
 | Sensitive data | Do not include secrets, tokens, credentials, or raw internal stack traces |
 | External exposure | Internal payloads are not directly exposed as external TMF events |
 
-### Stable event ontology rule
+### 3.4. Stable event ontology rule
 
 Internal events are not raw KP-schema projections. Internal events use stable shared intent-domain terms. Domain-specific KP structures may vary, and II MS maps domain KP knowledge into the stable internal event contract. Runtime intent semantics should preserve the canonical `expression.context.targets`, `expression.context.constraints`, and `expression.context.preferences` grouping unless a specific downstream event explicitly defines a different evaluated-output shape. Domain inputs such as `location`, `serviceType`, and `serviceClass` remain under `expression.context.constraints` for admitted and resolved runtime intent context.
 
@@ -117,19 +127,19 @@ Use shared resource vocabulary in internal events:
 
 Do not encode source/context into event-facing metric wrappers or field names such as `metrics.benchmark`, `metrics.telemetry`, `latencyBenchmarkMs`, or `currentLatencyMs`. The event type and processing stage provide that meaning.
 
-### Common references shape
+### 3.5. Common references shape
 
 Internal event `references` should use named resource reference objects with `id` and `href` where available. Use `correlationId` as a common scalar reference.
 
-### Shared location vocabulary
+### 3.6. Shared location vocabulary
 
 Where a location is present inside `expression.context.constraints.location`, the stable baseline fields are `locationId`, optional `displayName`, optional `locationType`, and optional `geographicScope`. Service-specific events may carry the subset that is relevant to the stage; absence of optional fields must not change the location identity when `locationId` is present.
 
-### Admission context carry-through rule
+### 3.7. Admission context carry-through rule
 
 `IntentValidatedEvent` must carry both `intentSpecification.id` and `expression.iri` from IC MS admission. `intentSpecification.id` identifies the selected active specification. `expression.iri` identifies the admitted semantic/expression contract. II MS treats both as carried-forward admission facts and must not re-resolve the governing `IntentSpecification` by IRI alone.
 
-### Optimiser status and evaluation rule
+### 3.8. Optimiser status and evaluation rule
 
 Use optimiser statuses as the primary outcome for the optimisation run, target evaluations, and constraint evaluations.
 
@@ -150,7 +160,7 @@ Do not add a separate `result` field by default.
 
 `COMPLETED` means the item was successfully evaluated and satisfied. `INFEASIBLE` means the item was evaluated but cannot be satisfied with the available resources/constraints. `FAILED` means technical/runtime/model/data failure.
 
-### Service configuration structure rule
+### 3.9. Service configuration structure rule
 
 In `IntentNetworkReadyEvent.serviceConfiguration`, use:
 
@@ -163,7 +173,7 @@ In `IntentNetworkReadyEvent.serviceConfiguration`, use:
 
 Do not repeat `orchestrator` or `observer` prefixes inside their own configuration blocks.
 
-### Service-ready configuration rule
+### 3.10. Service-ready configuration rule
 
 `IntentNetworkReadyEvent` means the service configuration has been prepared for change-execution/apply. It does not mean the service has already been applied. Use `serviceConfiguration` to carry the service apply and observation plan.
 
@@ -173,7 +183,7 @@ Do not repeat `orchestrator` or `observer` prefixes inside their own configurati
 
 ---
 
-## Common CloudEvents headers
+## 4. Common CloudEvents headers
 
 ```http
 ce-specversion: 1.0
@@ -185,7 +195,7 @@ ce-subject: INT-HOSP-2026-001
 content-type: application/json
 ```
 
-### Header and topic deviations by event:
+### 4.1. Header and topic deviations by event:
 
 | Event | Topic / header note |
 |---|---|
@@ -195,7 +205,7 @@ content-type: application/json
 
 ---
 
-## Internal event catalogue
+## 5. Internal event catalogue
 
 | **Event** | **Producer** | **Current primary consumer(s)** | **Purpose** |
 |---|---|---|---|
@@ -209,25 +219,25 @@ content-type: application/json
 
 ---
 
-## IntentValidatedEvent
+## 6. IntentValidatedEvent
 
-### Producer
+### 6.1. Producer
 
 ```text
 intent-controller-ms
 ```
 
-### Current primary consumer
+### 6.2. Current primary consumer
 
 ```text
 intent-intelligence-ms
 ```
 
-### Meaning
+### 6.3. Meaning
 
 The runtime Intent has passed IC MS admission validation and has been admitted into the intent lifecycle.
 
-### Example headers
+### 6.4. Example headers
 
 ```http
 ce-specversion: 1.0
@@ -239,7 +249,7 @@ ce-subject: INT-HOSP-2026-001
 content-type: application/json
 ```
 
-### Example body
+### 6.5. Example body
 
 ```json
 {
@@ -295,7 +305,7 @@ content-type: application/json
 }
 ```
 
-### Event-specific rules
+### 6.6. Event-specific rules
 
 - `IntentValidatedEvent` is the lean IC MS admission-focused event.
 - It carries the admitted runtime `expression.iri` and `expression.context`.
@@ -305,25 +315,25 @@ content-type: application/json
 - It does not include KP `benchmarks`, optimiser details, change-execution details, assurance details, or a `validation` object.
 - It uses canonical `expression.context.constraints.location.locationId` in the baseline event example.
 
-## IntentRejectedEvent
+## 7. IntentRejectedEvent
 
-### Producer
+### 7.1. Producer
 
 ```text
 intent-intelligence-ms
 ```
 
-### Current primary consumer
+### 7.2. Current primary consumer
 
 ```text
 intent-controller-ms
 ```
 
-### Meaning
+### 7.3. Meaning
 
 Semantic, policy, or downstream interpretation validation rejected the admitted Intent.
 
-### Example headers
+### 7.4. Example headers
 
 ```http
 ce-specversion: 1.0
@@ -335,7 +345,7 @@ ce-subject: INT-HOSP-2026-002
 content-type: application/json
 ```
 
-### Example body
+### 7.5. Example body
 
 ```json
 {
@@ -372,7 +382,7 @@ content-type: application/json
 }
 ```
 
-### Event-specific rules
+### 7.6. Event-specific rules
 
 - `IntentRejectedEvent` is the semantic/policy/capability rejection event.
 - For simple semantic/capability rejection, carry `lifecycleStatus`, `reasonCode`, `statusReason`, direct `location`, `serviceType`, `serviceClass`, and references. This is a deliberate compact rejection shape for failed admission/semantic resolution where a full resolved `body.expression.context` may not exist or may add no useful decision value.
@@ -382,25 +392,25 @@ content-type: application/json
 - Do not include optimiser, change-execution, or assurance payloads.
 - Include `references.knowledgePlane` when Knowledge Plane configuration or capability state materially contributed to the rejection decision. Do not include it for rejection outcomes that do not depend on KP context.
 
-## IntentResolvedEvent
+## 8. IntentResolvedEvent
 
-### Producer
+### 8.1. Producer
 
 ```text
 intent-intelligence-ms
 ```
 
-### Current primary consumer
+### 8.2. Current primary consumer
 
 ```text
 optimiser-controller-ms
 ```
 
-### Meaning
+### 8.3. Meaning
 
 The admitted Intent has been semantically resolved into a canonical internal handoff that can be optimised.
 
-### Example headers
+### 8.4. Example headers
 
 ```http
 ce-specversion: 1.0
@@ -412,7 +422,7 @@ ce-subject: INT-HOSP-2026-001
 content-type: application/json
 ```
 
-### Example body
+### 8.5. Example body
 
 ```json
 {
@@ -472,7 +482,7 @@ content-type: application/json
 }
 ```
 
-### Event-specific rules
+### 8.6. Event-specific rules
 
 - `IntentResolvedEvent` is the lean optimiser handoff.
 - Preserve resolved runtime semantics under `expression.context` when carrying the resolved intent context.
@@ -486,31 +496,31 @@ content-type: application/json
 - In `IntentResolvedEvent`, `resources[].metrics` carries candidate metric **values** from KP or resolution context. This is different from `IntentNetworkReadyEvent.serviceConfiguration.observerConfiguration.resources[].metrics`, where `metrics` is a list of metric **names** that IA/observer should collect.
 
 
-## OptimisationStatusChangeEvent
+## 9. OptimisationStatusChangeEvent
 
-### Producer
+### 9.1. Producer
 
 ```text
 intent-callback-ms
 ```
 
-### Current primary consumer
+### 9.2. Current primary consumer
 
 ```text
 intent-intelligence-ms
 ```
 
-### Meaning
+### 9.3. Meaning
 
 `OptimisationStatusChangeEvent` is the approved optimiser outcome event relayed by ICB MS after the Optimiser platform submits `OptimisationStatusChangeEventRequest` to `POST /intent-callback/v1/submissions`. ICB MS validates the payload structurally, persists it through the callback outbox, and publishes the event to the main internal intent event topic. II MS owns optimiser outcome correlation, interpretation, and selected-configuration packaging.
 
-### Topic
+### 9.4. Topic
 
 ```text
 t7.intent.management.events
 ```
 
-### Example headers
+### 9.5. Example headers
 
 ```http
 ce-specversion: 1.0
@@ -523,7 +533,7 @@ content-type: application/json
 x-correlation-id: corr-intent-create-001
 ```
 
-### Example payload
+### 9.6. Example payload
 
 ```json
 {
@@ -653,7 +663,7 @@ x-correlation-id: corr-intent-create-001
 }
 ```
 
-### Event-specific rules
+### 9.7. Event-specific rules
 
 - `OptimisationStatusChangeEvent` is structurally relayed by ICB MS and consumed by II MS.
 - ICB MS does not interpret optimiser status, selected configuration, feasibility, or service meaning.
@@ -661,27 +671,27 @@ x-correlation-id: corr-intent-create-001
 - This event is not converted into the ICB-owned `body` callback fact shape used by `IntentCallbackEvent`.
 
 
-## IntentNetworkReadyEvent
+## 10. IntentNetworkReadyEvent
 
-### Producer
+### 10.1. Producer
 
 ```text
 intent-intelligence-ms
 ```
 
-### Current primary consumer
+### 10.2. Current primary consumer
 
 ```text
 intent-assurance-ms
 ```
 
-### Meaning
+### 10.3. Meaning
 
 `IntentNetworkReadyEvent` is an internal milestone event indicating that the service configuration/resource set has been prepared for change-execution/apply.
 
 It does not mean the service has already been applied.
 
-### Example headers
+### 10.4. Example headers
 
 ```http
 ce-specversion: 1.0
@@ -693,7 +703,7 @@ ce-subject: INT-HOSP-2026-001
 content-type: application/json
 ```
 
-### Example body
+### 10.5. Example body
 
 ```json
 {
@@ -746,7 +756,7 @@ content-type: application/json
 }
 ```
 
-### Event-specific rules
+### 10.6. Event-specific rules
 
 - `IntentNetworkReadyEvent` means service configuration is ready for change-execution/apply, not that apply has succeeded.
 - Preserve resolved context under `body.expression.context`; do not flatten `location`, `serviceType`, `serviceClass`, `targets`, `constraints`, or `preferences` as top-level fields.
@@ -762,25 +772,25 @@ content-type: application/json
 - Do not include service-apply QoS internals, bandwidth, routing policy, hops, or service attributes by default unless they are required by the change-execution contract.
 - IA MS consumes this event; IA MS does not produce it.
 
-## IntentAssuranceEvent
+## 11. IntentAssuranceEvent
 
-### Producer
+### 11.1. Producer
 
 ```text
 intent-assurance-ms
 ```
 
-### Current primary consumer
+### 11.2. Current primary consumer
 
 ```text
 intent-controller-ms
 ```
 
-### Meaning
+### 11.3. Meaning
 
 IA MS reports curated assurance/apply/runtime outcome truth. IC MS consumes this event and updates the external `Intent` and `IntentReport` projections.
 
-### Example body — active outcome
+### 11.4. Example body — active outcome
 
 ```json
 {
@@ -889,7 +899,7 @@ IA MS reports curated assurance/apply/runtime outcome truth. IC MS consumes this
 }
 ```
 
-### Example body — degraded outcome
+### 11.5. Example body — degraded outcome
 
 ```json
 {
@@ -998,7 +1008,7 @@ IA MS reports curated assurance/apply/runtime outcome truth. IC MS consumes this
 }
 ```
 
-### Example body — failed outcome
+### 11.6. Example body — failed outcome
 
 ```json
 {
@@ -1079,7 +1089,7 @@ IA MS reports curated assurance/apply/runtime outcome truth. IC MS consumes this
 }
 ```
 
-### Example body — terminated outcome
+### 11.7. Example body — terminated outcome
 
 ```json
 {
@@ -1122,7 +1132,7 @@ IA MS reports curated assurance/apply/runtime outcome truth. IC MS consumes this
 }
 ```
 
-### Event-specific rules
+### 11.8. Event-specific rules
 
 - Preserve resolved context under `body.expression.context`; do not flatten `location`, `serviceType`, `serviceClass`, `targets`, `constraints`, or `preferences` as top-level fields.
 - Include resolved targets under `body.expression.context.targets` so control-loop consumers know which runtime objectives the observed metrics relate to.
@@ -1138,45 +1148,45 @@ IA MS reports curated assurance/apply/runtime outcome truth. IC MS consumes this
 - Do not include `controlLoop` by default; downstream control-loop consumers derive the next action from the assurance event.
 - Do not include a `knowledgePlane` reference by default; IA MS works from applied service configuration, observer scope, and resolved targets.
 
-## IntentCallbackEvent
+## 12. IntentCallbackEvent
 
-### Producer
+### 12.1. Producer
 
 ```text
 intent-callback-ms
 ```
 
-### Current primary consumer
+### 12.2. Current primary consumer
 
 ```text
 intent-assurance-ms
 ```
 
-### Topic
+### 12.3. Topic
 
 ```text
 t7.intent.management.events.callbacks
 ```
 
-### Kafka key
+### 12.4. Kafka key
 
 ```text
 intentId
 ```
 
-### CloudEvents type
+### 12.5. CloudEvents type
 
 ```text
 IntentCallbackEvent
 ```
 
-### Meaning
+### 12.6. Meaning
 
 ICB MS publishes accepted raw change-execution/apply callbacks to the dedicated callback Kafka topic as `IntentCallbackEvent`.
 
 IA MS consumes this event, validates/correlates intent state, maps raw source state into lifecycle/assurance meaning, and emits assurance outcomes where applicable.
 
-### Example headers
+### 12.7. Example headers
 
 ```http
 ce-specversion: 1.0
@@ -1188,7 +1198,7 @@ ce-subject: INT-HOSP-2026-001
 content-type: application/json
 ```
 
-### Example body
+### 12.8. Example body
 
 ```json
 {
@@ -1220,7 +1230,7 @@ content-type: application/json
 }
 ```
 
-### Event-specific rules
+### 12.9. Event-specific rules
 
 - `IntentCallbackEvent` is a raw callback relay event.
 - ICB MS only accepts, persists, and publishes the callback.
@@ -1232,7 +1242,7 @@ content-type: application/json
 - Avoid retired source-specific callback state/source/timestamp fields; use `callbackSource`, `callbackTimestamp`, and `sourceState`.
 - Do not include lifecycle, service, optimisation, service-configuration, or assurance interpretation fields in this event.
 
-### ICB MS ownership boundary
+### 12.10. ICB MS ownership boundary
 
 ICB MS does not validate intent existence, map source state, derive callback source type, decide actionability, or emit assurance/lifecycle events.
 
