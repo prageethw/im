@@ -106,6 +106,14 @@ ce-subject: INT-HOSP-2026-001
 content-type: application/json
 ```
 
+### Header and topic deviations by event:
+
+| Event | Topic / header note |
+|---|---|
+| `OptimisationStatusChangeEvent` | Published by `intent-callback-ms` to `t7.intent.management.events` after ICB relay. It may include `x-correlation-id` as an internal transport correlation header in addition to payload correlation fields. |
+| `IntentCallbackEvent` | Published by `intent-callback-ms` to the dedicated callback topic `t7.intent.management.events.callbacks`, not the main internal topic. |
+| Other internal events | Use the main internal intent event topic and the common CloudEvents-style header pattern shown above. |
+
 ---
 
 ## Internal event catalogue
@@ -288,7 +296,7 @@ content-type: application/json
 ### Event-specific rules
 
 - `IntentRejectedEvent` is the semantic/policy/capability rejection event.
-- For simple semantic/capability rejection, carry `lifecycleStatus`, `reasonCode`, `statusReason`, direct `location`, `serviceType`, `serviceClass`, and references.
+- For simple semantic/capability rejection, carry `lifecycleStatus`, `reasonCode`, `statusReason`, direct `location`, `serviceType`, `serviceClass`, and references. This is a deliberate compact rejection shape for failed admission/semantic resolution where a full resolved `body.expression.context` may not exist or may add no useful decision value.
 - Use `reasonCode: SERVICE_NOT_AVAILABLE` when the requested service is not currently available for the resolved service/location.
 - Do not include a `serviceContext` or generic `context` wrapper.
 - Do not include an `evaluations` block unless multiple checks or detailed rejection evidence is genuinely useful.
@@ -395,6 +403,7 @@ content-type: application/json
 - Do not include `capabilityStatus`; successful `IntentResolvedEvent` emission implies semantic/capability resolution succeeded.
 - `IntentResolvedEvent.resources[]` contains all applicable/apply-capable resources for the resolved location/service that the optimiser may consider, not a shortened selected list.
 - `IntentResolvedEvent.resources[].metrics` carries neutral metric values using names such as `latencyMs`, `availabilityPercent`, `jitterMs`, and `packetLossPercent`.
+- In `IntentResolvedEvent`, `resources[].metrics` carries candidate metric **values** from KP or resolution context. This is different from `IntentNetworkReadyEvent.serviceConfiguration.observerConfiguration.resources[].metrics`, where `metrics` is a list of metric **names** that IA/observer should collect.
 
 
 ## OptimisationStatusChangeEvent
@@ -909,13 +918,123 @@ IA MS reports curated assurance/apply/runtime outcome truth. IC MS consumes this
 }
 ```
 
+### Example body — failed outcome
+
+```json
+{
+  "body": {
+    "intentId": "INT-HOSP-2026-003",
+    "intentVersion": "v1",
+    "lifecycleStatus": "Failed",
+    "statusReason": "Apply failed and no safe active service state was confirmed.",
+    "expression": {
+      "context": {
+        "targets": {
+          "maxLatencyMs": 10,
+          "minAvailabilityPercent": 99.99,
+          "maxJitterMs": 2,
+          "maxPacketLossPercent": 0.01
+        },
+        "constraints": {
+          "location": {
+            "locationId": "AU-NSW-SYD-HOSP-001",
+            "displayName": "Sydney-Main-Hospital"
+          },
+          "serviceType": "surgical-connectivity",
+          "serviceClass": "critical-gold",
+          "priority": "critical",
+          "redundancyRequired": true
+        },
+        "preferences": {
+          "preferredAccessTechnology": "5G"
+        }
+      }
+    },
+    "current": {
+      "resources": [
+        {
+          "resourceId": "SYD-PRI-01",
+          "resourceType": "deliveryResource",
+          "resourceClass": "critical-gold",
+          "roles": ["primary"],
+          "metrics": {}
+        },
+        {
+          "resourceId": "SYD-SEC-01",
+          "resourceType": "deliveryResource",
+          "resourceClass": "critical-gold",
+          "roles": ["secondary"],
+          "metrics": {}
+        }
+      ]
+    },
+    "references": {
+      "correlationId": "corr-intent-assurance-003",
+      "intent": {
+        "id": "INT-HOSP-2026-003",
+        "href": "/intentManagement/v5/intent/INT-HOSP-2026-003"
+      },
+      "intentSpecification": {
+        "id": "ispec-hss-001",
+        "specKey": "hospital-surgical-slice-spec",
+        "version": "1.20",
+        "href": "/intentManagement/v5/intentSpecification/ispec-hss-001?version=1.20"
+      }
+    }
+  }
+}
+```
+
+### Example body — terminated outcome
+
+```json
+{
+  "body": {
+    "intentId": "INT-HOSP-2026-004",
+    "intentVersion": "v1",
+    "lifecycleStatus": "Terminated",
+    "statusReason": "Termination was confirmed by the change-execution system and no active observer scope remains.",
+    "expression": {
+      "context": {
+        "targets": {},
+        "constraints": {
+          "location": {
+            "locationId": "AU-NSW-SYD-HOSP-001",
+            "displayName": "Sydney-Main-Hospital"
+          },
+          "serviceType": "surgical-connectivity",
+          "serviceClass": "critical-gold"
+        },
+        "preferences": {}
+      }
+    },
+    "current": {
+      "resources": []
+    },
+    "references": {
+      "correlationId": "corr-intent-assurance-004",
+      "intent": {
+        "id": "INT-HOSP-2026-004",
+        "href": "/intentManagement/v5/intent/INT-HOSP-2026-004"
+      },
+      "intentSpecification": {
+        "id": "ispec-hss-001",
+        "specKey": "hospital-surgical-slice-spec",
+        "version": "1.20",
+        "href": "/intentManagement/v5/intentSpecification/ispec-hss-001?version=1.20"
+      }
+    }
+  }
+}
+```
+
 ### Event-specific rules
 
 - Preserve resolved context under `body.expression.context`; do not flatten `location`, `serviceType`, `serviceClass`, `targets`, `constraints`, or `preferences` as top-level fields.
 - Include resolved targets under `body.expression.context.targets` so control-loop consumers know which runtime objectives the observed metrics relate to.
 - Preserve `constraints` and `preferences` under `body.expression.context` where useful for downstream decisions.
 - Do not include `assuranceStatus` or `selectionStatus` by default; `lifecycleStatus` carries the assurance outcome.
-- Use `current.resources[]` for the full observed resource/path set within assurance scope.
+- Use `current.resources[]` for the full observed resource/path set within assurance scope. For failed apply outcomes where no reliable telemetry was observed, resource entries may carry empty `metrics` objects to preserve the failed apply scope without inventing observed values. For confirmed termination, `current.resources[]` may be empty when no active observer scope remains.
 - `current.resources[]` mirrors the observer scope received from `IntentNetworkReadyEvent.serviceConfiguration.observerConfiguration.resources[]`.
 - Use `current.resources[].metrics` for neutral metric values for each observed resource.
 - Do not include `evaluations` in `IntentAssuranceEvent` by default, including degraded state.
@@ -1014,6 +1133,7 @@ content-type: application/json
 - IA MS owns intent correlation, source-state mapping, skip/dead-letter decisions, and downstream assurance outcome publication.
 - Use `callbackSource` for the external system/component that submitted the callback.
 - Use `callbackTimestamp` for the timestamp supplied by that callback source.
+- Use `receivedAt` for the ICB MS ingestion/acceptance timestamp. It is distinct from source-supplied `callbackTimestamp`.
 - Use `sourceState` for the raw state/payload supplied by the callback source.
 - Avoid retired source-specific callback state/source/timestamp fields; use `callbackSource`, `callbackTimestamp`, and `sourceState`.
 - Do not include lifecycle, service, optimisation, service-configuration, or assurance interpretation fields in this event.

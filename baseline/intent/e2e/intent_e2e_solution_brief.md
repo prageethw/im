@@ -180,6 +180,8 @@ The Intent Enabler uses three distinct delivery models. They must not be collaps
 | External hub notifications | Subscriber notifications for `IntentSpecification`, `Intent`, and `IntentReport` resource events | Service-owned webhook delivery outbox, HTTP retry relay, HTTP `POST` to subscriber listener callback URL | HTTP headers such as `Content-Type`, `X-Correlation-Id`, and subscriber callback authentication where configured |
 | Callback ingestion | Source/change-execution and optimiser outcome callback submission into the platform | REST `POST` to ICB MS, callback persistence, callback outbox, internal Kafka publication to IA MS or II MS depending on callback profile | HTTP headers on inbound callback; CloudEvents-style Kafka/platform headers on `IntentCallbackEvent` or `OptimisationStatusChangeEvent` |
 
+The callback ingestion path has two approved profiles. Change-execution/apply callbacks are relayed as `IntentCallbackEvent` on the dedicated callback topic `t7.intent.management.events.callbacks` for IA MS. Optimiser outcome callbacks are relayed as `OptimisationStatusChangeEvent` on the main internal event topic `t7.intent.management.events` for II MS.
+
 ID MS and IC MS hub notifications are REST webhook callbacks with TMF-aligned event payloads. Kafka is not used for external hub notification delivery. Subscriber callback URLs are subscriber-owned; the platform defines the subscription API, delivery rules, retry behaviour, and TMF-aligned notification payload shape.
 
 ## Process view:
@@ -312,9 +314,13 @@ This is a termination request, not physical deletion of the runtime record. IC M
 
 If optimistic concurrency is required for the operation, a missing `If-Match` returns `428 Precondition Required`, and stale or mismatched `If-Match` returns `412 Precondition Failed`.
 
+## Pause and resume runtime intent:
+
+`Paused` is a governed runtime state where the policy remains known but active downstream progression is intentionally suspended. Entry into `Paused` is owned by IC MS through an authorised runtime lifecycle operation or platform policy action; II MS, IA MS, and ICB MS must not independently place an intent into `Paused`. While paused, new semantic interpretation, optimisation, apply, or recovery work should not start unless an authorised resume or recovery workflow explicitly permits it. Exit from `Paused` returns the runtime intent to an authorised workflow path such as re-evaluation, recovery, termination, or continued monitoring according to IC MS lifecycle rules.
+
 ## Retry failed runtime intent:
 
-A failed or degraded runtime intent does not automatically imply retry, rollback, reselection, or re-optimisation. IA MS reports assurance truth. IC MS projects it externally.
+A failed, degraded, or paused runtime intent does not automatically imply retry, rollback, reselection, or re-optimisation. IA MS reports assurance truth. IC MS projects it externally. `Paused` requires an authorised resume or recovery decision before retry-style workflow continues.
 
 A retry or recovery action should be initiated by an authorised workflow that can evaluate:
 
@@ -334,6 +340,8 @@ ICB MS exposes:
 ```http
 POST /intent-callback/v1/submissions
 ```
+
+The same protected ingress endpoint accepts two approved request profiles: `IntentCallbackEventRequest` for change-execution/apply callbacks and `OptimisationStatusChangeEventRequest` for approved optimiser outcome callbacks.
 
 ICB MS sits behind the API Gateway. It accepts callback submissions from trusted external change-execution/apply systems and approved Optimiser platforms. It validates only technical and structural properties, such as required fields, non-empty strings, ISO timestamp format, request size, trusted caller/source authorisation, and idempotency, where required.
 
@@ -609,7 +617,7 @@ Expected platform controls include:
 | `InProgress` | Downstream semantic, optimisation, service-ready, apply, or assurance workflow is underway. |
 | `Active` | Service is applied, and assurance evidence supports the active state. |
 | `Degraded` | Service is still present, but assurance evidence indicates degraded operation. |
-| `Paused` | Policy exists but is intentionally paused. |
+| `Paused` | Policy exists but is intentionally paused; entry and exit are governed by IC MS lifecycle policy, not by IA or ICB interpretation. |
 | `Rejected` | Request or later workflow outcome was rejected by semantic, policy, apply, or network decision. |
 | `Failed` | Delivery or operation failed irrecoverably. |
 | `Terminated` | Runtime intent has ended or been removed from active service state. |
@@ -787,7 +795,7 @@ Terminated
 |---|---|---|---|
 | `IntentValidatedEvent` | `intent-controller-ms` | `intent-intelligence-ms` | Runtime intent passed IC MS admission validation. |
 | `IntentRejectedEvent` | `intent-intelligence-ms` | `intent-controller-ms` | Semantic, policy, or capability rejection. |
-| `IntentResolvedEvent` | `intent-intelligence-ms` | Optimiser / downstream fulfilment path | Candidate-level semantic-resolution handoff. |
+| `IntentResolvedEvent` | `intent-intelligence-ms` | `optimiser-controller-ms` / approved optimisation path | Candidate-level semantic-resolution handoff. Optimiser may be an approved platform component reached through the optimiser integration path, not a public Intent Enabler API. |
 | `OptimisationStatusChangeEvent` | `intent-callback-ms` | `intent-intelligence-ms` | Approved optimiser outcome callback relayed by ICB MS after durable callback ingestion. |
 | `IntentNetworkReadyEvent` | `intent-intelligence-ms` | `intent-assurance-ms` | Service configuration ready for change execution/apply and observation. |
 | `IntentCallbackEvent` | `intent-callback-ms` | `intent-assurance-ms` | Raw accepted change-execution/apply callback fact for IA MS. |
