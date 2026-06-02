@@ -44,8 +44,8 @@ else not yet processed
     It does not re-resolve the governing specification by IRI alone.
   end note
 
-  IIMS -> IIMS : parse body.expression.context.targets\n(latency, availability, jitter, packet loss, ...)
-  IIMS -> IIMS : parse body.expression.context.constraints\n(location, service class, priority,\nredundancy, time window, ...)
+  IIMS -> IIMS : parse body.expression.context.targets\n(latency, availability, jitter, packet loss,..)
+  IIMS -> IIMS : parse body.expression.context.constraints\n(location, service class, priority,\nredundancy, time window,..)
   IIMS -> IIMS : parse body.expression.context.preferences\n(soft selection guidance)
 
   == 3. Knowledge Plane and Required Pre-Resolution Validation ==
@@ -128,7 +128,7 @@ else not yet processed
         IIMS -> IIMS : preserve preference as soft selection guidance\nfor candidate ranking
       end
 
-      == 7. Suitability / Proceedability Gate ==
+      == 7. Suitability and proceedability gate ==
 
       IIMS -> IIMS : decide if trusted semantic, policy, capability,\navailability, freshness, and external validation facts\nare sufficient to proceed safely
 
@@ -173,10 +173,10 @@ else not yet processed
 
         == 11. Optional Outbox Relay - Publish Observability Event ==
 
-        opt IntentResolvedEvent observability/audit enabled
+        opt IntentResolvedEvent observability and audit enabled
           RELAY -> STORE : poll PENDING outbox rows
           STORE --> RELAY : [IntentResolvedEvent]
-          RELAY -> KAFKA : publish IntentResolvedEvent\n(optional observability/audit; not optimiser trigger)
+          RELAY -> KAFKA : publish IntentResolvedEvent\n(optional observability and audit; )
           STORE <- RELAY : mark row DELIVERED
         end
 
