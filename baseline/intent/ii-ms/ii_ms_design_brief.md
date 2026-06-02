@@ -36,10 +36,10 @@
 
 Intent Intelligence MS, referred to as II MS, owns semantic interpretation, Knowledge Plane-backed validation and required pre-resolution validation, and semantic/service-ready preparation for admitted runtime intents.
 
-II MS receives syntactically admitted intent facts from IC MS, interprets and validates them against Knowledge Plane data, domain knowledge, and any additional pre-resolution validation sources required by the use case, and emits one of the II-owned internal outcome events:
+II MS receives syntactically admitted intent facts from IC MS, interprets and validates them against Knowledge Plane data, domain knowledge, and any additional pre-resolution validation sources required by the use case, and emits II-owned internal outcome events according to the milestone reached:
 
 - `IntentRejectedEvent` for semantic, policy, or capability rejection
-- `IntentResolvedEvent` for candidate-level semantic resolution
+- `IntentResolvedEvent` as an optional observability/audit semantic milestone after candidate-level semantic resolution
 - `IntentNetworkReadyEvent` for service-ready preparation to IA MS
 
 II MS is internal only.
@@ -79,7 +79,7 @@ II MS owns:
 | KP-backed and required pre-resolution validation | Uses Knowledge Plane data and, where required, approved T7 services or other governed sources to validate location, service, service class, capability, policy, resource availability, and other use-case-specific facts needed before resolution |
 | Canonicalisation | Normalises admitted values into canonical internal location, service, target, constraint, preference, and resource terms |
 | Rejection decision | Emits `IntentRejectedEvent` when semantic/policy/capability validation fails |
-| Resolution decision | Emits `IntentResolvedEvent` when the intent can be handed to the next internal fulfilment stage as a candidate-level semantic-resolution handoff |
+| Resolution observability milestone | May emit `IntentResolvedEvent` after semantic resolution to record the canonical context and candidate set for observability, audit, replay, or future consumers; it is not the optimiser trigger in the active baseline |
 | Service-ready preparation | Emits `IntentNetworkReadyEvent` when change-execution and observation configuration has been prepared for IA MS |
 | Candidate resource handoff | Provides the full valid resource set known for the resolved context after scope/policy filtering |
 | Outbox publication | Publishes II-owned events reliably through the II outbox |
@@ -95,7 +95,7 @@ II MS owns:
 | Runtime `IntentReport` REST API | IC MS |
 | External TMF lifecycle/status projection | IC MS |
 | External event subscriptions | IC MS / ID MS depending on resource |
-| Downstream optimisation selection | Optimiser platform / `optimiser-controller-ms` |
+| Downstream optimisation selection | Optimiser platform invoked directly by II MS through `POST /optimisation` using the optimisation API outbox |
 | Optimiser backend / solver target | `t7-gurobi-optimiser` where selected by KP or optimiser configuration |
 | Assurance/apply/runtime truth | IA MS |
 | Callback ingestion | ICB MS |
@@ -137,7 +137,7 @@ The baseline surgical hospital slice is an illustrative runtime example used to 
 | Output | Condition | Purpose |
 |---|---|---|
 | `IntentRejectedEvent` | Semantic, policy, or capability validation fails | Tells IC MS the admitted intent must be externally projected as rejected |
-| `IntentResolvedEvent` | Semantic/capability resolution succeeds and downstream fulfilment/selection is required | Provides candidate-level canonical context and the valid resource set for downstream consideration, including all applicable/apply-capable resources and neutral metric values |
+| `IntentResolvedEvent` | Semantic/capability resolution succeeds and optional observability/audit publication is enabled | Records candidate-level canonical context and the valid resource set for observability, audit, replay, or future consumers, including all applicable/apply-capable resources and neutral metric values |
 | `IntentNetworkReadyEvent` | Service-ready preparation succeeds after resolution | Provides IA MS with prepared change-execution and observation configuration; it does not mean apply succeeded |
 
 ## 7. Processing stages
@@ -153,7 +153,7 @@ The baseline surgical hospital slice is an illustrative runtime example used to 
 | Policy validation | Validate hard constraints such as priority and redundancy against KP/domain policy |
 | Canonicalisation | Normalise values into canonical internal terms |
 | Resource discovery | Resolve available KP resources for the resolved domain context |
-| Outcome selection | Emit `IntentRejectedEvent`, `IntentResolvedEvent`, or `IntentNetworkReadyEvent` depending on the resolved milestone |
+| Outcome selection | Emit `IntentRejectedEvent` or `IntentNetworkReadyEvent` where required, and optionally emit `IntentResolvedEvent` as an observability/audit milestone after semantic resolution |
 | Durable publication | Write event to II outbox and publish through relay |
 | Audit | Record semantic/KP decision trail where required |
 
@@ -185,7 +185,7 @@ II MS uses the Knowledge Plane as governed domain knowledge.
 | `capabilityStatus` | Decide available vs unknown/unavailable capability |
 | `benchmarks` | Understand service capability baseline and service/location target thresholds |
 | `resourceIds` | Discover candidate resources for downstream handoff |
-| `resources` | Build valid resource entries for downstream consideration |
+| `resources` | Build valid resource entries for observability, audit, optimiser request construction, replay, or future consumers |
 | `expressionMapping` | Resolve aliases/human expressions where applicable |
 | `redundancyAvailable` | Validate redundancy requirements |
 | logical target references | Resolve downstream target names where needed by downstream events |
@@ -231,12 +231,12 @@ A successful resolution implies:
 - the requested service type and service class are understood
 - the requested service is available or supported for the resolved location
 - hard constraints are semantically valid
-- the resource set is known and valid for downstream consideration after scope/policy filtering
+- the resource set is known and valid after scope/policy filtering
 - the intent can proceed to the next internal fulfilment/preparation stage
 
 `IntentResolvedEvent.resources[]` contains the full valid/applicable/apply-capable resource set known in KP for the resolved context after applicable scope/policy filtering.
 
-It includes neutral event-facing metric values for those resources so `optimiser-controller-ms` can compare and select the best applicable configuration. `IntentResolvedEvent.resources[]` is not the final selected/applied resource set and it is not the service-ready/apply-ready handoff.
+It includes neutral event-facing metric values for those resources so the resolved candidate context can be audited, replayed, or reused by future authorised consumers. In the active baseline, optimisation is invoked directly by II MS using `POST /optimisation` through the optimisation API outbox; `IntentResolvedEvent` is not the optimiser trigger. `IntentResolvedEvent.resources[]` is not the final selected/applied resource set and it is not the service-ready/apply-ready handoff.
 
 ## 12. Service-ready preparation rule
 
@@ -415,6 +415,6 @@ II MS is the internal semantic interpretation, resolution, and service-ready pre
 
 It consumes `IntentValidatedEvent` and, for optimisation-backed selection, `OptimisationStatusChangeEvent` after ICB MS callback ingestion. It validates and resolves the admitted expression using Knowledge Plane data, domain knowledge, and any required use-case-specific pre-resolution validation sources, preserves the canonical `expression.context.targets`, `expression.context.constraints`, and `expression.context.preferences` buckets, and emits `IntentRejectedEvent`, `IntentResolvedEvent`, or `IntentNetworkReadyEvent` depending on the resolved milestone. II MS emits neutral event-facing resource and metric structures.
 
-`IntentResolvedEvent.resources[]` carries the full applicable/apply-capable resource set with metric values for downstream optimisation/selection. `IntentNetworkReadyEvent.serviceConfiguration.orchestratorConfiguration.resources[]` carries only the selected apply/change-execution configuration, while `serviceConfiguration.observerConfiguration.resources[]` carries the full IA observation scope with metric names to observe.
+`IntentResolvedEvent.resources[]` carries the full applicable/apply-capable resource set with metric values for optional observability, audit, replay, or future consumers. It is not the optimiser trigger in the active baseline. `IntentNetworkReadyEvent.serviceConfiguration.orchestratorConfiguration.resources[]` carries only the selected apply/change-execution configuration, while `serviceConfiguration.observerConfiguration.resources[]` carries the full IA observation scope with metric names to observe.
 
 II MS does not own external TMF APIs, runtime Intent lifecycle projection, downstream apply execution, assurance truth, callback ingestion, or KP governance.
