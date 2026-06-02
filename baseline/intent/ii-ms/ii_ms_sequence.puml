@@ -21,7 +21,7 @@ participant "Intent Callback MS\n(ICB MS)" as ICB
 database "II MS Store\n(semantic state + outbox)" as STORE
 participant "Outbox Relay\n(background worker)" as RELAY
 participant "IC MS" as ICMS
-participant "Optional consumers\n(observability, audit, replay, future)" as OBS
+participant "Downstream services\n(optimiser, IA, change execution, other consumers)" as DS
 
 == 1. Consume IntentValidatedEvent ==
 
@@ -128,11 +128,26 @@ else not yet processed
         IIMS -> IIMS : preserve preference as soft selection guidance\nfor candidate ranking
       end
 
-      == 7. Canonicalisation ==
+      == 7. Suitability / Proceedability Gate ==
+
+      IIMS -> IIMS : decide if trusted semantic, policy, capability,\navailability, freshness, and external validation facts\nare sufficient to proceed safely
+
+      alt insufficient, stale, contradictory, unsafe, or unsupported facts
+        IIMS -> IIMS : semantic rejection or governed processing failure
+        group Atomic DB transaction
+          IIMS -> STORE : persist semantic decision trail\n{ reason: NOT_SUITABLE_TO_PROCEED, detail }
+          IIMS -> STORE : write IntentRejectedEvent to outbox\n{ intentId, rejectionClass: SUITABILITY, reason }
+        end
+        RELAY -> STORE : poll -> IntentRejectedEvent
+        RELAY -> KAFKA : publish IntentRejectedEvent
+        ICMS -> KAFKA : consume event
+      else safe to proceed with candidate discovery and optimisation path
+
+      == 8. Canonicalisation ==
 
       IIMS -> IIMS : normalise canonical semantic buckets\n- targets -> normalised measurement set\n- constraints -> validated hard set\n- preferences -> ranked soft guidance set
 
-      == 8. Candidate Discovery ==
+      == 9. Candidate Discovery ==
 
       IIMS -> IIMS : apply scope + policy filters\nto raw candidate resource set from KP
       IIMS -> IIMS : resolve complete valid candidate resource set\nfor current semantic context
@@ -148,33 +163,33 @@ else not yet processed
         ICMS -> KAFKA : consume event
       else valid candidates resolved
 
-        == 9. Record Semantic Decision + Optional Resolution Observability ==
+        == 10. Record Semantic Decision + Optional Resolution Event ==
 
         group Atomic DB transaction
           IIMS -> STORE : persist semantic decision trail\n{ candidateSet, canonicalTargets,\n canonicalConstraints, canonicalPreferences }
-          IIMS -> STORE : optionally write IntentResolvedEvent to outbox\n{ observability/audit only, not optimiser trigger }
+          IIMS -> STORE : optionally write IntentResolvedEvent to outbox\n{ intentId, candidateSet, canonicalContext, observabilityOnly }
           IIMS -> STORE : write deduplication record\n(cloudEventsId + intentId -> PROCESSED)
         end
 
-        == 10. Optional Outbox Relay - Publish Observability Event ==
+        == 11. Optional Outbox Relay - Publish Observability Event ==
 
-        RELAY -> STORE : poll PENDING outbox rows
-        STORE --> RELAY : [optional IntentResolvedEvent]
-        RELAY -> KAFKA : publish optional IntentResolvedEvent\n(observability/audit, no mandatory consumer)
-        RELAY -> STORE : mark row DELIVERED
-        OBS -> KAFKA : optionally consume IntentResolvedEvent\n(observability/audit/replay only)
+        opt IntentResolvedEvent observability/audit enabled
+          RELAY -> STORE : poll PENDING outbox rows
+          STORE --> RELAY : [IntentResolvedEvent]
+          RELAY -> KAFKA : publish IntentResolvedEvent\n(optional observability/audit; not optimiser trigger)
+          STORE <- RELAY : mark row DELIVERED
+        end
 
-        == 11. Direct REST Optimisation and Service-Ready Preparation ==
+        == 12. Optimisation-Backed Selection and Service-Ready Preparation ==
 
         note over IIMS,OPT
           When optimisation-backed selection is required,
           II MS submits the resolved candidate context to
-          the Optimiser platform directly using POST /optimisation.
+          the Optimiser platform using POST /optimisation.
           II MS registers or supplies the ICB callback URL.
           Optimiser owns selection logic and returns the
           governed selected configuration as an event to ICB.
           ICB relays OptimisationStatusChangeEvent to Kafka.
-          IntentResolvedEvent is not the optimiser trigger.
         end note
 
         IIMS -> OPT : POST /optimisation\n{ body.expression.context, candidate resources,\n targets, constraints, preferences, correlation,\n ICB callback URL }
@@ -190,12 +205,14 @@ else not yet processed
 
         RELAY -> STORE : poll -> IntentNetworkReadyEvent
         RELAY -> KAFKA : publish IntentNetworkReadyEvent
-        RELAY -> STORE : mark row DELIVERED
+        STORE <- RELAY : mark row DELIVERED
 
-        == 12. Downstream Consumers Continue Workflow ==
+        == 13. Downstream Consumers Continue Workflow ==
 
         ICMS -> KAFKA : consume event
-        OBS -> KAFKA : optional consumers may observe events
+        DS -> KAFKA : consume event
+        DS -> KAFKA : consume event
+      end
       end
     end
   end

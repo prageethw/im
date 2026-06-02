@@ -83,7 +83,7 @@ II MS consumes syntactically admitted runtime intent facts from IC MS and perfor
 II MS emits:
 
 - `IntentRejectedEvent` when the intent cannot be semantically, policy, or capability resolved
-- `IntentResolvedEvent` as an optional observability/audit milestone when semantic resolution succeeds
+- `IntentResolvedEvent` as an optional observability/audit milestone when the intent has been semantically resolved into candidate-level canonical context
 - `IntentNetworkReadyEvent` when service-ready preparation has produced the concrete change-execution and observation configuration required by IA MS
 
 II MS does not own runtime `Intent` REST APIs, external lifecycle projection, downstream selection/fulfilment decisions, assurance truth, callback ingestion, change execution, or KP governance.
@@ -448,9 +448,10 @@ II MS must process this event idempotently. Duplicate optimiser status events mu
 | 6 | Validate service capability/status |
 | 7 | Validate hard constraints, including priority, redundancy, and time window where present |
 | 8 | Validate requested targets are supported for the service class |
-| 9 | Preserve preferences for downstream selection guidance |
-| 10 | Resolve valid resource set from KP, inventory, topology, capacity, or other approved pre-resolution validation sources after scope/policy filtering |
-| 11 | Emit `IntentRejectedEvent`, `IntentResolvedEvent`, or `IntentNetworkReadyEvent` through the II outbox, depending on the resolved milestone |
+| 9 | Suitability / proceedability gate: decide whether the admitted intent has enough trusted semantic, policy, capability, availability, freshness, and pre-resolution facts to proceed safely. If KP or approved validation sources show the intent is unsupported, contradictory, unsafe, unavailable, stale, or insufficiently validated, emit `IntentRejectedEvent` or record a governed processing failure instead of proceeding to candidate discovery or optimisation. |
+| 10 | Preserve preferences for downstream selection guidance |
+| 11 | Resolve valid resource set from KP, inventory, topology, capacity, or other approved pre-resolution validation sources after scope/policy filtering |
+| 12 | Emit `IntentRejectedEvent`, optionally emit `IntentResolvedEvent` for observability/audit after safe candidate-level resolution, or emit `IntentNetworkReadyEvent` only after selected service-ready configuration has been derived |
 
 ---
 
@@ -685,14 +686,12 @@ intent-intelligence-ms
 ### 9.3. Current primary consumer
 
 ```text
-No mandatory consumer in the active baseline
+No mandatory consumer in the active baseline. Optional consumers may include observability, audit, replay, or future authorised internal consumers.
 ```
-
-`IntentResolvedEvent` may be consumed by observability, audit, replay, or future authorised consumers. Optimisation is invoked directly by II MS using `POST /optimisation` through the optimisation API outbox.
 
 ### 9.4. Meaning
 
-II MS may emit `IntentResolvedEvent` when the admitted intent has been semantically resolved into a canonical context and full valid candidate set. In the active baseline this event is an optional observability/audit milestone; it is not the optimiser trigger and has no mandatory consumer.
+II MS may emit `IntentResolvedEvent` when the admitted intent has been semantically resolved into canonical candidate-level context. In the active baseline it is an optional observability/audit milestone, not the optimiser trigger and not a required happy-path consumer handoff.
 
 ### 9.5. Example headers
 
@@ -1000,7 +999,7 @@ content-type: application/json
 - Do not flatten `location`, `serviceType`, or `serviceClass` into top-level event fields.
 - Do not include direct top-level `priority`, `preferredAccessTechnology`, or `redundancyRequired` outside the buckets.
 - Do not include `provider` by default.
-- Do not include downstream-selected resources; all resources in `IntentResolvedEvent.resources` are applicable/apply-capable resources recorded for observability, audit, replay, or future authorised consumers, not final selected output. Optimisation is invoked directly by II MS using `POST /optimisation` through the optimisation API outbox.
+- Do not include downstream-selected resources; all resources in `IntentResolvedEvent.resources` are applicable/apply-capable resources known for observability, audit, replay, or future authorised internal consumers, not final selected output.
 - Include generic `metrics` values for applicable resources using neutral metric names such as `latencyMs`, `availabilityPercent`, `jitterMs`, and `packetLossPercent`.
 - Do not encode metric origin or lifecycle context into wrappers or field names such as `metrics.benchmark`, `metrics.telemetry`, `latencyBenchmarkMs`, or `currentLatencyMs`.
 
@@ -1664,6 +1663,6 @@ II MS must fail closed for stale KP facts, stale runtime versions, duplicate opt
 
 `IntentRejectedEvent` is the semantic/policy/capability rejection handoff. IC MS consumes it and projects the external runtime `Intent` lifecycle accordingly.
 
-`IntentResolvedEvent` is an optional candidate-level semantic-resolution observability/audit milestone. It carries canonical service context and the full valid/applicable/apply-capable resource set for traceability, replay, or future authorised consumers. It includes generic metric values for applicable resources using neutral metric names such as `latencyMs`, `availabilityPercent`, `jitterMs`, and `packetLossPercent`. It is not the optimiser trigger and is not the final service-ready/apply-ready handoff.
+`IntentResolvedEvent` is the candidate-level semantic-resolution handoff. It carries canonical service context and the full valid/applicable/apply-capable resource set for observability, audit, replay, or future authorised internal consumers. It includes generic metric values for applicable resources using neutral metric names such as `latencyMs`, `availabilityPercent`, `jitterMs`, and `packetLossPercent`. It is not the final service-ready/apply-ready handoff and it is not the optimiser trigger.
 
 `IntentNetworkReadyEvent` is the service-ready preparation handoff to IA MS. It carries the optimiser-selected apply/change-execution configuration in `serviceConfiguration.orchestratorConfiguration` and the full assurance observation scope in `serviceConfiguration.observerConfiguration`, and it does not mean network apply has succeeded. It does not carry metric values in `serviceConfiguration.orchestratorConfiguration.resources[]`; `serviceConfiguration.observerConfiguration.resources[].metrics` names the metrics IA should observe.
