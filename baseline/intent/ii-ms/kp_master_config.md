@@ -1,4 +1,4 @@
-# KP Master Config:
+# KP Master Config
 
 | **Document status** | **Value** |
 | --- | --- |

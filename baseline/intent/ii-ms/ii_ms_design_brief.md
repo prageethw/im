@@ -1,4 +1,4 @@
-# II MS Design Brief:
+# II MS Design Brief
 
 | **Document status** | **Value** |
 | --- | --- |

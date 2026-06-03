@@ -1,4 +1,4 @@
-# II MS Specification:
+# II MS Specification
 
 | **Document status** | **Value** |
 | --- | --- |

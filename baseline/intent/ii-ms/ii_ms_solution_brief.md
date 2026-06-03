@@ -1,4 +1,4 @@
-# Intent Intelligence MS Solution Brief:
+# Intent Intelligence MS Solution Brief
 
 | **Document status** | **Value** |
 | --- | --- |
