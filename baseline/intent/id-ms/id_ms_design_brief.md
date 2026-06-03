@@ -364,7 +364,7 @@ Last-Modified: Sat, 18 Apr 2026 02:00:00 GMT
 
 Notes:
 
-- Create creates a mutable `DRAFT` candidate, not an official public version.
+- Create a mutable `DRAFT` candidate, not an official public version.
 - ID MS resolves server-assigned `id` from `specKey` and assigns `draftId`; `id` must not be assumed to equal `specKey`.
 - Response returns the created DRAFT candidate representation.
 - Response includes server-assigned `draftId`, DRAFT `href`, `Location`, `ETag`, and `_links`.
