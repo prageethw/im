@@ -87,20 +87,14 @@
   - [27.8 Alerting baseline:](#278-alerting-baseline)
   - [27.9 Tracing baseline:](#279-tracing-baseline)
   - [27.10 Baseline statement:](#2710-baseline-statement)
-- [28. ID MS consistency sweep:](#28-id-ms-consistency-sweep)
-  - [28.1 Sweep date:](#281-sweep-date)
-  - [28.2 Overall result:](#282-overall-result)
-  - [28.3 Checks:](#283-checks)
-  - [28.4 Notes requiring attention:](#284-notes-requiring-attention)
-  - [28.5 Final consistency position:](#285-final-consistency-position)
-- [29. Optional IntentSpecification behaviour metadata:](#29-optional-intentspecification-behaviour-metadata)
-- [30. specKey lineage note:](#30-speckey-lineage-note)
-- [31. draftId provenance lookup rule:](#31-draftid-provenance-lookup-rule)
-- [32. Runtime admission guardrail:](#32-runtime-admission-guardrail)
-- [33. Callback URL baseline:](#33-callback-url-baseline)
-- [34. PATCH semantics:](#34-patch-semantics)
-- [35. IntentSpecification versioning clarification:](#35-intentspecification-versioning-clarification)
-- [36. Expression schema alignment:](#36-expression-schema-alignment)
+- [28. Optional IntentSpecification behaviour metadata:](#28-optional-intentspecification-behaviour-metadata)
+- [29. specKey lineage note:](#29-speckey-lineage-note)
+- [30. draftId provenance lookup rule:](#30-draftid-provenance-lookup-rule)
+- [31. Runtime admission guardrail:](#31-runtime-admission-guardrail)
+- [32. Callback URL baseline:](#32-callback-url-baseline)
+- [33. PATCH semantics:](#33-patch-semantics)
+- [34. IntentSpecification versioning clarification:](#34-intentspecification-versioning-clarification)
+- [35. Expression schema alignment:](#35-expression-schema-alignment)
 
 ## 1. ID MS API contract:
 
@@ -1563,52 +1557,7 @@ Trace data must not include secrets or sensitive token contents.
 **ID MS must log and propagate correlation context, emit structured operational telemetry, and audit technical/governance-changing operations.
 Business and user authorisation audit remains with OEX, while ID MS audit focuses on specification creation, update, activation, retirement, deletion, hub subscription changes, technical validation failures, ETag and If-Match integrity decisions, immutable-resource enforcement, and dependency failure signals.**
 
-## 28. ID MS consistency sweep:
-
-### 28.1 Sweep date:
-
-2026-05-15
-
-### 28.2 Overall result:
-
-**PASS WITH NOTES**
-
-### 28.3 Checks:
-
-| **Area** | **Result** | **Notes** |
-|---|---|---|
-| Service naming | PASS | Uses Intent Definition MS, ID MS, and `intent-definition-ms` |
-| Lifecycle states | PASS | Uses `DRAFT`, `ACTIVE`, `RETIRED`; no `DELETED` lifecycle state |
-| Status-change event payload | PASS | Uses current `intentSpecification.lifecycleStatus` snapshot; no separate previous and new lifecycle fields in external event payload |
-| GET-only caching | PASS | Caching is scoped to GET responses only |
-| No GET ETag revalidation | PASS | `If-None-Match` and `304 Not Modified` are not baselined |
-| ETag unsafe concurrency | PASS | ETag is positioned for `If-Match` unsafe operation concurrency |
-| Dependency-specific circuit breakers | PASS | DB, cache, and webhook behaviours are present |
-| Security boundary | PASS | NGW authentication and OEX authorisation boundary preserved |
-| Eventing boundary | PASS | External `IntentSpecification` event family and boundary are present |
-| Persistence baseline | PASS | PostgreSQL-compatible RDBMS, JSONB, and outbox persistence are present |
-| Boundary exclusions | PASS | ID MS does not own runtime fulfilment concerns |
-| Platform extensions | PASS | `PUT`, domain-scoped hub, `specKey`, `_links`, ETag and If-Match, and caching are documented |
-
-### 28.4 Notes requiring attention:
-
-- Examples use `/intentManagement/v5`.
-- Domain-scoped `/intentSpecification/hub` route is intentional; strict TMF generic `/hub` exposure can be handled by NGW and API gateway routing when required.
-- `GET /intentSpecification/hub/{id}` is an approved platform extension for subscription retrieval.
-- `PUT` full replacement is an intentional platform extension.
-- `PATCH` remains supported for TMF compatibility, but is discouraged generally.
-- External `IntentSpecificationCreateEvent`, `IntentSpecificationAttributeValueChangeEvent`, `IntentSpecificationStatusChangeEvent`, and `IntentSpecificationDeleteEvent` envelopes should populate both `eventTime` and `timeOccurred` with the same canonical occurrence timestamp.
-- `targetEntitySchema` is retained as the governed runtime expression-value schema reference.
-- `specKey` is retained for spec-key version governance.
-
-### 28.5 Final consistency position:
-
-The ID MS design brief is internally consistent for the current baseline.
-The design keeps ID MS focused on definition-time `IntentSpecification` resource ownership, lifecycle and version governance, syntax and resource shape validation, ETag and If-Match concurrency, GET-only caching, external `IntentSpecification` webhook notification delivery, PostgreSQL-compatible persistence, and technical observability/audit.
-ID MS does not own semantic validation, policy validation, candidate and resource feasibility, optimisation, runtime assurance, telemetry, or callback ingestion.
-
-
-## 29. Optional IntentSpecification behaviour metadata:
+## 28. Optional IntentSpecification behaviour metadata:
 
 `intentBehaviour` and `intentLayer` are optional classification metadata fields on `IntentSpecification`. Refer to the ID MS specification for the full `intentBehaviour` and `intentLayer` definition, allowed values, and constraints.
 
@@ -1618,22 +1567,22 @@ If omitted, ID MS does not infer or default these values unless an explicit plat
 
 These fields do not replace `expressionSpecification.iri`, `targetEntitySchema`, `specCharacteristic`, or request-specific `serviceType`, `serviceClass`, `priority`, targets, constraints, and preferences inside the governed expression schema.
 
-## 30. specKey lineage note:
+## 29. specKey lineage note:
 
 `specKey` represents logical grouping across specification versions. If only `RETIRED` versions exist for a `specKey`, ID MS creates a new `id` by default. Lineage reuse of retired specifications is not assumed and requires explicit governance if introduced later.
 
 
-## 31. draftId provenance lookup rule:
+## 30. draftId provenance lookup rule:
 
 Before activation, `GET /intentSpecification/draft/{draftId}` returns the mutable DRAFT candidate. After activation, the same GET route remains valid as a read-only provenance lookup for the official `IntentSpecification` version produced from that DRAFT candidate.
 
 For produced official versions, the response must show the official `id`, official `version`, carried-forward `draftId`, and lifecycle status. DRAFT mutation links must not be returned after activation. Runtime Intent admission must still reference a concrete ACTIVE `IntentSpecification.id`; `draftId` must not be used for runtime contract selection.
 
-## 32. Runtime admission guardrail:
+## 31. Runtime admission guardrail:
 
 Runtime Intent admission must reference a concrete ACTIVE `IntentSpecification.id`. `specKey` and `draftId` must not be used for runtime contract selection. DRAFT candidates and RETIRED specifications must not be used for new runtime Intent admission.
 
-## 33. Callback URL baseline:
+## 32. Callback URL baseline:
 
 Callback URLs are subscriber-owned listener endpoints.
 Do not imply TM Forum owns subscriber callback URLs. Callback URLs are subscriber-owned, while notification payloads follow TMF-aligned event patterns.
@@ -1644,7 +1593,7 @@ https://consumer.example.com/listener/intentSpecification/events
 ```
 
 
-## 34. PATCH semantics:
+## 33. PATCH semantics:
 
 `PATCH` uses JSON Merge Patch semantics across the service's external REST API.
 
@@ -1658,7 +1607,7 @@ Content-Type: application/merge-patch+json
 
 
 
-## 35. IntentSpecification versioning clarification:
+## 34. IntentSpecification versioning clarification:
 
 `IntentSpecification.version` is a design-time contract version and is separate from runtime `Intent.version`.
 
@@ -1674,7 +1623,7 @@ Baseline:
 
 
 
-## 36. Expression schema alignment:
+## 35. Expression schema alignment:
 
 Intent domain expression schemas should align with the TMF Intent Ontology direction and use a scalable JSON-LD-style structure.
 
