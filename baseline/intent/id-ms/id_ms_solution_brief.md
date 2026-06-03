@@ -297,7 +297,7 @@ Baseline:
 - `specKey` is mandatory on create and is used by ID MS to resolve the stable server-assigned `IntentSpecification.id`.
 - ID MS assigns a new `draftId` for each mutable DRAFT candidate.
 - Before activation, DRAFT candidate retrieval, update, activation, and deletion use `/intentSpecification/draft/{draftId}`. After activation, GET by `draftId` remains available as read-only provenance lookup for the produced official version.
-- Material change after activation requires a new mutable DRAFT candidate.
+- Material change after activation to a spec requires a new mutable DRAFT candidate,that end as another active version.
 - `ACTIVE` and `RETIRED` specifications are immutable for material contract changes.
 - Runtime `Intent.version` and `IntentSpecification.version` are separate concepts.
 
