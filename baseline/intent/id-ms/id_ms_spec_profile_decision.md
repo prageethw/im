@@ -154,7 +154,7 @@ A DRAFT creation request should be lightweight. It only needs enough information
 | `@schemaLocation` | Optional | Useful where a concrete resource representation schema is published. |
 | `schemaHash` inside `targetEntitySchema` | Optional | Useful for schema integrity checking where schema governance supports it. |
 
-DRAFT candidates do not expose or guarantee any official version identifier. Any version indicator during authoring is non-authoritative. DRAFT authoring changes are protected by ETag-based optimistic concurrency; the entity tag is not a business version and must not be treated as the official `IntentSpecification.version`.
+DRAFT candidates do not expose or guarantee any official version identifier. Any version indicator during authoring is non-authoritative. ETag is used only as an optimistic concurrency token for unsafe DRAFT operations; it is not a business version and must not be treated as the official `IntentSpecification.version`.
 
 ## 6. Consumer-submitted ACTIVE publication profile:
 

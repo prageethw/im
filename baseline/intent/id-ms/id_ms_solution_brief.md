@@ -289,7 +289,7 @@ Content-Type: application/merge-patch+json
 
 `IntentSpecification.version` is a design-time contract version and is separate from runtime `Intent.version`.
 
-A mutable DRAFT `IntentSpecification` candidate does not expose an official public `version`. DRAFT authoring changes are protected by ETag-based optimistic concurrency, but `ETag` is not a business version and must not be treated as the official `IntentSpecification.version`. Any version indicator during draft authoring is non-authoritative and must not be relied on. ID MS assigns the official design-time contract `version` only when the selected DRAFT candidate is activated.
+A mutable DRAFT `IntentSpecification` candidate does not expose an official public `version`. ETag is used only as an optimistic concurrency token for unsafe DRAFT operations; it is not a business version and must not be treated as the official `IntentSpecification.version`. Any version indicator during draft authoring is non-authoritative and must not be relied on. ID MS assigns the official design-time contract `version` only when the selected DRAFT candidate is activated.
 
 Baseline:
 
@@ -616,9 +616,11 @@ ID MS may also invalidate or refresh affected cache entries on write paths or li
 }
 ```
 
-Activation emits two `IntentSpecificationStatusChangeEvent` events:
+Activation emits `IntentSpecificationStatusChangeEvent` for lifecycle transitions:
   - one for the newly activated specification version with `lifecycleStatus: ACTIVE`;
-  - one for the previous active specification version with `lifecycleStatus: RETIRED`.
+  - one for the previous active specification version with `lifecycleStatus: RETIRED`, when a previous active version exists.
+
+Creating or editing a DRAFT candidate does not emit `IntentSpecificationStatusChangeEvent`. DRAFT creation may emit `IntentSpecificationCreateEvent`, and DRAFT attribute changes may emit `IntentSpecificationAttributeValueChangeEvent` where subscribed.
 
 ### 25.8 Delete behaviour:
 

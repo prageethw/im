@@ -369,7 +369,7 @@ Notes:
 - Response returns the created DRAFT candidate representation.
 - Response includes server-assigned `draftId`, DRAFT `href`, `Location`, `ETag`, and `_links`.
 - `Location` points to `/intentSpecification/draft/{draftId}`.
-- DRAFT authoring changes are protected by ETag-based optimistic concurrency; `ETag` is not a business version.
+- ETag is used only as an optimistic concurrency token for unsafe DRAFT operations; it is not a business version.
 - Official `version` is assigned only when the selected DRAFT candidate is activated.
 
 ## 11. Retrieve IntentSpecification:
@@ -550,9 +550,10 @@ Rules:
 - Missing `If-Match` returns `428`.
 - Stale or mismatched `If-Match` returns `412`.
 - Invalid lifecycle transition returns `409 Conflict`.
-- Activation emits two `IntentSpecificationStatusChangeEvent` events:
+- Activation emits `IntentSpecificationStatusChangeEvent` for lifecycle transitions:
   - one event carrying the new version snapshot with `lifecycleStatus: ACTIVE`
-  - one event carrying the previous active version snapshot with `lifecycleStatus: RETIRED`
+  - one event carrying the previous active version snapshot with `lifecycleStatus: RETIRED`, when a previous active version exists
+- Creating or editing a DRAFT candidate does not emit `IntentSpecificationStatusChangeEvent`. DRAFT creation may emit `IntentSpecificationCreateEvent`, and DRAFT attribute changes may emit `IntentSpecificationAttributeValueChangeEvent` where subscribed.
 
 
 
@@ -1659,11 +1660,11 @@ Content-Type: application/merge-patch+json
 
 `IntentSpecification.version` is a design-time contract version and is separate from runtime `Intent.version`.
 
-DRAFT `IntentSpecification` candidates do not expose an official public `version`. DRAFT authoring changes are protected by ETag-based optimistic concurrency. ETag is not a business version. Any version indicator during draft authoring is non-authoritative and must not be relied on. DRAFT candidates do not expose or guarantee any version identifier.
+DRAFT `IntentSpecification` candidates do not expose an official public `version`. ETag is used only as an optimistic concurrency token for unsafe DRAFT operations and is not a business version. Any version indicator during draft authoring is non-authoritative and must not be relied on. DRAFT candidates do not expose or guarantee any version identifier.
 
 Baseline:
 
-- DRAFT candidates do not expose an official public `version`; DRAFT authoring changes are protected by ETag-based optimistic concurrency.
+- DRAFT candidates do not expose an official public `version`. ETag is used only as an optimistic concurrency token for unsafe DRAFT operations.
 - Material change after activation requires a new Draft `IntentSpecification` version.
 - `ACTIVE` and `RETIRED` specifications are immutable for material contract changes.
 - `specKey` is mandatory on create and is used by ID MS to resolve the stable server-assigned `IntentSpecification.id`.

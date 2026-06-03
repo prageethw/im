@@ -210,7 +210,7 @@ Baseline rules:
 - The caller must provide `specKey` on create and must not provide `id`, `draftId`, `version`, `href`, `lifecycleStatus`, server timestamps, or `_links`.
 - ID MS resolves the stable server-assigned `IntentSpecification.id` from `specKey` when the DRAFT candidate is created. The server-assigned `id` must not be assumed to equal `specKey`. If a current ACTIVE specification exists for the same `specKey`, the DRAFT candidate is assigned to that existing `id`; otherwise ID MS creates a new `id`. If only RETIRED versions exist for the same `specKey`, ID MS creates a new `id` unless governed lineage reuse is explicitly introduced later.
 - ID MS assigns a new `draftId` for each mutable DRAFT candidate. Before activation, DRAFT candidate retrieval, update, activation, and deletion use `/intentSpecification/draft/{draftId}`. After activation, `GET /intentSpecification/draft/{draftId}` remains valid as a read-only provenance lookup for the official version produced from that DRAFT candidate.
-- DRAFT candidates do not expose an official public `version`; DRAFT authoring changes are protected by ETag-based optimistic concurrency.
+- DRAFT candidates do not expose an official public `version`. ETag is used only as an optimistic concurrency token for unsafe DRAFT operations.
 - DRAFT candidates do not expose or guarantee any version identifier. Any version indicator during authoring is non-authoritative.
 - When a DRAFT candidate is activated, ID MS assigns the official `version`, carries the selected `draftId` forward as provenance, and transactionally retires the previous ACTIVE version for the same resolved `id`.
 - `ACTIVE` and `RETIRED` `IntentSpecification` resources are immutable for material contract changes.
@@ -532,7 +532,7 @@ Cache-Control: no-store
 
 ## 5. Create IntentSpecification:
 
-`POST /intentSpecification` creates a mutable DRAFT candidate only. The request must include `specKey`; ID MS resolves the stable server-assigned `IntentSpecification.id` from `specKey` and assigns a new `draftId`. The DRAFT candidate has no official public `version`; DRAFT authoring changes are protected by the returned `ETag` as an optimistic concurrency token. The returned `ETag` is not a business version and must not be treated as the official `IntentSpecification.version`. Any version indicator during draft authoring is non-authoritative and must not be relied on. DRAFT candidates do not expose or guarantee any version identifier.
+`POST /intentSpecification` creates a mutable DRAFT candidate only. The request must include `specKey`; ID MS resolves the stable server-assigned `IntentSpecification.id` from `specKey` and assigns a new `draftId`. The DRAFT candidate has no official public `version`. ETag is used only as an optimistic concurrency token for unsafe DRAFT operations; it is not a business version and must not be treated as the official `IntentSpecification.version`. Any version indicator during draft authoring is non-authoritative and must not be relied on. DRAFT candidates do not expose or guarantee any version identifier.
 
 ### 5.1 Request:
 
@@ -1734,10 +1734,12 @@ Activation full response body example:
 
 ### 11.5 Events emitted by activation:
 
-Activation emits two `IntentSpecificationStatusChangeEvent` events:
+Activation emits `IntentSpecificationStatusChangeEvent` for lifecycle transitions:
 
 1. One event for the newly activated version, with the emitted `intentSpecification.lifecycleStatus` set to `ACTIVE`.
-2. One event for the previous active version in the same `specKey`, with the emitted `intentSpecification.lifecycleStatus` set to `RETIRED`.
+2. One event for the previous active version in the same `specKey`, with the emitted `intentSpecification.lifecycleStatus` set to `RETIRED`, when a previous active version exists.
+
+Creating or editing a DRAFT candidate does not emit `IntentSpecificationStatusChangeEvent`. DRAFT creation may emit `IntentSpecificationCreateEvent`, and DRAFT attribute changes may emit `IntentSpecificationAttributeValueChangeEvent` where subscribed.
 
 The status-change event type identifies that the lifecycle status changed. The event body carries the current `IntentSpecification` resource snapshot and does not carry separate `previousLifecycleStatus` or `newLifecycleStatus` fields.
 
@@ -2064,10 +2066,12 @@ Event resource snapshots should carry consistent resource metadata:
 
 Status-change events carry the current `intentSpecification.lifecycleStatus` snapshot. They do not carry separate `previousLifecycleStatus` or `newLifecycleStatus` fields.
 
-Activation emits two `IntentSpecificationStatusChangeEvent` events:
+Activation emits `IntentSpecificationStatusChangeEvent` for lifecycle transitions:
 
 - one for the newly activated version, with `intentSpecification.lifecycleStatus` set to `ACTIVE`
-- one for the previous active version, with `intentSpecification.lifecycleStatus` set to `RETIRED`
+- one for the previous active version, with `intentSpecification.lifecycleStatus` set to `RETIRED`, when a previous active version exists
+
+Creating or editing a DRAFT candidate does not emit `IntentSpecificationStatusChangeEvent`. DRAFT creation may emit `IntentSpecificationCreateEvent`, and DRAFT attribute changes may emit `IntentSpecificationAttributeValueChangeEvent` where subscribed.
 
 Delete events are emitted only after successful delete and show the last known lifecycle state as `DRAFT`. Delete events must not use `DELETED`.
 

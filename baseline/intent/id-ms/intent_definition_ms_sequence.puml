@@ -124,6 +124,7 @@ note over Client, IDMS
   Activation is represented as lifecycleStatus change.
   Service does not expose POST .../intentSpecification/{id}/activate.
   Active lifecycle values are DRAFT, ACTIVE, and RETIRED.
+  Creating or editing a DRAFT candidate does not emit IntentSpecificationStatusChangeEvent.
   DELETED is not an IntentSpecification lifecycleStatus.
 end note
 Client -> GW : PUT or PATCH /intentManagement/v5/intentSpecification/draft/{draftId}\nIf-Match: "<draft-etag>"\n{ lifecycleStatus: "ACTIVE" }
@@ -137,9 +138,12 @@ else Stale or mismatched ETag:
 else If-Match valid:
   group Atomic DB transaction:
     IDMS -> CAT : Set target spec lifecycleStatus = ACTIVE
-    IDMS -> CAT : Find previous ACTIVE spec with same specKey and set RETIRED
+    IDMS -> CAT : Find previous ACTIVE spec with same specKey
     IDMS -> OUTBOX : Write IntentSpecificationStatusChangeEvent\n{ lifecycleStatus: ACTIVE }
-    IDMS -> OUTBOX : Write IntentSpecificationStatusChangeEvent\n{ lifecycleStatus: RETIRED, previousSpecId }
+    opt Previous ACTIVE specification exists:
+      IDMS -> CAT : Set previous ACTIVE spec lifecycleStatus = RETIRED
+      IDMS -> OUTBOX : Write IntentSpecificationStatusChangeEvent\n{ lifecycleStatus: RETIRED, previousSpecId }
+    end
   end
   IDMS --> GW : 200 OK\nETag + TMF-compliant IntentSpecification
   GW --> Client : 200 OK\nETag + TMF-compliant IntentSpecification
@@ -147,14 +151,16 @@ end
 
 |||
 DISPATCHER -> OUTBOX : Poll for PENDING status-change events
-OUTBOX --> DISPATCHER : [StatusChange(ACTIVE), StatusChange(RETIRED)]
+OUTBOX --> DISPATCHER : StatusChange(ACTIVE) and optional StatusChange(RETIRED)
 DISPATCHER -> SUBREG : Lookup matching subscriptions
 SUBREG --> DISPATCHER : [{ callbackUrl }]
 DISPATCHER -> SUB : HTTPS POST to subscriber-owned callbackUrl\nTMF-aligned IntentSpecificationStatusChangeEvent\n{ lifecycleStatus: "ACTIVE" }
 SUB --> DISPATCHER : 204 No Content
-DISPATCHER -> SUB : HTTPS POST to subscriber-owned callbackUrl\nTMF-aligned IntentSpecificationStatusChangeEvent\n{ lifecycleStatus: "RETIRED", id: previousSpecId }
-SUB --> DISPATCHER : 204 No Content
-DISPATCHER -> OUTBOX : Mark both events DELIVERED
+opt Previous ACTIVE specification was retired:
+  DISPATCHER -> SUB : HTTPS POST to subscriber-owned callbackUrl\nTMF-aligned IntentSpecificationStatusChangeEvent\n{ lifecycleStatus: "RETIRED", id: previousSpecId }
+  SUB --> DISPATCHER : 204 No Content
+end
+DISPATCHER -> OUTBOX : Mark delivered events DELIVERED
 
 == 5. Delete Unused Draft IntentSpecification: ==
 note over Client, IDMS
