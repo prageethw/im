@@ -116,11 +116,11 @@ II MS expects the admitted event to carry the admission context selected by IC M
 | Field | II MS usage |
 |---|---|
 | `intentSpecification.id` | Active specification selected by IC MS for syntactic admission, governance, and traceability. |
-| `expression.iri` | Semantic/expression contract identifier admitted by IC MS and checked against the selected specification. |
+| `expression.iri` | Semantic expression contract identifier admitted by IC MS and checked against the selected specification. |
 
 II MS must treat these as carried-forward admission facts. It must not re-resolve the governing `IntentSpecification` by IRI alone.
 
-II MS expects the admitted expression to preserve the canonical ID/IC semantic grouping:
+II MS expects the admitted expression to preserve the canonical ID & IC semantic grouping:
 
 ```text
 expression.context.targets
