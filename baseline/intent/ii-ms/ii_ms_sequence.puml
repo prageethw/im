@@ -166,11 +166,9 @@ else not yet processed
         == 11. Optimisation-Backed Selection and Service-Ready Preparation ==
 
         note over IIMS,OPT
-          IntentResolvedEvent is optional and is not the
-          optimiser trigger. When optimisation-backed
-          selection is required, II MS submits the resolved
-          candidate context directly to the Optimiser platform
-          using POST /optimisation through its API outbox.
+          For optimisation-backed selection, II MS submits the
+          resolved candidate context directly to the Optimiser
+          platform using POST /optimisation through its API outbox.
           II MS registers or supplies the ICB callback URL.
           Optimiser owns selection logic and returns the
           governed selected configuration as a request to ICB.
@@ -179,11 +177,8 @@ else not yet processed
 
         IIMS -> OPT : POST /optimisation\n{ body.expression.context, candidate resources,\n targets, constraints, preferences, correlation,\n ICB callback URL }
         OPT -> ICB : POST /intent-callback/v1/submissions\nOptimisationStatusChangeEventRequest { selectedConfiguration }
-        ICB -> KAFKA : publish OptimisationStatusChangeEvent
-with CloudEvents headers
-{ ce-type, ce-source, ce-subject }
-        IIMS -> KAFKA : consume OptimisationStatusChangeEvent
-with CloudEvents headers
+        ICB -> KAFKA : publish OptimisationStatusChangeEvent\nwith CloudEvents headers { ce-type, ce-source, ce-subject }
+        IIMS -> KAFKA : consume OptimisationStatusChangeEvent\nwith CloudEvents headers
         IIMS -> IIMS : correlate + persist optimiser outcome idempotently\nthen package selected configuration into IntentNetworkReadyEvent
 
         group Atomic DB transaction
@@ -197,14 +192,11 @@ with CloudEvents headers
 
         == 12. Downstream Consumers Continue Workflow ==
 
-        ICMS -> KAFKA : consume IntentNetworkReadyEvent
-(optional progress projection)
+        ICMS -> KAFKA : consume IntentNetworkReadyEvent\n(optional progress projection)
         OBS -> KAFKA : optionally observe workflow events
         note over IIMS,KAFKA
-          IntentResolvedEvent is retained as an optional
-          semantic milestone for audit, observability, replay,
-          and future consumers. It is not required for the
-          happy-path optimisation invocation.
+          IntentResolvedEvent is retained as an optional semantic
+          milestone for audit, observability, replay, and future consumers.
         end note
       end
     end
