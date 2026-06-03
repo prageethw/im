@@ -110,7 +110,7 @@ The primary ID MS process flows are:
 7. Create, retrieve, and delete external event subscriptions.
 8. Deliver external `IntentSpecification` event notifications by REST webhook callback after successful resource changes.
 
-Activation is a lifecycle update on the resource, not a custom action endpoint. The service must not expose `POST /intentManagement/v5/intentSpecification/{id}/activate`. Strict TMF-compatible clients may use `PATCH`; the preferred platform extension is `PUT` when the caller submits the full resource representation.
+Draft activation is performed through the DRAFT-candidate resource route. Strict TMF-compatible clients may use `PATCH /intentManagement/v5/intentSpecification/draft/{draftId}` with a small lifecycle update body. The preferred platform extension is `PUT /intentManagement/v5/intentSpecification/draft/{draftId}` when the caller submits the full DRAFT candidate representation. ID MS does not expose a separate custom action endpoint such as `POST /intentManagement/v5/intentSpecification/{id}/activate`.
 
 ## 4. Solution Elaboration:
 

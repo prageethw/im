@@ -364,7 +364,7 @@ Last-Modified: Sat, 18 Apr 2026 02:00:00 GMT
 
 Notes:
 
-- Create a mutable `DRAFT` candidate, not an official public version.
+- Create creates a mutable `DRAFT` candidate, not an official public version.
 - ID MS resolves server-assigned `id` from `specKey` and assigns `draftId`; `id` must not be assumed to equal `specKey`.
 - Response returns the created DRAFT candidate representation.
 - Response includes server-assigned `draftId`, DRAFT `href`, `Location`, `ETag`, and `_links`.
@@ -529,16 +529,18 @@ Rules:
 
 ## 17. Activate IntentSpecification:
 
-Activation is a lifecycle update, not a custom action endpoint.
+A DRAFT `IntentSpecification` candidate is activated through the DRAFT-candidate resource route. Activation is a governed lifecycle update from `DRAFT` to `ACTIVE`.
 
-Do not expose:
+Supported activation options:
 
-```http
-POST /intentManagement/v5/intentSpecification/{id}/activate
-```
+| **Option** | **Route** | **Use** |
+|---|---|---|
+| TMF-compatible partial lifecycle update | `PATCH /intentManagement/v5/intentSpecification/draft/{draftId}` | Activate a DRAFT candidate with a small JSON Merge Patch body such as `{ "lifecycleStatus": "ACTIVE" }`. |
+| Preferred platform full replacement | `PUT /intentManagement/v5/intentSpecification/draft/{draftId}` | Submit the complete DRAFT candidate representation and set `lifecycleStatus` to `ACTIVE` as a governed activation instruction. |
 
-Use `PATCH /intentManagement/v5/intentSpecification/draft/{draftId}` for TMF-compatible partial-update semantics on the platform-extension DRAFT-candidate route, or `PUT /intentManagement/v5/intentSpecification/draft/{draftId}` as the preferred platform extension when the caller sends the full DRAFT candidate representation. When a PUT body includes `lifecycleStatus: ACTIVE`, ID MS treats it as a governed activation instruction, not as free-form mutation of a server-managed field.
-Although `PATCH` is discouraged as a general update method, it is acceptable for this tightly controlled TMF-compatible lifecycle transition.
+Both activation options require `If-Match`. `PATCH` remains discouraged for general editing, but is acceptable for this tightly controlled lifecycle update. `PUT` is preferred where the caller sends the complete DRAFT candidate representation.
+
+ID MS does not expose a separate custom action endpoint such as `POST /intentManagement/v5/intentSpecification/{id}/activate`; activation remains part of the governed DRAFT-candidate resource update model.
 
 Rules:
 

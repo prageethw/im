@@ -1581,27 +1581,18 @@ Cache-Control: no-store
 
 ## 11. Activate IntentSpecification through lifecycle update:
 
-Activation is not exposed through a custom action endpoint. Do not use:
+A DRAFT `IntentSpecification` candidate is activated through the DRAFT-candidate resource route. Activation is a governed lifecycle update from `DRAFT` to `ACTIVE`.
 
-```http
-POST /intentManagement/v5/intentSpecification/{id}/activate  (not exposed)
-```
+Supported activation options:
 
-Use the existing resource update endpoint instead.
+| **Option** | **Route** | **Use** |
+|---|---|---|
+| TMF-compatible partial lifecycle update | `PATCH /intentManagement/v5/intentSpecification/draft/{draftId}` | Activate a DRAFT candidate with a small JSON Merge Patch body such as `{ "lifecycleStatus": "ACTIVE" }`. |
+| Preferred platform full replacement | `PUT /intentManagement/v5/intentSpecification/draft/{draftId}` | Submit the complete DRAFT candidate representation and set `lifecycleStatus` to `ACTIVE` as a governed activation instruction. |
 
-For TMF-compatible partial-update semantics on the platform-extension DRAFT-candidate route, use:
+Both activation options require `If-Match`. `PATCH` remains discouraged for general editing, but is acceptable for this tightly controlled lifecycle update. `PUT` is preferred where the caller sends the complete DRAFT candidate representation.
 
-```http
-PATCH /intentManagement/v5/intentSpecification/draft/{draftId}
-```
-
-For the preferred platform extension where the caller sends the full resource representation, use:
-
-```http
-PUT /intentManagement/v5/intentSpecification/draft/{draftId}
-```
-
-Although `PATCH` is discouraged as a general update method, this is an acceptable tightly controlled TMF-compatible case because activation is a small lifecycle-status update.
+ID MS does not expose a separate custom action endpoint such as `POST /intentManagement/v5/intentSpecification/{id}/activate`; activation remains part of the governed DRAFT-candidate resource update model.
 
 ### 11.1 PATCH activation request:
 
@@ -2448,7 +2439,7 @@ PUT /intentManagement/v5/intentSpecification/draft/{draftId}
 
 as a platform extension when performing deterministic full replacement.
 
-Do not expose custom lifecycle action endpoints such as:
+Activation is performed through the DRAFT-candidate update route. Do not add a separate custom lifecycle action endpoint such as:
 
 ```http
 POST /intentManagement/v5/intentSpecification/{id}/activate  (not exposed)
