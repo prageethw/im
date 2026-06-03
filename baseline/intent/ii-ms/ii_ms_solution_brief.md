@@ -1,12 +1,10 @@
-# Intent Intelligence MS Solution Brief
+# Intent Intelligence MS Solution Brief:
 
 | **Document status** | **Value** |
 | --- | --- |
 | Status | Current baseline |
 | Scope | Intent Intelligence MS solution brief |
 | Source of truth after commit | GitHub `baseline/intent/ii-ms/ii_ms_solution_brief.md` |
-
-The hospital surgical slice examples in this document are example use cases only. They do not limit the II MS baseline to a single service domain, location model, service class, resource profile, optimiser profile, or deployment pattern.
 
 ## Table of contents:
 
@@ -25,7 +23,7 @@ The hospital surgical slice examples in this document are example use cases only
 - [10. Field specification:](#10-field-specification)
 - [11. Fields not accepted:](#11-fields-not-accepted)
 - [12. Authorisation:](#12-authorisation)
-- [13. Persistence / state / outbox model:](#13-persistence-state-outbox-model)
+- [13. Persistence, state, and outbox model:](#13-persistence-state-and-outbox-model)
 - [14. Internal Kafka publication:](#14-internal-kafka-publication)
 - [15. Internal Kafka topics:](#15-internal-kafka-topics)
 - [16. Event identity:](#16-event-identity)
@@ -56,12 +54,12 @@ II MS is not an external TMF-compliant API service. It does not expose runtime I
 Its responsibility is to convert a syntactically accepted runtime intent into one of the following internal outcomes:
 
 - `IntentRejectedEvent` when the admitted intent cannot be semantically, policy, or capability resolved.
-- `IntentResolvedEvent` as an optional observability and audit milestone when the admitted intent has been semantically resolved into a canonical intent context and a full, valid candidate resource set. 
+- `IntentResolvedEvent` when the admitted intent has been semantically resolved into a canonical intent context and a full, valid candidate resource set for downstream optimisation or fulfilment consideration.
 - `IntentNetworkReadyEvent` when II MS has prepared the concrete service configuration needed for change execution and assurance observation.
 
-`IntentResolvedEvent` and `IntentNetworkReadyEvent` are intentionally different milestones. `IntentResolvedEvent` is the candidate-level semantic-resolution handoff. `IntentNetworkReadyEvent` is the service-ready preparation handoff to IA MS and means the service configuration/resource set has been prepared for change execution and assurance observation. It does not mean the network application has succeeded. IntentNetworkReadyEvent may be emitted only after II MS has received or derived a governed selected configuration from the authorised downstream selection or optimisation path. II MS does not own the optimisation algorithm or optimiser backend. II MS owns packaging the selected configuration into the service-ready event for IA MS.
+`IntentResolvedEvent` and `IntentNetworkReadyEvent` are intentionally different milestones. `IntentResolvedEvent` is the candidate-level semantic-resolution handoff. `IntentNetworkReadyEvent` is the service-ready preparation handoff to IA MS and means the service configuration and resource set has been prepared for change execution and assurance observation. It does not mean the network application has succeeded. IntentNetworkReadyEvent may be emitted only after II MS has received or derived a governed selected configuration from the authorised downstream selection or optimisation path. II MS does not own the optimisation algorithm or optimiser backend. II MS owns packaging the selected configuration into the service-ready event for IA MS.
 
-For optimisation-backed selection, II MS uses the approved Optimiser platform integration pattern: `POST /optimisation` for the governed REST request, with the ICB-owned callback submission URL, `POST /intent-callback/v1/submissions`, registered or supplied as the optimiser outcome target. The optimisation request focuses on the optimisation problem and candidate resources. The Optimiser platform sends `OptimisationStatusChangeEventRequest` to ICB MS with the selected best-match resources. ICB MS ingests the callback and publishes `OptimisationStatusChangeEvent` to Kafka for II MS consumption. The Optimiser platform owns optimisation execution, selection logic, solver models, and optimiser lifecycle. II MS owns submitting the governed request, correlating the Kafka-delivered optimiser outcome, deriving observer configuration from KP or governed configuration, and packaging the service-ready configuration into `IntentNetworkReadyEvent` for IA MS.
+For optimisation-backed selection, II MS uses the approved Optimiser platform integration pattern: `POST /optimisation` for the governed REST request, with the ICB-owned callback submission URL, `POST /intent-callback/v1/submissions`, registered or supplied as the optimiser outcome target. The Optimiser platform sends `OptimisationStatusChangeEvent` to ICB MS. ICB MS ingests the callback and publishes `OptimisationStatusChangeEvent` to Kafka for II MS consumption. The Optimiser platform owns optimisation execution, selection logic, solver models, and optimiser lifecycle. II MS owns submitting the governed request, correlating the Kafka-delivered optimiser outcome, and packaging that selected configuration into `IntentNetworkReadyEvent` for IA MS.
 
 ## 2. Logical View:
 
@@ -79,12 +77,11 @@ Logical responsibilities:
 |---|---|
 | Runtime input | Consume `IntentValidatedEvent` from the internal event backbone. |
 | Semantic interpretation | Interpret the admitted `expression.context` model. |
-| Knowledge Plane validation | Resolve and validate location, service type, service class, targets, constraints, preferences, policy, and capability context using KP and approved external pre-resolution validation sources where required. |
-| Suitability and proceedability validation | Decide whether the admitted intent has enough trusted semantic, policy, capability, availability, freshness, and pre-resolution facts to proceed safely. If KP or approved validation sources show the intent is unsupported, contradictory, unsafe, unavailable, stale, or insufficiently validated, II MS emits `IntentRejectedEvent` or records a governed processing failure instead of proceeding to candidate discovery or optimisation. |
+| Knowledge Plane validation | Resolve and validate location, service type, service class, targets, constraints, preferences, policy, and capability context. |
 | Canonicalisation | Preserve and normalise canonical semantic buckets: `targets`, `constraints`, and `preferences`. |
-| Candidate discovery | Resolve the full valid candidate resource set known for the resolved context after scope & policy filtering. |
+| Candidate discovery | Resolve the full valid candidate resource set known for the resolved context after scope and policy filtering. |
 | Rejection decision | Emit `IntentRejectedEvent` for semantic, policy, capability, or processing rejection. |
-| Resolution observability milestone | Optionally emit `IntentResolvedEvent` after candidate-level semantic resolution for observability, audit, replay, or future consumers. |
+| Resolution handoff | Emit `IntentResolvedEvent` for candidate-level semantic resolution. |
 | Service-ready handoff | Emit `IntentNetworkReadyEvent` when service configuration is prepared for change execution and assurance observation. |
 | Reliability | Use idempotent consumption and outbox-backed publication. |
 | Audit | Persist the semantic decision trail where required. |
@@ -104,9 +101,8 @@ Logical responsibilities:
 9. It records the semantic decision and writes the output event to the II outbox.
 10. The II outbox relay publishes the event to the internal event backbone.
 11. For optimisation-backed selection, II MS submits `POST /optimisation` and registers or supplies the ICB-owned callback submission URL, `POST /intent-callback/v1/submissions`.
-12. ICB MS ingests the external optimiser callback request and publishes `OptimisationStatusChangeEvent` to Kafka.
-13. II MS consumes and correlates the Kafka-delivered `OptimisationStatusChangeEvent`.
-14. II MS derives observer configuration from KP or governed configuration before emitting `IntentNetworkReadyEvent`.
+12. ICB MS ingests the external optimiser callback and publishes `OptimisationStatusChangeEvent` to Kafka.
+13. II MS consumes and correlates the Kafka-delivered `OptimisationStatusChangeEvent` before emitting `IntentNetworkReadyEvent`.
 14. Consumers continue the workflow according to the milestone event emitted.
 
 ## 4. Solution Elaboration:
@@ -129,13 +125,13 @@ II MS must not flatten these buckets into unrelated top-level fields. Keeping th
 
 ### 4.1. Required pre-resolution validation:
 
-The hospital surgical slice example use case mainly uses Knowledge Plane data and optimiser-related references, but II MS is not limited to Knowledge Plane and optimiser integration. Different intent domains may require II MS to perform additional pre-resolution validation before it can resolve an admitted intent accurately and meet the intent safely. This validation may consult approved T7 platform services, inventory systems, policy services, topology sources, catalogue services, capacity sources, fulfilment systems, or other governed domain sources.
+The hospital surgical slice baseline mainly uses Knowledge Plane data and optimiser-related references, but II MS is not limited to Knowledge Plane and optimiser integration. Different intent domains may require II MS to perform additional pre-resolution validation before it can resolve an admitted intent accurately and meet the intent safely. This validation may consult approved T7 platform services, inventory systems, policy services, topology sources, catalogue services, capacity sources, fulfilment systems, or other governed domain sources.
 
 Those systems provide facts for semantic interpretation, capability validation, policy validation, candidate discovery, or service-ready preparation. They do not own the external `Intent` lifecycle, and they do not change the II MS event ownership model. II MS still curates the resolved facts and emits `IntentRejectedEvent`, `IntentResolvedEvent`, or `IntentNetworkReadyEvent` according to the same contract rules.
 
 II MS must not dump raw source-system responses into events. Only validated, normalised, and next-stage-relevant facts should be carried forward in the canonical `targets`, `constraints`, `preferences`, `resources`, and `serviceConfiguration` structures.
 
-The hospital surgical slice is an illustrative example use case used to make the II MS semantic interpretation and Knowledge Plane-backed resolution contract concrete. It is not the only supported runtime Intent type, IntentSpecification, service class, schema, expression IRI, location, service type, Knowledge Plane profile, or deployment profile. Other runtime Intents may use different targets, constraints, preferences, expression schemas, service types, priorities, resources, and governance profiles while following the same II MS contract rules.
+The baseline surgical hospital slice is an illustrative runtime example used to make the II MS semantic interpretation and Knowledge Plane-backed resolution contract concrete. It is not the only supported runtime Intent type, IntentSpecification, service class, schema, expression IRI, location, service type, Knowledge Plane profile, or deployment profile. Other runtime Intents may use different targets, constraints, preferences, expression schemas, service types, priorities, resources, and governance profiles while following the same II MS contract rules.
 
 ## 5. Responsibilities:
 
@@ -148,10 +144,10 @@ II MS owns:
 | KP-backed and required pre-resolution validation | Validate location, service type, service class, capability, policy, resource availability, and other use-case-specific facts using KP and approved pre-resolution validation sources where required. |
 | Target validation | Validate supported measurable runtime objectives. |
 | Constraint validation | Validate hard requirements such as location, priority, redundancy, and time window. |
-| Preference preservation | Preserve soft selection guidance for downstream selection/optimisation. |
+| Preference preservation | Preserve soft selection guidance for downstream selection and optimisation. |
 | Candidate resource resolution | Build the full, valid candidate resource set after applicable scope and policy filtering. |
 | Semantic rejection | Emit `IntentRejectedEvent` with intent-domain reason codes. |
-| Candidate-level resolution observability | Optionally emit `IntentResolvedEvent` for observability, audit, replay, or future consumers after safe semantic resolution. |
+| Candidate-level resolution | Emit `IntentResolvedEvent` for downstream optimisation and fulfilment consideration. |
 | Service-ready preparation | Emit `IntentNetworkReadyEvent` with prepared change-execution and observation configuration. |
 | Idempotency | Deduplicate consumed events and avoid duplicate milestone outcomes. |
 | Persistence | Store current semantic resolution state, decision audit, idempotency records, and outbox entries. |
@@ -164,16 +160,16 @@ II MS owns:
 | Design-time `IntentSpecification` lifecycle | ID MS |
 | Runtime `Intent` REST API | IC MS |
 | Runtime `IntentReport` REST API and projection | IC MS |
-| External lifecycle/status projection | IC MS |
-| External TMF subscription APIs | IC MS / ID MS depending on resource |
-| External consumer authorisation | Gateway / OEX / domain-facing API layer before the internal event flow |
+| External lifecycle and status projection | IC MS |
+| External TMF subscription APIs | IC MS or ID MS depending on resource |
+| External consumer authorisation | Gateway, OEX, or domain-facing API layer before the internal event flow |
 | Downstream optimisation algorithm ownership | Optimiser service |
-| Network change execution | Change execution layer / network orchestrator |
+| Network change execution | Change execution layer and network orchestrator |
 | Apply outcome truth | IA MS |
 | Runtime assurance truth | IA MS |
 | Callback ingestion | ICB MS |
 | Raw callback interpretation and lifecycle mapping | IA MS |
-| KP configuration CRUD/governance | Knowledge Plane operating model |
+| KP configuration CRUD and governance | Knowledge Plane operating model |
 | Public, partner, OEX, or NGW-facing API exposure | Not applicable to II MS |
 
 ## 7. Contracts:
@@ -183,14 +179,14 @@ II MS contracts are internal event contracts only.
 | Contract | Direction | Producer | Consumer | Purpose |
 |---|---|---|---|---|
 | `IntentValidatedEvent` | Inbound | `intent-controller-ms` | `intent-intelligence-ms` | Tells II MS that IC MS admitted a runtime Intent syntactically. |
-| `IntentRejectedEvent` | Outbound | `intent-intelligence-ms` | `intent-controller-ms` | Tells IC MS that the admitted intent is semantically/policy/capability rejected. |
-| `IntentResolvedEvent` | Optional outbound | `intent-intelligence-ms` | Optional observability and audit consumers | Observability and audit milestone for candidate-level semantic resolution. |
+| `IntentRejectedEvent` | Outbound | `intent-intelligence-ms` | `intent-controller-ms` | Tells IC MS that the admitted intent is semantic, policy, or capability rejected. |
+| `IntentResolvedEvent` | Outbound | `intent-intelligence-ms` | Optional observability and audit consumers | Candidate-level semantic-resolution handoff. |
 | `IntentNetworkReadyEvent` | Outbound | `intent-intelligence-ms` | `intent-assurance-ms` | Service-ready change-execution and observation configuration handoff. |
 | `OptimisationStatusChangeEvent` | Inbound internal Kafka event | ICB MS | `intent-intelligence-ms` | Optimiser outcome event ingested by ICB MS and relayed to Kafka for a previously submitted `POST /optimisation` request. |
 
 II MS has no external TMF-compliant REST contract in the active baseline. Any health, readiness, or metrics endpoints are internal platform probes only and must not be treated as product APIs.
 
-For optimiser-backed selection, II MS registers or supplies the ICB-owned callback submission URL, `POST /intent-callback/v1/submissions`, to the Optimiser platform when submitting `POST /optimisation`. The Optimiser platform sends `OptimisationStatusChangeEventRequest` to ICB MS. ICB MS performs callback ingestion and places `OptimisationStatusChangeEvent` on Kafka for II MS to consume.
+For optimiser-backed selection, II MS registers or supplies the ICB-owned callback submission URL, `POST /intent-callback/v1/submissions`, to the Optimiser platform when submitting `POST /optimisation`. The Optimiser platform sends `OptimisationStatusChangeEvent` to ICB MS. ICB MS performs callback ingestion and places `OptimisationStatusChangeEvent` on Kafka for II MS to consume.
 
 II MS workflow events remain internal Kafka event contracts. The exact ICB optimiser-callback ingestion and relay contract must be confirmed during ICB MS refinement.
 
@@ -198,13 +194,13 @@ II MS workflow events remain internal Kafka event contracts. The exact ICB optim
 
 II MS has one event-delivery model in the active baseline: internal Kafka event processing. It consumes `IntentValidatedEvent` from IC MS and, for optimisation-backed selection, consumes `OptimisationStatusChangeEvent` from Kafka after ICB MS callback ingestion. II MS publishes II-owned milestone events through the II internal outbox relay to Kafka.
 
-These events use CloudEvents-style Kafka/platform headers and JSON bodies. External optimiser callback ingestion is handled by ICB MS and then relayed to Kafka for II MS consumption.
+These events use CloudEvents-style Kafka and platform headers and JSON bodies. External optimiser callback ingestion is handled by ICB MS and then relayed to Kafka for II MS consumption.
 
 ## 9. Inbound internal Kafka event shape:
 
 ### 9.1. IntentValidatedEvent:
 
-The inbound event is consumed from Kafka and uses CloudEvents-style Kafka/platform headers with a plain JSON body.
+The inbound event is consumed from Kafka and uses CloudEvents-style Kafka and platform headers with a plain JSON body.
 
 ```http
 ce-specversion: 1.0
@@ -276,7 +272,7 @@ content-type: application/json
 
 ### 9.2. OptimisationStatusChangeEvent:
 
-For optimisation-backed selection, II MS consumes `OptimisationStatusChangeEvent` from Kafka after ICB MS has ingested the external optimiser callback. The event uses CloudEvents-style Kafka/platform headers and a plain JSON body. It carries optimiser status and selected best-match resources. It must not carry `observerConfiguration`, observer target, observer profile, or metric names to observe by default.
+For optimisation-backed selection, II MS consumes `OptimisationStatusChangeEvent` from Kafka after ICB MS has ingested the external optimiser callback. The event uses CloudEvents-style Kafka and platform headers and a plain JSON body.
 
 ```http
 ce-specversion: 1.0
@@ -314,7 +310,11 @@ content-type: application/json
         "outcome": "COMPLETED",
         "summary": "Optimisation completed successfully. Selected primary and secondary resources for the Sydney hospital surgical slice."
       },
-      "selectedResources": [
+      "selectedConfiguration": {
+        "orchestratorConfiguration": {
+          "target": "t7-network-orchestrator",
+          "profile": "hospital-surgical-slice-apply-v1",
+          "resources": [
             {
               "resourceId": "SYD-PRI-01",
               "resourceType": "deliveryResource",
@@ -345,8 +345,71 @@ content-type: application/json
                 }
               ]
             }
-          
-      ]
+          ]
+        },
+        "observerConfiguration": {
+          "target": "t7-observability-platform",
+          "profile": "critical-gold-assurance-observation-v1",
+          "resources": [
+            {
+              "resourceId": "SYD-PRI-01",
+              "resourceType": "deliveryResource",
+              "resourceClass": "critical-gold",
+              "roles": [
+                "primary"
+              ],
+              "metrics": [
+                "latencyMs",
+                "availabilityPercent",
+                "jitterMs",
+                "packetLossPercent"
+              ]
+            },
+            {
+              "resourceId": "SYD-PRI-02",
+              "resourceType": "deliveryResource",
+              "resourceClass": "critical-gold",
+              "roles": [
+                "primary"
+              ],
+              "metrics": [
+                "latencyMs",
+                "availabilityPercent",
+                "jitterMs",
+                "packetLossPercent"
+              ]
+            },
+            {
+              "resourceId": "SYD-SEC-01",
+              "resourceType": "deliveryResource",
+              "resourceClass": "critical-gold",
+              "roles": [
+                "secondary"
+              ],
+              "metrics": [
+                "latencyMs",
+                "availabilityPercent",
+                "jitterMs",
+                "packetLossPercent"
+              ]
+            },
+            {
+              "resourceId": "SYD-SEC-02",
+              "resourceType": "deliveryResource",
+              "resourceClass": "critical-gold",
+              "roles": [
+                "secondary"
+              ],
+              "metrics": [
+                "latencyMs",
+                "availabilityPercent",
+                "jitterMs",
+                "packetLossPercent"
+              ]
+            }
+          ]
+        }
+      }
     }
   },
   "@type": "OptimisationStatusChangeEvent"
@@ -361,7 +424,7 @@ content-type: application/json
 | `body.intentVersion` | Required where runtime intent versioning is used | Used to prevent stale event decisions overriding newer versions. |
 | `body.lifecycleStatus` | Required | Expected to reflect IC MS admission state, commonly `Acknowledged`. |
 | `body.intentSpecification.id` | Required | Active specification used by IC MS admission validation. |
-| `body.expression.iri` | Required | Semantic/expression contract admitted by IC MS and checked against the selected specification. |
+| `body.expression.iri` | Required | Semantic expression contract admitted by IC MS and checked against the selected specification. |
 | `body.expression.context` | Required | Canonical runtime intent context. |
 | `body.expression.context.targets` | Required for downstream-capable intents | Measurable outcome objectives. |
 | `body.expression.context.constraints` | Required when hard requirements exist | Includes location, service type, service class, priority, redundancy, and time window where applicable. |
@@ -381,7 +444,7 @@ II MS should reject or ignore unexpected fields according to its schema and comp
 |---|---|
 | External TMF `Intent.expression.expressionValue` wrapper in II internal events | IC MS has already translated the external expression wrapper into internal JSON. |
 | Top-level `location`, `serviceType`, `serviceClass`, `priority`, `redundancyRequired`, or `preferredAccessTechnology` outside `expression.context` | These belong under the canonical semantic buckets. |
-| `provider` in resource entries by default | Provider is KP/resource-inventory metadata and is not event-facing unless explicitly needed. |
+| `provider` in resource entries by default | Provider is KP and resource-inventory metadata and is not event-facing unless explicitly needed. |
 | Downstream-selected final resources in `IntentResolvedEvent` | `IntentResolvedEvent.resources` is the full valid candidate set, not final selection. |
 | Apply outcome fields in `IntentNetworkReadyEvent` | Apply outcome is interpreted later by IA MS. |
 | Assurance status or observed metric truth in II output events | Runtime assurance truth belongs to IA MS. |
@@ -401,11 +464,11 @@ Security and authorisation rules:
 - Use service-to-service identity and platform network policy for internal calls.
 - Do not perform external end-user authorisation in II MS.
 - Do not rely on downstream user context; II MS receives internal event facts, not external user claims.
-- Restrict health, readiness, and metrics probes to the platform/runtime network plane.
+- Restrict health, readiness, and metrics probes to the platform and runtime network plane.
 - Audit semantic and policy rejections where required.
 - Do not emit secrets, credentials, or sensitive internal implementation details in events.
 
-## 13. Persistence / state / outbox model:
+## 13. Persistence, state, and outbox model:
 
 II MS should use source-of-truth persistence for semantic resolution state and reliable event publication.
 
@@ -416,12 +479,12 @@ Suggested tables:
 | Table | Purpose |
 |---|---|
 | `intent_resolution_state` | Current semantic resolution state per `intentId` and runtime version. |
-| `intent_resolution_idempotency` | Consumed event deduplication keyed by CloudEvents id and/or intent/version identity. |
+| `intent_resolution_idempotency` | Consumed event deduplication keyed by CloudEvents id and where applicable intent and version identity. |
 | `intent_optimisation_correlation` | Tracks II-submitted optimisation requests, optimisation id, intentId, intentVersion, correlationId, ICB callback submission target reference where applicable, optimiser outcome state, and correlation of ICB-relayed `OptimisationStatusChangeEvent` outcomes back to the originating `POST /optimisation` request. |
 | `intent_optimisation_api_outbox` | Durable API outbox for II-submitted `POST /optimisation` requests, including request body, idempotency key, callback submission URL, request status, retry count, next retry time, accepted optimisation id, and error/failure state. |
 | `intent_resolution_audit` | Decision audit for KP lookup, policy validation, semantic rejection, and resolution outcomes. |
 | `intent_resolution_outbox` | Reliable publication queue for `IntentRejectedEvent`, `IntentResolvedEvent`, and `IntentNetworkReadyEvent`. |
-| `intent_resolution_dead_letter` | Required minimum failed/unprocessable event handling for exhausted `IntentValidatedEvent` and `OptimisationStatusChangeEvent` processing, including event id, event type, intentId, intentVersion where available, failure reason, retry count, payload hash, and replay/operational status. |
+| `intent_resolution_dead_letter` | Required minimum failed and unprocessable event handling for exhausted `IntentValidatedEvent` and `OptimisationStatusChangeEvent` processing, including event id, event type, intentId, intentVersion where available, failure reason, retry count, payload hash, and replay and operational status. |
 | `shedlock` | Optional clustered outbox relay coordination. |
 
 The processing transaction should persist the semantic decision and enqueue the output event atomically. The relay publishes from the event outbox and records publication state separately from decision ownership. For optimisation-backed selection, the same decision transaction must also create or update the optimisation correlation record and pending optimisation API outbox entry before any `POST /optimisation` attempt is made.
@@ -463,7 +526,7 @@ CloudEvents identity must be stable and suitable for deduplication.
 | `ce-time` | Event creation time. |
 | `body.intentId` | Same runtime intent identity as `ce-subject`. |
 | `body.intentVersion` | Runtime intent version when versioning is used. |
-| `body.references.correlationId` | End-to-end trace/correlation id. |
+| `body.references.correlationId` | End-to-end trace and correlation id. |
 
 ## 17. Internal Kafka CloudEvents headers:
 
@@ -557,7 +620,7 @@ Baseline reason-code families:
 | `SEMANTIC_SERVICE_CLASS_UNSUPPORTED` | Requested service class is not supported. |
 | `SEMANTIC_REQUIRED_CONTEXT_MISSING` | Required `expression.context` information is missing. |
 | `SEMANTIC_EXPRESSION_UNSUPPORTED` | The admitted expression cannot be interpreted into canonical domain terms. |
-| `SEMANTIC_INTENT_CONTRADICTORY` | Requested targets/constraints are contradictory in the intent domain. |
+| `SEMANTIC_INTENT_CONTRADICTORY` | Requested targets and constraints are contradictory in the intent domain. |
 | `POLICY_LOCATION_NOT_ALLOWED` | Policy rejects the requested location. |
 | `POLICY_SERVICE_CLASS_NOT_ALLOWED` | Policy rejects the requested service class. |
 | `POLICY_PRIORITY_NOT_ALLOWED` | Policy rejects the requested priority. |
@@ -881,7 +944,7 @@ Rules:
 - `IntentNetworkReadyEvent` is produced by `intent-intelligence-ms`.
 - IA MS consumes `IntentNetworkReadyEvent`; IA MS must not produce it.
 - Use `serviceConfiguration.orchestratorConfiguration` for selected apply and change-execution details.
-- Use `serviceConfiguration.observerConfiguration` for assurance/monitoring details.
+- Use `serviceConfiguration.observerConfiguration` for assurance and monitoring details.
 - `serviceConfiguration.orchestratorConfiguration.resources[]` carries the selected apply and change-execution resources, including resource details, topology, roles, and change-execution-relevant information.
 - `serviceConfiguration.orchestratorConfiguration.resources[]` must not carry observed metric values.
 - `serviceConfiguration.observerConfiguration.resources[]` carries the assurance observation scope and uses `metrics` as a list of metric names IA MS should observe, not a value object.
@@ -892,7 +955,7 @@ Rules:
 
 ### 21.1. Successful semantic resolution:
 
-When an admitted intent can be semantically interpreted and candidate resources are known, II MS may emit `IntentResolvedEvent` as an optional observability and audit milestone. Optimisation is invoked separately through the direct `POST /optimisation` API outbox path.
+When an admitted intent can be semantically interpreted and candidate resources are known, II MS emits `IntentResolvedEvent`.
 
 ### 21.2. Semantic rejection:
 
@@ -904,7 +967,7 @@ When the service configuration required for change execution and assurance obser
 
 IntentNetworkReadyEvent may be emitted only after II MS has received or derived a governed selected configuration from the authorised downstream selection or optimisation path. II MS does not own the optimisation algorithm or optimiser backend. II MS owns packaging the selected configuration into the service-ready event for IA MS.
 
-This event carries `serviceConfiguration.orchestratorConfiguration` and `serviceConfiguration.observerConfiguration`. II MS builds the observer configuration from KP or governed configuration after it receives the optimiser-selected resources.
+This event carries `serviceConfiguration.orchestratorConfiguration` and `serviceConfiguration.observerConfiguration`.
 
 For optimisation-backed selection, II MS emits `IntentNetworkReadyEvent` only after the approved Optimiser path returns a complete, correlated, current selected configuration through ICB-relayed `OptimisationStatusChangeEvent`. If `POST /optimisation` fails, the optimiser outcome is `FAILED` or `INFEASIBLE`, the callback is missing beyond the configured deadline, or the outcome is stale for the current runtime version, II MS must not emit `IntentNetworkReadyEvent`; it records the outcome in correlation state and follows governed retry, timeout, failure, or rejection policy.
 
@@ -912,7 +975,7 @@ For optimisation-backed selection, II MS emits `IntentNetworkReadyEvent` only af
 
 II MS must support at-least-once delivery. It deduplicates consumed events by CloudEvents id and runtime intent identity, and avoids duplicate output milestone events for the same input event and semantic decision.
 
-II MS also deduplicates consumed `OptimisationStatusChangeEvent` instances by CloudEvents id, optimisation id, event type, and intent/version identity where available, and must not publish duplicate `IntentNetworkReadyEvent` outcomes for duplicate optimiser status events. A stale optimiser outcome for a superseded, cancelled, or no-longer-current runtime version must be ignored or recorded for audit and must not overwrite current semantic or service-ready state.
+II MS also deduplicates consumed `OptimisationStatusChangeEvent` instances by CloudEvents id, optimisation id, event type, and intent and version identity where available, and must not publish duplicate `IntentNetworkReadyEvent` outcomes for duplicate optimiser status events. A stale optimiser outcome for a superseded, cancelled, or no-longer-current runtime version must be ignored or recorded for audit and must not overwrite current semantic or service-ready state.
 
 ### 21.5. Ordering:
 
@@ -924,7 +987,7 @@ Where runtime versioning is active, state transitions are keyed by `intentId` an
 
 | Dependency | Behaviour |
 |---|---|
-| II database unavailable | Do not acknowledge/process beyond retry and dead-letter policy. |
+| II database unavailable | Do not acknowledge or process beyond retry and dead-letter policy. |
 | Knowledge Plane unavailable or stale | Fail closed for semantic resolution or service-ready packaging when fresh KP facts are required; refresh, retry, or dead-letter according to policy. |
 | Kafka unavailable | Persist to outbox and retry through relay. |
 | Cache unavailable | Bypass cache and use KP or the relevant approved pre-resolution validation source where safe. |
@@ -945,9 +1008,9 @@ Suggested configuration areas:
 | Optimisation API outbox | Request submission retry backoff, maximum retry count, idempotency-key policy, circuit-breaker settings, callback wait timeout, and accepted-response handling for `POST /optimisation`. |
 | KP, optimiser, and pre-resolution validation access | KP endpoint, `POST /optimisation` endpoint, ICB-owned callback submission URL registered with the Optimiser platform, approved T7 or governed source endpoints where required, timeout, cache TTL, circuit-breaker settings. |
 | Semantic rules | Supported service types, service classes, target names, constraint names, and policy rule versions. |
-| Rejection mapping | Reason-code mapping and user/projectable `statusReason` templates. |
+| Rejection mapping | Reason-code mapping and user-projectable `statusReason` templates. |
 | Observability | Log levels, metrics enablement, trace sampling. |
-| Dead-letter handling | DLQ topic/table settings and operational alert thresholds. |
+| Dead-letter handling | DLQ topic and table settings and operational alert thresholds. |
 
 Configuration must not introduce per-environment contract drift. Contract field names and event meaning remain stable across environments.
 
@@ -957,8 +1020,8 @@ Consumers of II-owned events must treat the event stream as at-least-once.
 
 Consumer rules:
 
-- Deduplicate by `ce-id` and/or `body.intentId` plus version and milestone type.
-- Treat `IntentResolvedEvent.resources[]` as the full valid candidate set for observability, audit, replay, or future consumers, not final selected or applied output.
+- Deduplicate by `ce-id` and where applicable `body.intentId` plus version and milestone type.
+- Treat `IntentResolvedEvent.resources[]` as the full valid candidate set, not final selected or applied output.
 - Treat `IntentNetworkReadyEvent` as service-ready preparation only, not apply success.
 - Do not infer assurance status from II events.
 - Use `body.references.correlationId` for traceability.
@@ -981,7 +1044,7 @@ Consumer rules:
 | II MS is internal only. | Closed. No external TMF-compliant API. |
 | II MS consumes `IntentValidatedEvent`. | Closed. |
 | II MS emits `IntentRejectedEvent`. | Closed. |
-| II MS may emit `IntentResolvedEvent` as an optional observability and audit milestone. | Closed. |
+| II MS emits `IntentResolvedEvent`. | Closed. |
 | II MS owns and emits `IntentNetworkReadyEvent`. | Closed. |
 | IA MS consumes but does not produce `IntentNetworkReadyEvent`. | Closed. |
 | `IntentResolvedEvent` resources are candidates, not selected or applied resources. | Closed. |
@@ -1000,6 +1063,6 @@ Consumer rules:
 | External API | None |
 | Primary input events | `IntentValidatedEvent`; `OptimisationStatusChangeEvent` after ICB MS callback ingestion |
 | Output events | `IntentRejectedEvent`, `IntentResolvedEvent`, `IntentNetworkReadyEvent` |
-| Primary persistence | PostgreSQL / PostgreSQL-compatible RDBMS |
-| Event style | Internal Kafka events with CloudEvents-style Kafka/platform headers and plain JSON `body` |
+| Primary persistence | PostgreSQL or PostgreSQL-compatible RDBMS |
+| Event style | Internal Kafka events with CloudEvents-style Kafka and platform headers and plain JSON `body` |
 | Public exposure | None |
