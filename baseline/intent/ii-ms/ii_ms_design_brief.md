@@ -147,18 +147,18 @@ The hospital surgical slice is an illustrative example use case used to make the
 | Stage | Description |
 |---|---|
 | Consume | Consume `IntentValidatedEvent` from the internal event backbone. For optimisation-backed selection, also consume `OptimisationStatusChangeEvent` from Kafka after ICB MS has ingested and relayed the optimiser callback. |
-| Idempotency | Deduplicate by CloudEvents `ce-id` / event id and `intentId` |
+| Idempotency | Deduplicate by CloudEvents `ce-id` & event id and `intentId` |
 | Admission context check | Confirm the event carries `intentSpecification.id` and `expression.iri` from IC MS admission context |
 | Semantic parse | Interpret `expression.context.targets`, `expression.context.constraints`, and `expression.context.preferences` |
 | KP and required pre-resolution validation lookup | Resolve location, service capability, policy, and other required domain facts from Knowledge Plane and approved use-case-specific pre-resolution validation sources |
 | Suitability and proceedability validation | Decide whether the admitted intent has enough trusted semantic, policy, capability, availability, freshness, and pre-resolution facts to proceed safely. If KP or approved validation sources show the intent is unsupported, contradictory, unsafe, unavailable, stale, or insufficiently validated, emit `IntentRejectedEvent` or record a governed processing failure instead of proceeding to candidate discovery or optimisation. |
-| Capability validation | Confirm requested service/service class is available for the requested location |
-| Policy validation | Validate hard constraints such as priority and redundancy against KP/domain policy |
+| Capability validation | Confirm requested service or service class is available for the requested location |
+| Policy validation | Validate hard constraints such as priority and redundancy against KP or domain policy |
 | Canonicalisation | Normalise values into canonical internal terms |
 | Resource discovery | Resolve available KP resources for the resolved domain context |
 | Outcome selection | Emit `IntentRejectedEvent`, optionally emit `IntentResolvedEvent` for observability and audit after safe candidate-level resolution, or emit `IntentNetworkReadyEvent` only after selected service-ready configuration has been derived. |
 | Durable publication | Write event to II outbox and publish through relay |
-| Audit | Record semantic/KP decision trail where required |
+| Audit | Record semantic or KP decision trail where required |
 
 For optimisation-backed selection, II MS also deduplicates `OptimisationStatusChangeEvent` after ICB relay and must not publish duplicate `IntentNetworkReadyEvent` outcomes for duplicate optimiser status events.
 
