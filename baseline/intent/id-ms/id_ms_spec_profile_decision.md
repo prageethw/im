@@ -257,7 +257,7 @@ The baseline surgical hospital slice is an illustrative example used to make the
 {
   "specKey": "hospital-surgical-slice-spec",
   "name": "Hospital Surgical Slice Intent Specification",
-  "description": "Definition-time specification for hospital surgical slice intents. This specification defines the allowed request shape for surgical connectivity intents. ID MS performs syntax and structure validation only; II MS and the knowledge plane validate semantic meaning, policy, and fulfilment feasibility.",
+  "description": "Definition-time specification for hospital surgical slice intents. This specification defines the allowed request shape for surgical connectivity intents. ID MS defines and governs the allowed expression structure and schema references. IC MS performs runtime syntactic validation against the active specification. II MS and the Knowledge Plane validate semantic meaning, policy, and fulfilment feasibility.",
   "isBundle": false,
   "validFor": {
     "startDateTime": "2026-04-18T12:00:00+10:00"
@@ -306,7 +306,7 @@ The baseline surgical hospital slice is an illustrative example used to make the
 {
   "specKey": "hospital-surgical-slice-spec",
   "name": "Hospital Surgical Slice Intent Specification",
-  "description": "Definition-time specification for hospital surgical slice intents. This specification defines the allowed request shape for surgical connectivity intents. ID MS performs syntax and structure validation only; II MS and the knowledge plane validate semantic meaning, policy, and fulfilment feasibility.",
+  "description": "Definition-time specification for hospital surgical slice intents. This specification defines the allowed request shape for surgical connectivity intents. ID MS defines and governs the allowed expression structure and schema references. IC MS performs runtime syntactic validation against the active specification. II MS and the Knowledge Plane validate semantic meaning, policy, and fulfilment feasibility.",
   "isBundle": false,
   "validFor": {
     "startDateTime": "2026-04-18T12:00:00+10:00"

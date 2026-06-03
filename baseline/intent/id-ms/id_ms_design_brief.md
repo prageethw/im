@@ -115,7 +115,8 @@ ID MS owns the definition-time `IntentSpecification` resource and related hub su
 | Primary resource | `IntentSpecification` |
 
 ID MS owns definition-time `IntentSpecification` contracts and subscription management for specification events.
-It validates syntax and resource shape, enforces specification lifecycle and version governance, and delivers external specification lifecycle notifications to subscribed REST webhook listener callbacks.
+It defines and governs the design-time `IntentSpecification` contract, including required fields, lifecycle rules, allowed expression shape, schema references, and validation constraints for runtime `Intent` payloads.
+ID MS enforces specification lifecycle and version governance and delivers external specification lifecycle notifications to subscribed REST webhook listener callbacks.
 ID MS does not validate runtime semantic feasibility, policy fulfilment, network topology, optimisation, assurance, telemetry, change-execution callbacks, or runtime intent lifecycle truth.
 
 ## 2. TMF compliance and platform extension:
@@ -719,7 +720,8 @@ Common errors:
 ## 22. ID MS API boundary statement:
 
 **ID MS owns definition-time `IntentSpecification` contracts and subscription management for specification events.
-It validates syntax and resource shape, enforces specification lifecycle and version governance, and delivers external specification lifecycle notifications to subscribed REST webhook listener callbacks.
+It defines and governs the design-time `IntentSpecification` contract, including required fields, lifecycle rules, allowed expression shape, schema references, and validation constraints for runtime `Intent` payloads.
+It enforces specification lifecycle and version governance and delivers external specification lifecycle notifications to subscribed REST webhook listener callbacks.
 It does not validate runtime semantic feasibility, policy fulfilment, network topology, optimisation, assurance, telemetry, change-execution callbacks, or callback ingestion.**
 
 ## 23. Lifecycle and versioning rules:

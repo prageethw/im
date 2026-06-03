@@ -125,8 +125,9 @@
 ### 1.1 Boundary statement:
 
 ID MS owns definition-time `IntentSpecification` contracts and subscription management for specification events.
-ID MS validates syntax and resource shape and enforces specification lifecycle and version governance.
-ID MS does not own runtime `Intent`, `IntentReport`, semantic validation, policy validation, network/resource feasibility, optimisation, runtime assurance, telemetry, or callback ingestion.
+ID MS defines and governs the design-time `IntentSpecification` contract, including required fields, lifecycle rules, allowed expression shape, schema references, and validation constraints for runtime `Intent` payloads.
+ID MS enforces specification lifecycle and version governance.
+ID MS does not own runtime `Intent`, `IntentReport`, semantic validation, policy validation, network or resource feasibility, optimisation, runtime assurance, telemetry, or callback ingestion.
 
 ### 1.2 TMF deployment path note:
 
@@ -545,7 +546,7 @@ Accept: application/json
 {
   "specKey": "hospital-surgical-slice-spec",
   "name": "Hospital Surgical Slice Intent Specification",
-  "description": "Definition-time specification for hospital surgical slice intents. This specification defines the allowed request shape for surgical connectivity intents. ID MS performs syntax and structure validation only. II MS and the knowledge plane validate semantic meaning, policy, and fulfilment feasibility.",
+  "description": "Definition-time specification for hospital surgical slice intents. This specification defines the allowed request shape for surgical connectivity intents. ID MS defines and governs the allowed expression structure and schema references. IC MS performs runtime syntactic validation against the active specification. II MS and the Knowledge Plane validate semantic meaning, policy, and fulfilment feasibility.",
   "validFor": {
     "startDateTime": "2026-04-18T12:00:00+10:00"
   },
@@ -622,7 +623,7 @@ The response is classified with `X-Platform-Extension: false` because `POST /int
   "specKey": "hospital-surgical-slice-spec",
   "draftId": "id-draft-hospital-surgical-slice-a",
   "name": "Hospital Surgical Slice Intent Specification",
-  "description": "Definition-time specification for hospital surgical slice intents. This specification defines the allowed request shape for surgical connectivity intents. ID MS performs syntax and structure validation only. II MS and the knowledge plane validate semantic meaning, policy, and fulfilment feasibility.",
+  "description": "Definition-time specification for hospital surgical slice intents. This specification defines the allowed request shape for surgical connectivity intents. ID MS defines and governs the allowed expression structure and schema references. IC MS performs runtime syntactic validation against the active specification. II MS and the Knowledge Plane validate semantic meaning, policy, and fulfilment feasibility.",
   "lifecycleStatus": "DRAFT",
   "statusChangeDate": "2026-04-18T12:00:00+10:00",
   "creationDate": "2026-04-18T12:00:00+10:00",
@@ -780,7 +781,7 @@ Cache-Control: private, max-age=300
   "specKey": "hospital-surgical-slice-spec",
   "draftId": "id-draft-hospital-surgical-slice-a",
   "name": "Hospital Surgical Slice Intent Specification",
-  "description": "Definition-time specification for hospital surgical slice intents. This specification defines the allowed request shape for surgical connectivity intents. ID MS performs syntax and structure validation only. II MS and the knowledge plane validate semantic meaning, policy, and fulfilment feasibility.",
+  "description": "Definition-time specification for hospital surgical slice intents. This specification defines the allowed request shape for surgical connectivity intents. ID MS defines and governs the allowed expression structure and schema references. IC MS performs runtime syntactic validation against the active specification. II MS and the Knowledge Plane validate semantic meaning, policy, and fulfilment feasibility.",
   "version": "1.19",
   "lifecycleStatus": "ACTIVE",
   "isBundle": false,
@@ -911,7 +912,7 @@ Cache-Control: private, max-age=300
   "specKey": "hospital-surgical-slice-spec",
   "draftId": "id-draft-hospital-surgical-slice-a",
   "name": "Hospital Surgical Slice Intent Specification",
-  "description": "Definition-time specification for hospital surgical slice intents. This specification defines the allowed request shape for surgical connectivity intents. ID MS performs syntax and structure validation only. II MS and the knowledge plane validate semantic meaning, policy, and fulfilment feasibility.",
+  "description": "Definition-time specification for hospital surgical slice intents. This specification defines the allowed request shape for surgical connectivity intents. ID MS defines and governs the allowed expression structure and schema references. IC MS performs runtime syntactic validation against the active specification. II MS and the Knowledge Plane validate semantic meaning, policy, and fulfilment feasibility.",
   "lifecycleStatus": "DRAFT",
   "isBundle": false,
   "validFor": {
@@ -1002,7 +1003,7 @@ Cache-Control: private, max-age=300
   "specKey": "hospital-surgical-slice-spec",
   "draftId": "id-draft-hospital-surgical-slice-b",
   "name": "Hospital Surgical Slice Intent Specification",
-  "description": "Definition-time specification for hospital surgical slice intents. This specification defines the allowed request shape for surgical connectivity intents. ID MS performs syntax and structure validation only; II MS and the knowledge plane validate semantic meaning, policy, and fulfilment feasibility.",
+  "description": "Definition-time specification for hospital surgical slice intents. This specification defines the allowed request shape for surgical connectivity intents. ID MS defines and governs the allowed expression structure and schema references. IC MS performs runtime syntactic validation against the active specification. II MS and the Knowledge Plane validate semantic meaning, policy, and fulfilment feasibility.",
   "version": "1.20",
   "lifecycleStatus": "ACTIVE",
   "isBundle": false,
@@ -1073,7 +1074,7 @@ If-Match: "id-draft-hospital-surgical-slice-a-r1"
 {
   "specKey": "hospital-surgical-slice-spec",
   "name": "Hospital Surgical Slice Intent Specification",
-  "description": "Updated definition-time specification for hospital surgical slice intents. This specification defines the allowed request shape for surgical connectivity intents. ID MS performs syntax and structure validation only. II MS and the knowledge plane validate semantic meaning, policy, and fulfilment feasibility.",
+  "description": "Updated definition-time specification for hospital surgical slice intents. This specification defines the allowed request shape for surgical connectivity intents. ID MS defines and governs the allowed expression structure and schema references. IC MS performs runtime syntactic validation against the active specification. II MS and the Knowledge Plane validate semantic meaning, policy, and fulfilment feasibility.",
   "isBundle": false,
   "validFor": {
     "startDateTime": "2026-04-18T12:00:00+10:00"
@@ -1137,7 +1138,7 @@ Last-Modified: Sat, 18 Apr 2026 03:00:00 GMT
   "specKey": "hospital-surgical-slice-spec",
   "draftId": "id-draft-hospital-surgical-slice-a",
   "name": "Hospital Surgical Slice Intent Specification",
-  "description": "Updated definition-time specification for hospital surgical slice intents. This specification defines the allowed request shape for surgical connectivity intents. ID MS performs syntax and structure validation only. II MS and the knowledge plane validate semantic meaning, policy, and fulfilment feasibility.",
+  "description": "Updated definition-time specification for hospital surgical slice intents. This specification defines the allowed request shape for surgical connectivity intents. ID MS defines and governs the allowed expression structure and schema references. IC MS performs runtime syntactic validation against the active specification. II MS and the Knowledge Plane validate semantic meaning, policy, and fulfilment feasibility.",
   "isBundle": false,
   "validFor": {
     "startDateTime": "2026-04-18T12:00:00+10:00"
@@ -1645,7 +1646,7 @@ Activation full response body example:
   "href": "/intentManagement/v5/intentSpecification/ispec-hss-001",
   "specKey": "hospital-surgical-slice-spec",
   "name": "Hospital Surgical Slice Intent Specification",
-  "description": "Definition-time specification for hospital surgical slice intents. This specification defines the allowed request shape for surgical connectivity intents. ID MS performs syntax and structure validation only. II MS and the knowledge plane validate semantic meaning, policy, and fulfilment feasibility.",
+  "description": "Definition-time specification for hospital surgical slice intents. This specification defines the allowed request shape for surgical connectivity intents. ID MS defines and governs the allowed expression structure and schema references. IC MS performs runtime syntactic validation against the active specification. II MS and the Knowledge Plane validate semantic meaning, policy, and fulfilment feasibility.",
   "version": "1.20",
   "lifecycleStatus": "ACTIVE",
   "isBundle": false,

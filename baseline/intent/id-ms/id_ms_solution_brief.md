@@ -130,7 +130,7 @@ The example baseline surgical hospital slice specification uses:
 
 The baseline surgical hospital slice is an illustrative example used to make the ID MS contract concrete. It is not the only supported IntentSpecification, intent type, service class, schema, expression IRI, or deployment profile. Other IntentSpecifications may use different targets, constraints, preferences, expression schemas, service types, and governance profiles while following the same ID MS contract rules.
 
-ID MS validates resource structure, required fields, lifecycle rules, and syntax and schema references. It does not decide whether a submitted runtime intent is semantically feasible or fulfillable in the network. Semantic and policy validation belongs to II MS and the knowledge plane. Runtime assurance belongs to IA MS.
+ID MS defines and governs the design-time IntentSpecification contract, including required fields, lifecycle rules, allowed expression shape, schema references, and validation constraints for runtime Intent payloads. ID MS does not decide whether a submitted runtime Intent is semantically feasible or fulfilable in the network. IC MS validates a submitted runtime Intent syntactically against the active IntentSpecification and its referenced schema. Semantic, policy, capability, suitability, and proceedability validation belongs to II MS using the Knowledge Plane and any approved pre-resolution validation sources. Runtime assurance belongs to IA MS.
 
 ## 5. Responsibilities:
 
@@ -564,7 +564,7 @@ Delete events are emitted only after successful delete and show the last known l
 ### 25.1 Create behaviour:
 
 - Create produces a mutable `DRAFT` candidate and assigns a `draftId`.
-- ID MS validates resource shape and required syntax and schema references.
+- ID MS validates the submitted `IntentSpecification` candidate against the governed design-time contract rules, including required fields, lifecycle rules, allowed expression shape, schema references, and validation constraints.
 - ID MS resolves server-assigned `id` from `specKey` and generates `draftId`, DRAFT `href`, `Location`, `ETag`, and `_links`; `id` must not be assumed to equal `specKey`.
 - Successful create returns `201 Created` with the full created DRAFT candidate resource.
 - Successful create emits `IntentSpecificationCreateEvent`.
