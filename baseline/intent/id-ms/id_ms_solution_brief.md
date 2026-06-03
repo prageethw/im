@@ -396,30 +396,11 @@ There is no `DELETED` lifecycle state. Delete is an operation outcome, not a lif
 
 ## 16. Fields not accepted:
 
-Clients must not provide server-generated, lifecycle, or official-version values on create:
+Server-generated attributes, lifecycle state, official version values, ETags, timestamps, and links are managed by ID MS and must not be changed by clients.
 
-- `id`
-- `href`
-- `draftId`
-- official `version`
-- `lifecycleStatus`
-- `creationDate`
-- `lastUpdate`
-- `statusChangeDate`
-- `Location`
-- `ETag`
-- `_links`
+`DELETED` is not a valid `IntentSpecification.lifecycleStatus`.
 
-Clients must not use or submit `DELETED` as a lifecycle status.
-
-`PATCH` must not normally be used for material replacement of:
-
-- `specKey`
-- `version`
-- `specCharacteristic`
-- `expressionSpecification`
-- `targetEntitySchema`
-- major lifecycle and version contract identity
+`PATCH` is for small, targeted updates only. Use `PUT` for deterministic full replacement of editable DRAFT resources where the platform extension is available.
 
 ## 17. Authorisation:
 
