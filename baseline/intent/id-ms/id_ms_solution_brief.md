@@ -289,7 +289,7 @@ Content-Type: application/merge-patch+json
 
 `IntentSpecification.version` is a design-time contract version and is separate from runtime `Intent.version`.
 
-A mutable DRAFT `IntentSpecification` candidate does not expose an official public `version`. Draft revision is represented by `ETag`. Any version indicator during draft authoring is non-authoritative and must not be relied on. DRAFT candidates do not expose or guarantee any version identifier. ID MS assigns the official design-time contract `version` only when the selected DRAFT candidate is activated.
+A mutable DRAFT `IntentSpecification` candidate does not expose an official public `version`. DRAFT authoring changes are protected by ETag-based optimistic concurrency, but `ETag` is not a business version and must not be treated as the official `IntentSpecification.version`. Any version indicator during draft authoring is non-authoritative and must not be relied on. ID MS assigns the official design-time contract `version` only when the selected DRAFT candidate is activated.
 
 Baseline:
 

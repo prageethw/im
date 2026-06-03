@@ -369,7 +369,7 @@ Notes:
 - Response returns the created DRAFT candidate representation.
 - Response includes server-assigned `draftId`, DRAFT `href`, `Location`, `ETag`, and `_links`.
 - `Location` points to `/intentSpecification/draft/{draftId}`.
-- DRAFT candidate revision is represented by `ETag`.
+- DRAFT authoring changes are protected by ETag-based optimistic concurrency; `ETag` is not a business version.
 - Official `version` is assigned only when the selected DRAFT candidate is activated.
 
 ## 11. Retrieve IntentSpecification:
@@ -1663,7 +1663,7 @@ DRAFT `IntentSpecification` candidates do not expose an official public `version
 
 Baseline:
 
-- DRAFT candidates do not expose an official public `version`; draft revision is represented by `ETag`.
+- DRAFT candidates do not expose an official public `version`; DRAFT authoring changes are protected by ETag-based optimistic concurrency.
 - Material change after activation requires a new Draft `IntentSpecification` version.
 - `ACTIVE` and `RETIRED` specifications are immutable for material contract changes.
 - `specKey` is mandatory on create and is used by ID MS to resolve the stable server-assigned `IntentSpecification.id`.
