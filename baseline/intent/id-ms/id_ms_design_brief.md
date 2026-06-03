@@ -16,7 +16,7 @@
 - [6. Hub subscription APIs:](#6-hub-subscription-apis)
 - [7. Query conventions:](#7-query-conventions)
 - [8. Lifecycle rules:](#8-lifecycle-rules)
-- [9. ETag / If-Match rules:](#9-etag-if-match-rules)
+- [9. ETag and If-Match rules:](#9-etag-and-if-match-rules)
 - [10. Create IntentSpecification:](#10-create-intentspecification)
 - [11. Retrieve IntentSpecification:](#11-retrieve-intentspecification)
 - [12. List IntentSpecifications:](#12-list-intentspecifications)
@@ -179,7 +179,7 @@ Approved platform extensions are:
 | `specKey` | Spec-key version governance across related specification versions |
 | `_links` | Platform navigation affordance |
 | `previousActiveSpecification` | Activation and retirement traceability during active-version promotion |
-| Strong `ETag` / `If-Match` rules | Optimistic concurrency for unsafe operations |
+| Strong `ETag` and `If-Match` rules | Optimistic concurrency for unsafe operations |
 | `428 Precondition Required` | Explicit stale-write prevention when `If-Match` is missing |
 
 External `IntentSpecificationCreateEvent`, `IntentSpecificationAttributeValueChangeEvent`, `IntentSpecificationStatusChangeEvent`, and `IntentSpecificationDeleteEvent` envelopes should populate both `eventTime` and `timeOccurred` with the same canonical event occurrence timestamp.
@@ -236,7 +236,7 @@ Supported query params:
 | `lifecycleStatus` | Filter by `DRAFT`, `ACTIVE`, or `RETIRED` |
 | `name` | Filter by specification name |
 | `version` | Filter by specification version |
-| `fields` | Optional TMF-aligned field selection / projection |
+| `fields` | Optional TMF-aligned field selection and projection |
 
 Response headers:
 
@@ -275,9 +275,9 @@ Important:
 - Activation is a lifecycle update on `/intentSpecification/draft/{draftId}`, not a custom `/activate` endpoint.
 - When a new version becomes `ACTIVE`, the previous `ACTIVE` version in the same `specKey` becomes `RETIRED`.
 
-## 9. ETag / If-Match rules:
+## 9. ETag and If-Match rules:
 
-| **Operation** | **ETag / If-Match rule** |
+| **Operation** | **ETag and If-Match rule** |
 |---|---|
 | `POST /intentSpecification` | Response must include `ETag` |
 | `GET /intentSpecification/{id}` | Response must include `ETag` |
@@ -1150,12 +1150,12 @@ Webhook delivery failure is handled through the ID MS local delivery outbox. Eac
 ### 25.1 Runtime model:
 
 ID MS is deployed as a mostly stateless API service.
-The service instances can be horizontally scaled behind the API gateway / ingress layer.
+The service instances can be horizontally scaled behind the API gateway or ingress layer.
 The application instances should not hold domain truth in local memory.
 
 ### 25.2 Source of truth:
 
-The source of truth for ID MS is a managed PostgreSQL / PostgreSQL-compatible relational database.
+The source of truth for ID MS is a managed PostgreSQL or PostgreSQL-compatible relational database.
 
 ID MS stores and governs:
 
@@ -1168,13 +1168,13 @@ ID MS stores and governs:
 
 ### 25.3 Recommended persistence model:
 
-| **Table / store** | **Purpose** |
+| **Table or store** | **Purpose** |
 |---|---|
 | `intent_specification` | Stores `IntentSpecification` resource, version, lifecycle, ETag, timestamps, and resource body |
 | `intent_specification_subscription` | Stores `/intentSpecification/hub` event subscriptions |
 | `webhook_delivery_outbox` | Stores durable subscriber webhook notification delivery records before HTTP callback delivery |
 | `inbox_event` | Optional; used only if ID MS later consumes internal events requiring idempotent processing |
-| audit table / audit log | Optional dedicated audit trail if not covered by platform audit capability |
+| audit table or audit log | Optional dedicated audit trail if not covered by platform audit capability |
 
 ### 25.4 JSONB usage:
 
@@ -1244,7 +1244,7 @@ Rules:
 
 ### 25.9 Health checks:
 
-| **Health endpoint / check** | **Meaning** |
+| **Health endpoint or check** | **Meaning** |
 |---|---|
 | Liveness | Process is running and can respond |
 | Readiness | Service can access critical dependencies needed for serving traffic |
@@ -1306,7 +1306,7 @@ Recommended metrics include:
 
 ### 25.12 Security posture:
 
-ID MS should sit behind the platform gateway / ingress security layer.
+ID MS should sit behind the platform gateway or ingress security layer.
 
 Security baseline:
 
@@ -1360,7 +1360,7 @@ ID MS still enforces:
 - version uniqueness
 - one active version per `specKey`
 - immutable `ACTIVE` and `RETIRED` specifications
-- `ETag` / `If-Match` for unsafe operations
+- `ETag` and `If-Match` for unsafe operations
 - no `DELETED` lifecycle state
 - delete only for unused `DRAFT`
 - callback URL validation for hub subscriptions if hub endpoints are exposed to system callers
@@ -1528,7 +1528,7 @@ Recommended audit record fields:
 
 Operational alerts should be raised for:
 
-- DB unavailable / DB circuit breaker open
+- DB unavailable or DB circuit breaker open
 - repeated DB errors
 - outbox backlog above threshold
 - repeated webhook delivery failures
@@ -1574,7 +1574,7 @@ Business and user authorisation audit remains with OEX, while ID MS audit focuse
 
 | **Area** | **Result** | **Notes** |
 |---|---|---|
-| Service naming | PASS | Uses Intent Definition MS / ID MS / `intent-definition-ms` |
+| Service naming | PASS | Uses Intent Definition MS, ID MS, and `intent-definition-ms` |
 | Lifecycle states | PASS | Uses `DRAFT`, `ACTIVE`, `RETIRED`; no `DELETED` lifecycle state |
 | Status-change event payload | PASS | Uses current `intentSpecification.lifecycleStatus` snapshot; no separate previous and new lifecycle fields in external event payload |
 | GET-only caching | PASS | Caching is scoped to GET responses only |
@@ -1659,7 +1659,7 @@ Content-Type: application/merge-patch+json
 
 `IntentSpecification.version` is a design-time contract version and is separate from runtime `Intent.version`.
 
-DRAFT `IntentSpecification` candidates do not expose an official public `version`. Draft revision is represented by `ETag`. Any version indicator during draft authoring is non-authoritative and must not be relied on. DRAFT candidates do not expose or guarantee any version identifier.
+DRAFT `IntentSpecification` candidates do not expose an official public `version`. DRAFT authoring changes are protected by ETag-based optimistic concurrency. ETag is not a business version. Any version indicator during draft authoring is non-authoritative and must not be relied on. DRAFT candidates do not expose or guarantee any version identifier.
 
 Baseline:
 

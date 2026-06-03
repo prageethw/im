@@ -17,7 +17,7 @@
 - [7. Response locale:](#7-response-locale)
 - [8. Response classification headers:](#8-response-classification-headers)
 - [9. Contracts:](#9-contracts)
-- [10. Request shape / event shape:](#10-request-shape-event-shape)
+- [10. Request shape and event shape:](#10-request-shape-and-event-shape)
   - [10.1 IntentSpecification resource API:](#101-intentspecification-resource-api)
   - [10.2 Hub subscription API:](#102-hub-subscription-api)
   - [10.3 Hub retrieve subscription example:](#103-hub-retrieve-subscription-example)
@@ -31,7 +31,7 @@
   - [15.3 Query parameters:](#153-query-parameters)
 - [16. Fields not accepted:](#16-fields-not-accepted)
 - [17. Authorisation:](#17-authorisation)
-- [18. Persistence / state / outbox model:](#18-persistence-state-outbox-model)
+- [18. Persistence, state, and outbox model:](#18-persistence-state-and-outbox-model)
 - [19. Hub notification delivery:](#19-hub-notification-delivery)
 - [20. Delivery reliability:](#20-delivery-reliability)
 - [21. Event identity:](#21-event-identity)
@@ -71,9 +71,9 @@ Those responsibilities remain with IC MS, II MS, IA MS, ICB MS, optimiser compon
 ID MS sits in the Intent Domain as the definition-time contract service.
 
 ```text
-External client / OEX / authorised platform
+External client, OEX, or authorised platform
   |
-  | REST over NGW / API Gateway
+  | REST over NGW or API Gateway
   v
 Intent Definition MS (ID MS)
   |
@@ -143,7 +143,7 @@ ID MS is responsible for:
 | Version governance | Enforce `specKey`, unique versions, active-version selection, and previous-active retirement. |
 | Lifecycle governance | Enforce `DRAFT`, `ACTIVE`, and `RETIRED` lifecycle states and allowed transitions. |
 | Mutability control | Allow material update only while the specification is `DRAFT`. |
-| Concurrency | Enforce strong `ETag` / `If-Match` behaviour on unsafe operations. |
+| Concurrency | Enforce strong `ETag` and `If-Match` behaviour on unsafe operations. |
 | Subscription management | Manage external `IntentSpecification` event subscriptions through domain-scoped hub routes. |
 | External events | Deliver TMF-aligned external resource-event notifications to registered hub subscriber callback URLs after successful specification changes. |
 | Retrieval support | Allow IC MS and authorised consumers to retrieve active specifications for runtime validation and discovery. |
@@ -297,7 +297,7 @@ Baseline:
 - `specKey` is mandatory on create and is used by ID MS to resolve the stable server-assigned `IntentSpecification.id`.
 - ID MS assigns a new `draftId` for each mutable DRAFT candidate.
 - Before activation, DRAFT candidate retrieval, update, activation, and deletion use `/intentSpecification/draft/{draftId}`. After activation, GET by `draftId` remains available as read-only provenance lookup for the produced official version.
-- Material change after activation to a spec requires a new mutable DRAFT candidate,that end as another active version.
+- Material change after activation requires a new mutable DRAFT candidate.
 - `ACTIVE` and `RETIRED` specifications are immutable for material contract changes.
 - Runtime `Intent.version` and `IntentSpecification.version` are separate concepts.
 
@@ -423,7 +423,7 @@ Clients must not use or submit `DELETED` as a lifecycle status.
 
 ## 17. Authorisation:
 
-ID MS is externally reached through the platform gateway/security boundary. The gateway authenticates the caller and forwards trusted system context according to platform policy.
+ID MS is externally reached through the platform gateway and security boundary. The gateway authenticates the caller and forwards trusted system context according to platform policy.
 
 ID MS must authorise callers for specification management operations and subscription management operations. It must enforce resource-level and lifecycle-level rules independently of gateway authentication.
 
@@ -435,7 +435,7 @@ ID MS must authorise callers for specification management operations and subscri
 | Delete draft specifications | Caller must be authorised for controlled deletion and the resource must be unused. |
 | Manage hub subscriptions | Caller must be authorised to register, inspect, or remove external listener subscriptions. |
 
-## 18. Persistence / state / outbox model:
+## 18. Persistence, state, and outbox model:
 
 ID MS requires durable persistence for:
 
@@ -669,7 +669,7 @@ ID MS configuration should include:
 | Concurrency policy | Unsafe operations require `If-Match`. |
 | Hub route policy | Domain-scoped `/intentSpecification/hub` routes retained as platform extension for REST webhook subscription delivery. |
 | Event filter policy | Supported `IntentSpecification` event types and subscription filters for REST webhook delivery. |
-| Schema registry / governed artefact references | Validation of `expressionSpecification` and `targetEntitySchema` references. |
+| Schema registry and governed artefact references | Validation of `expressionSpecification` and `targetEntitySchema` references. |
 
 
 

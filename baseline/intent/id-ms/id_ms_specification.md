@@ -429,7 +429,7 @@ The following query parameters are supported where applicable:
 |---|---|---|
 | `offset` | List | Zero-based result offset for pagination |
 | `limit` | List | Maximum number of results returned |
-| `fields` | Create, list, retrieve, update | Optional TMF-aligned field selection / projection parameter |
+| `fields` | Create, list, retrieve, update | Optional TMF-aligned field selection and projection parameter |
 | `lifecycleStatus` | List | Filter specifications by lifecycle state |
 | `name` | List | Filter specifications by name |
 | `version` | List | Filter specifications by version |
@@ -2415,7 +2415,7 @@ For ID MS, accepted platform extensions are:
 | `specKey` | Specification-key grouping across versions | Platform governance field; does not replace TMF `id` or `version` |
 | `_links` | Lifecycle-aware navigation and operation hints | Platform HATEOAS extension; clients must not require it for strict TMF compatibility |
 | `previousActiveSpecification` | Activation outcome trace | Platform governance projection showing the version retired during activation |
-| Strong `ETag` / `If-Match` governance | Unsafe-operation concurrency control | Platform concurrency policy applied consistently to mutable operations |
+| Strong `ETag` and `If-Match` governance | Unsafe-operation concurrency control | Platform concurrency policy applied consistently to mutable operations |
 | `428 Precondition Required` | Missing precondition response | Platform concurrency policy for unsafe operations that require `If-Match` |
 
 ### 23.3 Update method rule:
