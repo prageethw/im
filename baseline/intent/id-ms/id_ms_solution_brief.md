@@ -212,7 +212,7 @@ The platform base path is:
 
 A strict TMF-compatible gateway may map deployment-specific external prefixes to the platform-owned service path without changing resource semantics.
 
-## 10. Request shape / event shape:
+## 10. Request shape & event shape:
 
 ### 10.1 IntentSpecification resource API:
 
