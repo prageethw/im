@@ -459,7 +459,7 @@ The following query parameters are supported where applicable:
 | `404` | `RESOURCE_NOT_FOUND` | Specification or subscription not found |
 | `409` | `RESOURCE_IMMUTABLE` | Attempt to update active/retired specification |
 | `409` | `VERSION_CONFLICT` | Duplicate specification/version or specKey active-lineage conflict |
-| `412` | `PRECONDITION_FAILED` | Supplied `If-Match` does not match the current resource version |
+| `412` | `PRECONDITION_FAILED` | Supplied `If-Match` does not match the current resource representation |
 | `422` | `VALIDATION_FAILED` | Fails expression/spec schema constraints |
 | `428` | `PRECONDITION_REQUIRED` | Required `If-Match` header is missing for an unsafe operation |
 | `503` | `SERVICE_UNAVAILABLE` | Source-of-truth DB unavailable |
@@ -500,7 +500,7 @@ Cache-Control: no-store
 {
   "code": "PRECONDITION_FAILED",
   "reason": "ETAG_MISMATCH",
-  "message": "The supplied ETag does not match the current resource version.",
+  "message": "The supplied ETag does not match the current resource representation.",
   "status": 412,
   "referenceError": "https://mycsp.com.au/errors/PRECONDITION_FAILED",
   "@type": "Error"
@@ -1289,7 +1289,7 @@ Cache-Control: no-store
 {
   "code": "PRECONDITION_FAILED",
   "reason": "ETAG_MISMATCH",
-  "message": "The supplied ETag does not match the current resource version.",
+  "message": "The supplied ETag does not match the current resource representation.",
   "status": 412,
   "referenceError": "https://mycsp.com.au/errors/PRECONDITION_FAILED",
   "@type": "Error"
@@ -1469,7 +1469,7 @@ Cache-Control: no-store
 {
   "code": "PRECONDITION_FAILED",
   "reason": "ETAG_MISMATCH",
-  "message": "The supplied ETag does not match the current resource version.",
+  "message": "The supplied ETag does not match the current resource representation.",
   "status": 412,
   "referenceError": "https://mycsp.com.au/errors/PRECONDITION_FAILED",
   "@type": "Error"
@@ -1570,7 +1570,7 @@ Cache-Control: no-store
 {
   "code": "PRECONDITION_FAILED",
   "reason": "ETAG_MISMATCH",
-  "message": "The supplied ETag does not match the current resource version.",
+  "message": "The supplied ETag does not match the current resource representation.",
   "status": 412,
   "referenceError": "https://mycsp.com.au/errors/PRECONDITION_FAILED",
   "@type": "Error"
@@ -1725,10 +1725,10 @@ Activation full response body example:
 
 ### 11.5 Events emitted by activation:
 
-Activation emits `IntentSpecificationStatusChangeEvent` for lifecycle transitions:
+Activation emits status-change events for lifecycle transitions:
 
-1. One event for the newly activated version, with the emitted `intentSpecification.lifecycleStatus` set to `ACTIVE`.
-2. One event for the previous active version in the same `specKey`, with the emitted `intentSpecification.lifecycleStatus` set to `RETIRED`, when a previous active version exists.
+1. One `IntentSpecificationStatusChangeEvent` for the newly activated version, with the emitted `intentSpecification.lifecycleStatus` set to `ACTIVE`.
+2. One `IntentSpecificationStatusChangeEvent` for the previous active version in the same `specKey`, with the emitted `intentSpecification.lifecycleStatus` set to `RETIRED`, when a previous active version exists.
 
 Creating or editing a DRAFT candidate does not emit `IntentSpecificationStatusChangeEvent`. DRAFT creation may emit `IntentSpecificationCreateEvent`, and DRAFT attribute changes may emit `IntentSpecificationAttributeValueChangeEvent` where subscribed.
 
@@ -1790,7 +1790,7 @@ Cache-Control: no-store
 {
   "code": "PRECONDITION_FAILED",
   "reason": "ETAG_MISMATCH",
-  "message": "The supplied ETag does not match the current resource version.",
+  "message": "The supplied ETag does not match the current resource representation.",
   "status": 412,
   "referenceError": "https://mycsp.com.au/errors/PRECONDITION_FAILED",
   "@type": "Error"
@@ -1869,7 +1869,7 @@ ETag: "subscription-sub-001-v1"
 - The `query` field filters delivered events.
 - ID MS hub subscriptions are for external IntentSpecification events only: `IntentSpecificationCreateEvent`, `IntentSpecificationAttributeValueChangeEvent`, `IntentSpecificationStatusChangeEvent`, and `IntentSpecificationDeleteEvent`.
 - ID MS delivers subscribed events by HTTP `POST` to the stored subscriber callback URL.
-- ID MS does not publish hub notifications to Kafka and does not create a self-publish/self-consume Kafka loop for external subscription delivery.
+- ID MS does not publish hub notifications to Kafka and does not create a self-publish and self-consume Kafka loop for external subscription delivery.
 - ID MS uses a local delivery outbox and retry relay to track pending, delivered, failed, and retryable webhook notification work.
 - ID MS hub subscriptions must not expose internal workflow events, KP details, runtime assurance state, telemetry, callback payloads, or internal fulfilment details.
 
@@ -2057,10 +2057,10 @@ Event resource snapshots should carry consistent resource metadata:
 
 Status-change events carry the current `intentSpecification.lifecycleStatus` snapshot. They do not carry separate `previousLifecycleStatus` or `newLifecycleStatus` fields.
 
-Activation emits `IntentSpecificationStatusChangeEvent` for lifecycle transitions:
+Activation emits status-change events for lifecycle transitions:
 
-- one for the newly activated version, with `intentSpecification.lifecycleStatus` set to `ACTIVE`
-- one for the previous active version, with `intentSpecification.lifecycleStatus` set to `RETIRED`, when a previous active version exists
+- one `IntentSpecificationStatusChangeEvent` for the newly activated version, with `intentSpecification.lifecycleStatus` set to `ACTIVE`
+- one `IntentSpecificationStatusChangeEvent` for the previous active version, with `intentSpecification.lifecycleStatus` set to `RETIRED`, when a previous active version exists
 
 Creating or editing a DRAFT candidate does not emit `IntentSpecificationStatusChangeEvent`. DRAFT creation may emit `IntentSpecificationCreateEvent`, and DRAFT attribute changes may emit `IntentSpecificationAttributeValueChangeEvent` where subscribed.
 

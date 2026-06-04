@@ -68,6 +68,7 @@ Those responsibilities remain with IC MS, II MS, IA MS, ICB MS, optimiser compon
 
 ## 2. Logical View:
 ![alt text](id_ms_logical_view.svg)
+
 ID MS sits in the Intent Domain as the definition-time contract service.
 
 ```text
@@ -99,6 +100,7 @@ Core logical resources are:
 
 ## 3. Process View:
 ![alt text](intent_definition_ms_sequence.svg)
+
 The primary ID MS process flows are:
 
 1. Create a new draft `IntentSpecification`.
@@ -434,7 +436,7 @@ The implementation should create hub delivery work from committed state. Resourc
 
 ID MS uses `/intentSpecification/hub` as a REST webhook subscription mechanism. Subscribers register callback URLs and optional filters. After a committed `IntentSpecification` resource change, ID MS delivers matching `IntentSpecification` event notifications by HTTP `POST` to the registered subscriber callback URL.
 
-The delivery model is a TMF-aligned subscriber listener callback. Kafka is not used for ID MS hub notification delivery. There is no ID MS self-publish/self-consume Kafka loop and no dedicated Kafka topic for these external hub notifications. ID MS is both the event originator and the delivery owner.
+The delivery model is a TMF-aligned subscriber listener callback. Kafka is not used for ID MS hub notification delivery. There is no ID MS self-publish and self-consume Kafka loop and no dedicated Kafka topic for these external hub notifications. ID MS is both the event originator and the delivery owner.
 
 Events are external subscription notifications for specification-resource changes. They must not expose internal fulfilment, KP, optimiser, assurance, telemetry, callback, or candidate and resource scoring details.
 
@@ -564,7 +566,7 @@ Delete events are emitted only after successful delete and show the last known l
 - Retrieve GET may use private caching.
 - Clients may request a fresh response with `Cache-Control: no-cache`.
 
-### 25.5 GET response caching behaviour:
+### 25.4 GET response caching behaviour:
 
 For cacheable GET operations, ID MS builds a deterministic cache key from the effective request shape, including the path, query parameters, selected `fields` projection, and other inputs that can change the returned representation.
 
@@ -616,9 +618,9 @@ ID MS may also invalidate or refresh affected cache entries on write paths or li
 }
 ```
 
-Activation emits `IntentSpecificationStatusChangeEvent` for lifecycle transitions:
-  - one for the newly activated specification version with `lifecycleStatus: ACTIVE`;
-  - one for the previous active specification version with `lifecycleStatus: RETIRED`, when a previous active version exists.
+Activation emits status-change events for lifecycle transitions:
+  - one `IntentSpecificationStatusChangeEvent` for the newly activated specification version with `lifecycleStatus: ACTIVE`;
+  - one `IntentSpecificationStatusChangeEvent` for the previous active specification version with `lifecycleStatus: RETIRED`, when a previous active version exists.
 
 Creating or editing a DRAFT candidate does not emit `IntentSpecificationStatusChangeEvent`. DRAFT creation may emit `IntentSpecificationCreateEvent`, and DRAFT attribute changes may emit `IntentSpecificationAttributeValueChangeEvent` where subscribed.
 
@@ -637,7 +639,7 @@ Creating or editing a DRAFT candidate does not emit `IntentSpecificationStatusCh
 - ID MS stores subscriber callback URLs and subscription filters in its own subscription store.
 - After a committed specification change, ID MS creates local delivery outbox work for matching subscriptions.
 - An ID MS-owned retry relay delivers the event by HTTP `POST` to each subscriber listener callback URL.
-- Kafka is not used for hub delivery. There is no ID MS self-publish/self-consume Kafka loop for external notifications.
+- Kafka is not used for hub delivery. There is no ID MS self-publish and self-consume Kafka loop for external notifications.
 
 ## 26. Configuration:
 

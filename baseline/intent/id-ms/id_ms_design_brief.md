@@ -315,7 +315,7 @@ Cache-Control: no-store
 {
   "code": "PRECONDITION_FAILED",
   "reason": "ETAG_MISMATCH",
-  "message": "The supplied ETag does not match the current resource version.",
+  "message": "The supplied ETag does not match the current resource representation.",
   "status": 412,
   "referenceError": "https://mycsp.com.au/errors/PRECONDITION_FAILED",
   "@type": "Error"
@@ -546,9 +546,9 @@ Rules:
 - Missing `If-Match` returns `428`.
 - Stale or mismatched `If-Match` returns `412`.
 - Invalid lifecycle transition returns `409 Conflict`.
-- Activation emits `IntentSpecificationStatusChangeEvent` for lifecycle transitions:
-  - one event carrying the new version snapshot with `lifecycleStatus: ACTIVE`
-  - one event carrying the previous active version snapshot with `lifecycleStatus: RETIRED`, when a previous active version exists
+- Activation emits status-change events for lifecycle transitions:
+  - one `IntentSpecificationStatusChangeEvent` carrying the new version snapshot with `lifecycleStatus: ACTIVE`
+  - one `IntentSpecificationStatusChangeEvent` carrying the previous active version snapshot with `lifecycleStatus: RETIRED`, when a previous active version exists
 - Creating or editing a DRAFT candidate does not emit `IntentSpecificationStatusChangeEvent`. DRAFT creation may emit `IntentSpecificationCreateEvent`, and DRAFT attribute changes may emit `IntentSpecificationAttributeValueChangeEvent` where subscribed.
 
 
@@ -757,7 +757,7 @@ Delete is an operation outcome, not a normal lifecycle state.
 - When a new version becomes `ACTIVE`, the previous active version moves to `RETIRED`.
 - Retired specifications must not be used for new `Intent` creation.
 - Existing runtime Intent instances referencing a RETIRED specification may continue under external platform governance policy.
-- 
+
 ### 23.4 Specification key rule:
 
 A specification key is the logical grouping of related versions of the same specification.
@@ -911,7 +911,7 @@ Meaning:
 - `If-None-Match` is not baselined
 - `304 Not Modified` is not baselined
 
-### 24.6 GET response cache lookup and refresh behaviour:
+### 24.5 GET response cache lookup and refresh behaviour:
 
 For cacheable GET operations, ID MS uses a deterministic cache key derived from the effective request shape. The cache key includes the request path, query parameters, selected `fields` projection, caller-safe response context where applicable, and any other input that can change the returned representation. The implementation may hash this cache key internally, but the architecture baseline is based on the deterministic cache key, not on an externally visible request hash.
 
@@ -1160,7 +1160,7 @@ ID MS stores and governs:
 - specification versions
 - lifecycle status
 - hub subscriptions
-- local webhook delivery webhook delivery outbox records for subscribed event notification delivery
+- local webhook delivery outbox records for subscribed event notification delivery
 - audit-relevant metadata
 
 ### 25.3 Recommended persistence model:
