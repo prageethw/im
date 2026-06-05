@@ -33,7 +33,7 @@ end note
 EXT -> GW : POST /intent-callback/v1/submissions\nIntentCallbackEventRequest or OptimisationStatusChangeEventRequest
 
 == 2. API Gateway — Authentication + Trusted Context ==
-GW -> GW : authenticate caller\n(mTLS / OAuth2 / platform token)
+GW -> GW : authenticate caller\n(mTLS, OAuth2, or platform token)
 
 alt authentication fails
     GW --> EXT : 401 Unauthorized
@@ -41,7 +41,7 @@ else authenticated
     GW -> ICBMS : forward request + trusted caller context\n{ callerId, callerScope, sourceSystem }
 
     == 3. ICB MS — Authorisation ==
-    ICBMS -> ICBMS : authorise callback submission\nfor caller / source context
+    ICBMS -> ICBMS : authorise callback submission\nfor caller and source context
 
     alt not authorised
         ICBMS --> GW : 403 Forbidden
@@ -49,9 +49,9 @@ else authenticated
     else authorised
 
         == 4. Structure and Syntax Validation ==
-        ICBMS -> ICBMS : validate structure and syntax only\n(no semantic interpretation,\n no intentId / optimisation correlation here)
+        ICBMS -> ICBMS : validate structure and syntax only\n(no semantic interpretation,\n no intentId or optimisation correlation here)
 
-        alt structure / syntax invalid
+        alt structure or syntax invalid
             ICBMS --> GW : 400 Bad Request { validationErrors }
             GW --> EXT : 400 Bad Request
         else structure valid
@@ -72,7 +72,7 @@ ICB MS fails fast and does not accept the callback.
                 STORE --> ICBMS : committed
                 ICBMS --> GW : 202 Accepted { correlationId }
                 GW --> EXT : 202 Accepted { correlationId }
-            else DB unavailable / commit fails
+            else DB unavailable or commit fails
                 STORE --> ICBMS : error
                 ICBMS --> GW : 503 Service Unavailable
                 GW --> EXT : 503 Service Unavailable
@@ -92,7 +92,7 @@ ICB MS fails fast and does not accept the callback.
                 KAFKA --> RELAY : ack
                 RELAY -> STORE : mark outbox record DELIVERED
             else Kafka unavailable
-                KAFKA --> RELAY : error / timeout
+                KAFKA --> RELAY : error or timeout
                 RELAY -> STORE : increment retry count\n(exponential back-off)
             end
 
