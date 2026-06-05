@@ -320,7 +320,7 @@ Internal II events do not use the TMF external `Intent.expression` wrapper, but 
 
 II MS has no external TMF-compliant API and no consumer-facing REST contract. It is not exposed through NGW, OEX, public API gateways, or partner-facing API channels.
 
-For optimiser-backed selection, II MS uses the ICB-owned callback ingestion path for optimiser outcome events. II MS registers or supplies the ICB submission URL to the Optimiser platform, and ICB MS publishes the received `OptimisationStatusChangeEvent` to Kafka for II MS consumption. The exact ICB ingestion and relay contract must be confirmed during ICB MS refinement.
+For optimiser-backed selection, II MS uses the ICB-owned callback ingestion path for optimiser outcome events. II MS registers or supplies the ICB submission URL to the Optimiser platform, and ICB MS ingests the received `OptimisationStatusChangeEventRequest` callback and publishes `OptimisationStatusChangeEvent` to Kafka for II MS consumption. The exact ICB ingestion and relay contract must be confirmed during ICB MS refinement.
 
 Operational probes such as `/health`, `/ready`, and `/metrics`, if implemented, are platform-internal only. They are for Kubernetes and platform operations and must not be presented as TMF921 resource APIs or externally exposed service APIs.
 
