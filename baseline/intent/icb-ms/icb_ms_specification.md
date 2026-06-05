@@ -40,7 +40,7 @@
 - [12. Event-specific rules:](#12-event-specific-rules)
 - [13. Reference and correlation construction rules:](#13-reference-and-correlation-construction-rules)
 - [14. Structural validation rules:](#14-structural-validation-rules)
-  - [14.1. IntentCallbackEvent change execution and apply callback profile:](#141-intentcallbackevent-change-executionapply-callback-profile)
+  - [14.1. IntentCallbackEvent change-execution/apply callback profile:](#141-intentcallbackevent-change-executionapply-callback-profile)
   - [14.2. OptimisationStatusChangeEvent optimiser outcome callback profile:](#142-optimisationstatuschangeevent-optimiser-outcome-callback-profile)
 - [15. Standard errors:](#15-standard-errors)
   - [15.1. Common errors:](#151-common-errors)
@@ -77,11 +77,11 @@ ICB MS performs technical authorisation, structural validation, idempotent durab
 | Submit callback | `POST` | `/intent-callback/v1/submissions` |
 | Retrieve callback submission status | `GET` | `/intent-callback/v1/submissions/{id}` |
 
-The `POST` endpoint supports approved callback profiles, including change execution and apply callback submissions and optimiser outcome callback submissions.
+The `POST` endpoint supports approved callback profiles, including change-execution/apply callback submissions and optimiser outcome callback submissions.
 
 | **Callback profile** | **ICB output event** | **Kafka topic** | **Consumer** |
 |---|---|---|---|
-| Change-execution/apply callback | `IntentCallbackEvent` | `t7.intent.management.events.callbacks` | IA MS |
+| Change-execution and apply callback | `IntentCallbackEvent` | `t7.intent.management.events.callbacks` | IA MS |
 | Optimiser outcome callback | `OptimisationStatusChangeEvent` | `t7.intent.management.events` | II MS |
 
 The `GET` endpoint is a callback-submission operational status endpoint. It does not expose internal IA assurance state and does not replace IC MS `Intent` or `IntentReport` resources.
@@ -684,7 +684,7 @@ ICB MS must not trust caller-supplied platform `href` values. Where ICB MS creat
 
 Required request fields depend on the approved callback profile.
 
-### 14.1. IntentCallbackEvent change execution and apply callback profile:
+### 14.1. IntentCallbackEvent change-execution/apply callback profile:
 
 | **Field** | **Rule** |
 |---|---|
@@ -711,7 +711,7 @@ Required request fields depend on the approved callback profile.
 
 ICB MS validates syntax and structure only. It does not validate service feasibility, lifecycle meaning, assurance meaning, selected-configuration meaning, or optimiser outcomes.
 
-Do not use `callbackType` as an ICB contract field. Raw change execution and apply callback meaning is carried by `sourceState.state` and interpreted by IA MS. Optimiser outcome meaning is carried by `OptimisationStatusChangeEvent` and interpreted by II MS.
+Do not use `callbackType` as an ICB contract field. Raw change-execution/apply callback meaning is carried by `sourceState.state` and interpreted by IA MS. Optimiser outcome meaning is carried by `OptimisationStatusChangeEvent` and interpreted by II MS.
 
 ## 15. Standard errors:
 
@@ -786,16 +786,16 @@ Retry-After: 30
 | `callback_submission_payload` | Optional payload body store. Use when payload size, data classification, retention separation, or audit policy requires payload separation; otherwise the accepted payload may be stored inline in `callback_submission` or `callback_outbox` according to the implementation data model |
 | `callback_idempotency` | Deduplication and retry-safety records |
 | `callback_outbox` | Pending/published callback events for Kafka relay, including `IntentCallbackEvent` and `OptimisationStatusChangeEvent` |
-| `callback_audit` | Audit of accepted, rejected, and duplicate decisions |
+| `callback_audit` | Audit of accepted/rejected/duplicate decisions |
 | `shedlock` | Optional clustered relay coordination |
 
 ## 17. Outbox relay rules:
 
 - Write callback submission and outbox record in one DB transaction.
-- Return API success after DB and outbox commit succeeds.
+- Return API success after DB/outbox commit succeeds.
 - Publish to Kafka asynchronously through outbox relay.
 - If Kafka is unavailable, retry publication later.
-- If DB and outbox commit fails, return API failure because durable callback publication cannot be guaranteed.
+- If DB/outbox commit fails, return API failure because durable callback publication cannot be guaranteed.
 - Outbox relay must be idempotent and safe to retry. The relay publishes `IntentCallbackEvent` to the callback topic and `OptimisationStatusChangeEvent` to the main internal event topic according to the outbox record event type.
 
 ## 18. Security rules:
