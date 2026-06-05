@@ -124,7 +124,7 @@ IC MS owns the externally visible runtime projection, not the full internal fulf
 
 ### 3.2. Runtime intent Draft update and submitted-version change:
 
-1. A consumer may update an existing Draft projection using `PUT` or `PATCH` only while the current Intent/Draft projection is in `Draft`.
+1. A consumer may update an existing Draft projection using `PUT` or `PATCH` only while the current Intent or Draft projection is in `Draft`.
 2. Unsafe update operations require `If-Match`.
 3. IC MS applies optimistic concurrency using the current ETag.
 4. For a Draft Intent, all attributes accepted by the `PUT` and `PATCH` request contract are mutable.
@@ -164,7 +164,7 @@ When a newer version becomes `activeVersion`, the previous version transition ru
 2. IC MS consumes curated assurance outcomes and creates/updates `IntentReport` projections.
 3. External consumers can list and retrieve `IntentReport` records.
 4. Ordinary external consumers do not delete `IntentReport` records.
-5. Governed internal/admin purge may remove reports and emit `IntentReportDeleteEvent` when policy allows.
+5. Governed internal or admin purge may remove reports and emit `IntentReportDeleteEvent` when policy allows.
 
 ### 3.5. Hub notification delivery:
 
@@ -217,7 +217,7 @@ IC MS is responsible for:
 | Internal progress publication | Emit `IntentValidatedEvent` after schema and request-shape validation succeeds. |
 | External lifecycle projection | Own consumer-facing `Intent.lifecycleStatus`, `statusReason`, and `statusChangeDate`; external consumers cannot set or patch these fields. |
 | Runtime version projection | Return the current projected runtime version externally while retaining internal version history; Draft authoring records do not drive `activeVersion`. |
-| `IntentReport` projection | Expose read-only curated report/projection history derived from assurance outcomes. |
+| `IntentReport` projection | Expose read-only curated report projection history derived from assurance outcomes. |
 | Event subscription | Support strict TMF `/hub` and domain-scoped `/intent/hub` subscription routes. |
 | External event delivery | Deliver consumer-safe TMF-aligned `Intent` and `IntentReport` event notifications by REST webhook callback to subscriber listener URLs. |
 | Concurrency control | Enforce ETag and `If-Match` on unsafe state-changing operations. |
@@ -242,7 +242,7 @@ IC MS does not own:
 | Raw orchestrator callback interpretation | IA MS |
 | Raw candidate/resource scoring exposure | Internal optimiser/assurance pipeline only |
 
-IC MS also does not resolve an `IntentSpecification` by `expression.iri` alone, `specKey`, name, or inferred expression shape alone. Submitted runtime create/update admission requests must include both `intentSpecification.id` and `expression.iri`. `intentSpecification.id` selects the exact active platform-managed specification. `expression.iri` identifies the semantic/expression contract and must match the selected specification's `expressionSpecification.iri`. `intentSpecification.specKey` and `intentSpecification.name` are optional hints only.
+IC MS also does not resolve an `IntentSpecification` by `expression.iri` alone, `specKey`, name, or inferred expression shape alone. Submitted runtime create or update admission requests must include both `intentSpecification.id` and `expression.iri`. `intentSpecification.id` selects the exact active platform-managed specification. `expression.iri` identifies the semantic expression contract and must match the selected specification's `expressionSpecification.iri`. `intentSpecification.specKey` and `intentSpecification.name` are optional hints only.
 
 IC MS does not allow external consumers to set or patch `lifecycleStatus`; lifecycle state is assigned and projected by the intent management entity.
 
@@ -290,7 +290,7 @@ X-Platform-Extension: true
 | List reports for intent | `GET` | `/intentManagement/v5/intent/{intentId}/intentReport` | Platform/TMF-aligned nested report projection |
 | Retrieve report by ID | `GET` | `/intentManagement/v5/intent/{intentId}/intentReport/{id}` | Platform/TMF-aligned nested report projection |
 
-Ordinary external consumers do not receive a public `DELETE /intentManagement/v5/intent/{intentId}/intentReport/{id}` capability. Governed internal/admin purge may exist, but is not exposed through NGW/public consumer APIs by default.
+Ordinary external consumers do not receive a public `DELETE /intentManagement/v5/intent/{intentId}/intentReport/{id}` capability. Governed internal or admin purge may exist, but is not exposed through NGW/public consumer APIs by default.
 
 ### 8.3. Hub subscription APIs:
 
@@ -351,7 +351,7 @@ Preferred governed `expression.expressionValue` shape:
 Baseline:
 
 - `targetEntitySchema` owns the detailed validation contract.
-- `expressionSpecification.iri` identifies the semantic/expression contract.
+- `expressionSpecification.iri` identifies the semantic expression contract.
 - `specCharacteristic` gives catalogue/discovery summary only.
 - Use array-based `targets`, `constraints`, and `preferences` for scalability.
 - Keep simplified object-map examples only where they are deliberately explanatory.
@@ -368,7 +368,7 @@ A runtime intent create/update request uses the following baseline:
 | `humanExpression` | Human-readable expression of the requested outcome. |
 | `submit` | Optional IC MS extension request-control field. `false` saves or keeps Draft; `true` submits for admission. If omitted on initial create, the request is treated as submitted. If omitted on an existing Draft, Draft handling is preserved. |
 | `intentSpecification.id` | Mandatory for submitted admission; selects the exact active platform-managed specification used for validation, governance, and audit. |
-| `expression.iri` | Mandatory for submitted admission; identifies the semantic/expression contract and must match the selected specification's `expressionSpecification.iri`. |
+| `expression.iri` | Mandatory for submitted admission; identifies the semantic expression contract and must match the selected specification's `expressionSpecification.iri`. |
 | `intentSpecification.specKey` | Optional descriptive/discovery hint; not an authoritative validation key. |
 | `intentSpecification.name` | Optional descriptive/discovery hint; not an authoritative validation key. |
 | `expression` | Required TMF-compliant `JsonLdExpression`. |
@@ -454,7 +454,7 @@ Terminated
 
 ### 12.3. Intent-version lifecycleStatus values after admission:
 
-The Intent-version-level `lifecycleStatus` is the lifecycle truth for each admitted runtime version. It supports version history, rollback/restart, audit, and governance.
+The Intent-version-level `lifecycleStatus` is the lifecycle truth for each admitted runtime version. It supports version history, rollback or restart, audit, and governance.
 
 ```text
 Acknowledged
@@ -521,7 +521,7 @@ IC MS should reject or ignore unsupported external request fields according to t
 |---|---|
 | `intentSpecification.specKey` as the authoritative validation key | IC MS does not resolve runtime requests by specKey alone; it is only an optional hint. |
 | `intentSpecification.name` as the authoritative validation key | IC MS does not resolve runtime requests by display name alone; it is only an optional hint. |
-| Missing `expression.iri` | Submitted admission must include `expression.iri` so IC MS can validate the semantic/expression contract against the selected specification. |
+| Missing `expression.iri` | Submitted admission must include `expression.iri` so IC MS can validate the semantic expression contract against the selected specification. |
 | Inferred specification from payload shape alone | IC MS must resolve the active validation contract by mandatory `intentSpecification.id`, with mandatory `expression.iri` checked against the selected specification. |
 | Internal optimiser candidate sets | Not part of the external runtime create/update contract. |
 | Raw Knowledge Plane facts | Not accepted through IC MS runtime APIs. |
@@ -530,7 +530,7 @@ IC MS should reject or ignore unsupported external request fields according to t
 | Consumer-supplied lifecycle and status projection authority | IC MS owns external lifecycle and status projection. |
 | Consumer-supplied `lifecycleStatus` in create/update | Lifecycle state is assigned and projected by the intent management entity; external consumers use `submit`, not `lifecycleStatus`, to request draft/save versus admission. |
 | Missing `isBundle` in create/update request | Not an error. IC MS defaults omitted `isBundle` to `false` on create and preserves the persisted/server-resolved value on Draft updates unless explicitly changed. |
-| Consumer-supplied `IntentReport` mutation fields | Reports are curated projection/audit resources. |
+| Consumer-supplied `IntentReport` mutation fields | Reports are curated projection and audit resources. |
 | String placeholders for object/array fields in examples or payloads | Typed placeholder rule requires object placeholders for objects and array placeholders for arrays. |
 
 ## 14. Authorisation:
@@ -560,7 +560,7 @@ IC MS persists external runtime intent projections, runtime version metadata, hu
 | Runtime intent record | External canonical `Intent` projection, including Draft authoring records where `submit: false` is used. |
 | Current projected version | Version returned by standard `GET /intent/{id}`; Draft authoring records do not drive `activeVersion`. |
 | Lifecycle/status fields | `lifecycleStatus`, `statusReason`, `statusChangeDate`, assigned and projected by the intent management entity. |
-| ETag/version token | Optimistic concurrency for unsafe operations. |
+| ETag concurrency token | Optimistic concurrency for unsafe operations. |
 | Internal version history | Audit and traceability; not returned by default external GET. |
 | Correlation identifiers | Trace lifecycle and downstream outcome handling. |
 
@@ -571,7 +571,7 @@ IC MS persists external runtime intent projections, runtime version metadata, hu
 | Report record | Read-only curated assurance/lifecycle report. |
 | Parent intent reference | Associates report with runtime intent. |
 | Report expression | Consumer-safe assurance and lifecycle summary. |
-| ETag/version token | Supports GET caching and governed admin operations. |
+| ETag concurrency token | Supports GET caching and governed admin operations. |
 | Retention metadata | Supports policy-governed purge/admin removal where required. |
 
 ### 15.3. Hub subscription state:
@@ -581,7 +581,7 @@ IC MS persists external runtime intent projections, runtime version metadata, hu
 | Subscription ID | Stable event subscription identifier. |
 | Callback URL | Subscriber-owned listener endpoint. |
 | Query/filter | Event filter expression such as `eventType=IntentStatusChangeEvent`. |
-| ETag/version token | Required for unsafe delete where baselined. |
+| ETag concurrency token | Required for unsafe delete where baselined. |
 | Subscription metadata | Audit and operational support. |
 
 ### 15.4. Webhook delivery outbox state:
@@ -825,8 +825,8 @@ Webhook notifications use HTTP headers, not Kafka CloudEvents headers.
 |---|---|
 | Unsafe operation missing required `If-Match` | Return `428 PRECONDITION_REQUIRED` with reason `IF_MATCH_REQUIRED`. |
 | Stale or mismatched ETag | Return `412 PRECONDITION_FAILED` with reason `ETAG_MISMATCH`. |
-| Draft PUT/PATCH | Allowed while the current Intent/Draft projection is `Draft`; all request-contract attributes are mutable. |
-| Submitted-version PUT/PATCH | Not allowed for general attribute update; material change requires a new Draft authoring record. |
+| Draft PUT and PATCH | Allowed while the current Intent or Draft projection is `Draft`; all request-contract attributes are mutable. |
+| Submitted-version PUT and PATCH | Not allowed for general attribute update; material change requires a new Draft authoring record. |
 | Newer candidate already exists | Reject/defer another newer version while the existing candidate is `Acknowledged` or `InProgress`. |
 | `PATCH` usage | Supported for TMF compatibility while Draft, but `PUT` is preferred for deterministic full update. |
 
@@ -876,7 +876,7 @@ IC MS configuration should include:
 | Hub subscription policy | Control callback URL validation, event filters, and subscription lifecycle. |
 | Webhook delivery policy | Control retry intervals, retry limit, timeout, and failed-delivery handling. |
 | ETag/concurrency policy | Enforce `If-Match` on unsafe operations. |
-| Report retention policy | Govern `IntentReport` retention and internal/admin purge. |
+| Report retention policy | Govern `IntentReport` retention and internal or admin purge. |
 | Cache policy | Apply GET-only cache headers and fresh-read override. |
 | Error catalogue | Maintain shared platform REST error body consistency. |
 
@@ -890,7 +890,7 @@ External consumers can rely on IC MS to provide:
 | Runtime validation discriminator | Submitted runtime requests must include both `intentSpecification.id` and `expression.iri`. |
 | Draft authoring | Consumers can save and edit Draft Intents with `submit: false`; Drafts are not admitted or sent downstream. |
 | External status projection | `lifecycleStatus`, `statusReason`, and `statusChangeDate` are IC MS-owned projections and are not externally writable. |
-| Report read model | `IntentReport` is a read-only curated projection/audit resource for ordinary consumers. |
+| Report read model | `IntentReport` is a read-only curated projection and audit resource for ordinary consumers. |
 | Hypermedia links | Responses include links for valid next actions where applicable. |
 | Optimistic concurrency | Unsafe operations use `If-Match` and ETag. |
 | Submitted-version immutability | Once an Intent leaves Draft, consumers cannot patch arbitrary attributes on that submitted version; material change requires a new Draft authoring record. |

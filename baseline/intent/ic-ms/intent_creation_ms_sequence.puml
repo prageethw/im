@@ -86,14 +86,14 @@ end
 == 2. Draft Update and Submission ==
 
 note over Consumer, ICMS
-PUT and PATCH are allowed only while the current Intent/Draft projection is Draft.
+PUT and PATCH are allowed only while the current Intent or Draft projection is Draft.
 Material changes after admission require a new Draft authoring record.
 The route or operation for creating that new Draft authoring record is future scope.
 end note
 
 Consumer -> GW : PUT /intentManagement/v5/intent/{id}\nor PATCH /intentManagement/v5/intent/{id}\nHeaders: If-Match: "{currentETag}"\nPATCH Content-Type: application/merge-patch+json
 GW -> ICMS : mTLS forward request\n(system/service context)
-ICMS -> STORE : fetch current Intent/Draft projection and ETag
+ICMS -> STORE : fetch current Intent or Draft projection and ETag
 STORE --> ICMS : { intent, lifecycleStatus, etag }
 
 alt Missing If-Match for unsafe update
@@ -196,7 +196,7 @@ GW --> Consumer : 200 OK { result }
 
 note over Consumer, STORE
 Ordinary external consumers do not delete IntentReport records.
-Only governed internal/admin purge may remove reports.
+Only governed internal or admin purge may remove reports.
 end note
 
 group Admin and Governed Purge (policy-controlled, internal)

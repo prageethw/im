@@ -42,7 +42,7 @@
 - [14. TMF compliance and platform extension baseline:](#14-tmf-compliance-and-platform-extension-baseline)
 - [15. Response classification headers:](#15-response-classification-headers)
 - [16. IC MS boundary statement:](#16-ic-ms-boundary-statement)
-- [17. Lifecycle/status and versioning baseline:](#17-lifecycle-status-and-versioning-baseline)
+- [17. Lifecycle, status, and versioning baseline:](#17-lifecycle-status-and-versioning-baseline)
   - [17.1. Intent-level lifecycleStatus:](#171-intent-level-lifecyclestatus)
   - [17.2. Intent-version lifecycleStatus:](#172-intent-version-lifecyclestatus)
   - [17.3. Version state meanings:](#173-version-state-meanings)
@@ -52,11 +52,11 @@
   - [17.7. Lifecycle/versioning example:](#177-lifecycleversioning-example)
   - [17.8. Example JSON — while v2 is still being processed:](#178-example-json-while-v2-is-still-being-processed)
   - [17.9. Example JSON — after v2 becomes active:](#179-example-json-after-v2-becomes-active)
-  - [17.10. Example JSON — after rollback/restart to v1 is acknowledged:](#1710-example-json-after-rollbackrestart-to-v1-is-acknowledged)
+  - [17.10. Example JSON — after rollback or restart to v1 is acknowledged:](#1710-example-json-after-rollback-or-restart-to-v1-is-acknowledged)
   - [17.11. Example JSON — after rollback to v1 is confirmed:](#1711-example-json-after-rollback-to-v1-is-confirmed)
   - [17.12. Example JSON — after v2 is terminated and then retired from future use:](#1712-example-json-after-v2-is-terminated-and-then-retired-from-future-use)
   - [17.13. Example JSON — after termination:](#1713-example-json-after-termination)
-  - [17.14. Delete/terminate rule:](#1714-deleteterminate-rule)
+  - [17.14. Delete or terminate rule:](#1714-delete-or-terminate-rule)
   - [17.15. Final baseline statements:](#1715-final-baseline-statements)
 - [18. Intent lifecycle state diagrams:](#18-intent-lifecycle-state-diagrams)
   - [18.1. Purpose:](#181-purpose)
@@ -87,7 +87,7 @@
   - [21.7. Failure responses:](#217-failure-responses)
   - [21.8. Baseline statements:](#218-baseline-statements)
 - [22. Deployment and persistence strategy:](#22-deployment-and-persistence-strategy)
-  - [22.1. Runtime/state model:](#221-runtimestate-model)
+  - [22.1. Runtime and state model:](#221-runtime-and-state-model)
   - [22.2. Source of truth:](#222-source-of-truth)
   - [22.3. Recommended persistence model:](#223-recommended-persistence-model)
   - [22.4. JSONB usage:](#224-jsonb-usage)
@@ -331,7 +331,7 @@ IC MS owns the external lifecycle and status projection, but not the runtime tru
 | IA MS apply success / active assurance | Project `Active` |
 | IA MS degraded assurance | Project `Degraded` |
 | IA MS paused/failed/terminated outcome | Project `Paused`, `Failed`, or `Terminated` |
-| Delete/terminate request accepted | Project termination path according to final delete/terminate rules |
+| Delete or terminate request accepted | Project termination path according to final delete or terminate rules |
 
 ## 11. Internal event interactions:
 
@@ -482,7 +482,7 @@ Approved IC MS platform extensions:
 | `GET /intentManagement/v5/intent/hub/{id}` | Operational convenience for retrieving a domain-scoped subscription. Not part of the strict minimum TMF hub operation set. |
 | `ETag` and `If-Match` with `428 Precondition Required` and `412 Precondition Failed` | Platform optimistic-concurrency policy for unsafe operations. |
 | Termination-retention behaviour for `DELETE /intent/{id}` | `DELETE` is treated as termination of the retained runtime `Intent` projection, not physical deletion by default. |
-| Governed/admin-only `IntentReport` delete posture | Ordinary external consumers list/retrieve reports only; internal/admin purge may emit `IntentReportDeleteEvent` where policy allows. |
+| Governed or admin-only `IntentReport` delete posture | Ordinary external consumers list and retrieve reports only; internal or admin purge may emit `IntentReportDeleteEvent` where policy allows. |
 
 Platform preference:
 
@@ -494,7 +494,7 @@ Platform preference:
 
 **IC MS is the TMF-compliant runtime intent controller. It owns external `Intent` and `IntentReport` resources, performs schema and request-shape validation against `ACTIVE` `IntentSpecification`, emits `IntentValidatedEvent` as an internal state and progress event, and projects external lifecycle and status from II MS rejection outcomes and IA MS assurance outcomes. IC MS does not perform semantic validation, policy validation, optimisation, network apply, runtime assurance, telemetry ingestion, or callback mediation.**
 
-## 17. Lifecycle/status and versioning baseline:
+## 17. Lifecycle, status, and versioning baseline:
 
 ### 17.1. Intent-level lifecycleStatus:
 
@@ -535,13 +535,13 @@ Retired
 |---|---|
 | `Acknowledged` | Version accepted after schema and request-shape validation |
 | `InProgress` | Version change handling is in progress, including semantic resolution, optimisation where applicable, apply/change execution, or assurance confirmation |
-| `Active` | Version is currently active in the network/service |
+| `Active` | Version is currently active in the network or service |
 | `Standby` | Version is not currently active, but is retained as a valid rollback or future reactivation candidate |
 | `Degraded` | Version is still active, but runtime assurance is degraded |
 | `Paused` | Version is temporarily paused where applicable |
 | `Rejected` | Version was rejected before successful fulfilment |
 | `Failed` | Version failed during fulfilment, apply, or runtime processing |
-| `Terminated` | Version was stopped because the Intent/service was terminated |
+| `Terminated` | Version was stopped because the Intent or service was terminated |
 | `Retired` | Administrative/version-governance archival state; reachable only from `Terminated`; terminal |
 
 ### 17.4. Version pointer:
@@ -574,7 +574,7 @@ or:
 
 | **Term** | **Decision** | **Reason** |
 |---|---|---|
-| `activeVersion` | Use | Natural and clearly points to the version currently active in the network/service |
+| `activeVersion` | Use | Natural and clearly points to the version currently active in the network or service |
 | `effectiveVersion` | Do not use | Accurate, but less natural |
 | `currentVersion` | Do not use | Ambiguous; could mean latest submitted, latest edited, latest stored, or active |
 
@@ -601,12 +601,12 @@ Runtime truth comes from:
 | 4 | Runtime degradation reported by IA MS | `v1` | `Degraded` | `v1` | Intent degraded, but `v1` remains `activeVersion` |
 | 5 | Meaningful update accepted, creates new version | `v2` | `Acknowledged` or `InProgress` | `v1` | New version being processed; service still running on `v1` |
 | 6 | IA MS confirms updated apply active | `v2` | `Active` | `v2` | `v2` becomes `activeVersion` |
-| 7 | `v2` becomes `activeVersion` | `v1` | `Standby` | `v2` | `v1` no longer active, but remains a rollback/restart candidate |
+| 7 | `v2` becomes `activeVersion` | `v1` | `Standby` | `v2` | `v1` no longer active, but remains a rollback or restart candidate |
 | 8 | Rollback/restart requested | `v1` | `Acknowledged` | `v2` | `v1` re-enters the Intent version change lifecycle; `v2` remains active until the restart is confirmed |
 | 9 | Rollback/restart change execution begins | `v1` | `InProgress` | `v2` | `v1` is being applied; `v2` remains active until the restart is confirmed |
 | 10 | Rollback/restart confirmed | `v1` | `Active` | `v1` | `v1` becomes `activeVersion` again; previous active version moves to `Standby` where applicable |
 | 11 | Version explicitly terminated | `v2` | `Terminated` | `v1` | `v2` is no longer a restart candidate |
-| 12 | Administrative retirement after termination | `v2` | `Retired` | `v1` | `v2` is archived for governance/audit and cannot become active again |
+| 12 | Administrative retirement after termination | `v2` | `Retired` | `v1` | `v2` is archived for governance and audit and cannot become active again |
 
 ### 17.8. Example JSON — while v2 is still being processed:
 
@@ -648,7 +648,7 @@ Runtime truth comes from:
 }
 ```
 
-### 17.10. Example JSON — after rollback/restart to v1 is acknowledged:
+### 17.10. Example JSON — after rollback or restart to v1 is acknowledged:
 
 ```json
 {
@@ -728,7 +728,7 @@ Runtime truth comes from:
 }
 ```
 
-### 17.14. Delete/terminate rule:
+### 17.14. Delete or terminate rule:
 
 IC MS does not physically delete runtime `Intent` records by default.
 
@@ -744,7 +744,7 @@ The retained `Intent` record remains available for:
 
 ### 17.15. Final baseline statements:
 
-**Use `activeVersion`, not `effectiveVersion` or `currentVersion`, for the Intent version currently confirmed active in the network/service.**
+**Use `activeVersion`, not `effectiveVersion` or `currentVersion`, for the Intent version currently confirmed active in the network or service.**
 
 **When a newer Intent version becomes `Active`, IC MS moves `activeVersion` to the newer version and transitions the previously active version to `Standby`. `Standby` means the version is no longer currently active, but is retained as a valid rollback or future reactivation candidate.**
 
@@ -823,9 +823,9 @@ Retired
 v1 Active, activeVersion = v1
 -> v2 created, v2 InProgress, activeVersion still v1
 -> v2 Active, activeVersion = v2, v1 moves to Standby
--> rollback/restart requested, v1 Acknowledged, activeVersion still v2
--> rollback/restart starts, v1 InProgress, activeVersion still v2
--> rollback/restart confirmed, v1 Active, activeVersion = v1, v2 moves to Standby
+-> rollback or restart requested, v1 Acknowledged, activeVersion still v2
+-> rollback or restart starts, v1 InProgress, activeVersion still v2
+-> rollback or restart confirmed, v1 Active, activeVersion = v1, v2 moves to Standby
 ```
 
 ### 18.8. Baseline statement:
@@ -899,7 +899,7 @@ The fields serve different purposes:
 | **Field** | **Purpose** |
 |---|---|
 | `intentSpecification.id` | Selects the exact active platform-managed `IntentSpecification` used for validation, governance, lifecycle, and audit. |
-| `expression.iri` | Identifies the semantic/expression contract claimed by the runtime expression. |
+| `expression.iri` | Identifies the semantic expression contract claimed by the runtime expression. |
 
 IC MS does not infer the governing runtime validation contract from `expression.iri` alone.
 
@@ -921,7 +921,7 @@ The baseline surgical hospital slice is an illustrative runtime example used to 
 
 | **Version concept** | **Applies to** | **Meaning** |
 |---|---|---|
-| `IntentSpecification` version | Design-time contract | Which schema/contract validates the runtime Intent |
+| `IntentSpecification` version | Design-time contract | Which schema or contract validates the runtime Intent |
 | `Intent` version | Runtime intent | Which runtime request/config version is projected, active, standby, failed, terminated, or retained |
 
 ### 20.3. Operation behaviour:
@@ -938,7 +938,7 @@ The baseline surgical hospital slice is an illustrative runtime example used to 
 
 ### 20.4. Baseline statement:
 
-**Submitted runtime `Intent` admission requires both `intentSpecification.id` and `expression.iri`. `intentSpecification.id` selects the exact active platform-managed specification. `expression.iri` identifies the semantic/expression contract and must match the selected specification's `expressionSpecification.iri`. IC MS does not admit by IRI-only resolution.**
+**Submitted runtime `Intent` admission requires both `intentSpecification.id` and `expression.iri`. `intentSpecification.id` selects the exact active platform-managed specification. `expression.iri` identifies the semantic expression contract and must match the selected specification's `expressionSpecification.iri`. IC MS does not admit by IRI-only resolution.**
 
 **Draft creation remains light. A Draft Intent can be created with `submit: false` without `intentSpecification.id` or `expression.iri`; those fields become mandatory only when admission is requested. `isBundle` is optional and defaults to `false` when omitted on create.**
 
@@ -1094,7 +1094,7 @@ Retry-After: 30
 
 ## 22. Deployment and persistence strategy:
 
-### 22.1. Runtime/state model:
+### 22.1. Runtime and state model:
 
 IC MS is a stateful MS, backed by a managed PostgreSQL-compatible RDBMS. IC MS application instances can still scale independently because durable state is externalised to the database rather than held in local memory.
 
@@ -1370,7 +1370,7 @@ Preferred governed `expression.expressionValue` shape:
 Baseline:
 
 - `targetEntitySchema` owns the detailed validation contract.
-- `expressionSpecification.iri` identifies the semantic/expression contract.
+- `expressionSpecification.iri` identifies the semantic expression contract.
 - `specCharacteristic` gives catalogue/discovery summary only.
 - Use array-based `targets`, `constraints`, and `preferences` for scalability.
 - Keep simplified object-map examples only where they are deliberately explanatory.

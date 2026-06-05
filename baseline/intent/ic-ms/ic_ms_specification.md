@@ -1,4 +1,4 @@
-# IC MS Specification:
+# IC MS Specification
 
 | **Document status** | **Value** |
 | --- | --- |
@@ -129,7 +129,7 @@ This specification uses `/intentManagement/v5` in examples as the platform base 
 
 IC MS owns the external runtime `Intent` and `IntentReport` resources.
 
-IC MS validates runtime `Intent` request shape against the applicable `ACTIVE` `IntentSpecification` resolved from mandatory `intentSpecification.id`, with mandatory `expression.iri` used to confirm the semantic/expression contract. IC MS admits schema and request-shape valid runtime intents, emits `IntentValidatedEvent` as an internal state and progress event, projects external lifecycle and status based on downstream outcomes, and exposes curated `IntentReport` projections.
+IC MS validates runtime `Intent` request shape against the applicable `ACTIVE` `IntentSpecification` resolved from mandatory `intentSpecification.id`, with mandatory `expression.iri` used to confirm the semantic expression contract. IC MS admits schema and request-shape valid runtime intents, emits `IntentValidatedEvent` as an internal state and progress event, projects external lifecycle and status based on downstream outcomes, and exposes curated `IntentReport` projections.
 
 IC MS does not own:
 
@@ -327,7 +327,7 @@ These fields serve different purposes:
 | **Field** | **Purpose** |
 |---|---|
 | `intentSpecification.id` | Selects the exact active platform-managed `IntentSpecification` used for validation, governance, and audit. |
-| `expression.iri` | Identifies the semantic/expression contract claimed by the runtime expression. |
+| `expression.iri` | Identifies the semantic expression contract claimed by the runtime expression. |
 
 For submitted admission, `intentSpecification.id` is mandatory. IC MS does not infer the governing runtime validation contract from `expression.iri` alone.
 
@@ -556,8 +556,8 @@ Do not use string placeholders for array/object fields.
 | `404` | `RESOURCE_NOT_FOUND` | Intent, IntentReport, or subscription not found |
 | `409` | `INVALID_STATE_TRANSITION` | Requested lifecycle/version transition is not allowed |
 | `409` | `RESOURCE_CONFLICT` | Runtime update conflicts with current projection state |
-| `412` | `PRECONDITION_FAILED` | Supplied `If-Match` does not match the current resource version |
-| `422` | `VALIDATION_FAILED` | Runtime Intent fails request-shape/spec validation, misses mandatory `intentSpecification.id`, misses mandatory `expression.iri`, or has an IRI/specification mismatch |
+| `412` | `PRECONDITION_FAILED` | Supplied `If-Match` does not match the current resource representation |
+| `422` | `VALIDATION_FAILED` | Runtime Intent fails request-shape or specification validation, misses mandatory `intentSpecification.id`, misses mandatory `expression.iri`, or has an IRI/specification mismatch |
 | `422` | `INTENT_SPECIFICATION_NOT_ACTIVE` | Referenced IntentSpecification is not active |
 | `428` | `PRECONDITION_REQUIRED` | Required `If-Match` header is missing for an unsafe operation |
 | `503` | `SERVICE_UNAVAILABLE` | IC MS DB unavailable or active spec cannot be confirmed |
@@ -598,7 +598,7 @@ Cache-Control: no-store
 {
   "code": "PRECONDITION_FAILED",
   "reason": "ETAG_MISMATCH",
-  "message": "The supplied ETag does not match the current resource version.",
+  "message": "The supplied ETag does not match the current resource representation.",
   "status": 412,
   "referenceError": "https://mycsp.com.au/errors/PRECONDITION_FAILED",
   "@type": "Error"
@@ -1185,7 +1185,7 @@ ETag: "intent-INT-HOSP-2026-001-v4"
 
 `PUT` is a platform extension for deterministic full replacement.
 
-`PUT` is allowed only while the current Intent/Draft projection is in `Draft`.
+`PUT` is allowed only while the current Intent or Draft projection is in `Draft`.
 
 For a Draft Intent, all attributes accepted by the `PUT` request contract are mutable. The request contract does not expose `lifecycleStatus` as writable.
 
@@ -1334,7 +1334,7 @@ ETag: "intent-INT-HOSP-2026-001-v5"
 
 `PATCH` is supported for TMF compatibility but is not encouraged for ordinary edits where deterministic full replacement through `PUT` is available.
 
-`PATCH` is allowed only while the current Intent/Draft projection is in `Draft`.
+`PATCH` is allowed only while the current Intent or Draft projection is in `Draft`.
 
 For a Draft Intent, all attributes accepted by the `PATCH` request contract are mutable. The request contract does not expose `id` or `lifecycleStatus` as writable patch attributes.
 
@@ -1913,7 +1913,7 @@ Cache-Control: no-store
 {
   "code": "PRECONDITION_FAILED",
   "reason": "ETAG_MISMATCH",
-  "message": "The supplied ETag does not match the current resource version.",
+  "message": "The supplied ETag does not match the current resource representation.",
   "status": 412,
   "referenceError": "https://mycsp.com.au/errors/PRECONDITION_FAILED",
   "@type": "Error"
@@ -2305,7 +2305,7 @@ External hub notifications do not use these Kafka headers. They are HTTP webhook
 - `GET /intent` lists current projected Intent states for retained Intent IDs.
 - Submitted runtime create/update admission requires both mandatory `intentSpecification.id` and mandatory `expression.iri`.
 - `intentSpecification.id` selects the exact active platform-managed specification.
-- `expression.iri` identifies the semantic/expression contract and must match the selected specification's `expressionSpecification.iri`.
+- `expression.iri` identifies the semantic expression contract and must match the selected specification's `expressionSpecification.iri`.
 - IC MS does not admit by IRI-only resolution.
 - `intentSpecification.specKey` and `intentSpecification.name` are optional hints only and are not authoritative runtime validation keys.
 - IC MS must not resolve `IntentSpecification` by `specKey`, name, or inferred payload shape alone.
@@ -2314,7 +2314,7 @@ Baseline:
 - `expression.iri` is mandatory.
 - `intentSpecification.id` is mandatory for submitted admission.
 - `intentSpecification.specKey` and `intentSpecification.name` are optional hints only.
-- `expression.iri` is the semantic/expression contract identifier and must match the selected specification's `expressionSpecification.iri`.
+- `expression.iri` is the semantic expression contract identifier and must match the selected specification's `expressionSpecification.iri`.
 - Runtime admission is governed by the explicit `intentSpecification.id` and the `expression.iri` consistency check. IC MS must not select the governing runtime contract by `expression.iri` alone.
 - `DELETE /intent/{id}` is termination, not physical deletion.
 - `submit` is an approved IC MS extension request-control field; `submit: false` saves or keeps an Intent as `Draft`, and `submit: true` submits it for admission.
@@ -2322,8 +2322,8 @@ Baseline:
 - If an Intent is already persisted with `submit: false`, later omission of `submit` preserves Draft handling and must not automatically submit the Intent.
 - External consumers must not set or patch `lifecycleStatus`; lifecycle is assigned, transitioned, and projected by the intent management entity.
 - `isBundle` is optional in create/update requests; omitted create requests default to `false`, and persisted responses include the server-resolved value.
-- `PUT /intent/{id}` is a platform extension for deterministic full replacement and is allowed only while the current Intent/Draft projection is in `Draft`.
-- `PATCH /intent/{id}` is supported for TMF compatibility and is allowed only while the current Intent/Draft projection is in `Draft`.
+- `PUT /intent/{id}` is a platform extension for deterministic full replacement and is allowed only while the current Intent or Draft projection is in `Draft`.
+- `PATCH /intent/{id}` is supported for TMF compatibility and is allowed only while the current Intent or Draft projection is in `Draft`.
 - Once an Intent leaves `Draft`, material changes require creating a new Draft authoring record.
 - ETag is used for unsafe-operation concurrency through `If-Match`.
 - GET responses may use bounded private caching based on a deterministic cache key derived from the effective request shape.

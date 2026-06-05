@@ -18,7 +18,7 @@ rectangle "Primary profile:\nruntime Intent admission" as ADMISSION #FFE0B2 {
 
   rectangle "Strongly encouraged\n\n- humanExpression" as ADMISSION_RECOMMENDED
 
-  rectangle "Both are mandatory\nfor admission\n\nintentSpecification.id selects\nthe platform-managed specification.\n\nexpression.iri identifies\nthe semantic/expression contract." as BOTH_REQUIRED
+  rectangle "Both are mandatory\nfor admission\n\nintentSpecification.id selects\nthe platform-managed specification.\n\nexpression.iri identifies\nthe semantic expression contract." as BOTH_REQUIRED
 
   rectangle "Consistency validation\n\n1. Retrieve ACTIVE IntentSpecification\n   by intentSpecification.id\n2. Compare runtime expression.iri\n   with IntentSpecification.expressionSpecification.iri\n3. Reject if missing or mismatched" as CONSISTENCY
 }
