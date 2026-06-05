@@ -76,11 +76,11 @@ ICB MS must not decide whether a callback means `Active`, `Failed`, `Terminated`
 |---|---|
 | Callback API exposure | Exposes callback submission endpoint behind API Gateway |
 | Caller trust handling | Consumes trusted identity/claims forwarded by API Gateway |
-| Technical authorisation | Checks the authenticated caller is allowed to submit callback facts for the relevant change-execution/source context |
+| Technical authorisation | Checks the authenticated caller is allowed to submit callback facts for the relevant source integration context |
 | Structural validation | Validates request syntax, required fields, timestamps, idempotency key, and allowed structural shape |
 | Durable persistence | Writes callback submission and outbox event in one DB transaction |
 | Raw event publication | Publishes `IntentCallbackEvent` to `t7.intent.management.events.callbacks` or `OptimisationStatusChangeEvent` to `t7.intent.management.events` through outbox relay according to the approved source integration profile |
-| Idempotency | Handles external retry safety using idempotency key and/or callback identifiers |
+| Idempotency | Handles external retry safety using idempotency key or callback identifiers |
 | Audit | Records accepted, rejected, duplicate, and failed callback ingestion decisions |
 | Observability | Emits logs, metrics, traces, and outbox relay health signals |
 
@@ -93,7 +93,7 @@ ICB MS must not decide whether a callback means `Active`, `Failed`, `Terminated`
 | `IntentReport` projection | IC MS |
 | Runtime assurance truth | IA MS |
 | Callback state interpretation | IA MS |
-| Semantic interpretation/resolution | II MS |
+| Semantic interpretation and resolution | II MS |
 | Optimisation decision and selected-configuration meaning | Optimiser and II MS context; ICB MS only relays the approved optimiser outcome event |
 | Optimiser solver/backend target | `t7-gurobi-optimiser`, where applicable |
 | Network apply and change-execution execution | External change execution and apply system |

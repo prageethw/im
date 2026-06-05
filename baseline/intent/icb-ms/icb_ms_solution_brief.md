@@ -91,7 +91,7 @@ The callback Kafka topic is dedicated to raw change execution and apply callback
 ```text
 1. External change execution and apply system or approved Optimiser platform submits a callback.
 2. API Gateway authenticates the caller and forwards the trusted caller context.
-3. ICB MS authorises the callback submission for the caller/source context.
+3. ICB MS authorises the callback submission for the caller and source context.
 4. ICB MS validates only structure and syntax.
 5. ICB MS writes the callback submission and callback outbox record in one DB transaction.
 6. ICB MS returns 202 Accepted only after durable commit succeeds.
@@ -129,7 +129,7 @@ If the ICB persistence path is unavailable, ICB MS fails fast and does not accep
 | Callback state interpretation | IA MS |
 | Unknown `intentId` correlation/dead-letter decision | IA MS |
 | Skip/unmapped callback decision | IA MS |
-| Semantic interpretation/resolution | II MS |
+| Semantic interpretation and resolution | II MS |
 | Optimisation decision and optimiser outcome interpretation | Optimiser and II MS context. ICB MS only relays the approved optimiser outcome event. |
 | Optimiser solver/backend execution | `t7-gurobi-optimiser`, where applicable |
 | Network apply and change-execution execution | External change execution and apply system |
@@ -365,7 +365,7 @@ Idempotency-Key: cb-OPT-HSS-2026-001-0001
 | Field | Required | Validation | Notes |
 |---|---:|---|---|
 | `intentId` | Yes for `IntentCallbackEventRequest` | Required, non-empty string | Syntax only. IA MS validates existence and correlation. |
-| `callbackSource` | Yes for `IntentCallbackEventRequest` | Required, non-empty string | Identifies the external source/change-execution instance. Gateway identity remains authoritative for trust. |
+| `callbackSource` | Yes for `IntentCallbackEventRequest` | Required, non-empty string | Identifies the external source and change-execution instance. Gateway identity remains authoritative for trust. |
 | `callbackTimestamp` | Yes for `IntentCallbackEventRequest` | ISO 8601 date-time | Source-reported callback time. Distinct from ICB receive time and Kafka publish time. |
 | `sourceState.state` | Yes for `IntentCallbackEventRequest` | Required, non-empty string | Raw source-owned state. IA MS interprets it. ICB MS does not map it. |
 | `eventType` | Yes for `OptimisationStatusChangeEventRequest` | Must be `OptimisationStatusChangeEvent` for the approved optimiser profile | Used to select the structural relay profile, not to interpret optimiser outcome meaning. |
@@ -391,7 +391,7 @@ ICB MS must not trust caller-supplied platform `href` values. Where ICB MS creat
 | `orchestratorState` | Retired legacy callback state field. Use `sourceState.state`. |
 | `source` | Retired legacy shape. Use `callbackSource`. |
 | `timestamp` | Retired legacy shape. Use `callbackTimestamp`. |
-| `orchestratorType` | Retired legacy callback source-type field. IA MS derives source/change-execution type from its own state/configuration where required. |
+| `orchestratorType` | Retired legacy callback source-type field. IA MS derives source and change-execution type from its own state/configuration where required. |
 | `lifecycleStatus` | ICB MS does not accept or emit lifecycle state. |
 | `assuranceStatus` | ICB MS does not accept or emit assurance state. |
 | `targets`, `constraints`, `preferences` | These are intent expression/optimisation concepts and must not be included in callback events. |
@@ -433,7 +433,7 @@ These are callback submission handling statuses only. They are not external `Int
 |---|---|
 | API Gateway | Authenticates external caller, validates token/client identity, applies platform edge controls, and forwards trusted identity/claims. |
 | ICB MS | Trusts only gateway-forwarded identity/claims according to platform policy. |
-| ICB MS | Authorises whether the authenticated caller/source may submit callbacks for the relevant integration context. |
+| ICB MS | Authorises whether the authenticated caller or source may submit callbacks for the relevant integration context. |
 | ICB MS | Rejects unauthorised, malformed, oversized, or structurally invalid callbacks. |
 | ICB MS | Avoids exposing internal DB/Kafka details in errors. |
 | ICB MS | Audits security-relevant decisions. |
@@ -461,7 +461,7 @@ ICB MS follows the IME DB baseline: managed PostgreSQL or PostgreSQL-compatible 
 |---|---|---|
 | `id` | UUID / platform identifier | Primary callback submission identifier. |
 | `intent_id` | VARCHAR | Copied from `intentId`; syntax only in ICB. |
-| `callback_source` | VARCHAR | External source/change-execution identifier. |
+| `callback_source` | VARCHAR | External source and change-execution identifier. |
 | `callback_timestamp` | TIMESTAMPTZ | Source-reported callback time. |
 | `source_state` | VARCHAR | Raw `sourceState.state`. |
 | `source_reference_id` | VARCHAR | Optional external source reference identifier. |
@@ -631,7 +631,7 @@ value:
 |---|---:|---|---|
 | `body.callbackId` | Yes | String | ICB callback submission/outbox identifier. |
 | `body.intentId` | Yes | String | Present and non-empty; ICB checks syntax only. |
-| `body.callbackSource` | Yes | String | External source/change-execution identifier. |
+| `body.callbackSource` | Yes | String | External source and change-execution identifier. |
 | `body.callbackTimestamp` | Yes | ISO 8601 date-time | Source-reported callback time. |
 | `body.sourceState.state` | Yes | String | Raw source state; not interpreted by ICB MS. |
 | `body.sourceState.reason` | No | String | Optional source-provided explanation. |
@@ -705,7 +705,7 @@ The full `OptimisationStatusChangeEvent` payload example is canonical in `icb_ms
 |---:|---|
 | 1 | Receive callback request behind API Gateway. |
 | 2 | Read trusted gateway caller identity/claims. |
-| 3 | Authorise caller/source for callback submission. |
+| 3 | Authorise caller and source for callback submission. |
 | 4 | Validate request structure and size. |
 | 5 | Check idempotency key or stable duplicate identifiers where available. |
 | 6 | Insert or update callback submission/idempotency records. |
@@ -780,7 +780,7 @@ IC MS is not a direct consumer of ICB MS callback relay events. IC MS receives e
 |---:|---|---|
 | 1 | IA MS | Consumes `IntentCallbackEvent` from `t7.intent.management.events.callbacks`. |
 | 2 | IA MS | Validates/correlates `intentId` against IA-owned state. |
-| 3 | IA MS | Resolves source/change-execution context from IA-owned configuration/state where required. |
+| 3 | IA MS | Resolves source and change-execution context from IA-owned configuration/state where required. |
 | 4 | IA MS | Maps raw `sourceState.state` into assurance/lifecycle-driving outcome. |
 | 5 | IA MS | Handles unmapped/skip states according to IA policy with logging/audit. |
 | 6 | IA MS | Writes assurance outcome and IA outbox record. |
