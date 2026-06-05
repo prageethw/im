@@ -102,7 +102,7 @@ The Intent Enabler is a multi-microservice solution built around external TMF-co
 2. IC MS admits runtime `Intent` requests that are syntactically valid and reference an active specification.
 3. IC MS emits `IntentValidatedEvent` after admission.
 4. II MS consumes the admitted intent, performs semantic and policy interpretation, and either rejects, resolves, or prepares network-ready service configuration.
-5. II MS emits `IntentRejectedEvent`, `IntentResolvedEvent`, and, or `IntentNetworkReadyEvent` according to the workflow milestone.
+5. II MS emits `IntentRejectedEvent`, `IntentResolvedEvent`, or `IntentNetworkReadyEvent` according to the workflow milestone.
 6. Where optimisation-backed selection is required, II MS submits `POST /optimisation` using the optimisation API outbox and supplies the ICB-owned callback submission URL, `POST /intent-callback/v1/submissions`, as the optimiser outcome callback target.
 7. ICB MS receives external callback submissions from trusted change-execution and apply systems and approved Optimiser platforms, validates only structure, persists the callback, and publishes either raw `IntentCallbackEvent` or approved `OptimisationStatusChangeEvent` relay events.
 8. IA MS consumes `IntentNetworkReadyEvent`, `IntentCallbackEvent`, and runtime observation facts, then emits `IntentAssuranceEvent`.
@@ -222,7 +222,7 @@ The Intent Enabler uses three distinct delivery models. They must not be collaps
 | External hub notifications | Subscriber notifications for `IntentSpecification`, `Intent`, and `IntentReport` resource events | Service-owned webhook delivery outbox, HTTP retry relay, HTTP `POST` to subscriber listener callback URL | HTTP headers such as `Content-Type`, `X-Correlation-Id`, and subscriber callback authentication where configured |
 | Callback ingestion | Source, change-execution, and optimiser outcome callback submission into the platform | REST `POST` to ICB MS, callback persistence, callback outbox, internal Kafka publication to IA MS or II MS depending on callback profile | HTTP headers on inbound callback; CloudEvents-style Kafka and platform headers on `IntentCallbackEvent` or `OptimisationStatusChangeEvent` |
 
-The callback ingestion path has two approved profiles. Change-execution/apply callbacks are relayed as `IntentCallbackEvent` on the dedicated callback topic `t7.intent.management.events.callbacks` for IA MS. Optimiser outcome callbacks are relayed as `OptimisationStatusChangeEvent` on the main internal event topic `t7.intent.management.events` for II MS.
+The callback ingestion path has two approved profiles. Change-execution and apply callbacks are relayed as `IntentCallbackEvent` on the dedicated callback topic `t7.intent.management.events.callbacks` for IA MS. Optimiser outcome callbacks are relayed as `OptimisationStatusChangeEvent` on the main internal event topic `t7.intent.management.events` for II MS.
 
 ID MS and IC MS hub notifications are REST webhook callbacks with TMF-aligned event payloads. Kafka is not used for external hub notification delivery. Subscriber callback URLs are subscriber-owned; the platform defines the subscription API, delivery rules, retry behaviour, and TMF-aligned notification payload shape.
 
@@ -586,7 +586,7 @@ Expected platform controls include:
 | Boundary drift between IC, II, IA, and ICB | Services duplicate or contradict each other | Keep ownership matrix and event catalogue as baseline governance artefacts. |
 | External events leaking internal details | Security and contract instability | Keep external events resource-scoped and curated. |
 | Callback state misinterpreted at ingestion | Incorrect lifecycle projection | ICB remains raw ingestion only; IA owns mapping. |
-| `IntentNetworkReadyEvent` misunderstood as apply success | Premature external `Active` projection | Document that apply success requires callback and, or observation evidence. |
+| `IntentNetworkReadyEvent` misunderstood as apply success | Premature external `Active` projection | Document that apply success requires callback or observation evidence. |
 | Specification lifecycle and version mistakes | Runtime intents created against wrong contract | Enforce one active version per `specKey` and active-only runtime creation. |
 | Kafka duplicate delivery | Duplicate lifecycle and report updates | Idempotent consumers and stable deduplication keys. |
 | Webhook delivery retry duplication | Duplicate subscriber notifications | Use event identifiers, idempotent subscriber listener handling, and delivery retry tracking. |
