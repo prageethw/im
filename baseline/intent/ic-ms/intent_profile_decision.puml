@@ -50,7 +50,7 @@ rectangle "Optional intent-management-entity\ngoverned enrichment fields" as ENR
 }
 
 rectangle "Lifecycle ownership guardrail" as GUARDRAIL #E3F2FD {
-  rectangle "External consumers must not supply\nlifecycleStatus in any external\nwrite request.\n\ncreate / PUT / PATCH / other writes" as NO_LIFECYCLE
+  rectangle "External consumers must not supply\nlifecycleStatus in any external\nwrite request.\n\ncreate, PUT, PATCH, and other writes" as NO_LIFECYCLE
 
   rectangle "lifecycleStatus is assigned,\ntransitioned, and projected by\nthe intent management entity." as LIFECYCLE_RULE
 }

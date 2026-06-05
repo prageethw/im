@@ -34,11 +34,11 @@ title IC MS — Intent Version Lifecycle State Diagram
 ' ── States ────────────────────────────────────────────────────────────────
 state Acknowledged #d4e6f1 : Schema and request-shape admitted,\nawaiting change handling
 state InProgress #d5f5e3 : Change execution\nin progress
-state Active #2ecc71 : Network / service confirmed\n(activeVersion)
+state Active #2ecc71 : Network or service confirmed\n(activeVersion)
 state Degraded #f9e79f : Assurance degradation\ndetected
 state Paused #e8daef : Controlled pause
 state Standby #d6eaf8 : Non-active retained\nversion (fallback candidate)
-state Rejected #f5cba7 : Validation / policy\nrejection
+state Rejected #f5cba7 : Validation or policy\nrejection
 state Failed #f1948a : Change or runtime\nfailure
 state Terminated #aab7b8 : Closed — no longer\nruntime-active
 state Retired #d5d8dc : Administrative /\nversion-governance archive
@@ -47,24 +47,24 @@ state Retired #d5d8dc : Administrative /\nversion-governance archive
 Acknowledged --> InProgress : change starts
 InProgress --> Active : network/service confirmed
 InProgress --> Failed : change failed
-InProgress --> Rejected : semantic / policy rejection
+InProgress --> Rejected : semantic or policy rejection
 
 ' ── Operational runtime lifecycle ──────────────────────────────────────────
 Active --> Degraded : assurance degradation
 Active --> Paused : controlled pause
 Active --> Failed : runtime failure
-Active --> Terminated : teardown / delete completed
+Active --> Terminated : teardown or delete completed
 Active --> Standby : newer version becomes activeVersion
 
 Degraded --> Active : recovered
 Degraded --> Paused : controlled pause
 Degraded --> Failed : unrecoverable failure
-Degraded --> Terminated : teardown / delete completed
+Degraded --> Terminated : teardown or delete completed
 Degraded --> Standby : newer version becomes activeVersion
 
 Paused --> Active : resumed
 Paused --> Failed : unrecoverable failure
-Paused --> Terminated : teardown / delete completed
+Paused --> Terminated : teardown or delete completed
 Paused --> Standby : newer version becomes activeVersion
 
 ' ── Closure and governance lifecycle ───────────────────────────────────────
@@ -86,14 +86,14 @@ end note
 
 note bottom of Standby
 Standby is a non-active retained Intent version.
-It may be used as a fallback / restartable candidate,
+It may be used as a fallback or restartable candidate,
 but must re-enter through Acknowledged.
 No direct Standby to Active transition.
 No direct Standby to Retired transition.
 end note
 
 note right of Retired
-Retired is an administrative / version-governance archival state — not a runtime/network state.
+Retired is an administrative and version-governance archival state — not a runtime or network state.
 Only Terminated may transition to Retired.
 No other state may transition directly to Retired.
 end note
@@ -102,8 +102,8 @@ legend right
 Version replacement behaviour
 ──────────────────────────────────────────────
 When a newer version becomes activeVersion:
-• Previous Active / Degraded / Paused to Standby
-• Previous Rejected / Failed to Terminated
+• Previous Active, Degraded, or Paused to Standby
+• Previous Rejected or Failed to Terminated
 • Standby can restart only via Acknowledged
 • Only Terminated can move to Retired
 endlegend

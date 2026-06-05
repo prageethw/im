@@ -43,13 +43,13 @@ Draft --> Terminated : termination request accepted
 
 ' ── Acknowledged ──────────────────────────────────────────────────────────
 Acknowledged --> InProgress : change execution starts
-Acknowledged --> Rejected   : II MS semantic / policy rejection
+Acknowledged --> Rejected   : II MS semantic or policy rejection
 Acknowledged --> Terminated : termination request accepted
 
 ' ── InProgress ────────────────────────────────────────────────────────────
 InProgress --> Active     : IA MS confirms change applied and assured
 InProgress --> Failed     : IA MS reports change or runtime failure
-InProgress --> Rejected   : semantic / policy rejection outcome
+InProgress --> Rejected   : semantic or policy rejection outcome
 InProgress --> Terminated : termination request accepted
 
 ' ── Active ────────────────────────────────────────────────────────────────

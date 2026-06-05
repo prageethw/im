@@ -1,5 +1,5 @@
 @startuml
-title Runtime Intent contract reference proposal: IRI, IntentSpecification ID, or both
+title Runtime Intent contract reference decision: IRI, IntentSpecification ID, or both
 
 skinparam shadowing false
 skinparam defaultTextAlignment center

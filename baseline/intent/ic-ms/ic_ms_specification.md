@@ -1,4 +1,4 @@
-# IC MS Specification:
+# IC MS Specification
 
 | **Document status** | **Value** |
 | --- | --- |
@@ -119,7 +119,7 @@
 | Base path | `/intentManagement/v5` |
 | Primary resource | `Intent` |
 | Secondary resource | `IntentReport` |
-| Primary responsibility | TMF-compliant runtime `Intent` controller, schema and request-shape admission, lifecycle/status projection, and external runtime intent events |
+| Primary responsibility | TMF-compliant runtime `Intent` controller, schema and request-shape admission, lifecycle and status projection, and external runtime intent events |
 
 **TMF deployment path note:**
 
@@ -129,7 +129,7 @@ This specification uses `/intentManagement/v5` in examples as the platform base 
 
 IC MS owns the external runtime `Intent` and `IntentReport` resources.
 
-IC MS validates runtime `Intent` request shape against the applicable `ACTIVE` `IntentSpecification` resolved from mandatory `intentSpecification.id`, with mandatory `expression.iri` used to confirm the semantic/expression contract. IC MS admits schema and request-shape valid runtime intents, emits `IntentValidatedEvent` as an internal state/progress event, projects external lifecycle/status based on downstream outcomes, and exposes curated `IntentReport` projections.
+IC MS validates runtime `Intent` request shape against the applicable `ACTIVE` `IntentSpecification` resolved from mandatory `intentSpecification.id`, with mandatory `expression.iri` used to confirm the semantic/expression contract. IC MS admits schema and request-shape valid runtime intents, emits `IntentValidatedEvent` as an internal state and progress event, projects external lifecycle and status based on downstream outcomes, and exposes curated `IntentReport` projections.
 
 IC MS does not own:
 
@@ -144,7 +144,7 @@ IC MS does not own:
 - callback ingestion
 - raw orchestrator callback interpretation
 
-Network or platform change execution is owned by the downstream change execution layer, which may be a network orchestrator or another authorised fulfilment component depending on the Intent domain. IA MS interprets change outcomes and owns runtime assurance truth; IC MS only projects the resulting lifecycle/status changes.
+Network or platform change execution is owned by the downstream change execution layer, which may be a network orchestrator or another authorised fulfilment component depending on the Intent domain. IA MS interprets change outcomes and owns runtime assurance truth; IC MS only projects the resulting lifecycle and status changes.
 
 ---
 
@@ -191,7 +191,7 @@ IC MS therefore has two separate event-delivery paths:
 
 | Delivery path | Purpose | Transport | Durability model | Headers | Payload |
 |---|---|---|---|---|---|
-| Internal platform events | Publish internal state/progress events such as `IntentValidatedEvent` to independent internal consumers. | Kafka. | IC MS internal event outbox and Kafka relay. | CloudEvents-style Kafka/platform event headers. | Internal event JSON body. |
+| Internal platform events | Publish internal state and progress events such as `IntentValidatedEvent` to independent internal consumers. | Kafka. | IC MS internal event outbox and Kafka relay. | CloudEvents-style Kafka/platform event headers. | Internal event JSON body. |
 | External TMF/webhook notifications | Notify registered hub subscribers about consumer-safe `Intent` and `IntentReport` events. | HTTP `POST` to subscriber listener callback URL. | IC MS webhook delivery outbox and HTTP retry relay. | HTTP headers. | TMF-aligned event request body. |
 
 ---
@@ -421,7 +421,7 @@ External consumers must not set or patch `lifecycleStatus`. `lifecycleStatus` is
 
 If `submit` is omitted on initial create, IC MS treats the request as `submit: true`. If an Intent is persisted with `submit: false`, later omission of `submit` must preserve draft handling and must not automatically submit the Intent. A draft Intent is submitted only when a later request explicitly sets `submit: true`.
 
-While `lifecycleStatus = Draft`, all attributes accepted by the `PUT` / `PATCH` request contract are mutable. The `PUT` / `PATCH` request contract must not expose `lifecycleStatus` as a writable attribute.
+While `lifecycleStatus = Draft`, all attributes accepted by the `PUT` and `PATCH` request contract are mutable. The `PUT` and `PATCH` request contract must not expose `lifecycleStatus` as a writable attribute.
 
 `id` is immutable. If `id` appears in a full-replacement `PUT` request, it must match the path `id` and is used only for consistency checking; it cannot be changed.
 
@@ -484,7 +484,7 @@ Cache-Control: no-cache
 
 When `Cache-Control: no-cache` is received, IC MS must bypass any existing cached response for that request, compile the response from the source-of-truth store, refresh the cache entry for the derived cache key where safe, and return the fresh response with normal cache-control headers.
 
-IC MS may also invalidate or refresh affected cache entries on write paths or lifecycle/status transitions when it knows cached projections have become stale. Examples include Intent create, Draft update, admission, lifecycle/status projection update, IntentReport projection update, termination, and governed report purge.
+IC MS may also invalidate or refresh affected cache entries on write paths or lifecycle and status transitions when it knows cached projections have become stale. Examples include Intent create, Draft update, admission, lifecycle and status projection update, IntentReport projection update, termination, and governed report purge.
 
 ETag is used only for unsafe-operation concurrency through:
 
@@ -556,8 +556,8 @@ Do not use string placeholders for array/object fields.
 | `404` | `RESOURCE_NOT_FOUND` | Intent, IntentReport, or subscription not found |
 | `409` | `INVALID_STATE_TRANSITION` | Requested lifecycle/version transition is not allowed |
 | `409` | `RESOURCE_CONFLICT` | Runtime update conflicts with current projection state |
-| `412` | `PRECONDITION_FAILED` | Supplied `If-Match` does not match the current resource version |
-| `422` | `VALIDATION_FAILED` | Runtime Intent fails request-shape/spec validation, misses mandatory `intentSpecification.id`, misses mandatory `expression.iri`, or has an IRI/specification mismatch |
+| `412` | `PRECONDITION_FAILED` | Supplied `If-Match` does not match the current resource representation |
+| `422` | `VALIDATION_FAILED` | Runtime Intent fails request-shape or specification validation, misses mandatory `intentSpecification.id`, misses mandatory `expression.iri`, or has an IRI/specification mismatch |
 | `422` | `INTENT_SPECIFICATION_NOT_ACTIVE` | Referenced IntentSpecification is not active |
 | `428` | `PRECONDITION_REQUIRED` | Required `If-Match` header is missing for an unsafe operation |
 | `503` | `SERVICE_UNAVAILABLE` | IC MS DB unavailable or active spec cannot be confirmed |
@@ -598,7 +598,7 @@ Cache-Control: no-store
 {
   "code": "PRECONDITION_FAILED",
   "reason": "ETAG_MISMATCH",
-  "message": "The supplied ETag does not match the current resource version.",
+  "message": "The supplied ETag does not match the current resource representation.",
   "status": 412,
   "referenceError": "https://mycsp.com.au/errors/PRECONDITION_FAILED",
   "@type": "Error"
@@ -830,7 +830,7 @@ If `submit: true` is supplied, IC MS applies the runtime admission profile. IC M
 
 If `isBundle` is omitted on create, IC MS defaults it to `false`. If supplied, it must be boolean. Persisted responses include the server-resolved value.
 
-`IntentValidatedEvent` is a state/progress event, not a point-to-point command for a specific consumer.
+`IntentValidatedEvent` is a state and progress event, not a point-to-point command for a specific consumer.
 
 ---
 
@@ -1916,7 +1916,7 @@ Cache-Control: no-store
 {
   "code": "PRECONDITION_FAILED",
   "reason": "ETAG_MISMATCH",
-  "message": "The supplied ETag does not match the current resource version.",
+  "message": "The supplied ETag does not match the current resource representation.",
   "status": 412,
   "referenceError": "https://mycsp.com.au/errors/PRECONDITION_FAILED",
   "@type": "Error"
@@ -1960,7 +1960,7 @@ IC MS emits external TMF-aligned resource events for `Intent` projection changes
 |---|---|
 | `IntentCreateEvent` | Runtime Intent projection created |
 | `IntentAttributeValueChangeEvent` | External Intent attributes changed |
-| `IntentStatusChangeEvent` | External lifecycle/status projection changed |
+| `IntentStatusChangeEvent` | External lifecycle and status projection changed |
 | `IntentDeleteEvent` | Runtime Intent termination accepted; retained projection moves to `Terminated` |
 
 These are external projection/resource events only.
@@ -2089,7 +2089,7 @@ They must not expose raw telemetry, raw optimiser decisions, raw `t7.knowledge p
 }
 ```
 
-`IntentStatusChangeEvent` carries the current `event.intent.lifecycleStatus` snapshot. It does not carry separate `previousLifecycleStatus` or `newLifecycleStatus` fields in the external event payload. The event type plus the emitted resource snapshot provide the external lifecycle/status-change signal.
+`IntentStatusChangeEvent` carries the current `event.intent.lifecycleStatus` snapshot. It does not carry separate `previousLifecycleStatus` or `newLifecycleStatus` fields in the external event payload. The event type plus the emitted resource snapshot provide the external lifecycle and status-change signal.
 
 ---
 
@@ -2277,7 +2277,7 @@ IC MS publishes `IntentValidatedEvent` internally after schema and request-shape
 
 This is not a point-to-point command for a single consumer.
 
-It is a platform state/progress event meaning the runtime Intent has passed IC MS schema and request-shape validation and has been admitted into the Intent lifecycle.
+It is a platform state and progress event meaning the runtime Intent has passed IC MS schema and request-shape validation and has been admitted into the Intent lifecycle.
 
 Current primary consumer is II MS / `intent-intelligence-ms`, but the event may be consumed by other authorised internal consumers where useful.
 

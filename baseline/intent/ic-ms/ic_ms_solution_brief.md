@@ -36,7 +36,7 @@
   - [12.6. IntentReport projection fields:](#126-intentreport-projection-fields)
 - [13. Fields not accepted:](#13-fields-not-accepted)
 - [14. Authorisation:](#14-authorisation)
-- [15. Persistence / state model:](#15-persistence-state-model)
+- [15. Persistence and state model:](#15-persistence-and-state-model)
   - [15.1. Intent projection state:](#151-intent-projection-state)
   - [15.2. IntentReport projection state:](#152-intentreport-projection-state)
   - [15.3. Hub subscription state:](#153-hub-subscription-state)
@@ -66,7 +66,7 @@
 
 ## 1. Summary:
 
-Intent Controller MS (IC MS) is the TMF-compliant runtime intent controller for the Intent Enabler. It owns the external `Intent` and `IntentReport` resource boundary, supports Draft runtime Intent authoring through the approved `submit` request-control extension, admits schema and request-shape valid submitted runtime intent requests, projects external lifecycle/status state, and publishes curated external runtime intent events.
+Intent Controller MS (IC MS) is the TMF-compliant runtime intent controller for the Intent Enabler. It owns the external `Intent` and `IntentReport` resource boundary, supports Draft runtime Intent authoring through the approved `submit` request-control extension, admits schema and request-shape valid submitted runtime intent requests, projects external lifecycle and status state, and publishes curated external runtime intent events.
 
 IC MS is deliberately not the owner of semantic validation, optimisation, callback ingestion, change execution, or runtime assurance truth.
 
@@ -96,7 +96,7 @@ IC MS -> webhook_delivery_outbox -> HTTP POST -> external subscriber listener ca
 | Upstream dependency | ID MS for `ACTIVE` `IntentSpecification` validation using mandatory `intentSpecification.id`, with mandatory `expression.iri` checked against the selected specification's `expressionSpecification.iri`. |
 | Internal event path | Emits admitted runtime intent state through `IntentValidatedEvent` using the IC MS internal event outbox and Kafka relay. |
 | Downstream event consumers | II MS consumes admitted runtime intent state through `IntentValidatedEvent`. |
-| Downstream status inputs | II MS rejection outcomes and IA MS assurance outcomes drive IC MS external lifecycle/status projection. |
+| Downstream status inputs | II MS rejection outcomes and IA MS assurance outcomes drive IC MS external lifecycle and status projection. |
 | External event subscribers | Receive TMF-aligned `Intent` and `IntentReport` events through REST webhook subscriber listener callbacks registered via the IC MS hub subscription model. |
 | External notification path | Uses `webhook_delivery_outbox` and HTTP `POST`; Kafka is not used for external hub notification delivery. |
 
@@ -118,7 +118,7 @@ IC MS owns the externally visible runtime projection, not the full internal fulf
 8. IC MS confirms the request `expression.iri` matches the selected specification's `expressionSpecification.iri`, then validates the runtime expression/request shape against the resolved active definition owned by ID MS.
 9. If validation fails, IC MS returns a structured error such as `422 VALIDATION_FAILED`.
 10. If validation succeeds, IC MS persists the external `Intent` projection, includes the server-resolved `isBundle` value, and sets the initial projected lifecycle state to `Acknowledged`.
-11. IC MS emits `IntentValidatedEvent` as an internal state/progress event.
+11. IC MS emits `IntentValidatedEvent` as an internal state and progress event.
 12. Downstream services continue semantic interpretation, optimisation where applicable, change preparation, apply, callback interpretation, and assurance.
 13. IC MS consumes downstream outcome/projection events and updates the external `Intent` and `IntentReport` views.
 
@@ -127,7 +127,7 @@ IC MS owns the externally visible runtime projection, not the full internal fulf
 1. A consumer may update an existing Draft projection using `PUT` or `PATCH` only while the current Intent/Draft projection is in `Draft`.
 2. Unsafe update operations require `If-Match`.
 3. IC MS applies optimistic concurrency using the current ETag.
-4. For a Draft Intent, all attributes accepted by the `PUT` / `PATCH` request contract are mutable.
+4. For a Draft Intent, all attributes accepted by the `PUT` and `PATCH` request contract are mutable.
 5. The request contract does not expose `lifecycleStatus` as writable.
 6. `id` is immutable. If `id` appears in a full-replacement `PUT`, it must match the path `id` and is used only for consistency checking.
 7. If `submit` is omitted while the current Intent is already Draft, the Intent remains Draft.
@@ -202,7 +202,7 @@ IC MS therefore exposes a stable TMF-compliant resource API while avoiding leaka
 
 The baseline surgical hospital slice is an illustrative runtime example used to make the IC MS contract concrete. It is not the only supported runtime Intent type, IntentSpecification, service class, schema, expression IRI, location, service type, or deployment profile. Other runtime Intents may use different targets, constraints, preferences, expression schemas, service types, priorities, and governance profiles while following the same IC MS contract rules.
 
-It is responsible for Draft authoring control, correct external lifecycle/status representation, consumer-safe reports, event subscription handling, ETag concurrency, and error consistency. External consumers request draft/save versus submission through `submit`; they do not assign lifecycle state.
+It is responsible for Draft authoring control, correct external lifecycle and status representation, consumer-safe reports, event subscription handling, ETag concurrency, and error consistency. External consumers request draft/save versus submission through `submit`; they do not assign lifecycle state.
 
 ## 5. Responsibilities:
 
@@ -220,7 +220,7 @@ IC MS is responsible for:
 | `IntentReport` projection | Expose read-only curated report/projection history derived from assurance outcomes. |
 | Event subscription | Support strict TMF `/hub` and domain-scoped `/intent/hub` subscription routes. |
 | External event delivery | Deliver consumer-safe TMF-aligned `Intent` and `IntentReport` event notifications by REST webhook callback to subscriber listener URLs. |
-| Concurrency control | Enforce ETag / `If-Match` on unsafe state-changing operations. |
+| Concurrency control | Enforce ETag and `If-Match` on unsafe state-changing operations. |
 | Common error shape | Return the shared platform REST error body. |
 
 ## 6. IC MS does not:
@@ -454,7 +454,7 @@ Terminated
 
 ### 12.3. Intent-version lifecycleStatus values after admission:
 
-The Intent-version-level `lifecycleStatus` is the lifecycle truth for each admitted runtime version. It supports version history, rollback/restart, audit, and governance.
+The Intent-version-level `lifecycleStatus` is the lifecycle truth for each admitted runtime version. It supports version history, rollback or restart, audit, and governance.
 
 ```text
 Acknowledged
@@ -481,7 +481,7 @@ External `GET /intent/{id}` returns the current projected `Intent` state. It doe
 | Initial submit default | If `submit` is omitted on initial create, IC MS treats the request as submitted for admission. |
 | Draft submit persistence | If an Intent is already persisted with `submit: false`, later omission of `submit` preserves Draft handling and does not automatically submit the Intent. |
 | Submit Draft | `submit: true` requests admission. IC MS validates the runtime admission profile and, if accepted, projects `Acknowledged`. |
-| Draft editability | While `lifecycleStatus = Draft`, all attributes accepted by the `PUT` / `PATCH` request contract are mutable. |
+| Draft editability | While `lifecycleStatus = Draft`, all attributes accepted by the `PUT` and `PATCH` request contract are mutable. |
 | Immutable identity | `id` is immutable; if included in `PUT`, it must match the path `id`. |
 | Lifecycle ownership | `lifecycleStatus` is not writable through create/update contracts; it is assigned and projected by the intent management entity. |
 | Bundle defaulting | `isBundle` is optional in request bodies and defaults to `false` when omitted on create; persisted responses include the server-resolved value. |
@@ -527,7 +527,7 @@ IC MS should reject or ignore unsupported external request fields according to t
 | Raw Knowledge Plane facts | Not accepted through IC MS runtime APIs. |
 | Raw telemetry observations | IA MS consumes telemetry; IC MS exposes curated projections only. |
 | Raw orchestrator callback payloads | ICB MS ingests callbacks; IA MS interprets them. |
-| Consumer-supplied lifecycle/status projection authority | IC MS owns external lifecycle/status projection. |
+| Consumer-supplied lifecycle and status projection authority | IC MS owns external lifecycle and status projection. |
 | Consumer-supplied `lifecycleStatus` in create/update | Lifecycle state is assigned and projected by the intent management entity; external consumers use `submit`, not `lifecycleStatus`, to request draft/save versus admission. |
 | Missing `isBundle` in create/update request | Not an error. IC MS defaults omitted `isBundle` to `false` on create and preserves the persisted/server-resolved value on Draft updates unless explicitly changed. |
 | Consumer-supplied `IntentReport` mutation fields | Reports are curated projection/audit resources. |
@@ -549,7 +549,7 @@ Authorisation responsibilities include:
 
 IC MS must not expose internal semantic, optimisation, assurance, or callback interpretation data simply because a caller can read an external `Intent` resource. Resource access and projection safety remain separate responsibilities.
 
-## 15. Persistence / state model:
+## 15. Persistence and state model:
 
 IC MS persists external runtime intent projections, runtime version metadata, hub subscriptions, webhook delivery work, and curated `IntentReport` projections.
 
@@ -559,8 +559,8 @@ IC MS persists external runtime intent projections, runtime version metadata, hu
 |---|---|
 | Runtime intent record | External canonical `Intent` projection, including Draft authoring records where `submit: false` is used. |
 | Current projected version | Version returned by standard `GET /intent/{id}`; Draft authoring records do not drive `activeVersion`. |
-| Lifecycle/status fields | `lifecycleStatus`, `statusReason`, `statusChangeDate`, assigned and projected by the intent management entity. |
-| ETag/version token | Optimistic concurrency for unsafe operations. |
+| Lifecycle and status fields | `lifecycleStatus`, `statusReason`, `statusChangeDate`, assigned and projected by the intent management entity. |
+| ETag concurrency token | Optimistic concurrency for unsafe operations. |
 | Internal version history | Audit and traceability; not returned by default external GET. |
 | Correlation identifiers | Trace lifecycle and downstream outcome handling. |
 
@@ -571,7 +571,7 @@ IC MS persists external runtime intent projections, runtime version metadata, hu
 | Report record | Read-only curated assurance/lifecycle report. |
 | Parent intent reference | Associates report with runtime intent. |
 | Report expression | Consumer-safe assurance and lifecycle summary. |
-| ETag/version token | Supports GET caching and governed admin operations. |
+| ETag concurrency token | Supports GET caching and governed admin operations. |
 | Retention metadata | Supports policy-governed purge/admin removal where required. |
 
 ### 15.3. Hub subscription state:
@@ -581,7 +581,7 @@ IC MS persists external runtime intent projections, runtime version metadata, hu
 | Subscription ID | Stable event subscription identifier. |
 | Callback URL | Subscriber-owned listener endpoint. |
 | Query/filter | Event filter expression such as `eventType=IntentStatusChangeEvent`. |
-| ETag/version token | Required for unsafe delete where baselined. |
+| ETag concurrency token | Required for unsafe delete where baselined. |
 | Subscription metadata | Audit and operational support. |
 
 ### 15.4. Webhook delivery outbox state:
@@ -606,11 +606,11 @@ IC MS has two distinct event-delivery paths. The two paths must not be collapsed
 
 ## 17. Internal Kafka event publication:
 
-IC MS publishes internal state/progress events through the platform Kafka event backbone where an independent internal consumer exists.
+IC MS publishes internal state and progress events through the platform Kafka event backbone where an independent internal consumer exists.
 
 | Event category | Purpose | Transport | Primary consumer |
 |---|---|---|---|
-| `IntentValidatedEvent` | Internal state/progress event emitted after schema and request-shape validation succeeds. | Kafka. | II MS / `intent-intelligence-ms`. |
+| `IntentValidatedEvent` | Internal state and progress event emitted after schema and request-shape validation succeeds. | Kafka. | II MS / `intent-intelligence-ms`. |
 
 `IntentValidatedEvent` is not a point-to-point command. It states that an `Intent` has passed IC MS schema and request-shape validation and has been admitted into the runtime lifecycle. IC MS writes the event to its internal event outbox, and the internal event relay publishes it to Kafka using the platform event header model.
 
@@ -838,7 +838,7 @@ If a valid unexpired cache entry exists and the request does not include `Cache-
 
 If no valid cache entry exists, or if the consumer sends `Cache-Control: no-cache`, IC MS reads from the source-of-truth store, refreshes the cache entry where safe, and returns the fresh response with normal cache-control headers.
 
-IC MS may also invalidate or refresh affected cache entries on write paths or lifecycle/status transitions when it knows the current Intent or IntentReport projection has changed.
+IC MS may also invalidate or refresh affected cache entries on write paths or lifecycle and status transitions when it knows the current Intent or IntentReport projection has changed.
 
 | Operation | Behaviour |
 |---|---|
@@ -937,4 +937,4 @@ Internal consumers can rely on `IntentValidatedEvent` as the admitted runtime in
 | Base path | `/intentManagement/v5` |
 | Primary resource | `Intent` |
 | Secondary resource | `IntentReport` |
-| Primary responsibility | TMF-compliant runtime `Intent` controller, schema and request-shape admission, lifecycle/status projection, and external runtime intent events |
+| Primary responsibility | TMF-compliant runtime `Intent` controller, schema and request-shape admission, lifecycle and status projection, and external runtime intent events |

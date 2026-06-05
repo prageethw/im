@@ -44,7 +44,7 @@ end note
 Consumer -> GW : POST /intentManagement/v5/intent\n{ submit: true, intentSpecification.id, expression.iri, expression, ... }
 GW -> ICMS : mTLS forward request\n(system/service context)
 
-group TMF-aligned resource and schema/request-shape validation
+group TMF-aligned resource and schema and request-shape validation
   ICMS -> ICMS : require intentSpecification.id and expression.iri\nfor submitted admission
   ICMS -> IDMS : GET /intentManagement/v5/intentSpecification/{id}\nverify referenced specification is ACTIVE
   IDMS --> ICMS : IntentSpecification { lifecycleStatus: ACTIVE, expressionSpecification.iri, schema/definition }
@@ -110,7 +110,7 @@ else Current projection is Draft and request keeps submit=false or omitted
   ICMS --> GW : 200 OK\n{ intent, lifecycleStatus: Draft, newETag }
   GW --> Consumer : 200 OK { intent }
 else Current projection is Draft and submit=true
-  group TMF-aligned schema/request-shape validation
+  group TMF-aligned schema and request-shape validation
     ICMS -> ICMS : require intentSpecification.id and expression.iri\nfor submitted admission
     ICMS -> IDMS : GET /intentManagement/v5/intentSpecification/{id}\nverify referenced specification is ACTIVE
     IDMS --> ICMS : IntentSpecification { lifecycleStatus: ACTIVE, expressionSpecification.iri, schema/definition }
@@ -179,7 +179,7 @@ end note
 
 IAMS -> KAFKA : publish IntentAssuranceEvent\ninternal platform event
 ICMS -> KAFKA : consume event
-ICMS -> STORE : create / update IntentReport projection\n{ intentId, reportId, assuranceStatus, timestamp }
+ICMS -> STORE : create or update IntentReport projection\n{ intentId, reportId, assuranceStatus, timestamp }
 ICMS -> OUTBOX : write IntentReportCreateEvent\nor IntentReportAttributeValueChangeEvent
 
 RELAY -> OUTBOX : poll PENDING report event
@@ -199,7 +199,7 @@ Ordinary external consumers do not delete IntentReport records.
 Only governed internal/admin purge may remove reports.
 end note
 
-group Admin / Governed Purge (policy-controlled, internal)
+group Admin and governed purge (policy-controlled, internal)
   ICMS -> STORE : remove IntentReport record\n(policy allows)
   ICMS -> OUTBOX : write IntentReportDeleteEvent\n{ status: PENDING }
   RELAY -> OUTBOX : poll PENDING IntentReportDeleteEvent
