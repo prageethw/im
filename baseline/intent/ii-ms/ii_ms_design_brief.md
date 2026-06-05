@@ -192,7 +192,7 @@ II MS uses the Knowledge Plane as governed domain knowledge.
 
 II MS must not dump raw KP into events.
 
-It curates only the information required by the next stage. `provider` remains KP and resource-inventory metadata only and is not included by default in event-facing resource entries. KP remains a native knowledge/config source. KP may retain `metrics.benchmark.*` for resource reference and capability values, `benchmarks.*` for service and location target thresholds, and `t7-gurobi-optimiser` as the optimiser backend/solver target.
+It curates only the information required by the next stage. `provider` remains KP and resource-inventory metadata only and is not included by default in event-facing resource entries. KP remains a native knowledge and config source. KP may retain `metrics.benchmark.*` for resource reference and capability values, `benchmarks.*` for service and location target thresholds, and `t7-gurobi-optimiser` as the optimiser backend/solver target.
 
 II maps KP resource metric values into neutral event-facing `metrics` fields such as `latencyMs`, `availabilityPercent`, `jitterMs`, and `packetLossPercent`.
 
