@@ -26,7 +26,7 @@ Document authority: this solution brief is authoritative for IA MS operational f
 - [12. IntentAssuranceEvent output shape:](#12-intentassuranceevent-output-shape)
 - [13. Fields not accepted:](#13-fields-not-accepted)
 - [14. Authorisation:](#14-authorisation)
-- [15. Persistence / state / outbox model:](#15-persistence-state-outbox-model)
+- [15. Persistence, state, and outbox model:](#15-persistence-state-outbox-model)
 - [16. Internal Kafka publication:](#16-internal-kafka-publication)
 - [17. Internal Kafka topics:](#17-internal-kafka-topics)
 - [18. Event identity:](#18-event-identity)
@@ -43,7 +43,7 @@ Document authority: this solution brief is authoritative for IA MS operational f
 
 Intent Assurance MS (IA MS) is the internal runtime assurance truth service for Intent Management. It owns assurance evaluation after network-ready service configuration, raw callback relay events, and runtime observation metrics are available.
 
-IA MS consumes `IntentNetworkReadyEvent`, `IntentCallbackEvent`, and runtime metrics/observation facts only. It correlates runtime state, normalises raw source callback states, evaluates observed resource metrics against resolved runtime targets and the stored applied assurance baseline, persists IA-owned assurance state, and publishes `IntentAssuranceEvent`.
+IA MS consumes `IntentNetworkReadyEvent`, `IntentCallbackEvent`, and runtime metrics and observation facts only. It correlates runtime state, normalises raw source callback states, evaluates observed resource metrics against resolved runtime targets and the stored applied assurance baseline, persists IA-owned assurance state, and publishes `IntentAssuranceEvent`.
 
 IA MS does not expose a TMF-compliant API. IC MS remains the owner of externally visible runtime `Intent` lifecycle projection and external `IntentReport` resources. IC MS consumes IA MS assurance outcomes and projects the public TMF-compliant state.
 
@@ -63,7 +63,7 @@ Primary collaborators:
 | ICB MS | Accepts external callbacks and relays raw `IntentCallbackEvent` to the dedicated callback topic. |
 | Observability platform | Provides runtime metric facts for observer-scope resources. |
 | IC MS | Consumes `IntentAssuranceEvent` and projects external `Intent` and `IntentReport` state. |
-| Knowledge Plane / policy configuration | May support mapping and evaluation policy, but IA MS does not query KP for every assurance decision by default. |
+| Knowledge Plane and policy configuration | May support mapping and evaluation policy, but IA MS does not query KP for every assurance decision by default. |
 
 IA MS persists its own assurance state, idempotency records, observation snapshots, mapping audit, and outbox records. It does not depend on IC MS for its internal event publication path.
 
@@ -84,7 +84,7 @@ The normal IA MS runtime process is:
 11. Publish `IntentAssuranceEvent` through the IA outbox relay.
 12. IC MS consumes the event and updates external `Intent` lifecycle and `IntentReport` projection.
 
-`IntentNetworkReadyEvent` alone never proves apply success. Active state requires apply/callback confirmation and/or runtime observations according to the workflow policy.
+`IntentNetworkReadyEvent` alone never proves apply success. Active state requires apply or callback confirmation and/or runtime observations according to the workflow policy.
 - `IntentNetworkReadyEvent` establishes the assurance context and observer scope; it does not prove apply success.
 - `IntentCallbackEvent` may arrive before, after, or between observation attempts, so IA MS must correlate and process events idempotently by `intentId`, `intentVersion`, and event identity.
 - IA MS must not emit misleading `IntentAssuranceEvent` outcomes for stale, superseded, or unmatched versions.
@@ -98,7 +98,7 @@ IA MS should be implemented as an internal event-driven microservice with:
 - idempotent Kafka consumers;
 - IA-owned PostgreSQL-compatible persistence;
 - a durable outbox for `IntentAssuranceEvent` publication;
-- mapping/audit records for callback state interpretation and skip/dead-letter decisions;
+- mapping and audit records for callback state interpretation and skip, dead-letter decisions;
 - retry-safe processing for at-least-once delivery;
 - clear separation between raw input capture, IA state update, and event publication.
 
@@ -110,20 +110,20 @@ Derived evaluation blocks such as `current.evaluations` or `body.evaluations` ar
 
 | Responsibility | IA MS behaviour |
 |---|---|
-| Runtime assurance truth | Owns the current assurance/projection state used to determine whether an intent is healthy, degraded, failed, or terminated. |
+| Runtime assurance truth | Owns the current assurance and projection state used to determine whether an intent is healthy, degraded, failed, or terminated. |
 | Network-ready configuration consumption | Consumes `IntentNetworkReadyEvent` from II MS and stores selected apply resources plus observer scope. |
 | Callback consumption | Consumes raw `IntentCallbackEvent` from the dedicated callback topic. |
 | Intent correlation | Validates/correlates `intentId` using IA-owned state and platform context. |
 | Raw state mapping | Maps raw `sourceState.state` into platform lifecycle and assurance meaning. |
 | Runtime observation | Obtains runtime metrics from observability endpoints informed by `observerConfiguration`. |
 | Assurance evaluation | Evaluates runtime observations against resolved targets and the stored applied assurance baseline. |
-| Assurance state update | Updates IA-owned current assurance/projection state. |
+| Assurance state update | Updates IA-owned current assurance and projection state. |
 | Assurance publication | Publishes `IntentAssuranceEvent` to the internal event backbone. |
 | Outbox ownership | Owns IA outbox and relay for reliable event publication. |
 
 ## 6. IA MS does not:
 
-| Concern | Owner / reason |
+| Concern | Owner or reason |
 |---|---|
 | Design-time `IntentSpecification` lifecycle | ID MS owns this. |
 | Runtime `Intent` REST API | IC MS owns this. |
@@ -131,10 +131,10 @@ Derived evaluation blocks such as `current.evaluations` or `body.evaluations` ar
 | External `IntentReport` resource creation | IC MS owns this. |
 | Raw callback ingestion REST endpoint | ICB MS owns this. |
 | Callback outbox persistence | ICB MS owns this. |
-| Network apply/change-execution execution | Change-execution layer owns this. |
+| Network apply and change-execution execution | Change-execution layer owns this. |
 | Intent interpretation and semantic resolution | II MS owns this. |
-| Optimisation decision | Optimiser / IO context owns this. |
-| Knowledge Plane config CRUD/governance | Knowledge Plane operating model owns this. |
+| Optimisation decision | Optimiser and IO context owns this. |
+| Knowledge Plane config CRUD and governance | Knowledge Plane operating model owns this. |
 | OEX user experience | OEX layer owns this. |
 | `IntentNetworkReadyEvent` production | II MS owns and emits it. IA MS only consumes it. |
 
@@ -144,10 +144,10 @@ IA MS has no external TMF-compliant REST API in the active baseline.
 
 IA MS internal contracts are:
 
-| Contract | Direction | Source / target | Purpose |
+| Contract | Direction | Source or target | Purpose |
 |---|---|---|---|
 | `IntentNetworkReadyEvent` | Input | II MS | Service-ready change-execution and observation configuration. |
-| `IntentCallbackEvent` | Input | ICB MS | Raw callback state relayed from source/change-execution systems. |
+| `IntentCallbackEvent` | Input | ICB MS | Raw callback state relayed from source or change-execution systems. |
 | Observation endpoint metric facts | Input | Observability platform | Runtime metrics for observer-scope resources. |
 | `IntentAssuranceEvent` | Output | Internal event backbone, consumed by IC MS | Curated assurance outcome used for external projection. |
 
@@ -157,7 +157,7 @@ IA MS internal contracts are:
 
 Required handling fields:
 
-| Field / area | IA MS usage |
+| Field or area | IA MS usage |
 |---|---|
 | `body.intentId` | Primary correlation key. |
 | `body.intentVersion` | Runtime intent version context where supplied. |
@@ -167,10 +167,10 @@ Required handling fields:
 | `body.expression.context.constraints.location` | Location context for assurance. |
 | `body.expression.context.constraints.serviceType` | Service type context for assurance. |
 | `body.expression.context.constraints.serviceClass` | Service class context for assurance. |
-| `body.serviceConfiguration.orchestratorConfiguration` | Selected apply/change-execution configuration. |
+| `body.serviceConfiguration.orchestratorConfiguration` | Selected apply and change-execution configuration. |
 | `body.serviceConfiguration.orchestratorConfiguration.resources[]` | Optimiser-selected resources/configuration ready for apply. |
-| `body.serviceConfiguration.observerConfiguration` | Assurance/monitoring configuration. |
-| `body.serviceConfiguration.observerConfiguration.resources[]` | Full observer scope IA/observer should monitor. |
+| `body.serviceConfiguration.observerConfiguration` | Assurance and monitoring configuration. |
+| `body.serviceConfiguration.observerConfiguration.resources[]` | Full observer scope IA and observer should monitor. |
 | `body.serviceConfiguration.observerConfiguration.resources[].metrics` | List of metric names to observe, not metric values. |
 | `body.references` | Correlation and resource references. |
 
@@ -185,24 +185,24 @@ IA MS consumes raw callback relay events emitted by ICB MS. The canonical callba
 - `sourceState`
 - `sourceState.state`
 
-`sourceState.state` carries the raw source/change-execution state value, such as `APPLIED`, `APPLY_FAILED`, or `TERMINATED`.
+`sourceState.state` carries the raw source or change-execution state value, such as `APPLIED`, `APPLY_FAILED`, or `TERMINATED`.
 
 Required handling fields:
 
-| Field / area | IA MS usage |
+| Field or area | IA MS usage |
 |---|---|
 | `body.callbackId` | Optional ICB callback submission/outbox identifier where supplied. |
 | `body.intentId` | Primary IA correlation key. |
 | `body.callbackSource` | Raw source system identity supplied by ICB MS. |
 | `body.callbackTimestamp` | Source callback timestamp. |
-| `body.sourceState.state` | Raw source/change-execution state value to map. |
+| `body.sourceState.state` | Raw source or change-execution state value to map. |
 | `body.sourceState.reason` | Optional raw reason to support IA mapping/audit. |
 | `body.receivedAt` | ICB receive/accept time. |
 | `body.details` | Optional safe raw or structured callback detail. |
 | `body.references.correlationId` | Correlation across the workflow. |
 | `body.references.intent` | Platform intent reference where generated by ICB/IA. |
 
-Do not use retired source-specific callback state/source/timestamp field names as baseline callback field names.
+Do not use retired source-specific callback state, source, and timestamp field names as baseline callback field names.
 
 ## 10. Observation metric shape:
 
@@ -236,7 +236,7 @@ IA MS owns raw callback state mapping. ICB MS must not map raw source states int
 
 | Raw `sourceState.state` | IA MS treatment | Typical `IntentAssuranceEvent.lifecycleStatus` |
 |---|---|---|
-| `APPLY_ACCEPTED` | Apply request accepted by source/change-execution layer. | `InProgress` |
+| `APPLY_ACCEPTED` | Apply request accepted by source or change-execution layer. | `InProgress` |
 | `APPLY_IN_PROGRESS` | Apply still underway. | `InProgress` |
 | `APPLIED` | Apply completed; runtime observations may further confirm health. | `Active` |
 | `APPLY_REJECTED` | Apply request rejected before successful application. | `Failed` |
@@ -244,7 +244,7 @@ IA MS owns raw callback state mapping. ICB MS must not map raw source states int
 | `PARTIALLY_APPLIED` | Some selected resources applied while others failed or remain unconfirmed. Preserve factual resource state and map to `Degraded` or `Failed` according to policy severity. | `Degraded` or `Failed` |
 | `TERMINATION_ACCEPTED` | Termination accepted. | `InProgress` |
 | `TERMINATED` | Termination confirmed. | `Terminated` |
-| Unknown / unmapped | Record skip, dead-letter, or operational handling decision. | No default lifecycle event unless policy requires one. |
+| Unknown or unmapped | Record skip, dead-letter, or operational handling decision. | No default lifecycle event unless policy requires one. |
 
 Mapping must be auditable. Unknown or unmapped values should not be silently converted into misleading healthy or failed states.
 
@@ -266,7 +266,7 @@ content-type: application/json
 
 Payload field specification:
 
-| Field / area | Purpose |
+| Field or area | Purpose |
 |---|---|
 | `body.intentId` | Runtime intent identifier. |
 | `body.intentVersion` | Runtime intent version context where supplied. |
@@ -364,7 +364,7 @@ Representative degraded outcome snippet. The IA MS specification is the canonica
 
 IA MS must not include the following by default in `IntentAssuranceEvent`:
 
-| Field / pattern | Reason |
+| Field or pattern | Reason |
 |---|---|
 | Raw callback payloads | IA emits curated outcomes, not callback dumps. |
 | Raw telemetry dumps | IA emits curated assurance facts, not full telemetry streams. |
@@ -374,9 +374,9 @@ IA MS must not include the following by default in `IntentAssuranceEvent`:
 | `body.evaluations` | Metrics-first event; no derived evaluation block by default. |
 | `requiresReoptimisation` | Decision components infer need from lifecycle/status/metrics. |
 | Optimiser scoring or solver internals | Optimiser-owned internals must not leak into IA event. |
-| Retired source-specific callback state/source/timestamp fields | Replaced by `sourceState`, `callbackSource`, and `callbackTimestamp`. |
-| `metrics.benchmark` / `metrics.telemetry` wrappers | Metric origin is inferred from event stage and processing context. |
-| `currentLatencyMs` / `observedLatencyMs` / similar context-encoded metric names | Use neutral metric names. |
+| Retired source-specific callback state, source, and timestamp fields | Replaced by `sourceState`, `callbackSource`, and `callbackTimestamp`. |
+| `metrics.benchmark` and `metrics.telemetry` wrappers | Metric origin is inferred from event stage and processing context. |
+| `currentLatencyMs`, `observedLatencyMs`, or similar context-encoded metric names | Use neutral metric names. |
 
 ## 14. Authorisation:
 
@@ -390,16 +390,16 @@ Authorisation should follow internal service-to-service controls:
 - callback source trust is not established by IA alone; ICB MS owns callback endpoint admission and relay, while IA owns state correlation and mapping;
 - downstream consumers must not treat IA event payloads as public TMF events.
 
-## 15. Persistence / state / outbox model:
+## 15. Persistence, state, and outbox model:
 
 IA MS owns its own PostgreSQL-compatible persistence boundary.
 
 | Table | Purpose |
 |---|---|
-| `intent_assurance_state` | Current assurance/projection state per intent. |
+| `intent_assurance_state` | Current assurance and projection state per intent. |
 | `intent_assurance_observation` | Current/recent curated observations. |
 | `intent_assurance_idempotency` | Consumed event deduplication. |
-| `intent_assurance_mapping_audit` | Callback mapping and skip/dead-letter decisions. |
+| `intent_assurance_mapping_audit` | Callback mapping and skip, dead-letter decisions. |
 | `intent_assurance_outbox` | Durable publication of `IntentAssuranceEvent`. |
 | `intent_assurance_dead_letter` | Required minimum dead-letter handling for exhausted input processing, unknown or invalid callbacks, stale/superseded event handling that cannot be safely ignored, and repeated observation collection failures after retry policy is exhausted. |
 | `shedlock` | Relay coordination if an embedded clustered relay is used. |
@@ -407,7 +407,7 @@ IA MS owns its own PostgreSQL-compatible persistence boundary.
 Persistence rules:
 
 - consumers must be idempotent;
-- `ce-id` / event id is the deduplication key;
+- `ce-id` or event id is the deduplication key;
 - `correlationId` must be propagated;
 - intent-scoped events should use `intentId` as the Kafka key where practical;
 - IA state updates and outbox writes should be transactional where possible;
@@ -421,7 +421,7 @@ Publication rules:
 
 - delivery is at-least-once;
 - consumers must be idempotent;
-- `ce-id` / event id is the deduplication key;
+- `ce-id` or event id is the deduplication key;
 - Kafka key should prefer `intentId` for intent-scoped events;
 - schema evolution should prefer additive changes;
 - breaking changes require versioning;
@@ -446,7 +446,7 @@ Exact topic naming should remain aligned with the environment-specific platform 
 | Producer | `intent-assurance-ms` |
 | Subject | `intentId` |
 | Kafka key | Prefer `intentId` |
-| Deduplication key | `ce-id` / event id |
+| Deduplication key | `ce-id` or event id |
 | Correlation | `correlationId` in `body.references` or equivalent reference area |
 | Delivery model | At-least-once |
 | Consumer behaviour | Idempotent consumption required |
@@ -512,13 +512,13 @@ IA MS must treat observation gaps, stale observations, and exhausted retries as 
 | Apply callback received with `APPLIED` | Correlate `intentId`, map state, update assurance state, and publish an assurance outcome according to workflow policy. |
 | Apply callback received with `APPLY_FAILED` | Correlate, map to failure meaning, update state, publish `IntentAssuranceEvent` with `Failed` where policy requires. |
 | Partial apply callback received | Correlate selected resources, preserve factual applied/failed/unconfirmed resource context, and publish `IntentAssuranceEvent` with `Degraded` or `Failed` according to policy severity. |
-| Unknown `intentId` callback | Record skip/dead-letter decision according to IA policy; do not publish misleading assurance state. |
-| Unknown `sourceState.state` | Record mapping audit and skip/dead-letter/operational handling decision; no default lifecycle event unless policy requires. |
-| Observed metrics inside target | Publish or maintain `Active`/healthy assurance state as policy requires. |
+| Unknown `intentId` callback | Record skip, dead-letter decision according to IA policy; do not publish misleading assurance state. |
+| Unknown `sourceState.state` | Record mapping audit and skip, dead-letter/operational handling decision; no default lifecycle event unless policy requires. |
+| Observed metrics inside target | Publish or maintain `Active or healthy assurance state as policy requires. |
 | Observed metrics outside target | Publish `Degraded` or `Failed` according to policy and severity. |
 | Observability unavailable, stale, or incomplete | Retry according to configured policy, mark the observation collection gap operationally, retain previous assurance state where safe, and do not invent healthy state from missing or stale telemetry. |
 | Kafka unavailable | Keep unpublished events in the IA outbox and retry later. |
-| IA DB unavailable | Hard fail processing; do not acknowledge consumed events until retry/DLQ policy applies. |
+| IA DB unavailable | Hard fail processing; do not acknowledge consumed events until retry and DLQ policy applies. |
 
 ## 22. Configuration:
 
@@ -526,7 +526,7 @@ IA MS configuration should include:
 
 | Configuration area | Purpose |
 |---|---|
-| Callback state mapping | Maps raw `sourceState.state` values to IA lifecycle/assurance meaning. |
+| Callback state mapping | Maps raw `sourceState.state` values to IA lifecycle and assurance meaning. |
 | Skip/dead-letter policy | Controls unknown intent, unknown state, invalid callback, stale or superseded version handling, replay handling, and repeated observation collection failure after retry policy is exhausted. |
 | Observation endpoint profiles | Maps observer configuration targets/profiles to actual observability endpoints. |
 | Metric threshold/evaluation policy | Defines how target breaches become `Active`, `Degraded`, `Failed`, or operational gaps. |
@@ -543,7 +543,7 @@ Primary consumer of `IntentAssuranceEvent` is IC MS.
 Consumer expectations:
 
 - consume idempotently;
-- use `ce-id` / event id for deduplication;
+- use `ce-id` or event id for deduplication;
 - use `intentId` and `correlationId` for workflow correlation;
 - treat IA events as curated internal assurance facts;
 - do not expose IA internal payloads directly as public TMF events;
@@ -566,7 +566,7 @@ Other authorised internal decision components may consume `IntentAssuranceEvent`
 |---|---|
 | Event example harmonisation | Closed for the active IA baseline. Future example changes must preserve the metrics-first `IntentAssuranceEvent` shape and must not reintroduce candidates, evaluations, benchmark wrappers, or `requiresReoptimisation` by default. |
 | IA external API | IA MS has no external TMF-compliant API. |
-| IA input events | IA consumes `IntentNetworkReadyEvent`, `IntentCallbackEvent`, and runtime metrics/observation facts only. |
+| IA input events | IA consumes `IntentNetworkReadyEvent`, `IntentCallbackEvent`, and runtime metrics and observation facts only. |
 | `IntentNetworkReadyEvent` owner | Produced by II MS, not IA MS. |
 | Callback field names | Use `callbackSource`, `callbackTimestamp`, and `sourceState.state`. |
 | Raw callback lifecycle mapping owner | IA MS owns mapping; ICB MS does not map lifecycle. |
@@ -586,6 +586,6 @@ Other authorised internal decision components may consume `IntentAssuranceEvent`
 | External API owner | No external TMF-compliant API |
 | Main responsibility | Runtime assurance truth, callback state normalisation, observation evaluation, and `IntentAssuranceEvent` publication |
 | Main input events | `IntentNetworkReadyEvent`, `IntentCallbackEvent` |
-| Main non-event input | Runtime metrics / observation facts from observability endpoints |
+| Main non-event input | Runtime metrics and observation facts from observability endpoints |
 | Main output event | `IntentAssuranceEvent` |
 | Event style | Internal CloudEvents-style headers with plain JSON `body` |
