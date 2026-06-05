@@ -236,7 +236,7 @@ A successful resolution implies:
 
 `IntentResolvedEvent.resources[]` contains the full valid, applicable, and apply-capable resource set known in KP for the resolved context after applicable scope and policy filtering.
 
-It includes neutral event-facing metric values for those resources so `optimiser-controller-ms` can compare and select the best applicable configuration. `IntentResolvedEvent.resources[]` is not the final selected or applied resource set and it is not the service-ready/apply-ready handoff.
+It includes neutral event-facing metric values for those resources so `optimiser-controller-ms` can compare and select the best applicable configuration. `IntentResolvedEvent.resources[]` is not the final selected or applied resource set and it is not the service-ready or apply-ready handoff.
 
 ## 12. Service-ready preparation rule:
 
@@ -361,7 +361,7 @@ Indicative tables:
 | Kafka or event broker unavailable | Consumed event state must not be lost; II outbox relay retries publication |
 | Cache unavailable | Bypass cache and use KP or source where safe |
 | Optimisation API outbox unavailable | Prevents outbound `POST /optimisation` submission for optimisation-backed selection. II MS must keep the optimisation request pending and must not emit `IntentNetworkReadyEvent` until the API outbox worker successfully submits the request and the correlated optimiser outcome is received through ICB MS and Kafka. |
-| Optimiser / ICB optimiser callback path unavailable | Not a dependency for semantic resolution or `IntentResolvedEvent` emission. For optimisation-backed selection, `POST /optimisation` failure from the API outbox worker, missing optimiser callback through ICB MS, or missing `OptimisationStatusChangeEvent` from Kafka prevents `IntentNetworkReadyEvent` emission until configured retry, callback timeout, governed failure/rejection policy, or operational handling applies. |
+| Optimiser and ICB optimiser callback path unavailable | Not a dependency for semantic resolution or `IntentResolvedEvent` emission. For optimisation-backed selection, `POST /optimisation` failure from the API outbox worker, missing optimiser callback through ICB MS, or missing `OptimisationStatusChangeEvent` from Kafka prevents `IntentNetworkReadyEvent` emission until configured retry, callback timeout, governed failure/rejection policy, or operational handling applies. |
 | Downstream fulfilment and preparation stage unavailable | Not an external caller concern; II emits only the milestone it has actually reached |
 
 ## 19. Security baseline:
