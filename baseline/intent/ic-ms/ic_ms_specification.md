@@ -1,4 +1,4 @@
-# IC MS Specification
+# IC MS Specification:
 
 | **Document status** | **Value** |
 | --- | --- |
@@ -256,7 +256,7 @@ IC MS keeps the external `Intent` and `IntentReport` contract TMF-aligned while 
 | `/intent/hub` domain-scoped hub routes | Domain-owned subscription surface for external Intent and IntentReport events |
 | `GET /intent/hub/{id}` | Operational convenience for retrieving a domain-scoped subscription; not part of the strict TMF minimum hub route set |
 | `_links` | Lifecycle-aware and authorisation-aware HATEOAS controls |
-| Strong `ETag` / `If-Match` governance | Optimistic concurrency for unsafe operations |
+| Strong ETag and `If-Match` governance | Optimistic concurrency for unsafe operations |
 | `428 Precondition Required` | Explicit response when required `If-Match` is missing |
 | Termination-retention behaviour for `DELETE /intent/{id}` | Runtime Intent records remain available for audit, reporting, lifecycle history, and traceability |
 | Ordinary external `IntentReport` delete not exposed | `IntentReport` is read-only curated projection/audit history for ordinary consumers; governed/admin removal remains internal or restricted |
@@ -331,7 +331,7 @@ These fields serve different purposes:
 
 For submitted admission, `intentSpecification.id` is mandatory. IC MS does not infer the governing runtime validation contract from `expression.iri` alone.
 
-`expression.iri` is also mandatory because it identifies the expression language / ontology / expression contract used for runtime expression validation. IC MS must confirm that the runtime `expression.iri` is consistent with the selected specification's `expressionSpecification.iri`.
+`expression.iri` is also mandatory because it identifies the expression language, ontology, or expression contract used for runtime expression validation. IC MS must confirm that the runtime `expression.iri` is consistent with the selected specification's `expressionSpecification.iri`.
 
 `intentSpecification.specKey` and `intentSpecification.name` are optional descriptive/discovery hints only. They are not mandatory and are not authoritative runtime validation keys. If supplied, IC MS may use them for consistency checking or narrowing where supported, but they must not replace `intentSpecification.id`.
 
@@ -556,8 +556,8 @@ Do not use string placeholders for array/object fields.
 | `404` | `RESOURCE_NOT_FOUND` | Intent, IntentReport, or subscription not found |
 | `409` | `INVALID_STATE_TRANSITION` | Requested lifecycle/version transition is not allowed |
 | `409` | `RESOURCE_CONFLICT` | Runtime update conflicts with current projection state |
-| `412` | `PRECONDITION_FAILED` | Supplied `If-Match` does not match the current resource representation |
-| `422` | `VALIDATION_FAILED` | Runtime Intent fails request-shape or specification validation, misses mandatory `intentSpecification.id`, misses mandatory `expression.iri`, or has an IRI/specification mismatch |
+| `412` | `PRECONDITION_FAILED` | Supplied `If-Match` does not match the current resource version |
+| `422` | `VALIDATION_FAILED` | Runtime Intent fails request-shape/spec validation, misses mandatory `intentSpecification.id`, misses mandatory `expression.iri`, or has an IRI/specification mismatch |
 | `422` | `INTENT_SPECIFICATION_NOT_ACTIVE` | Referenced IntentSpecification is not active |
 | `428` | `PRECONDITION_REQUIRED` | Required `If-Match` header is missing for an unsafe operation |
 | `503` | `SERVICE_UNAVAILABLE` | IC MS DB unavailable or active spec cannot be confirmed |
@@ -598,7 +598,7 @@ Cache-Control: no-store
 {
   "code": "PRECONDITION_FAILED",
   "reason": "ETAG_MISMATCH",
-  "message": "The supplied ETag does not match the current resource representation.",
+  "message": "The supplied ETag does not match the current resource version.",
   "status": 412,
   "referenceError": "https://mycsp.com.au/errors/PRECONDITION_FAILED",
   "@type": "Error"
@@ -890,7 +890,7 @@ Cache-Control: private, max-age=60
 |---|---|
 | `offset` | Zero-based start position |
 | `limit` | Maximum number of records |
-| `fields` | Optional TMF-aligned field selection / projection parameter |
+| `fields` | Optional TMF-aligned field selection or projection parameter |
 | `lifecycleStatus` | Filter by projected external lifecycle status |
 | `version` | Filter by projected runtime version |
 | `intentSpecification.id` | Filter by concrete IntentSpecification ID |
@@ -1596,9 +1596,6 @@ IC MS emits `IntentReportDeleteEvent` only after successful governed internal/ad
 
 ---
 
-
----
-
 ## 12. Hub create subscription:
 
 ### 12.1. Strict TMF route request:
@@ -1916,7 +1913,7 @@ Cache-Control: no-store
 {
   "code": "PRECONDITION_FAILED",
   "reason": "ETAG_MISMATCH",
-  "message": "The supplied ETag does not match the current resource representation.",
+  "message": "The supplied ETag does not match the current resource version.",
   "status": 412,
   "referenceError": "https://mycsp.com.au/errors/PRECONDITION_FAILED",
   "@type": "Error"
@@ -2279,7 +2276,7 @@ This is not a point-to-point command for a single consumer.
 
 It is a platform state and progress event meaning the runtime Intent has passed IC MS schema and request-shape validation and has been admitted into the Intent lifecycle.
 
-Current primary consumer is II MS / `intent-intelligence-ms`, but the event may be consumed by other authorised internal consumers where useful.
+Current primary consumer is II MS, `intent-intelligence-ms`, but the event may be consumed by other authorised internal consumers where useful.
 
 IC MS also consumes downstream internal events that drive projection updates. `IntentRejectedEvent` carries II MS semantic or policy rejection outcomes that IC MS projects as external `Rejected` state. `IntentAssuranceEvent` carries IA MS assurance and runtime outcome facts that IC MS uses to update external `Intent` and `IntentReport` projections. IC MS does not consume `IntentCallbackEvent` by default; callback interpretation belongs to IA MS.
 

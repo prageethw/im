@@ -44,7 +44,7 @@ end note
 Consumer -> GW : POST /intentManagement/v5/intent\n{ submit: true, intentSpecification.id, expression.iri, expression, ... }
 GW -> ICMS : mTLS forward request\n(system/service context)
 
-group TMF-aligned resource and schema and request-shape validation
+group TMF-aligned resource and schema/request-shape validation
   ICMS -> ICMS : require intentSpecification.id and expression.iri\nfor submitted admission
   ICMS -> IDMS : GET /intentManagement/v5/intentSpecification/{id}\nverify referenced specification is ACTIVE
   IDMS --> ICMS : IntentSpecification { lifecycleStatus: ACTIVE, expressionSpecification.iri, schema/definition }
@@ -54,7 +54,7 @@ group TMF-aligned resource and schema and request-shape validation
 end
 
 alt Validation fails
-  ICMS --> GW : 422 Unprocessable Entity\n{ code: VALIDATION_FAILED, reason: INTENT_SPECIFICATION_ID_REQUIRED / EXPRESSION_IRI_REQUIRED / INTENT_EXPRESSION_IRI_MISMATCH / ... }
+  ICMS --> GW : 422 Unprocessable Entity\n{ code: VALIDATION_FAILED, reason: INTENT_SPECIFICATION_ID_REQUIRED, EXPRESSION_IRI_REQUIRED, INTENT_EXPRESSION_IRI_MISMATCH, ... }
   GW --> Consumer : 422 VALIDATION_FAILED
 else Validation succeeds
   group Atomic DB transaction
@@ -78,7 +78,7 @@ else Validation succeeds
     SUB --> RELAY : 204 No Content
     RELAY -> OUTBOX : mark DELIVERED
   else failure
-    SUB --> RELAY : 4xx / 5xx / timeout
+    SUB --> RELAY : 4xx, 5xx, or timeout
     RELAY -> OUTBOX : increment retry count\n(delivery policy back-off)
   end
 end
@@ -110,7 +110,7 @@ else Current projection is Draft and request keeps submit=false or omitted
   ICMS --> GW : 200 OK\n{ intent, lifecycleStatus: Draft, newETag }
   GW --> Consumer : 200 OK { intent }
 else Current projection is Draft and submit=true
-  group TMF-aligned schema and request-shape validation
+  group TMF-aligned schema/request-shape validation
     ICMS -> ICMS : require intentSpecification.id and expression.iri\nfor submitted admission
     ICMS -> IDMS : GET /intentManagement/v5/intentSpecification/{id}\nverify referenced specification is ACTIVE
     IDMS --> ICMS : IntentSpecification { lifecycleStatus: ACTIVE, expressionSpecification.iri, schema/definition }
@@ -199,7 +199,7 @@ Ordinary external consumers do not delete IntentReport records.
 Only governed internal/admin purge may remove reports.
 end note
 
-group Admin and governed purge (policy-controlled, internal)
+group Admin and Governed Purge (policy-controlled, internal)
   ICMS -> STORE : remove IntentReport record\n(policy allows)
   ICMS -> OUTBOX : write IntentReportDeleteEvent\n{ status: PENDING }
   RELAY -> OUTBOX : poll PENDING IntentReportDeleteEvent

@@ -44,7 +44,7 @@ rectangle "Draft \npre-admission authoring context" as DRAFT #FFF8E1 {
 rectangle "Optional intent-management-entity\ngoverned enrichment fields" as ENRICHMENT #F3E5F5 {
   rectangle "Strongly recommended\nbut not generically mandatory\n\n- humanExpression" as ENRICHMENT_RECOMMENDED
 
-  rectangle "Optional / governed\n\n- description\n- validFor.startDateTime\n- isBundle\n- priority\n- relatedParty\n- _links" as ENRICHMENT_OPTIONAL
+  rectangle "Optional and governed\n\n- description\n- validFor.startDateTime\n- isBundle\n- priority\n- relatedParty\n- _links" as ENRICHMENT_OPTIONAL
 
   rectangle "Rule\n\nMay be required by a specific\nimplementation, product, channel,\npolicy, onboarding profile,\nor security posture.\n\nNot part of the generic\nminimum mandatory profile." as ENRICHMENT_RULE
 }

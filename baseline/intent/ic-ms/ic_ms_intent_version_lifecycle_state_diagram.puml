@@ -71,7 +71,7 @@ Paused --> Standby : newer version becomes activeVersion
 Rejected --> Terminated : close rejected version
 Failed --> Terminated : close failed version
 Standby --> Acknowledged : restart Intent version change lifecycle
-Standby --> Terminated : explicit termination / no longer retained
+Standby --> Terminated : explicit termination, no longer retained
 Terminated --> Retired : administrative archive decision
 Retired --> [*]
 

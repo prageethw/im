@@ -81,10 +81,10 @@ It is the runtime API and projection boundary for `Intent` and `IntentReport`; i
 ![alt text](ic_ms_logical_view.svg)
 
 ```text
-External consumer / OEX -> platform gateway -> IC MS -> ID MS
-External consumer / OEX -> platform gateway -> IC MS -> Intent projection store
+External consumer or OEX -> platform gateway -> IC MS -> ID MS
+External consumer or OEX -> platform gateway -> IC MS -> Intent projection store
 IC MS -> internal_event_outbox -> Kafka -> II MS
-II MS / IA MS -> Kafka -> IC MS -> Intent / IntentReport projection store
+II MS and IA MS -> Kafka -> IC MS -> Intent and IntentReport projection store
 IC MS -> webhook_delivery_outbox -> HTTP POST -> external subscriber listener callback
 ```
 
@@ -454,7 +454,7 @@ Terminated
 
 ### 12.3. Intent-version lifecycleStatus values after admission:
 
-The Intent-version-level `lifecycleStatus` is the lifecycle truth for each admitted runtime version. It supports version history, rollback or restart, audit, and governance.
+The Intent-version-level `lifecycleStatus` is the lifecycle truth for each admitted runtime version. It supports version history, rollback/restart, audit, and governance.
 
 ```text
 Acknowledged
@@ -493,8 +493,8 @@ External `GET /intent/{id}` returns the current projected `Intent` state. It doe
 |---|---|
 | New version gating | Do not create another newer version while there is already a newer candidate version in `Acknowledged` or `InProgress`. |
 | Draft authoring-record behaviour | Draft authoring records are editable authoring records and do not drive `activeVersion`. |
-| New version becomes `activeVersion` after previous `Active` / `Degraded` / `Paused` | Previous version moves to `Standby`. |
-| New version becomes `activeVersion` after previous `Rejected` / `Failed` | Previous version moves to `Terminated`. |
+| New version becomes `activeVersion` after previous `Active`, `Degraded`, or `Paused` | Previous version moves to `Standby`. |
+| New version becomes `activeVersion` after previous `Rejected` or `Failed` | Previous version moves to `Terminated`. |
 | Standby reactivation | `Standby -> Acknowledged -> InProgress -> Active`. |
 | Retirement | Only `Terminated -> Retired`; no direct `Standby`, `Failed`, or `Rejected` to `Retired`. |
 | Retired | Administrative/version-governance archival state, not a runtime/network operational state. |
@@ -559,8 +559,8 @@ IC MS persists external runtime intent projections, runtime version metadata, hu
 |---|---|
 | Runtime intent record | External canonical `Intent` projection, including Draft authoring records where `submit: false` is used. |
 | Current projected version | Version returned by standard `GET /intent/{id}`; Draft authoring records do not drive `activeVersion`. |
-| Lifecycle and status fields | `lifecycleStatus`, `statusReason`, `statusChangeDate`, assigned and projected by the intent management entity. |
-| ETag concurrency token | Optimistic concurrency for unsafe operations. |
+| Lifecycle/status fields | `lifecycleStatus`, `statusReason`, `statusChangeDate`, assigned and projected by the intent management entity. |
+| ETag/version token | Optimistic concurrency for unsafe operations. |
 | Internal version history | Audit and traceability; not returned by default external GET. |
 | Correlation identifiers | Trace lifecycle and downstream outcome handling. |
 
@@ -571,7 +571,7 @@ IC MS persists external runtime intent projections, runtime version metadata, hu
 | Report record | Read-only curated assurance/lifecycle report. |
 | Parent intent reference | Associates report with runtime intent. |
 | Report expression | Consumer-safe assurance and lifecycle summary. |
-| ETag concurrency token | Supports GET caching and governed admin operations. |
+| ETag/version token | Supports GET caching and governed admin operations. |
 | Retention metadata | Supports policy-governed purge/admin removal where required. |
 
 ### 15.3. Hub subscription state:
@@ -581,7 +581,7 @@ IC MS persists external runtime intent projections, runtime version metadata, hu
 | Subscription ID | Stable event subscription identifier. |
 | Callback URL | Subscriber-owned listener endpoint. |
 | Query/filter | Event filter expression such as `eventType=IntentStatusChangeEvent`. |
-| ETag concurrency token | Required for unsafe delete where baselined. |
+| ETag/version token | Required for unsafe delete where baselined. |
 | Subscription metadata | Audit and operational support. |
 
 ### 15.4. Webhook delivery outbox state:
@@ -610,7 +610,7 @@ IC MS publishes internal state and progress events through the platform Kafka ev
 
 | Event category | Purpose | Transport | Primary consumer |
 |---|---|---|---|
-| `IntentValidatedEvent` | Internal state and progress event emitted after schema and request-shape validation succeeds. | Kafka. | II MS / `intent-intelligence-ms`. |
+| `IntentValidatedEvent` | Internal state and progress event emitted after schema and request-shape validation succeeds. | Kafka. | II MS, `intent-intelligence-ms`. |
 
 `IntentValidatedEvent` is not a point-to-point command. It states that an `Intent` has passed IC MS schema and request-shape validation and has been admitted into the runtime lifecycle. IC MS writes the event to its internal event outbox, and the internal event relay publishes it to Kafka using the platform event header model.
 

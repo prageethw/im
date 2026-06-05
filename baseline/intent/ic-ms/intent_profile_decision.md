@@ -1,4 +1,4 @@
-# TAF - Decision Proposal Intent, Minimum data requirement.
+# TAF - Runtime Intent minimum data requirement decision
 
 | **Document status** | **Value** |
 | --- | --- |

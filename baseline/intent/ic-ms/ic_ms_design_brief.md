@@ -19,7 +19,7 @@
 - [5. IC MS validation responsibility:](#5-ic-ms-validation-responsibility)
 - [6. Event delivery paths:](#6-event-delivery-paths)
 - [7. IntentValidatedEvent production rule:](#7-intentvalidatedevent-production-rule)
-  - [7.1. Rule: `IntentValidatedEvent` is a state and progress event, not a point-to-point command:](#71-rule-intentvalidatedevent-is-a-stateprogress-event-not-a-point-to-point-command)
+  - [7.1. Rule: `IntentValidatedEvent` is a state and progress event, not a point-to-point command:](#71-rule-intentvalidatedevent-is-a-state-and-progress-event-not-a-point-to-point-command)
 - [8. Internal Kafka event publication:](#8-internal-kafka-event-publication)
   - [8.1. Internal Kafka CloudEvents-style headers:](#81-internal-kafka-cloudevents-style-headers)
 - [9. External webhook notification delivery:](#9-external-webhook-notification-delivery)
@@ -42,21 +42,21 @@
 - [14. TMF compliance and platform extension baseline:](#14-tmf-compliance-and-platform-extension-baseline)
 - [15. Response classification headers:](#15-response-classification-headers)
 - [16. IC MS boundary statement:](#16-ic-ms-boundary-statement)
-- [17. Lifecycle and status and versioning baseline:](#17-lifecyclestatus-and-versioning-baseline)
+- [17. Lifecycle/status and versioning baseline:](#17-lifecycle-status-and-versioning-baseline)
   - [17.1. Intent-level lifecycleStatus:](#171-intent-level-lifecyclestatus)
   - [17.2. Intent-version lifecycleStatus:](#172-intent-version-lifecyclestatus)
   - [17.3. Version state meanings:](#173-version-state-meanings)
   - [17.4. Version pointer:](#174-version-pointer)
   - [17.5. Why `activeVersion`:](#175-why-activeversion)
-  - [17.6. Lifecycle and status ownership:](#176-lifecyclestatus-ownership)
+  - [17.6. Lifecycle/status ownership:](#176-lifecyclestatus-ownership)
   - [17.7. Lifecycle/versioning example:](#177-lifecycleversioning-example)
   - [17.8. Example JSON — while v2 is still being processed:](#178-example-json-while-v2-is-still-being-processed)
   - [17.9. Example JSON — after v2 becomes active:](#179-example-json-after-v2-becomes-active)
-  - [17.10. Example JSON — after rollback or restart to v1 is acknowledged:](#1710-example-json-after-rollbackrestart-to-v1-is-acknowledged)
+  - [17.10. Example JSON — after rollback/restart to v1 is acknowledged:](#1710-example-json-after-rollbackrestart-to-v1-is-acknowledged)
   - [17.11. Example JSON — after rollback to v1 is confirmed:](#1711-example-json-after-rollback-to-v1-is-confirmed)
   - [17.12. Example JSON — after v2 is terminated and then retired from future use:](#1712-example-json-after-v2-is-terminated-and-then-retired-from-future-use)
   - [17.13. Example JSON — after termination:](#1713-example-json-after-termination)
-  - [17.14. Delete or terminate rule:](#1714-deleteterminate-rule)
+  - [17.14. Delete/terminate rule:](#1714-deleteterminate-rule)
   - [17.15. Final baseline statements:](#1715-final-baseline-statements)
 - [18. Intent lifecycle state diagrams:](#18-intent-lifecycle-state-diagrams)
   - [18.1. Purpose:](#181-purpose)
@@ -87,7 +87,7 @@
   - [21.7. Failure responses:](#217-failure-responses)
   - [21.8. Baseline statements:](#218-baseline-statements)
 - [22. Deployment and persistence strategy:](#22-deployment-and-persistence-strategy)
-  - [22.1. Runtime and state model:](#221-runtimestate-model)
+  - [22.1. Runtime/state model:](#221-runtimestate-model)
   - [22.2. Source of truth:](#222-source-of-truth)
   - [22.3. Recommended persistence model:](#223-recommended-persistence-model)
   - [22.4. JSONB usage:](#224-jsonb-usage)
@@ -248,6 +248,8 @@ II MS is the current primary consumer because it performs semantic validation an
 
 ### 7.1. Rule: `IntentValidatedEvent` is a state and progress event, not a point-to-point command:
 
+`IntentValidatedEvent` records that IC MS has admitted the runtime Intent after schema and request-shape validation. It is not an instruction addressed only to II MS.
+
 ## 8. Internal Kafka event publication:
 
 IC MS publishes internal platform events through the internal event outbox and Kafka relay.
@@ -321,7 +323,7 @@ Terminated
 
 IC MS owns the external lifecycle and status projection, but not the runtime truth.
 
-| **Lifecycle and status source** | **IC MS action** |
+| **Lifecycle/status source** | **IC MS action** |
 |---|---|
 | Submitted IC MS schema and request-shape validation succeeds | Project `Acknowledged` |
 | Draft creation with `submit:false` | Project `Draft`; no admitted Intent version is created and `activeVersion` is not driven |
@@ -329,7 +331,7 @@ IC MS owns the external lifecycle and status projection, but not the runtime tru
 | IA MS apply success / active assurance | Project `Active` |
 | IA MS degraded assurance | Project `Degraded` |
 | IA MS paused/failed/terminated outcome | Project `Paused`, `Failed`, or `Terminated` |
-| Delete or terminate request accepted | Project termination path according to final delete or terminate rules |
+| Delete/terminate request accepted | Project termination path according to final delete/terminate rules |
 
 ## 11. Internal event interactions:
 
@@ -473,12 +475,12 @@ Strict TMF-compatible external operations:
 
 Approved IC MS platform extensions:
 
-| **Extension** | **Purpose / boundary** |
+| **Extension** | **Purpose and boundary** |
 |---|---|
 | `PUT /intentManagement/v5/intent/{id}` | Deterministic full replacement where supported; `PATCH` remains available for strict TMF-compatible clients. |
 | `/intentManagement/v5/intent/hub` | Domain-scoped subscription route for IC-owned `Intent` and `IntentReport` notifications. |
 | `GET /intentManagement/v5/intent/hub/{id}` | Operational convenience for retrieving a domain-scoped subscription. Not part of the strict minimum TMF hub operation set. |
-| `ETag` / `If-Match` with `428 Precondition Required` and `412 Precondition Failed` | Platform optimistic-concurrency policy for unsafe operations. |
+| `ETag` and `If-Match` with `428 Precondition Required` and `412 Precondition Failed` | Platform optimistic-concurrency policy for unsafe operations. |
 | Termination-retention behaviour for `DELETE /intent/{id}` | `DELETE` is treated as termination of the retained runtime `Intent` projection, not physical deletion by default. |
 | Governed/admin-only `IntentReport` delete posture | Ordinary external consumers list/retrieve reports only; internal/admin purge may emit `IntentReportDeleteEvent` where policy allows. |
 
@@ -492,7 +494,7 @@ Platform preference:
 
 **IC MS is the TMF-compliant runtime intent controller. It owns external `Intent` and `IntentReport` resources, performs schema and request-shape validation against `ACTIVE` `IntentSpecification`, emits `IntentValidatedEvent` as an internal state and progress event, and projects external lifecycle and status from II MS rejection outcomes and IA MS assurance outcomes. IC MS does not perform semantic validation, policy validation, optimisation, network apply, runtime assurance, telemetry ingestion, or callback mediation.**
 
-## 17. Lifecycle and status and versioning baseline:
+## 17. Lifecycle/status and versioning baseline:
 
 ### 17.1. Intent-level lifecycleStatus:
 
@@ -576,7 +578,7 @@ or:
 | `effectiveVersion` | Do not use | Accurate, but less natural |
 | `currentVersion` | Do not use | Ambiguous; could mean latest submitted, latest edited, latest stored, or active |
 
-### 17.6. Lifecycle and status ownership:
+### 17.6. Lifecycle/status ownership:
 
 IC MS owns the external lifecycle and status projection, not the runtime truth.
 
@@ -591,18 +593,18 @@ Runtime truth comes from:
 
 ### 17.7. Lifecycle/versioning example:
 
-| **Step** | **Trigger / event** | **Intent version** | **Version lifecycleStatus** | **Intent activeVersion** | **IC MS external projection** |
+| **Step** | **Trigger or event** | **Intent version** | **Version lifecycleStatus** | **Intent activeVersion** | **IC MS external projection** |
 |---:|---|---|---|---|---|
 | 1 | `POST /intent` with `submit:true` or omitted `submit` passes schema and request-shape validation | `v1` | `Acknowledged` | none | Intent admitted; `IntentValidatedEvent` emitted |
 | 2 | Downstream fulfilment starts | `v1` | `InProgress` | none | Intent is being processed |
 | 3 | IA MS confirms apply/assurance active | `v1` | `Active` | `v1` | Intent active; `v1` becomes active version |
 | 4 | Runtime degradation reported by IA MS | `v1` | `Degraded` | `v1` | Intent degraded, but `v1` remains `activeVersion` |
-| 5 | Meaningful update accepted, creates new version | `v2` | `Acknowledged` / `InProgress` | `v1` | New version being processed; service still running on `v1` |
+| 5 | Meaningful update accepted, creates new version | `v2` | `Acknowledged` or `InProgress` | `v1` | New version being processed; service still running on `v1` |
 | 6 | IA MS confirms updated apply active | `v2` | `Active` | `v2` | `v2` becomes `activeVersion` |
-| 7 | `v2` becomes `activeVersion` | `v1` | `Standby` | `v2` | `v1` no longer active, but remains a rollback or restart candidate |
-| 8 | Rollback or restart requested | `v1` | `Acknowledged` | `v2` | `v1` re-enters the Intent version change lifecycle; `v2` remains active until the restart is confirmed |
-| 9 | Rollback or restart change execution begins | `v1` | `InProgress` | `v2` | `v1` is being applied; `v2` remains active until the restart is confirmed |
-| 10 | Rollback or restart confirmed | `v1` | `Active` | `v1` | `v1` becomes `activeVersion` again; previous active version moves to `Standby` where applicable |
+| 7 | `v2` becomes `activeVersion` | `v1` | `Standby` | `v2` | `v1` no longer active, but remains a rollback/restart candidate |
+| 8 | Rollback/restart requested | `v1` | `Acknowledged` | `v2` | `v1` re-enters the Intent version change lifecycle; `v2` remains active until the restart is confirmed |
+| 9 | Rollback/restart change execution begins | `v1` | `InProgress` | `v2` | `v1` is being applied; `v2` remains active until the restart is confirmed |
+| 10 | Rollback/restart confirmed | `v1` | `Active` | `v1` | `v1` becomes `activeVersion` again; previous active version moves to `Standby` where applicable |
 | 11 | Version explicitly terminated | `v2` | `Terminated` | `v1` | `v2` is no longer a restart candidate |
 | 12 | Administrative retirement after termination | `v2` | `Retired` | `v1` | `v2` is archived for governance/audit and cannot become active again |
 
@@ -646,7 +648,7 @@ Runtime truth comes from:
 }
 ```
 
-### 17.10. Example JSON — after rollback or restart to v1 is acknowledged:
+### 17.10. Example JSON — after rollback/restart to v1 is acknowledged:
 
 ```json
 {
@@ -726,7 +728,7 @@ Runtime truth comes from:
 }
 ```
 
-### 17.14. Delete or terminate rule:
+### 17.14. Delete/terminate rule:
 
 IC MS does not physically delete runtime `Intent` records by default.
 
@@ -796,7 +798,7 @@ Retired
 
 | **Rule** | **Baseline** |
 |---|---|
-| Submitted schema and request-shape success | Intent/admitted version starts as `Acknowledged` |
+| Submitted schema and request-shape success | Intent or admitted version starts as `Acknowledged` |
 | Draft creation with `submit:false` | Intent-level lifecycleStatus is `Draft`; no admitted Intent version is created and `activeVersion` is not driven |
 | Semantic/policy rejection | Moves to `Rejected` |
 | Fulfilment/apply starts | Moves to `InProgress` |
@@ -804,7 +806,7 @@ Retired
 | Runtime degradation | Active version can move to `Degraded` while remaining `activeVersion` |
 | Recovery from degradation | `Degraded -> Active` |
 | New version becomes active | New version becomes `Active`; previous active version moves to `Standby` |
-| Rollback or restart | `Standby -> Acknowledged -> InProgress -> Active`; previous active version moves to `Standby` only after the restarted version becomes active |
+| Rollback/restart | `Standby -> Acknowledged -> InProgress -> Active`; previous active version moves to `Standby` only after the restarted version becomes active |
 | Explicit retirement | Only `Terminated -> Retired`; `Retired` is administrative/version-governance archival state |
 | Termination | Intent-level moves to `Terminated`; active version moves to `Terminated`; records retained |
 | Physical delete | Not baselined for runtime `Intent` |
@@ -821,9 +823,9 @@ Retired
 v1 Active, activeVersion = v1
 -> v2 created, v2 InProgress, activeVersion still v1
 -> v2 Active, activeVersion = v2, v1 moves to Standby
--> rollback or restart requested, v1 Acknowledged, activeVersion still v2
--> rollback or restart starts, v1 InProgress, activeVersion still v2
--> rollback or restart confirmed, v1 Active, activeVersion = v1, v2 moves to Standby
+-> rollback/restart requested, v1 Acknowledged, activeVersion still v2
+-> rollback/restart starts, v1 InProgress, activeVersion still v2
+-> rollback/restart confirmed, v1 Active, activeVersion = v1, v2 moves to Standby
 ```
 
 ### 18.8. Baseline statement:
@@ -1092,7 +1094,7 @@ Retry-After: 30
 
 ## 22. Deployment and persistence strategy:
 
-### 22.1. Runtime and state model:
+### 22.1. Runtime/state model:
 
 IC MS is a stateful MS, backed by a managed PostgreSQL-compatible RDBMS. IC MS application instances can still scale independently because durable state is externalised to the database rather than held in local memory.
 
@@ -1122,7 +1124,7 @@ The IC MS database is the source of truth for:
 | `inbox_event` | Stores consumed internal events such as `IntentRejectedEvent` and `IntentAssuranceEvent` for idempotent processing |
 | `internal_event_outbox` | Stores internal platform events before Kafka publication, including `IntentValidatedEvent` |
 | `webhook_delivery_outbox` | Stores external TMF/webhook notification delivery work before HTTP POST to subscriber callback URLs |
-| audit table / audit log | Optional dedicated audit trail if not covered by platform audit capability |
+| audit table or audit log | Optional dedicated audit trail if not covered by platform audit capability |
 
 ### 22.4. JSONB usage:
 
@@ -1138,7 +1140,7 @@ Recommended JSONB fields:
 - consumed event snapshot in `inbox_event`
 - curated resource/service/evaluation summaries where structure may evolve
 
-Relational columns should still be used for governance and query fields such as `id`, `version`, `lifecycleStatus`, `activeVersion` / projected version, `intentSpecificationId`, `etag`, and timestamps.
+Relational columns should still be used for governance and query fields such as `id`, `version`, `lifecycleStatus`, `activeVersion` or projected version, `intentSpecificationId`, `etag`, and timestamps.
 
 ### 22.5. Suggested relational columns:
 
@@ -1214,7 +1216,7 @@ Initial deployment may be single-region or same-region multi-AZ. The selected da
 
 ### 22.9. Health checks:
 
-| **Health endpoint / check** | **Meaning** |
+| **Health endpoint or check** | **Meaning** |
 |---|---|
 | Liveness | Process is running and can respond |
 | Readiness | Service can access dependencies needed for serving traffic |

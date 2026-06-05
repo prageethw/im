@@ -62,7 +62,7 @@
                 <mxCell id="e4" style="edgeStyle=orthogonalEdgeStyle;rounded=0;fillColor=#d5e8d4;strokeColor=default;" parent="1" source="icms_core" target="intent_store" edge="1">
                     <mxGeometry relative="1" as="geometry"/>
                 </mxCell>
-                <mxCell id="e4_lbl" value="persist / update&#xa;Intent / IntentReport projection" style="edgeLabel;fontSize=10;fontStyle=2;container=0;rounded=0;" parent="e4" connectable="0" vertex="1">
+                <mxCell id="e4_lbl" value="persist or update&#xa;Intent and IntentReport projection" style="edgeLabel;fontSize=10;fontStyle=2;container=0;rounded=0;" parent="e4" connectable="0" vertex="1">
                     <mxGeometry relative="0.5" as="geometry">
                         <mxPoint x="-83" y="-34" as="offset"/>
                     </mxGeometry>
@@ -150,18 +150,18 @@
                         </Array>
                     </mxGeometry>
                 </mxCell>
-                <mxCell id="e13_lbl" value="store / lookup&#xa;callback subscriptions" style="edgeLabel;fontSize=10;fontStyle=2;container=0;rounded=0;" parent="e13" connectable="0" vertex="1">
+                <mxCell id="e13_lbl" value="store or lookup&#xa;callback subscriptions" style="edgeLabel;fontSize=10;fontStyle=2;container=0;rounded=0;" parent="e13" connectable="0" vertex="1">
                     <mxGeometry relative="0.5" as="geometry">
                         <mxPoint x="67" y="35" as="offset"/>
                     </mxGeometry>
                 </mxCell>
-                <mxCell id="legend" value="&lt;b&gt;Legend&lt;/b&gt;&#xa;─── Synchronous / data flow&#xa;- - - Dependency / lookup&#xa;─── Kafka event (internal platform only)&#xa;─── HTTP POST webhook callback (external)" style="text;html=1;strokeColor=default;fillColor=#f5f5f5;align=left;verticalAlign=top;spacingLeft=8;fontSize=11;fontColor=#333333;container=0;rounded=0;" parent="1" vertex="1">
+                <mxCell id="legend" value="&lt;b&gt;Legend&lt;/b&gt;&#xa;─── Synchronous data flow&#xa;- - - Dependency or lookup&#xa;─── Kafka event (internal platform only)&#xa;─── HTTP POST webhook callback (external)" style="text;html=1;strokeColor=default;fillColor=#f5f5f5;align=left;verticalAlign=top;spacingLeft=8;fontSize=11;fontColor=#333333;container=0;rounded=0;" parent="1" vertex="1">
                     <mxGeometry x="840" y="650" width="320" height="100" as="geometry"/>
                 </mxCell>
-                <mxCell id="not_owned_note" value="IC MS does NOT own:&#xa;• Semantic interpretation&#xa;• Optimisation / change&#xa;• Callback ingestion&#xa;• Runtime assurance truth&#xa;• Internal fulfilment state machine" style="text;html=1;strokeColor=default;fillColor=#f8cecc;align=left;verticalAlign=top;spacingLeft=8;fontSize=11;container=0;rounded=0;" parent="1" vertex="1">
+                <mxCell id="not_owned_note" value="IC MS does NOT own:&#xa;• Semantic interpretation&#xa;• Optimisation and change&#xa;• Callback ingestion&#xa;• Runtime assurance truth&#xa;• Internal fulfilment state machine" style="text;html=1;strokeColor=default;fillColor=#f8cecc;align=left;verticalAlign=top;spacingLeft=8;fontSize=11;container=0;rounded=0;" parent="1" vertex="1">
                     <mxGeometry x="840" y="760" width="280" height="110" as="geometry"/>
                 </mxCell>
-                <mxCell id="ext_consumer" value="External Consumer / OEX" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=default;fontStyle=1;fontSize=12;container=0;" parent="1" vertex="1">
+                <mxCell id="ext_consumer" value="External Consumer or OEX" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=default;fontStyle=1;fontSize=12;container=0;" parent="1" vertex="1">
                     <mxGeometry x="110" y="100" width="200" height="50" as="geometry"/>
                 </mxCell>
                 <mxCell id="ext_subscriber" value="External Subscriber Listener&#xa;(subscriber-owned callback URL)" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=default;fontStyle=1;fontSize=12;container=0;" parent="1" vertex="1">
@@ -191,7 +191,7 @@
                 <mxCell id="kafka" value="Kafka&#xa;(internal platform event bus)" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=default;fontStyle=1;fontSize=12;container=0;" parent="1" vertex="1">
                     <mxGeometry x="1340" y="320" width="170" height="50" as="geometry"/>
                 </mxCell>
-                <mxCell id="iims" value="Intent Intelligence MS&lt;br&gt;(II MS)&lt;br&gt;&lt;br&gt;• Semantic interpretation&lt;br&gt;• Optimisation&lt;br&gt;• Change handoff&lt;br&gt;• Emits rejection / network-ready outcomes" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#ffcccc;strokeColor=default;fontStyle=1;fontSize=12;align=left;spacingLeft=10;container=0;" parent="1" vertex="1">
+                <mxCell id="iims" value="Intent Intelligence MS&lt;br&gt;(II MS)&lt;br&gt;&lt;br&gt;• Semantic interpretation&lt;br&gt;• Optimisation&lt;br&gt;• Change handoff&lt;br&gt;• Emits rejection and network-ready outcomes" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#ffcccc;strokeColor=default;fontStyle=1;fontSize=12;align=left;spacingLeft=10;container=0;" parent="1" vertex="1">
                     <mxGeometry x="1250" y="445" width="150" height="145" as="geometry"/>
                 </mxCell>
                 <mxCell id="iams" value="Intent Assurance MS&#xa;(IA MS)&#xa;&#xa;• Runtime assurance truth&#xa;• Emits IntentAssuranceEvent outcomes" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#ffcccc;strokeColor=default;fontStyle=1;fontSize=12;align=left;spacingLeft=10;container=0;" parent="1" vertex="1">
