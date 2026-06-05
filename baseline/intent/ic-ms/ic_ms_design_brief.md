@@ -389,7 +389,7 @@ IntentReportAttributeValueChangeEvent
 IntentReportDeleteEvent
 ```
 
-`IntentReportDeleteEvent` is retained in this vocabulary for TMF alignment and governed internal/admin deletion or retention purge scenarios only; it is not emitted for ordinary external consumer delete because that operation is not exposed by default.
+`IntentReportDeleteEvent` is retained in this vocabulary for TMF alignment and governed internal or admin deletion or retention purge scenarios only; it is not emitted for ordinary external consumer delete because that operation is not exposed by default.
 
 ### 12.3. External event timestamp rule:
 
@@ -431,7 +431,7 @@ IC MS may provide an internal-only governed `IntentReport` delete/purge capabili
 
 If a deployment must expose the TMF report delete route for compatibility, it must be restricted/admin-only or return a policy error such as `403 Forbidden` or `405 Method Not Allowed` for ordinary consumers.
 
-`IntentReportDeleteEvent` remains part of the external TMF-aligned event vocabulary for `IntentReport` alignment. It may be emitted only after successful governed internal/admin removal where notification is allowed by policy. It is not emitted as the result of ordinary external consumer delete because ordinary report delete is not exposed.
+`IntentReportDeleteEvent` remains part of the external TMF-aligned event vocabulary for `IntentReport` alignment. It may be emitted only after successful governed internal or admin removal where notification is allowed by policy. It is not emitted as the result of ordinary external consumer delete because ordinary report delete is not exposed.
 
 No separate `IntentReport` lifecycle is baselined for ordinary consumer use because delete/purge is a governed administrative operation, not a normal report lifecycle transition.
 
@@ -1191,7 +1191,7 @@ External webhook notifications delivered through the webhook delivery outbox inc
 - `IntentDeleteEvent`
 - `IntentReportCreateEvent`
 - `IntentReportAttributeValueChangeEvent`
-- `IntentReportDeleteEvent` — governed internal/admin retention or deletion scenarios only
+- `IntentReportDeleteEvent` — governed internal or admin retention or deletion scenarios only
 
 IC MS should use inbox/idempotency handling for consumed internal events, including:
 

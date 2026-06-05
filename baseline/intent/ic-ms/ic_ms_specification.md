@@ -1590,7 +1590,7 @@ If an implementation must expose the TMF report delete route for compatibility, 
 
 `IntentReportDeleteEvent` remains part of the external TMF-aligned event vocabulary for `IntentReport` alignment.
 
-IC MS emits `IntentReportDeleteEvent` only after successful governed internal/admin removal, where notification is allowed by policy. Valid trigger examples include retention purge, legal deletion, platform administration, approved data correction, or policy-governed cleanup.
+IC MS emits `IntentReportDeleteEvent` only after successful governed internal or admin removal, where notification is allowed by policy. Valid trigger examples include retention purge, legal deletion, platform administration, approved data correction, or policy-governed cleanup.
 
 `IntentReportDeleteEvent` is not emitted as the result of ordinary external consumer delete because ordinary external consumer delete is not exposed.
 
@@ -1692,7 +1692,7 @@ IntentReportAttributeValueChangeEvent
 IntentReportDeleteEvent
 ```
 
-`IntentReportDeleteEvent` is included in the subscription vocabulary for TMF alignment, but is emitted only for governed internal/admin retention or deletion scenarios, not ordinary external consumer delete.
+`IntentReportDeleteEvent` is included in the subscription vocabulary for TMF alignment, but is emitted only for governed internal or admin retention or deletion scenarios, not ordinary external consumer delete.
 
 ### 12.6. Hub notification delivery rule:
 
@@ -2230,7 +2230,7 @@ IC MS emits external TMF-aligned resource events for `IntentReport` projection c
 
 ## 24. IntentReportDeleteEvent:
 
-`IntentReportDeleteEvent` represents governed internal/admin removal, not ordinary external consumer delete.
+`IntentReportDeleteEvent` represents governed internal or admin removal, not ordinary external consumer delete.
 
 ```json
 {

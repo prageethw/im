@@ -545,7 +545,7 @@ Authorisation responsibilities include:
 | Report read access | Consumers can only read reports they are authorised to access. |
 | Hub subscription management | Only authorised subscribers can create or delete event subscriptions. |
 | Internal event consumption | Internal consumers use service-to-service identity and platform trust controls. |
-| Admin-only report purge | Governed internal/admin capability only, not ordinary external consumer capability. |
+| Admin-only report purge | Governed internal or admin capability only, not ordinary external consumer capability. |
 
 IC MS must not expose internal semantic, optimisation, assurance, or callback interpretation data simply because a caller can read an external `Intent` resource. Resource access and projection safety remain separate responsibilities.
 
@@ -657,7 +657,7 @@ IntentReportAttributeValueChangeEvent
 IntentReportDeleteEvent
 ```
 
-`IntentReportDeleteEvent` is included for TMF vocabulary alignment but is emitted only after governed internal/admin removal where notification is allowed by policy.
+`IntentReportDeleteEvent` is included for TMF vocabulary alignment but is emitted only after governed internal or admin removal where notification is allowed by policy.
 
 Status-change events carry the current `intent.lifecycleStatus` snapshot in the `event.intent` payload. They do not carry separate `previousLifecycleStatus` or `newLifecycleStatus` fields in the external event payload. The event type, timestamp, and emitted resource snapshot provide the lifecycle-change signal.
 
@@ -905,7 +905,7 @@ Internal consumers can rely on `IntentValidatedEvent` as the admitted runtime in
 |---|---|
 | Exact physical Kafka topic split for IC internal events | May be refined by deployment policy while preserving `IntentValidatedEvent` semantics. |
 | Public exposure posture for TMF strict `/hub` versus domain-scoped `/intent/hub` | Both are baselined; gateway product exposure can choose supported route set. |
-| Optional internal/admin `IntentReport` purge API details | Governed capability is allowed, but ordinary external consumer delete remains not exposed by default. |
+| Optional internal or admin `IntentReport` purge API details | Governed capability is allowed, but ordinary external consumer delete remains not exposed by default. |
 | Full internal version-history retrieval API | Not exposed by default; can be defined later as a documented platform extension if needed. |
 | Draft authoring-record creation route/detail | Future scope. New submitted-version changes require a new Draft authoring record, but the route or operation for creating that record is intentionally deferred. PUT and PATCH on an admitted runtime version must not create, mutate, or submit that new Draft authoring record. |
 
@@ -921,7 +921,7 @@ Internal consumers can rely on `IntentValidatedEvent` as the admitted runtime in
 | Hub notification delivery | REST webhook delivery to subscriber listener callback URLs; Kafka is not used for external hub delivery. |
 | `DELETE /intent/{id}` behaviour | Termination, not physical deletion. |
 | External event timestamp spelling | Use both `eventTime` and corrected `timeOccurred`. |
-| `IntentReportDeleteEvent` posture | Event vocabulary retained for TMF alignment; emitted only after governed internal/admin removal. |
+| `IntentReportDeleteEvent` posture | Event vocabulary retained for TMF alignment; emitted only after governed internal or admin removal. |
 | Ordinary external `IntentReport` delete | Not exposed by default. |
 | Missing `If-Match` | `428 PRECONDITION_REQUIRED`. |
 | Stale/mismatched ETag | `412 PRECONDITION_FAILED`. |
