@@ -31,7 +31,7 @@
 
 ## 1. Purpose:
 
-Intent Callback MS, referred to as ICB MS, owns thin callback ingestion for external change execution and apply systems. ICB MS accepts callback submissions from trusted external systems through the API Gateway, performs technical authorisation and structural validation, durably records the callback fact through an outbox pattern, and publishes raw internal callback outcome events to Kafka. Change-execution/apply callbacks are relayed as `IntentCallbackEvent` to the dedicated callback topic for IA MS. Optimiser outcome callbacks are relayed as `OptimisationStatusChangeEvent` to the main intent-management event topic for II MS.
+Intent Callback MS, referred to as ICB MS, owns thin callback ingestion for external change execution and apply systems. ICB MS accepts callback submissions from trusted external systems through the API Gateway, performs technical authorisation and structural validation, durably records the callback fact through an outbox pattern, and publishes raw internal callback outcome events to Kafka. Change-execution and apply callbacks are relayed as `IntentCallbackEvent` to the dedicated callback topic for IA MS. Optimiser outcome callbacks are relayed as `OptimisationStatusChangeEvent` to the main intent-management event topic for II MS.
 
 ICB MS does not interpret lifecycle, assurance, degradation, optimisation, or service meaning.
 

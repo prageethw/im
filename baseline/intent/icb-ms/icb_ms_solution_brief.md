@@ -66,7 +66,7 @@
 
 ## 1. Summary:
 
-Intent Callback MS, referred to as ICB MS, is the thin callback ingestion service for the Intent Management Enabler platform. It accepts callback submissions from trusted external change-execution or application systems through the API Gateway, performs technical authorisation and structural validation, durably records the accepted callback fact, and publishes raw internal callback events to Kafka. Change-execution/apply callbacks are relayed as `IntentCallbackEvent` to the dedicated callback topic for IA MS. Optimiser outcome callbacks are relayed as `OptimisationStatusChangeEvent` to the main internal event topic for II MS.
+Intent Callback MS, referred to as ICB MS, is the thin callback ingestion service for the Intent Management Enabler platform. It accepts callback submissions from trusted external change-execution or application systems through the API Gateway, performs technical authorisation and structural validation, durably records the accepted callback fact, and publishes raw internal callback events to Kafka. Change-execution and apply callbacks are relayed as `IntentCallbackEvent` to the dedicated callback topic for IA MS. Optimiser outcome callbacks are relayed as `OptimisationStatusChangeEvent` to the main internal event topic for II MS.
 
 ICB MS does not interpret the callback meaning. It does not decide whether a callback means `Active`, `Failed`, `Terminated`, `Degraded`, or any other lifecycle or assurance outcome. IA MS is the normalisation and interpretation point. IA MS consumes `IntentCallbackEvent`, correlates the `intentId`, interprets raw `sourceState.state`, and emits lifecycle-driving `IntentAssuranceEvent` outcomes to the main internal event flow.
 
@@ -145,7 +145,7 @@ The same ICB-owned submission endpoint is used for approved callback profiles. T
 
 | **Callback profile** | **External source** | **ICB output event** | **Kafka topic** | **Intended consumer** |
 |---|---|---|---|---|
-| Change-execution/apply callback | External orchestrator or apply system | `IntentCallbackEvent` | `t7.intent.management.events.callbacks` | IA MS |
+| Change-execution and apply callback | External orchestrator or apply system | `IntentCallbackEvent` | `t7.intent.management.events.callbacks` | IA MS |
 | Optimiser outcome callback | Approved Optimiser platform | `OptimisationStatusChangeEvent` | `t7.intent.management.events` | II MS |
 
 II MS registers or supplies the ICB-owned callback submission URL, `POST /intent-callback/v1/submissions`, to the Optimiser platform. ICB MS validates and relays the optimiser event structurally; II MS owns correlation and interpretation of the optimiser outcome.
@@ -826,7 +826,7 @@ The mapping configuration belongs to IA MS. It is not an ICB MS configuration co
 | 2 | Lifecycle interpretation | IA MS owns callback interpretation and lifecycle-driving assurance outcomes. |
 | 3 | `intentId` existence validation | ICB MS checks syntax only; IA MS validates/correlates existence. |
 | 4 | Callback topic | ICB publishes to dedicated `t7.intent.management.events.callbacks`. |
-| 5 | Main event topic usage | ICB MS does not emit change execution and apply `IntentCallbackEvent` facts to the main internal events topic. Change-execution/apply callbacks are published only to `t7.intent.management.events.callbacks`. Approved optimiser outcome callbacks are published as `OptimisationStatusChangeEvent` to `t7.intent.management.events` for II MS. |
+| 5 | Main event topic usage | ICB MS does not emit change execution and apply `IntentCallbackEvent` facts to the main internal events topic. Change-execution and apply callbacks are published only to `t7.intent.management.events.callbacks`. Approved optimiser outcome callbacks are published as `OptimisationStatusChangeEvent` to `t7.intent.management.events` for II MS. |
 | 6 | Outbox pattern | Accepted callback submission and callback outbox record are written transactionally. |
 | 7 | Gateway protection | ICB MS sits behind API Gateway and trusts only gateway-forwarded identity/claims. |
 | 8 | Event body style | `IntentCallbackEvent` uses the ICB-owned top-level `body` callback fact shape. `OptimisationStatusChangeEvent` uses the approved optimiser event payload shape consumed by II MS and is not converted into an ICB-owned `body.callback` fact shape. |

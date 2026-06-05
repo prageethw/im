@@ -40,7 +40,7 @@
 - [12. Event-specific rules:](#12-event-specific-rules)
 - [13. Reference and correlation construction rules:](#13-reference-and-correlation-construction-rules)
 - [14. Structural validation rules:](#14-structural-validation-rules)
-  - [14.1. IntentCallbackEvent change-execution/apply callback profile:](#141-intentcallbackevent-change-executionapply-callback-profile)
+  - [14.1. IntentCallbackEvent change-execution and apply callback profile:](#141-intentcallbackevent-change-execution-and-apply-callback-profile)
   - [14.2. OptimisationStatusChangeEvent optimiser outcome callback profile:](#142-optimisationstatuschangeevent-optimiser-outcome-callback-profile)
 - [15. Standard errors:](#15-standard-errors)
   - [15.1. Common errors:](#151-common-errors)
@@ -77,7 +77,7 @@ ICB MS performs technical authorisation, structural validation, idempotent durab
 | Submit callback | `POST` | `/intent-callback/v1/submissions` |
 | Retrieve callback submission status | `GET` | `/intent-callback/v1/submissions/{id}` |
 
-The `POST` endpoint supports approved callback profiles, including change-execution/apply callback submissions and optimiser outcome callback submissions.
+The `POST` endpoint supports approved callback profiles, including change-execution and apply callback submissions and optimiser outcome callback submissions.
 
 | **Callback profile** | **ICB output event** | **Kafka topic** | **Consumer** |
 |---|---|---|---|
@@ -684,7 +684,7 @@ ICB MS must not trust caller-supplied platform `href` values. Where ICB MS creat
 
 Required request fields depend on the approved callback profile.
 
-### 14.1. IntentCallbackEvent change-execution/apply callback profile:
+### 14.1. IntentCallbackEvent change-execution and apply callback profile:
 
 | **Field** | **Rule** |
 |---|---|
@@ -711,7 +711,7 @@ Required request fields depend on the approved callback profile.
 
 ICB MS validates syntax and structure only. It does not validate service feasibility, lifecycle meaning, assurance meaning, selected-configuration meaning, or optimiser outcomes.
 
-Do not use `callbackType` as an ICB contract field. Raw change-execution/apply callback meaning is carried by `sourceState.state` and interpreted by IA MS. Optimiser outcome meaning is carried by `OptimisationStatusChangeEvent` and interpreted by II MS.
+Do not use `callbackType` as an ICB contract field. Raw change-execution and apply callback meaning is carried by `sourceState.state` and interpreted by IA MS. Optimiser outcome meaning is carried by `OptimisationStatusChangeEvent` and interpreted by II MS.
 
 ## 15. Standard errors:
 
