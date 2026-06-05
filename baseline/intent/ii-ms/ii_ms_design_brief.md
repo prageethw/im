@@ -244,7 +244,7 @@ II MS emits `IntentNetworkReadyEvent` when service-ready preparation has produce
 
 IntentNetworkReadyEvent may be emitted only after II MS has received or derived a governed selected configuration from the authorised downstream selection or optimisation path. II MS does not own the optimisation algorithm or optimiser backend. II MS owns packaging the selected configuration into the service-ready event for IA MS.
 
-For optimisation-backed selection, II MS submits the resolved intent context and candidate resources to the Optimiser platform using `POST /optimisation`. II MS registers or supplies the ICB-owned callback submission URL, `POST /intent-callback/v1/submissions`, as the optimiser outcome target. The Optimiser platform returns the governed selected configuration by sending `OptimisationStatusChangeEvent` to ICB MS. ICB MS ingests the callback and publishes `OptimisationStatusChangeEvent` to Kafka for II MS consumption. II MS then packages that selected configuration into `IntentNetworkReadyEvent` for IA MS.
+For optimisation-backed selection, II MS submits the resolved intent context and candidate resources to the Optimiser platform using `POST /optimisation`. II MS registers or supplies the ICB-owned callback submission URL, `POST /intent-callback/v1/submissions`, as the optimiser outcome target. The Optimiser platform returns the governed selected configuration by sending `OptimisationStatusChangeEventRequest` to the ICB-owned callback submission URL. ICB MS ingests the callback request and publishes `OptimisationStatusChangeEvent` to Kafka for II MS consumption. II MS then packages that selected configuration into `IntentNetworkReadyEvent` for IA MS.
 
 The `POST /optimisation` submission must be driven by the II MS optimisation API outbox, not by an in-memory synchronous call tied only to the `IntentValidatedEvent` consumer transaction. II MS must first persist the semantic decision, `intent_optimisation_correlation` state, and pending optimisation API outbox entry atomically. A dedicated optimisation API outbox worker submits the request, applies bounded retries and circuit-breaker behaviour, records the accepted optimisation id or failure state, and updates the correlation record. II MS must not emit `IntentNetworkReadyEvent` until the correlated `OptimisationStatusChangeEvent` is received through ICB MS and Kafka.
 
@@ -264,7 +264,7 @@ IA MS consumes this event and must not produce it.
 
 `IntentNetworkReadyEvent.serviceConfiguration.observerConfiguration.resources[]` contains the full assurance observation scope that IA MS must observe. Each observer resource uses `metrics` as a list of metric names to observe, not as metric values.
 
-Do not introduce a separate `observationPoints` attribute.
+Keep assurance observation resources under `IntentNetworkReadyEvent.serviceConfiguration.observerConfiguration.resources[]`.
 
 ## 13. Rejection rule:
 

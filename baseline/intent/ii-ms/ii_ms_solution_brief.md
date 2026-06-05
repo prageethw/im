@@ -59,7 +59,7 @@ Its responsibility is to convert a syntactically accepted runtime intent into on
 
 `IntentResolvedEvent` and `IntentNetworkReadyEvent` are intentionally different milestones. `IntentResolvedEvent` is the candidate-level semantic-resolution handoff. `IntentNetworkReadyEvent` is the service-ready preparation handoff to IA MS and means the service configuration and resource set has been prepared for change execution and assurance observation. It does not mean the network application has succeeded. IntentNetworkReadyEvent may be emitted only after II MS has received or derived a governed selected configuration from the authorised downstream selection or optimisation path. II MS does not own the optimisation algorithm or optimiser backend. II MS owns packaging the selected configuration into the service-ready event for IA MS.
 
-For optimisation-backed selection, II MS uses the approved Optimiser platform integration pattern: `POST /optimisation` for the governed REST request, with the ICB-owned callback submission URL, `POST /intent-callback/v1/submissions`, registered or supplied as the optimiser outcome target. The Optimiser platform sends `OptimisationStatusChangeEvent` to ICB MS. ICB MS ingests the callback and publishes `OptimisationStatusChangeEvent` to Kafka for II MS consumption. The Optimiser platform owns optimisation execution, selection logic, solver models, and optimiser lifecycle. II MS owns submitting the governed request, correlating the Kafka-delivered optimiser outcome, and packaging that selected configuration into `IntentNetworkReadyEvent` for IA MS.
+For optimisation-backed selection, II MS uses the approved Optimiser platform integration pattern: `POST /optimisation` for the governed REST request, with the ICB-owned callback submission URL, `POST /intent-callback/v1/submissions`, registered or supplied as the optimiser outcome target. The Optimiser platform sends `OptimisationStatusChangeEventRequest` to the ICB-owned callback submission URL. ICB MS ingests the callback request and publishes `OptimisationStatusChangeEvent` to Kafka for II MS consumption. The Optimiser platform owns optimisation execution, selection logic, solver models, and optimiser lifecycle. II MS owns submitting the governed request, correlating the Kafka-delivered optimiser outcome, and packaging that selected configuration into `IntentNetworkReadyEvent` for IA MS.
 
 ## 2. Logical View:
 
@@ -101,7 +101,7 @@ Logical responsibilities:
 9. It records the semantic decision and writes the output event to the II outbox.
 10. The II outbox relay publishes the event to the internal event backbone.
 11. For optimisation-backed selection, II MS submits `POST /optimisation` and registers or supplies the ICB-owned callback submission URL, `POST /intent-callback/v1/submissions`.
-12. ICB MS ingests the external optimiser callback and publishes `OptimisationStatusChangeEvent` to Kafka.
+12. ICB MS ingests the external `OptimisationStatusChangeEventRequest` callback and publishes `OptimisationStatusChangeEvent` to Kafka.
 13. II MS consumes and correlates the Kafka-delivered `OptimisationStatusChangeEvent` before emitting `IntentNetworkReadyEvent`.
 14. Consumers continue the workflow according to the milestone event emitted.
 
@@ -186,7 +186,7 @@ II MS contracts are internal event contracts only.
 
 II MS has no external TMF-compliant REST contract in the active baseline. Any health, readiness, or metrics endpoints are internal platform probes only and must not be treated as product APIs.
 
-For optimiser-backed selection, II MS registers or supplies the ICB-owned callback submission URL, `POST /intent-callback/v1/submissions`, to the Optimiser platform when submitting `POST /optimisation`. The Optimiser platform sends `OptimisationStatusChangeEvent` to ICB MS. ICB MS performs callback ingestion and places `OptimisationStatusChangeEvent` on Kafka for II MS to consume.
+For optimiser-backed selection, II MS registers or supplies the ICB-owned callback submission URL, `POST /intent-callback/v1/submissions`, to the Optimiser platform when submitting `POST /optimisation`. The Optimiser platform sends `OptimisationStatusChangeEventRequest` to the ICB-owned callback submission URL. ICB MS performs callback ingestion and places `OptimisationStatusChangeEvent` on Kafka for II MS to consume.
 
 II MS workflow events remain internal Kafka event contracts. The exact ICB optimiser-callback ingestion and relay contract must be confirmed during ICB MS refinement.
 
