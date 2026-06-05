@@ -7,13 +7,13 @@
                 <mxCell id="title" value="Intent Enabler – Logical View" style="text;html=1;strokeColor=none;fillColor=none;align=left;fontSize=20;fontStyle=1;container=0;" parent="1" vertex="1">
                     <mxGeometry x="60" y="30" width="500" height="36" as="geometry"/>
                 </mxCell>
-                <mxCell id="ext" value="External Consumer / OEX / Authorised Platform" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=default;fontStyle=1;fontSize=13;container=0;" parent="1" vertex="1">
+                <mxCell id="ext" value="External Consumer, OEX, or Authorised Platform" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=default;fontStyle=1;fontSize=13;container=0;" parent="1" vertex="1">
                     <mxGeometry x="660" y="80" width="520" height="60" as="geometry"/>
                 </mxCell>
                 <mxCell id="id-ms" value="&lt;b&gt;ID MS&lt;/b&gt;&lt;br/&gt;Publishes &amp; governs IntentSpecification" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=default;fontSize=12;container=0;" parent="1" vertex="1">
                     <mxGeometry x="163" y="220" width="360" height="80" as="geometry"/>
                 </mxCell>
-                <mxCell id="ic-ms" value="&lt;b&gt;IC MS&lt;/b&gt;&lt;br/&gt;Admits Intent requests · owns Intent / IntentReport projection" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=default;fontSize=12;container=0;" parent="1" vertex="1">
+                <mxCell id="ic-ms" value="&lt;b&gt;IC MS&lt;/b&gt;&lt;br/&gt;Admits Intent requests · owns Intent and IntentReport projection" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=default;fontSize=12;container=0;" parent="1" vertex="1">
                     <mxGeometry x="660" y="220" width="520" height="80" as="geometry"/>
                 </mxCell>
                 <mxCell id="kafka" value="Internal Kafka Event Backbone" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=default;dashed=1;dashPattern=8 4;fontStyle=1;fontSize=13;container=0;" parent="1" vertex="1">
@@ -31,7 +31,7 @@
                 <mxCell id="optimiser" value="&lt;b&gt;Optimiser&lt;/b&gt;&lt;br/&gt;POST /optimisation" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#e1d5e7;strokeColor=default;fontSize=12;container=0;" parent="1" vertex="1">
                     <mxGeometry x="1680" y="480" width="200" height="80" as="geometry"/>
                 </mxCell>
-                <mxCell id="change-sys" value="&lt;b&gt;Change-Execution / Apply Systems&lt;/b&gt;" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#e1d5e7;strokeColor=default;fontSize=12;container=0;" parent="1" vertex="1">
+                <mxCell id="change-sys" value="&lt;b&gt;Change-Execution and Apply Systems&lt;/b&gt;" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#e1d5e7;strokeColor=default;fontSize=12;container=0;" parent="1" vertex="1">
                     <mxGeometry x="1680" y="600" width="200" height="60" as="geometry"/>
                 </mxCell>
                 <mxCell id="id-db" value="store" style="shape=cylinder3;whiteSpace=wrap;html=1;fillColor=#f8cecc;strokeColor=default;fontSize=10;container=0;" parent="1" vertex="1">
@@ -52,7 +52,7 @@
                 <mxCell id="e1" value="IntentSpecification (TMF)" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=block;endFill=1;fontSize=10;strokeWidth=4;" parent="1" source="ext" target="id-ms" edge="1">
                     <mxGeometry relative="1" as="geometry"/>
                 </mxCell>
-                <mxCell id="e2" value="Intent / IntentReport (TMF)" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=block;endFill=1;fontSize=10;strokeWidth=4;" parent="1" source="ext" target="ic-ms" edge="1">
+                <mxCell id="e2" value="Intent and IntentReport (TMF)" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=block;endFill=1;fontSize=10;strokeWidth=4;" parent="1" source="ext" target="ic-ms" edge="1">
                     <mxGeometry relative="1" as="geometry"/>
                 </mxCell>
                 <mxCell id="e3" value="governs active spec" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=open;endFill=0;dashed=1;fontSize=10;" parent="1" source="id-ms" target="ic-ms" edge="1">
