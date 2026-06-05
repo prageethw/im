@@ -31,7 +31,7 @@
 
 ## 1. Purpose:
 
-Intent Callback MS, referred to as ICB MS, owns thin callback ingestion for external change-execution/apply systems. ICB MS accepts callback submissions from trusted external systems through the API Gateway, performs technical authorisation and structural validation, durably records the callback fact through an outbox pattern, and publishes raw internal callback outcome events to Kafka. Change-execution/apply callbacks are relayed as `IntentCallbackEvent` to the dedicated callback topic for IA MS. Optimiser outcome callbacks are relayed as `OptimisationStatusChangeEvent` to the main intent-management event topic for II MS.
+Intent Callback MS, referred to as ICB MS, owns thin callback ingestion for external change execution and apply systems. ICB MS accepts callback submissions from trusted external systems through the API Gateway, performs technical authorisation and structural validation, durably records the callback fact through an outbox pattern, and publishes raw internal callback outcome events to Kafka. Change-execution/apply callbacks are relayed as `IntentCallbackEvent` to the dedicated callback topic for IA MS. Optimiser outcome callbacks are relayed as `OptimisationStatusChangeEvent` to the main intent-management event topic for II MS.
 
 ICB MS does not interpret lifecycle, assurance, degradation, optimisation, or service meaning.
 
@@ -42,33 +42,33 @@ ICB MS does not interpret lifecycle, assurance, degradation, optimisation, or se
 | Display name | Intent Callback MS |
 | Service name | `intent-callback-ms` |
 | Short name | ICB MS |
-| Main responsibility | Thin callback ingestion and raw callback event relay for change-execution/apply callbacks and optimiser outcome callbacks |
-| Primary external input | Callback event submitted over REST from external change-execution/apply systems or an approved Optimiser platform |
+| Main responsibility | Thin callback ingestion and raw callback event relay for change execution and apply callbacks and optimiser outcome callbacks |
+| Primary external input | Callback event submitted over REST from external change execution and apply systems or an approved Optimiser platform |
 | Primary internal outputs | `IntentCallbackEvent`; `OptimisationStatusChangeEvent` |
 | Internal callback topics | `t7.intent.management.events.callbacks` for `IntentCallbackEvent`; `t7.intent.management.events` for `OptimisationStatusChangeEvent` |
-| Source-of-truth persistence | Managed PostgreSQL / PostgreSQL-compatible RDBMS |
+| Source-of-truth persistence | Managed PostgreSQL or PostgreSQL-compatible RDBMS |
 | External TMF API owner | No — this is a platform callback ingestion API, not a TMF921 resource API |
 
 ## 3. Callback ingestion sequence:
 
 ```text
-External system / Optimiser -> API Gateway -> ICB MS -> Outbox DB -> Kafka -> IA MS / II MS
+External system or Optimiser -> API Gateway -> ICB MS -> Outbox DB -> Kafka -> IA MS and II MS
 ```
 
 | **Step** | **Responsibility** |
 |---|---|
-| External system | Sends callback submission after change-execution/apply progress or outcome |
+| External system | Sends callback submission after change execution and apply progress or outcome |
 | API Gateway | Authenticates the caller and forwards trusted identity/claims |
 | ICB MS | Authorises callback submission, validates structure, and writes a durable outbox record |
 | Outbox DB | Stores callback submission and pending internal callback event durably |
 | Kafka topics | Carry raw callback facts to IA MS and optimiser outcome events to II MS |
-| IA MS / II MS | IA MS interprets change-execution callbacks; II MS consumes optimiser outcome events and packages selected configuration into `IntentNetworkReadyEvent` |
+| IA MS and II MS | IA MS interprets change-execution callbacks; II MS consumes optimiser outcome events and packages selected configuration into `IntentNetworkReadyEvent` |
 
 ## 4. Boundary statement:
 
 **ICB MS carries raw callback facts only. IA MS interprets callback state and owns lifecycle/assurance meaning.**
 
-ICB MS must not decide whether a callback means `Active`, `Failed`, `Terminated`, `Degraded`, `Completed`, `Infeasible`, or any other intent or optimisation lifecycle state. ICB MS must not classify callback meaning through a field such as `callbackType`. For change-execution/apply callbacks, raw callback meaning is carried by source-owned state such as `sourceState.state`, and IA MS owns interpretation, correlation, skip/dead-letter decisions, and lifecycle-driving assurance outcomes. For optimiser outcome callbacks, optimiser meaning is carried by `OptimisationStatusChangeEvent`, and II MS owns optimiser outcome correlation, interpretation, and selected-configuration packaging.
+ICB MS must not decide whether a callback means `Active`, `Failed`, `Terminated`, `Degraded`, `Completed`, `Infeasible`, or any other intent or optimisation lifecycle state. ICB MS must not classify callback meaning through a field such as `callbackType`. For change execution and apply callbacks, raw callback meaning is carried by source-owned state such as `sourceState.state`, and IA MS owns interpretation, correlation, skip or dead-letter decisions, and lifecycle-driving assurance outcomes. For optimiser outcome callbacks, optimiser meaning is carried by `OptimisationStatusChangeEvent`, and II MS owns optimiser outcome correlation, interpretation, and selected-configuration packaging.
 
 ## 5. Core responsibilities:
 
@@ -94,16 +94,16 @@ ICB MS must not decide whether a callback means `Active`, `Failed`, `Terminated`
 | Runtime assurance truth | IA MS |
 | Callback state interpretation | IA MS |
 | Semantic interpretation/resolution | II MS |
-| Optimisation decision and selected-configuration meaning | Optimiser / II MS context; ICB MS only relays the approved optimiser outcome event |
+| Optimisation decision and selected-configuration meaning | Optimiser and II MS context; ICB MS only relays the approved optimiser outcome event |
 | Optimiser solver/backend target | `t7-gurobi-optimiser`, where applicable |
-| Network apply/change-execution execution | External change-execution/apply system |
-| KP config/governance | Knowledge Plane operating model |
+| Network apply and change-execution execution | External change execution and apply system |
+| KP config and governance | Knowledge Plane operating model |
 
 ## 7. Callback submission model:
 
-The external callback submission API carries event-like callback facts across the protected REST boundary. For change-execution/apply callbacks, the submitted payload uses `@type: IntentCallbackEventRequest`; ICB MS accepts, persists, and relays the fact internally as `ce-type: IntentCallbackEvent`. Approved optimiser outcome callbacks use `@type: OptimisationStatusChangeEventRequest` and are relayed internally as `ce-type: OptimisationStatusChangeEvent`.
+The external callback submission API carries event-like callback facts across the protected REST boundary. For change execution and apply callbacks, the submitted payload uses `@type: IntentCallbackEventRequest`; ICB MS accepts, persists, and relays the fact internally as `ce-type: IntentCallbackEvent`. Approved optimiser outcome callbacks use `@type: OptimisationStatusChangeEventRequest` and are relayed internally as `ce-type: OptimisationStatusChangeEvent`.
 
-Typical change-execution/apply callback facts include:
+Typical change execution and apply callback facts include:
 
 - `intentId`
 - `callbackSource`
@@ -150,7 +150,7 @@ ICB MS must not trust caller-supplied platform `href` values. Where ICB MS creat
 
 ## 10. Persistence baseline:
 
-ICB MS follows the IME DB baseline: managed PostgreSQL / PostgreSQL-compatible RDBMS, owned by ICB MS only.
+ICB MS follows the IME DB baseline: managed PostgreSQL or PostgreSQL-compatible RDBMS, owned by ICB MS only.
 
 Suggested tables:
 
@@ -167,7 +167,7 @@ Suggested tables:
 
 ICB MS must write the accepted callback submission and callback outbox record in the same DB transaction.
 
-The API returns success only after DB and outbox write succeed. Kafka publication is asynchronous through the outbox relay. The target topic and event type are determined by the approved source integration profile. If Kafka is unavailable, the API may still return success when DB/outbox commit succeeded, and the relay retries publication later.
+The API returns success only after DB and outbox write succeed. Kafka publication is asynchronous through the outbox relay. The target topic and event type are determined by the approved source integration profile. If Kafka is unavailable, the API may still return success when DB and outbox commit succeeded, and the relay retries publication later.
 
 ## 12. Dependency behaviour:
 
@@ -175,9 +175,9 @@ The API returns success only after DB and outbox write succeed. Kafka publicatio
 |---|---|
 | API Gateway unavailable | Request does not reach ICB MS |
 | ICB MS DB unavailable | Hard fail-fast; return `503 Service Unavailable` |
-| Kafka unavailable | API can still succeed after DB/outbox commit; outbox relay retries |
+| Kafka unavailable | API can still succeed after DB and outbox commit; outbox relay retries |
 | Outbox relay unavailable | API can still write durable outbox; relay health alarms must fire |
-| IA MS / II MS unavailable | ICB MS API unaffected; downstream consumers catch up later from Kafka topics |
+| IA MS and II MS unavailable | ICB MS API unaffected; downstream consumers catch up later from Kafka topics |
 | Unknown `intentId` | ICB MS does not reject solely for unknown intent; IA MS owns correlation/dead-letter decision |
 
 ## 13. Security baseline:
@@ -212,7 +212,7 @@ ICB MS must emit:
 - outbox pending/publish failure metrics
 - relay lag metrics
 - audit logs for accept/reject decisions
-- distributed traces from API Gateway through DB/outbox relay where applicable
+- distributed traces from API Gateway through DB and outbox relay where applicable
 
 Suggested metrics:
 

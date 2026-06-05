@@ -28,7 +28,7 @@
     - [5.1.5. Fields not accepted:](#515-fields-not-accepted)
   - [5.2. Retrieve callback submission status:](#52-retrieve-callback-submission-status)
 - [6. Authorisation:](#6-authorisation)
-- [7. Persistence / state / outbox model:](#7-persistence-state-outbox-model)
+- [7. Persistence, state, and outbox model:](#7-persistence-state-outbox-model)
   - [7.1. Persistence tables:](#71-persistence-tables)
   - [7.2. `callback_submission` baseline fields:](#72-callbacksubmission-baseline-fields)
   - [7.3. `callback_outbox` baseline fields:](#73-callbackoutbox-baseline-fields)
@@ -84,12 +84,12 @@ The current solution deliberately keeps ICB MS implementation-oriented and narro
 
 ICB MS sits behind the API Gateway. External systems do not call it directly. The API Gateway authenticates the external caller and forwards the trusted caller identity or claims to ICB MS. ICB MS uses that trusted context for technical authorisation and then validates the callback payload structure.
 
-The callback Kafka topic is dedicated to raw change-execution/apply callback facts. It is separate from the main internal intent event topic. IA MS consumes `IntentCallbackEvent` from the callback topic. For optimiser outcome callbacks, ICB MS publishes `OptimisationStatusChangeEvent` to the main internal intent event topic for II MS.
+The callback Kafka topic is dedicated to raw change execution and apply callback facts. It is separate from the main internal intent event topic. IA MS consumes `IntentCallbackEvent` from the callback topic. For optimiser outcome callbacks, ICB MS publishes `OptimisationStatusChangeEvent` to the main internal intent event topic for II MS.
 
 ## 3. Process View:
 
 ```text
-1. External change-execution/apply system or approved Optimiser platform submits a callback.
+1. External change execution and apply system or approved Optimiser platform submits a callback.
 2. API Gateway authenticates the caller and forwards the trusted caller context.
 3. ICB MS authorises the callback submission for the caller/source context.
 4. ICB MS validates only structure and syntax.
@@ -110,7 +110,7 @@ If the ICB persistence path is unavailable, ICB MS fails fast and does not accep
 |---|---|
 | Callback API exposure | Exposes `POST /intent-callback/v1/submissions` behind API Gateway. |
 | Caller trust handling | Consumes trusted caller identity/claims forwarded by API Gateway. |
-| Technical authorisation | Checks the authenticated caller is permitted to submit callback facts for the relevant source/integration context. |
+| Technical authorisation | Checks the authenticated caller is permitted to submit callback facts for the relevant source or integration context. |
 | Structural validation | Validates required fields, non-empty strings, ISO 8601 timestamp shape, request size, and allowed structural shape. |
 | Idempotent durable persistence | Persists accepted callback submission and outbox event record in one transaction. |
 | Raw event publication | Publishes `IntentCallbackEvent` to `t7.intent.management.events.callbacks` or `OptimisationStatusChangeEvent` to `t7.intent.management.events` through the outbox relay according to the approved source integration profile. |
@@ -130,10 +130,10 @@ If the ICB persistence path is unavailable, ICB MS fails fast and does not accep
 | Unknown `intentId` correlation/dead-letter decision | IA MS |
 | Skip/unmapped callback decision | IA MS |
 | Semantic interpretation/resolution | II MS |
-| Optimisation decision and optimiser outcome interpretation | Optimiser / II MS context. ICB MS only relays the approved optimiser outcome event. |
+| Optimisation decision and optimiser outcome interpretation | Optimiser and II MS context. ICB MS only relays the approved optimiser outcome event. |
 | Optimiser solver/backend execution | `t7-gurobi-optimiser`, where applicable |
-| Network apply/change-execution execution | External change-execution/apply system |
-| KP config/governance | Knowledge Plane operating model |
+| Network apply and change-execution execution | External change execution and apply system |
+| KP config and governance | Knowledge Plane operating model |
 
 ICB MS must not validate that `intentId` exists in the platform. It validates only that the `intentId` field is structurally present and non-empty. IA MS owns correlation, unknown-intent handling, and downstream assurance outcome decisions.
 
@@ -377,7 +377,7 @@ Idempotency-Key: cb-OPT-HSS-2026-001-0001
 | `sourceState.reason` | No | String when supplied | Human-readable source reason or explanatory detail. |
 | `sourceReference` | No | Object when supplied | External source reference only. Must not be treated as a platform resource reference. |
 | `details` | No | Structured JSON object subject to size and policy limits | Raw or structured callback detail where safe. Must not contain secrets or credentials. |
-| `@type` | Yes | `IntentCallbackEventRequest` for change-execution/apply callbacks; `OptimisationStatusChangeEventRequest` for approved optimiser outcome callbacks. | Type marker for the submitted REST callback request payload. Internal Kafka event names remain `IntentCallbackEvent` and `OptimisationStatusChangeEvent`. |
+| `@type` | Yes | `IntentCallbackEventRequest` for change execution and apply callbacks; `OptimisationStatusChangeEventRequest` for approved optimiser outcome callbacks. | Type marker for the submitted REST callback request payload. Internal Kafka event names remain `IntentCallbackEvent` and `OptimisationStatusChangeEvent`. |
 | `Idempotency-Key` header | Strongly recommended / may be required | Non-empty string | Protects external retry safety and duplicate callback handling. |
 | `X-Correlation-ID` header | Recommended | Non-empty string | Propagated for tracing and operational correlation. For `IntentCallbackEvent`, ICB MS copies it to `body.references.correlationId` and may also emit `x-correlation-id` as an internal Kafka/message header. For `OptimisationStatusChangeEvent`, ICB MS preserves `event.optimisation.sourceContext.correlationId` and may also emit the same value as `x-correlation-id`. |
 
@@ -440,7 +440,7 @@ These are callback submission handling statuses only. They are not external `Int
 
 The inbound `callbackSource` field is useful for callback provenance and downstream interpretation, but it is not by itself an authentication proof. The authenticated gateway context remains authoritative.
 
-## 7. Persistence / state / outbox model:
+## 7. Persistence, state, and outbox model:
 
 ICB MS follows the IME DB baseline: managed PostgreSQL or PostgreSQL-compatible RDBMS, owned by ICB MS only.
 
@@ -525,7 +525,7 @@ ICB MS has one event-delivery path: internal Kafka publication only. The output 
 
 | Topic | Purpose | Producer | Consumer |
 |---|---|---|---|
-| `t7.intent.management.events.callbacks` | Raw accepted change-execution/apply callback facts as `IntentCallbackEvent` | ICB MS | IA MS |
+| `t7.intent.management.events.callbacks` | Raw accepted change execution and apply callback facts as `IntentCallbackEvent` | ICB MS | IA MS |
 | `t7.intent.management.events` | Approved optimiser outcome callback facts as `OptimisationStatusChangeEvent` | ICB MS | II MS |
 
 ### 9.2. Topic naming convention:
@@ -711,7 +711,7 @@ The full `OptimisationStatusChangeEvent` payload example is canonical in `icb_ms
 | 6 | Insert or update callback submission/idempotency records. |
 | 7 | Insert callback outbox record in same DB transaction. |
 | 8 | Return `202 Accepted` after durable commit. |
-| 9 | Relay publishes the selected internal event asynchronously: `IntentCallbackEvent` for change-execution/apply callbacks, or `OptimisationStatusChangeEvent` for approved optimiser outcome callbacks. |
+| 9 | Relay publishes the selected internal event asynchronously: `IntentCallbackEvent` for change execution and apply callbacks, or `OptimisationStatusChangeEvent` for approved optimiser outcome callbacks. |
 
 ### 10.2. Duplicate behaviour:
 
@@ -736,7 +736,7 @@ Duplicate submissions must not create duplicate internal callback facts. The def
 | Configuration area | Purpose |
 |---|---|
 | Gateway trusted header policy | Defines which identity/claim headers ICB MS may trust. |
-| Source/integration authorisation policy | Defines which external callers may submit callbacks for each source/integration context. |
+| Source/integration authorisation policy | Defines which external callers may submit callbacks for each source or integration context. |
 | Payload size and schema limits | Prevents oversized or structurally unsafe callback submissions. |
 | Idempotency policy | Determines whether `Idempotency-Key` is mandatory for an integration and how duplicate responses are returned. |
 | Relay promotion rules | Controls batch size, poll interval, retry settings, age threshold, and ordering. |
@@ -757,7 +757,7 @@ Duplicate submissions must not create duplicate internal callback facts. The def
 | Delivery | At least once. |
 | Idempotency | IA MS must deduplicate using `ce-id`, callback id, or agreed stable event identifier. |
 | Unknown `intentId` | IA MS owns dead-letter/alert handling. |
-| Unmapped raw state | IA MS owns skip/ignore/dead-letter policy according to its mapping configuration. |
+| Unmapped raw state | IA MS owns skip, ignore, or dead-letter policy according to its mapping configuration. |
 
 #### 12.1.1. OptimisationStatusChangeEvent consumer contract model:
 
@@ -769,10 +769,10 @@ Duplicate submissions must not create duplicate internal callback facts. The def
 | Contract style | Consumer-driven contract between II MS and ICB MS for approved optimiser outcome relay. |
 | Locked shape | CloudEvents headers plus approved `OptimisationStatusChangeEvent` payload shape. |
 | Delivery | At least once. |
-| Idempotency | II MS must deduplicate and correlate using `ce-id`, optimisation id, intentId/intentVersion, and correlation id where available. |
+| Idempotency | II MS must deduplicate and correlate using `ce-id`, optimisation id, intentId and intentVersion, and correlation id where available. |
 | Interpretation | II MS owns optimiser outcome correlation and selected-configuration packaging. ICB MS validates and relays structure only. |
 
-IC MS is not a direct consumer of ICB MS callback relay events. IC MS receives externally projectable lifecycle and report facts through IA MS `IntentAssuranceEvent` outcomes for change-execution/apply callbacks, and through the wider intent workflow where II MS later emits service-ready events based on optimiser outcomes.
+IC MS is not a direct consumer of ICB MS callback relay events. IC MS receives externally projectable lifecycle and report facts through IA MS `IntentAssuranceEvent` outcomes for change execution and apply callbacks, and through the wider intent workflow where II MS later emits service-ready events based on optimiser outcomes.
 
 ### 12.2. IA MS lifecycle mapping steps:
 
@@ -826,7 +826,7 @@ The mapping configuration belongs to IA MS. It is not an ICB MS configuration co
 | 2 | Lifecycle interpretation | IA MS owns callback interpretation and lifecycle-driving assurance outcomes. |
 | 3 | `intentId` existence validation | ICB MS checks syntax only; IA MS validates/correlates existence. |
 | 4 | Callback topic | ICB publishes to dedicated `t7.intent.management.events.callbacks`. |
-| 5 | Main event topic usage | ICB MS does not emit change-execution/apply `IntentCallbackEvent` facts to the main internal events topic. Change-execution/apply callbacks are published only to `t7.intent.management.events.callbacks`. Approved optimiser outcome callbacks are published as `OptimisationStatusChangeEvent` to `t7.intent.management.events` for II MS. |
+| 5 | Main event topic usage | ICB MS does not emit change execution and apply `IntentCallbackEvent` facts to the main internal events topic. Change-execution/apply callbacks are published only to `t7.intent.management.events.callbacks`. Approved optimiser outcome callbacks are published as `OptimisationStatusChangeEvent` to `t7.intent.management.events` for II MS. |
 | 6 | Outbox pattern | Accepted callback submission and callback outbox record are written transactionally. |
 | 7 | Gateway protection | ICB MS sits behind API Gateway and trusts only gateway-forwarded identity/claims. |
 | 8 | Event body style | `IntentCallbackEvent` uses the ICB-owned top-level `body` callback fact shape. `OptimisationStatusChangeEvent` uses the approved optimiser event payload shape consumed by II MS and is not converted into an ICB-owned `body.callback` fact shape. |
@@ -849,7 +849,7 @@ The mapping configuration belongs to IA MS. It is not an ICB MS configuration co
 | Primary responsibility | Callback submission ingestion and raw callback event relay |
 | Primary output events | `IntentCallbackEvent`, `OptimisationStatusChangeEvent` |
 | Kafka topics | `t7.intent.management.events.callbacks`, `t7.intent.management.events` |
-| Source-of-truth persistence | Managed PostgreSQL / PostgreSQL-compatible RDBMS |
+| Source-of-truth persistence | Managed PostgreSQL or PostgreSQL-compatible RDBMS |
 | Deployment | Kubernetes service behind API Gateway |
 | Relay model | Outbox relay with single-active coordination such as ShedLock |
 | Consumes from Kafka | None |

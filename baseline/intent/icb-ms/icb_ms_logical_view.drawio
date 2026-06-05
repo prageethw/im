@@ -22,7 +22,7 @@
                 <mxCell id="7" value="t7.intent.management.events.callbacks&#xa;+ t7.intent.management.events&#xa;(Kafka Topics)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=default;fontStyle=1;fontSize=12;" parent="1" vertex="1">
                     <mxGeometry x="350" y="510" width="320" height="60" as="geometry"/>
                 </mxCell>
-                <mxCell id="8" value="IA MS / II MS" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=default;fontStyle=1;fontSize=13;" parent="1" vertex="1">
+                <mxCell id="8" value="IA MS and II MS" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=default;fontStyle=1;fontSize=13;" parent="1" vertex="1">
                     <mxGeometry x="400" y="650" width="220" height="60" as="geometry"/>
                 </mxCell>
                 <mxCell id="9" value="POST /intent-callback/v1/submissions" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;exitX=0.5;exitY=1;entryX=0.5;entryY=0;fontSize=11;fillColor=#d5e8d4;strokeColor=default;" parent="1" source="2" target="4" edge="1">
@@ -34,7 +34,7 @@
                 <mxCell id="11" value="poll" style="edgeStyle=orthogonalEdgeStyle;rounded=0;fontSize=11;fillColor=#d5e8d4;strokeColor=default;" parent="1" source="5" target="6" edge="1">
                     <mxGeometry relative="1" as="geometry"/>
                 </mxCell>
-                <mxCell id="12" value="IntentCallbackEvent / OptimisationStatusChangeEvent" style="edgeStyle=orthogonalEdgeStyle;rounded=0;fontSize=11;fillColor=#d5e8d4;strokeColor=default;" parent="1" source="6" target="7" edge="1">
+                <mxCell id="12" value="IntentCallbackEvent and OptimisationStatusChangeEvent" style="edgeStyle=orthogonalEdgeStyle;rounded=0;fontSize=11;fillColor=#d5e8d4;strokeColor=default;" parent="1" source="6" target="7" edge="1">
                     <mxGeometry relative="1" as="geometry"/>
                 </mxCell>
                 <mxCell id="13" value="consume" style="edgeStyle=orthogonalEdgeStyle;rounded=0;fontSize=11;fillColor=#d5e8d4;strokeColor=default;" parent="1" source="7" target="8" edge="1">
