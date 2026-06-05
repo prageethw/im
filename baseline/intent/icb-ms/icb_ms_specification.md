@@ -99,7 +99,7 @@ Idempotency-Key: cb-EXT-ORCH-001-INT-HOSP-2026-001-0001
 
 ### 4.2. Gateway-provided trusted context:
 
-The exact header names may be platform-specific, but API Gateway must forward trusted caller identity/claims to ICB MS.
+The exact header names may be platform-specific, but API Gateway must forward trusted caller identity and claims to ICB MS.
 
 Indicative examples:
 
@@ -786,23 +786,23 @@ Retry-After: 30
 | `callback_submission_payload` | Optional payload body store. Use when payload size, data classification, retention separation, or audit policy requires payload separation; otherwise the accepted payload may be stored inline in `callback_submission` or `callback_outbox` according to the implementation data model |
 | `callback_idempotency` | Deduplication and retry-safety records |
 | `callback_outbox` | Pending/published callback events for Kafka relay, including `IntentCallbackEvent` and `OptimisationStatusChangeEvent` |
-| `callback_audit` | Audit of accepted/rejected/duplicate decisions |
+| `callback_audit` | Audit of accepted, rejected, and duplicate decisions |
 | `shedlock` | Optional clustered relay coordination |
 
 ## 17. Outbox relay rules:
 
 - Write callback submission and outbox record in one DB transaction.
-- Return API success after DB/outbox commit succeeds.
+- Return API success after DB and outbox commit succeeds.
 - Publish to Kafka asynchronously through outbox relay.
 - If Kafka is unavailable, retry publication later.
-- If DB/outbox commit fails, return API failure because durable callback publication cannot be guaranteed.
+- If DB and outbox commit fails, return API failure because durable callback publication cannot be guaranteed.
 - Outbox relay must be idempotent and safe to retry. The relay publishes `IntentCallbackEvent` to the callback topic and `OptimisationStatusChangeEvent` to the main internal event topic according to the outbox record event type.
 
 ## 18. Security rules:
 
 - API Gateway authenticates external caller.
-- ICB MS trusts only gateway-forwarded identity/claims according to platform policy.
-- ICB MS authorises caller/source before accepting callback.
+- ICB MS trusts only gateway-forwarded identity and claims according to platform policy.
+- ICB MS authorises caller and source before accepting callback.
 - Request body size limits must be enforced.
 - Sensitive values, credentials, tokens, and raw internal stack traces must not be stored in events or returned in errors.
 - Audit all accepted, rejected, and duplicate callback submissions.
@@ -815,8 +815,8 @@ ICB MS emits structured logs, metrics, and traces for:
 - validation failure
 - authorisation failure
 - duplicate callback detection
-- outbox write success/failure
-- outbox relay success/failure
+- outbox write success and failure
+- outbox relay success and failure
 - Kafka publish retry state
 
 Recommended metrics:
