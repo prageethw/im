@@ -83,7 +83,7 @@ II MS consumes syntactically admitted runtime intent facts from IC MS and perfor
 II MS emits:
 
 - `IntentRejectedEvent` when the intent cannot be semantically, policy, or capability resolved
-- `IntentResolvedEvent` when the intent can proceed to the next internal fulfilment stage as a candidate-level semantic-resolution handoff
+- `IntentResolvedEvent` as an optional candidate-level semantic-resolution milestone for audit, observability, and internal traceability
 - `IntentNetworkReadyEvent` when service-ready preparation has produced the concrete change-execution and observation configuration required by IA MS
 
 II MS does not own runtime `Intent` REST APIs, external lifecycle projection, downstream selection and fulfilment decisions, assurance truth, callback ingestion, change execution, or KP governance.
@@ -685,12 +685,14 @@ intent-intelligence-ms
 ### 9.3. Current primary consumer:
 
 ```text
-optimiser-controller-ms
+internal audit, observability, and optional milestone consumers
 ```
 
 ### 9.4. Meaning:
 
-II MS emits `IntentResolvedEvent` when the admitted intent has been semantically resolved into a canonical handoff that can proceed to the next internal fulfilment stage.
+II MS may emit `IntentResolvedEvent` when the admitted intent has been semantically resolved into canonical service context and applicable candidate resources.
+
+`IntentResolvedEvent` is an optional candidate-level semantic-resolution milestone for audit, observability, and internal traceability. It is not the optimiser invocation mechanism. II MS invokes optimisation through the governed `POST /optimisation` integration path, and optimiser outcomes return through ICB MS as `OptimisationStatusChangeEvent`.
 
 ### 9.5. Example headers:
 
@@ -998,7 +1000,7 @@ content-type: application/json
 - Do not flatten `location`, `serviceType`, or `serviceClass` into top-level event fields.
 - Do not include direct top-level `priority`, `preferredAccessTechnology`, or `redundancyRequired` outside the buckets.
 - Do not include `provider` by default.
-- Do not include downstream-selected resources; all resources in `IntentResolvedEvent.resources` are applicable and apply-capable resources known for downstream consideration by `optimiser-controller-ms`, not final selected output.
+- Do not include downstream-selected resources; all resources in `IntentResolvedEvent.resources` are applicable and apply-capable candidate resources known at semantic resolution time, not final selected output and not the optimiser invocation contract.
 - Include generic `metrics` values for applicable resources using neutral metric names such as `latencyMs`, `availabilityPercent`, `jitterMs`, and `packetLossPercent`.
 - Do not encode metric origin or lifecycle context into wrappers or field names such as `metrics.benchmark`, `metrics.telemetry`, `latencyBenchmarkMs`, or `currentLatencyMs`.
 
@@ -1610,7 +1612,7 @@ Suggested tables:
 | Cache unavailable | Bypass cache and use KP or the relevant approved pre-resolution validation source where safe |
 | Optimisation API outbox unavailable | Prevents outbound `POST /optimisation` submission for optimisation-backed selection. II MS keeps the optimisation request pending and must not emit `IntentNetworkReadyEvent` until the API outbox worker successfully submits the request and the correlated optimiser outcome is received through ICB MS and Kafka. |
 | Optimiser and ICB optimiser callback path unavailable | Not a dependency for semantic resolution or `IntentResolvedEvent` emission. For optimisation-backed selection, `POST /optimisation` failure from the API outbox worker, missing optimiser callback through ICB MS, or missing `OptimisationStatusChangeEvent` from Kafka prevents `IntentNetworkReadyEvent` emission until configured retry, callback timeout, governed failure/rejection policy, or operational handling applies. |
-| Downstream fulfilment stage unavailable | Not an II MS dependency for emitting `IntentResolvedEvent`; service-ready preparation must complete before emitting `IntentNetworkReadyEvent` |
+| Downstream selection or fulfilment stage unavailable | Not an II MS dependency for emitting optional `IntentResolvedEvent`; service-ready preparation and governed selected configuration are required before emitting `IntentNetworkReadyEvent` |
 
 ---
 
@@ -1662,6 +1664,6 @@ II MS must fail closed for stale KP facts, stale runtime versions, duplicate opt
 
 `IntentRejectedEvent` is the semantic, policy, or capability rejection handoff. IC MS consumes it and projects the external runtime `Intent` lifecycle accordingly.
 
-`IntentResolvedEvent` is the candidate-level semantic-resolution handoff. It carries canonical service context and the full valid, applicable, and apply-capable resource set for downstream consideration by `optimiser-controller-ms`. It includes generic metric values for applicable resources using neutral metric names such as `latencyMs`, `availabilityPercent`, `jitterMs`, and `packetLossPercent`. It is not the final service-ready or apply-ready handoff.
+`IntentResolvedEvent` is an optional candidate-level semantic-resolution milestone for audit, observability, and internal traceability. It carries canonical service context and the full valid, applicable, and apply-capable candidate resource set known at semantic resolution time. It includes generic metric values for applicable resources using neutral metric names such as `latencyMs`, `availabilityPercent`, `jitterMs`, and `packetLossPercent`. It is not the optimiser invocation mechanism, and it is not the final service-ready or apply-ready handoff. II MS invokes optimisation through the governed `POST /optimisation` integration path.
 
 `IntentNetworkReadyEvent` is the service-ready preparation handoff to IA MS. It carries the optimiser-selected apply and change-execution configuration in `serviceConfiguration.orchestratorConfiguration` and the full assurance observation scope in `serviceConfiguration.observerConfiguration`, and it does not mean network apply has succeeded. It does not carry metric values in `serviceConfiguration.orchestratorConfiguration.resources[]`; `serviceConfiguration.observerConfiguration.resources[].metrics` names the metrics IA should observe.

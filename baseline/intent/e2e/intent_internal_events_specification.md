@@ -4,11 +4,11 @@
 
 | Field | Value |
 |---|---|
-| Document status | Intent Architecture 3.5 baseline-aligned internal event specification. |
-| Source of truth | GitHub `main/baseline/intent`. |
-| Baseline tag | `intent-3.5-baseline`. |
+| Document status | Intent Architecture 3.6 baseline-aligned internal event specification. |
+| Source of truth | GitHub `intent-3.6-baseline/baseline/intent`. |
+| Baseline tag | `intent-3.6-baseline`. |
 | Scope | Internal Intent Enabler event contracts, CloudEvents headers, topics, payload rules, and event-specific examples. |
-| Change note | Adds numbered headings, numbered table of contents, and status table only. |
+| Change note | Aligns internal event metadata and clarifies that `IntentResolvedEvent` is an optional semantic-resolution milestone, not the optimiser invocation mechanism. |
 
 ## 2. Table of contents:
 
@@ -211,7 +211,7 @@ content-type: application/json
 |---|---|---|---|
 | `IntentValidatedEvent` | `intent-controller-ms` | `intent-intelligence-ms` | Runtime Intent passed IC MS admission validation and was admitted into the lifecycle |
 | `IntentRejectedEvent` | `intent-intelligence-ms` | `intent-controller-ms` | Semantic and policy validation rejected the admitted Intent |
-| `IntentResolvedEvent` | `intent-intelligence-ms` | `optimiser-controller-ms` or approved optimisation path | Intent was semantically resolved into a canonical internal handoff with applicable resources for optimisation. The optimiser may be an approved platform component reached through the optimiser integration path, not a public Intent Enabler API. |
+| `IntentResolvedEvent` | `intent-intelligence-ms` | Internal audit, observability, and optional milestone consumers | Optional candidate-level semantic-resolution milestone. It carries canonical service context and applicable candidate resources known at semantic resolution time. It is not the optimiser invocation mechanism; optimiser invocation is performed through the II MS governed `POST /optimisation` path, and optimiser outcomes return through ICB MS as `OptimisationStatusChangeEvent`. |
 | `OptimisationStatusChangeEvent` | `intent-callback-ms` | `intent-intelligence-ms` | Approved optimiser outcome callback relayed by ICB MS after durable callback ingestion. |
 | `IntentNetworkReadyEvent` | `intent-intelligence-ms` | `intent-assurance-ms` | Optimised resource set has been projected into service configuration ready for change execution and apply; apply success is not yet confirmed |
 | `IntentAssuranceEvent` | `intent-assurance-ms` | `intent-controller-ms` | Assurance, apply, and runtime outcome truth for external Intent and IntentReport projection |
@@ -403,12 +403,14 @@ intent-intelligence-ms
 ### 8.2. Current primary consumer:
 
 ```text
-optimiser-controller-ms
+internal audit, observability, and optional milestone consumers
 ```
 
 ### 8.3. Meaning:
 
-The admitted Intent has been semantically resolved into a canonical internal handoff that can be optimised.
+`IntentResolvedEvent` is an optional candidate-level semantic-resolution milestone emitted by II MS after semantic interpretation has produced canonical service context and applicable candidate resources.
+
+It is not the optimiser invocation mechanism. Optimiser invocation is performed through the II MS governed `POST /optimisation` path, and optimiser outcomes return through ICB MS as `OptimisationStatusChangeEvent`.
 
 ### 8.4. Example headers:
 
@@ -430,7 +432,7 @@ content-type: application/json
     "intentId": "INT-HOSP-2026-001",
     "intentVersion": "v1",
     "lifecycleStatus": "InProgress",
-    "statusReason": "Intent has been semantically resolved into candidate resources for optimisation.",
+    "statusReason": "Intent has been semantically resolved into canonical service context and candidate resources.",
     "expression": {
       "iri": "https://mycsp.com.au/tio/hospital-surgical-slice/v1.0",
       "context": {
@@ -484,14 +486,14 @@ content-type: application/json
 
 ### 8.6. Event-specific rules:
 
-- `IntentResolvedEvent` is the lean optimiser handoff.
+- `IntentResolvedEvent` is an optional candidate-level semantic-resolution milestone, not the optimiser handoff.
 - Preserve resolved runtime semantics under `expression.context` when carrying the resolved intent context.
 - Use `expression.context.targets` for measurable SLA-style objectives.
 - Use `expression.context.constraints` for hard inputs such as location, service type, service class, priority, and redundancy.
 - Use `expression.context.preferences` for soft selection guidance such as `preferredAccessTechnology`.
 - Do not include direct top-level `priority`, `preferredAccessTechnology`, or `redundancyRequired`; place them under `expression.context.constraints` or `expression.context.preferences`.
 - Do not include `capabilityStatus`; successful `IntentResolvedEvent` emission implies semantic/capability resolution succeeded.
-- `IntentResolvedEvent.resources[]` contains all applicable and apply-capable resources for the resolved location and service that the optimiser may consider, not a shortened selected list.
+- `IntentResolvedEvent.resources[]` contains all applicable and apply-capable resources for the resolved location and service that are known at semantic resolution time. These are candidate facts, not final selected output and not the optimiser invocation contract.
 - `IntentResolvedEvent.resources[].metrics` carries neutral metric values using names such as `latencyMs`, `availabilityPercent`, `jitterMs`, and `packetLossPercent`.
 - In `IntentResolvedEvent`, `resources[].metrics` carries candidate metric **values** from KP or resolution context. This is different from `IntentNetworkReadyEvent.serviceConfiguration.observerConfiguration.resources[].metrics`, where `metrics` is a list of metric **names** that IA or observer should collect.
 
