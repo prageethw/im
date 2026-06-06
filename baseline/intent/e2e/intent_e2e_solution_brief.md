@@ -324,6 +324,19 @@ IC MS does not validate semantic feasibility, network topology, resource suitabi
 
 Where optimisation-backed selection is required, II MS submits `POST /optimisation` through its optimisation API outbox, supplies the ICB callback URL, and consumes ICB-relayed `OptimisationStatusChangeEvent` before producing `IntentNetworkReadyEvent`.
 
+### 13.1. Runtime version and activeVersion baseline:
+
+The external `Intent.lifecycleStatus` is the public runtime projection. Each admitted runtime Intent version has its own version-level lifecycle state.
+
+`activeVersion` is the only pointer to the runtime version currently driving the external `Intent.lifecycleStatus`. Draft authoring records do not drive `activeVersion`.
+
+A newer runtime version must not be created while a newer candidate version is already `Acknowledged` or `InProgress`. When a newer version becomes `Active`, the previous `Active`, `Degraded`, or `Paused` version moves to `Standby`.
+
+A `Standby` version may re-enter service only through a governed runtime cycle: `Acknowledged`, then `InProgress`, then `Active`. Failed or rejected versions do not automatically roll back the service.
+
+Late callbacks, optimiser outcomes, and assurance observations for stale or superseded versions must be recorded for audit or operational handling and must not overwrite current-version state.
+
+
 ## 14. Monitor runtime intent:
 
 Monitoring is split across IA MS and IC MS.
@@ -832,7 +845,7 @@ Terminated
 |---|---|---|---|
 | `IntentValidatedEvent` | `intent-controller-ms` | `intent-intelligence-ms` | Runtime intent passed IC MS admission validation. |
 | `IntentRejectedEvent` | `intent-intelligence-ms` | `intent-controller-ms` | Semantic, policy, or capability rejection. |
-| `IntentResolvedEvent` | `intent-intelligence-ms` | Optional internal audit, observability, and traceability consumers | Optional candidate-level semantic-resolution milestone. It is not the optimiser invocation mechanism. |
+| `IntentResolvedEvent` | `intent-intelligence-ms` | `optimiser-controller-ms` or approved optimisation path | Candidate-level semantic-resolution handoff. Optimiser may be an approved platform component reached through the optimiser integration path, not a public Intent Enabler API. |
 | `OptimisationStatusChangeEvent` | `intent-callback-ms` | `intent-intelligence-ms` | Approved optimiser outcome callback relayed by ICB MS after durable callback ingestion. |
 | `IntentNetworkReadyEvent` | `intent-intelligence-ms` | `intent-assurance-ms` | Service configuration ready for change execution and apply, and observation. |
 | `IntentCallbackEvent` | `intent-callback-ms` | `intent-assurance-ms` | Raw accepted change-execution and apply callback fact for IA MS. |
