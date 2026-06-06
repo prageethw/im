@@ -79,7 +79,7 @@ II MS owns:
 | KP-backed and required pre-resolution validation | Uses Knowledge Plane data and, where required, approved T7 services or other governed sources to validate location, service, service class, capability, policy, resource availability, and other use-case-specific facts needed before resolution |
 | Canonicalisation | Normalises admitted values into canonical internal location, service, target, constraint, preference, and resource terms |
 | Rejection decision | Emits `IntentRejectedEvent` when semantic, policy, or capability validation fails |
-| Resolution decision | Emits `IntentResolvedEvent` when the intent can be handed to the next internal fulfilment stage as a candidate-level semantic-resolution handoff |
+| Resolution decision | Emits `IntentResolvedEvent` as an optional candidate-level semantic-resolution milestone for audit, observability, traceability, and optional milestone consumers |
 | Service-ready preparation | Emits `IntentNetworkReadyEvent` when change-execution and observation configuration has been prepared for IA MS |
 | Candidate resource handoff | Provides the full valid resource set known for the resolved context after scope and policy filtering |
 | Outbox publication | Publishes II-owned events reliably through the II outbox |
@@ -137,7 +137,7 @@ The baseline surgical hospital slice is an illustrative runtime example used to 
 | Output | Condition | Purpose |
 |---|---|---|
 | `IntentRejectedEvent` | Semantic, policy, or capability validation fails | Tells IC MS the admitted intent must be externally projected as rejected |
-| `IntentResolvedEvent` | Semantic and capability resolution succeeds and downstream fulfilment and selection is required | Provides candidate-level canonical context and the valid resource set for downstream consideration, including all applicable and apply-capable resources and neutral metric values |
+| `IntentResolvedEvent` | Semantic and capability resolution succeeds and an optional candidate-level semantic-resolution milestone is useful | Provides candidate-level canonical context and the valid resource set as candidate facts for audit, observability, traceability, and optional milestone consumers, including all applicable and apply-capable resources and neutral metric values |
 | `IntentNetworkReadyEvent` | Service-ready preparation succeeds after resolution | Provides IA MS with prepared change-execution and observation configuration; it does not mean apply succeeded |
 
 ## 7. Processing stages:
