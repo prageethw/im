@@ -832,7 +832,7 @@ Terminated
 |---|---|---|---|
 | `IntentValidatedEvent` | `intent-controller-ms` | `intent-intelligence-ms` | Runtime intent passed IC MS admission validation. |
 | `IntentRejectedEvent` | `intent-intelligence-ms` | `intent-controller-ms` | Semantic, policy, or capability rejection. |
-| `IntentResolvedEvent` | `intent-intelligence-ms` | `optimiser-controller-ms` or approved optimisation path | Candidate-level semantic-resolution handoff. Optimiser may be an approved platform component reached through the optimiser integration path, not a public Intent Enabler API. |
+| `IntentResolvedEvent` | `intent-intelligence-ms` | Optional internal audit, observability, and traceability consumers | Optional candidate-level semantic-resolution milestone. It is not the optimiser invocation mechanism. |
 | `OptimisationStatusChangeEvent` | `intent-callback-ms` | `intent-intelligence-ms` | Approved optimiser outcome callback relayed by ICB MS after durable callback ingestion. |
 | `IntentNetworkReadyEvent` | `intent-intelligence-ms` | `intent-assurance-ms` | Service configuration ready for change execution and apply, and observation. |
 | `IntentCallbackEvent` | `intent-callback-ms` | `intent-assurance-ms` | Raw accepted change-execution and apply callback fact for IA MS. |
