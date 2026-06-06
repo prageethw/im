@@ -238,7 +238,7 @@ A successful resolution implies:
 
 IntentResolvedEvent.resources[] carries candidate facts for audit, observability, traceability, and optional milestone consumers. It is not the optimiser invocation contract. Optimiser invocation is through the governed `POST /optimisation` path.
 
-It includes neutral event-facing metric values for those resources so `optimiser-controller-ms` can compare and select the best applicable configuration. `IntentResolvedEvent.resources[]` is not the final selected or applied resource set and it is not the service-ready or apply-ready handoff.
+It includes neutral event-facing metric values for those resources as candidate facts for audit, observability, traceability, and optional milestone consumers. `IntentResolvedEvent.resources[]` is not the final selected or applied resource set and it is not the service-ready or apply-ready handoff.
 
 ## 12. Service-ready preparation rule:
 
