@@ -4,11 +4,11 @@
 
 | Field | Value |
 |---|---|
-| Document status | Intent Architecture 3.5 baseline-aligned E2E solution brief. |
-| Source of truth | GitHub `main/baseline/intent`. |
-| Baseline tag | `intent-3.5-baseline`. |
+| Document status | Intent Architecture 3.6 baseline-aligned E2E solution brief. |
+| Source of truth | GitHub `intent-3.6-baseline/baseline/intent`. |
+| Baseline tag | `intent-3.6-baseline`. |
 | Scope | End-to-end Intent Enabler solution view, cross-service flow, security, quality attributes, appendices, and artefact index. |
-| Change note | Adds numbered headings, numbered table of contents, and status table only. |
+| Change note | Aligns E2E metadata with the `intent-3.6-baseline` tag. |
 
 ## 2. Table of contents:
 
@@ -18,22 +18,22 @@
 - [4. Solution summary:](#4-solution-summary)
 - [5. Solution elaboration:](#5-solution-elaboration)
 - [6. Use case view:](#6-use-case-view)
-  - [6.1. Define intent capability:](#61-define-intent-capability)
-  - [6.2. Activate intent capability:](#62-activate-intent-capability)
-  - [6.3. Create runtime intent:](#63-create-runtime-intent)
-  - [6.4. Interpret and resolve intent:](#64-interpret-and-resolve-intent)
-  - [6.5. Optimisation-backed selection:](#65-optimisation-backed-selection)
-  - [6.6. Prepare service-ready configuration:](#66-prepare-service-ready-configuration)
-  - [6.7. Ingest external apply callback:](#67-ingest-external-apply-callback)
-  - [6.8. Assure runtime intent:](#68-assure-runtime-intent)
-  - [6.9. Project external lifecycle and report:](#69-project-external-lifecycle-and-report)
-  - [6.10. Terminate runtime intent:](#610-terminate-runtime-intent)
-  - [6.11. Handle failed or degraded runtime state:](#611-handle-failed-or-degraded-runtime-state)
+- [6.1. Define intent capability:](#61-define-intent-capability)
+- [6.2. Activate intent capability:](#62-activate-intent-capability)
+- [6.3. Create runtime intent:](#63-create-runtime-intent)
+- [6.4. Interpret and resolve intent:](#64-interpret-and-resolve-intent)
+- [6.5. Optimisation-backed selection:](#65-optimisation-backed-selection)
+- [6.6. Prepare service-ready configuration:](#66-prepare-service-ready-configuration)
+- [6.7. Ingest external apply callback:](#67-ingest-external-apply-callback)
+- [6.8. Assure runtime intent:](#68-assure-runtime-intent)
+- [6.9. Project external lifecycle and report:](#69-project-external-lifecycle-and-report)
+- [6.10. Terminate runtime intent:](#610-terminate-runtime-intent)
+- [6.11. Handle failed or degraded runtime state:](#611-handle-failed-or-degraded-runtime-state)
 - [7. Logical view:](#7-logical-view)
 - [8. Event delivery model:](#8-event-delivery-model)
 - [9. Process view:](#9-process-view)
-  - [9.1. Definition-time process:](#91-definition-time-process)
-  - [9.2. Runtime intent process:](#92-runtime-intent-process)
+- [9.1. Definition-time process:](#91-definition-time-process)
+- [9.2. Runtime intent process:](#92-runtime-intent-process)
 - [10. Discover intent capability:](#10-discover-intent-capability)
 - [11. Create intent specification:](#11-create-intent-specification)
 - [12. Activate intent specification:](#12-activate-intent-specification)
@@ -56,29 +56,29 @@
 - [29. Sensitive information boundary:](#29-sensitive-information-boundary)
 - [30. Infrastructure security controls across solution briefs:](#30-infrastructure-security-controls-across-solution-briefs)
 - [31. Important quality attributes:](#31-important-quality-attributes)
-  - [31.1. Availability:](#311-availability)
-  - [31.2. Scalability:](#312-scalability)
-  - [31.3. Performance:](#313-performance)
-  - [31.4. Reliability:](#314-reliability)
-  - [31.5. Maintainability:](#315-maintainability)
+- [31.1. Availability:](#311-availability)
+- [31.2. Scalability:](#312-scalability)
+- [31.3. Performance:](#313-performance)
+- [31.4. Reliability:](#314-reliability)
+- [31.5. Maintainability:](#315-maintainability)
 - [32. Risks:](#32-risks)
 - [33. Assumptions:](#33-assumptions)
 - [34. Constraints:](#34-constraints)
 - [35. Appendix:](#35-appendix)
-  - [35.1. ID MS endpoint summary:](#351-id-ms-endpoint-summary)
-  - [35.2. IC MS endpoint summary:](#352-ic-ms-endpoint-summary)
-  - [35.3. ICB MS endpoint summary:](#353-icb-ms-endpoint-summary)
-  - [35.4. Runtime lifecycle states:](#354-runtime-lifecycle-states)
-  - [35.5. Kafka topics:](#355-kafka-topics)
-  - [35.6. External webhook notification delivery:](#356-external-webhook-notification-delivery)
-  - [35.7. Event types:](#357-event-types)
-  - [35.8. Worker instructions:](#358-worker-instructions)
-  - [35.9. IntentAssuranceEvent lifecycle mapping:](#359-intentassuranceevent-lifecycle-mapping)
-  - [35.10. Key artifacts:](#3510-key-artifacts)
-  - [35.11. Canonical runtime expression shape:](#3511-canonical-runtime-expression-shape)
-  - [35.12. IntentSpecification lifecycle baseline:](#3512-intentspecification-lifecycle-baseline)
-  - [35.13. Runtime Intent lifecycle baseline:](#3513-runtime-intent-lifecycle-baseline)
-  - [35.14. Internal event baseline:](#3514-internal-event-baseline)
+- [35.1. ID MS endpoint summary:](#351-id-ms-endpoint-summary)
+- [35.2. IC MS endpoint summary:](#352-ic-ms-endpoint-summary)
+- [35.3. ICB MS endpoint summary:](#353-icb-ms-endpoint-summary)
+- [35.4. Runtime lifecycle states:](#354-runtime-lifecycle-states)
+- [35.5. Kafka topics:](#355-kafka-topics)
+- [35.6. External webhook notification delivery:](#356-external-webhook-notification-delivery)
+- [35.7. Event types:](#357-event-types)
+- [35.8. Worker instructions:](#358-worker-instructions)
+- [35.9. IntentAssuranceEvent lifecycle mapping:](#359-intentassuranceevent-lifecycle-mapping)
+- [35.10. Key artifacts:](#3510-key-artifacts)
+- [35.11. Canonical runtime expression shape:](#3511-canonical-runtime-expression-shape)
+- [35.12. IntentSpecification lifecycle baseline:](#3512-intentspecification-lifecycle-baseline)
+- [35.13. Runtime Intent lifecycle baseline:](#3513-runtime-intent-lifecycle-baseline)
+- [35.14. Internal event baseline:](#3514-internal-event-baseline)
 
 ## 3. Business context:
 
@@ -146,6 +146,7 @@ The canonical runtime semantic model uses the same buckets through the pipeline:
 `targets` are measurable goals, `constraints` are hard requirements, and `preferences` are soft selection guidance. This structure should remain consistent across ID MS, IC MS, II MS, IA MS, and future control-loop extensions.
 
 ## 6. Use case view:
+
 ![view](intent_platform_usecase.svg)
 
 ### 6.1. Define intent capability:
@@ -222,9 +223,9 @@ The Intent Enabler uses three distinct delivery models. They must not be collaps
 | External hub notifications | Subscriber notifications for `IntentSpecification`, `Intent`, and `IntentReport` resource events | Service-owned webhook delivery outbox, HTTP retry relay, HTTP `POST` to subscriber listener callback URL | HTTP headers such as `Content-Type`, `X-Correlation-Id`, and subscriber callback authentication where configured |
 | Callback ingestion | Source, change-execution, and optimiser outcome callback submission into the platform | REST `POST` to ICB MS, callback persistence, callback outbox, internal Kafka publication to IA MS or II MS depending on callback profile | HTTP headers on inbound callback; CloudEvents-style Kafka and platform headers on `IntentCallbackEvent` or `OptimisationStatusChangeEvent` |
 
-The callback ingestion path has two approved profiles. Change-execution and apply callbacks are relayed as `IntentCallbackEvent` on the dedicated callback topic `t7.intent.management.events.callbacks` for IA MS. Optimiser outcome callbacks are relayed as `OptimisationStatusChangeEvent` on the main internal event topic `t7.intent.management.events` for II MS.
+The callback ingestion path has two approved profiles. Change-execution and apply callbacks are relayed as `IntentCallbackEvent` on the dedicated callback topic `t7.intent.management.events.callbacks` for IA MS. Optimiser outcome callbacks are relayed as `OptimisationStatusChangeEvent` on the main internal event topic `t7.intent.management.events` for II MS. ID MS and IC MS hub notifications are REST webhook callbacks with TMF-aligned event payloads. Kafka is not used for external hub notification delivery.
 
-ID MS and IC MS hub notifications are REST webhook callbacks with TMF-aligned event payloads. Kafka is not used for external hub notification delivery. Subscriber callback URLs are subscriber-owned; the platform defines the subscription API, delivery rules, retry behaviour, and TMF-aligned notification payload shape.
+Subscriber callback URLs are subscriber-owned; the platform defines the subscription API, delivery rules, retry behaviour, and TMF-aligned notification payload shape.
 
 ## 9. Process view:
 
@@ -266,9 +267,9 @@ ID MS and IC MS hub notifications are REST webhook callbacks with TMF-aligned ev
 
 ## 10. Discover intent capability:
 
-External consumers and OEX discover supported intent capabilities by reading `IntentSpecification` resources from ID MS. The default list response should remain lightweight. Full specification details, including `specCharacteristic`, `expressionSpecification`, and `targetEntitySchema`, are retrieved from the single-resource endpoint or requested through `fields` where supported.
+External consumers and OEX discover supported intent capabilities by reading `IntentSpecification` resources from ID MS. The default list response should remain lightweight. Full specification details, including `specCharacteristic`, `expressionSpecification`, and `targetEntitySchema`, are retrieved from the single-resource endpoint or requested through `fields` where supported. Only `ACTIVE` official specification versions are valid for creating new runtime intents.
 
-Only `ACTIVE` official specification versions are valid for creating new runtime intents. `DRAFT` candidates are for governance and editing, selected by `draftId`, and have no official public version until activation. `RETIRED` official versions are retained for audit and history and existing references, but are not used for new runtime creation.
+`DRAFT` candidates are for governance and editing, selected by `draftId`, and have no official public version until activation. `RETIRED` official versions are retained for audit and history and existing references, but are not used for new runtime creation.
 
 ## 11. Create intent specification:
 
@@ -319,9 +320,9 @@ IC MS validates:
 - runtime expression shape against the active specification contract;
 - basic external authorisation context passed by the gateway/security layer.
 
-IC MS does not validate semantic feasibility, network topology, resource suitability, or assurance success. After successful admission, IC MS persists the intent with the server-resolved `isBundle` value, sets the projected lifecycle to `Acknowledged`, and emits `IntentValidatedEvent`. II MS then performs semantic interpretation and service-ready preparation.
+IC MS does not validate semantic feasibility, network topology, resource suitability, or assurance success. After successful admission, IC MS persists the intent with the server-resolved `isBundle` value, sets the projected lifecycle to `Acknowledged`, and emits `IntentValidatedEvent`. II MS then performs semantic interpretation and service-ready preparation. Where an optimiser component is used, `IntentResolvedEvent` can hand off a full candidate set to the optimisation path.
 
-Where an optimiser component is used, `IntentResolvedEvent` can hand off a full candidate set to the optimisation path. II MS submits `POST /optimisation` through its optimisation API outbox, supplies the ICB callback URL, and consumes ICB-relayed `OptimisationStatusChangeEvent` before producing `IntentNetworkReadyEvent`.
+II MS submits `POST /optimisation` through its optimisation API outbox, supplies the ICB callback URL, and consumes ICB-relayed `OptimisationStatusChangeEvent` before producing `IntentNetworkReadyEvent`.
 
 ## 14. Monitor runtime intent:
 
@@ -353,13 +354,13 @@ The runtime termination operation is represented externally as:
 DELETE /intentManagement/v5/intent/{id}
 ```
 
-This is a termination request, not physical deletion of the runtime record. IC MS retains the intent for audit, traceability, reporting, and lifecycle history. Termination must follow the same security, authorisation, and concurrency expectations as other unsafe operations.
-
-If optimistic concurrency is required for the operation, a missing `If-Match` returns `428 Precondition Required`, and stale or mismatched `If-Match` returns `412 Precondition Failed`.
+This is a termination request, not physical deletion of the runtime record. IC MS retains the intent for audit, traceability, reporting, and lifecycle history. Termination must follow the same security, authorisation, and concurrency expectations as other unsafe operations. If optimistic concurrency is required for the operation, a missing `If-Match` returns `428 Precondition Required`, and stale or mismatched `If-Match` returns `412 Precondition Failed`.
 
 ## 16. Pause and resume runtime intent:
 
-`Paused` is a governed runtime state where the policy remains known but active downstream progression is intentionally suspended. Entry into `Paused` is owned by IC MS through an authorised runtime lifecycle operation or platform policy action; II MS, IA MS, and ICB MS must not independently place an intent into `Paused`. While paused, new semantic interpretation, optimisation, apply, or recovery work should not start unless an authorised resume or recovery workflow explicitly permits it. Exit from `Paused` returns the runtime intent to an authorised workflow path such as re-evaluation, recovery, termination, or continued monitoring according to IC MS lifecycle rules.
+`Paused` is a governed runtime state where the policy remains known but active downstream progression is intentionally suspended. Entry into `Paused` is owned by IC MS through an authorised runtime lifecycle operation or platform policy action; II MS, IA MS, and ICB MS must not independently place an intent into `Paused`. While paused, new semantic interpretation, optimisation, apply, or recovery work should not start unless an authorised resume or recovery workflow explicitly permits it.
+
+Exit from `Paused` returns the runtime intent to an authorised workflow path such as re-evaluation, recovery, termination, or continued monitoring according to IC MS lifecycle rules.
 
 ## 17. Retry failed runtime intent:
 
@@ -384,13 +385,13 @@ ICB MS exposes:
 POST /intent-callback/v1/submissions
 ```
 
-The same protected ingress endpoint accepts two approved request profiles: `IntentCallbackEventRequest` for change-execution and apply callbacks and `OptimisationStatusChangeEventRequest` for approved optimiser outcome callbacks.
+The same protected ingress endpoint accepts two approved request profiles: `IntentCallbackEventRequest` for change-execution and apply callbacks and `OptimisationStatusChangeEventRequest` for approved optimiser outcome callbacks. ICB MS sits behind the API Gateway. It accepts callback submissions from trusted external change-execution and apply systems and approved Optimiser platforms.
 
-ICB MS sits behind the API Gateway. It accepts callback submissions from trusted external change-execution and apply systems and approved Optimiser platforms. It validates only technical and structural properties, such as required fields, non-empty strings, ISO timestamp format, request size, trusted caller/source authorisation, and idempotency, where required.
+It validates only technical and structural properties, such as required fields, non-empty strings, ISO timestamp format, request size, trusted caller/source authorisation, and idempotency, where required. ICB MS does not validate that `intentId` exists. IA MS owns intent correlation and unknown-intent handling after consuming `IntentCallbackEvent`.
 
-ICB MS does not validate that `intentId` exists. IA MS owns intent correlation and unknown-intent handling after consuming `IntentCallbackEvent`.
+For change-execution and apply callbacks, the REST request uses `@type: IntentCallbackEventRequest` and the internal relay event is `IntentCallbackEvent`.
 
-For change-execution and apply callbacks, the REST request uses `@type: IntentCallbackEventRequest` and the internal relay event is `IntentCallbackEvent`. Canonical change-execution callback fields:
+Canonical change-execution callback fields:
 
 | Field | Purpose |
 |---|---|
@@ -401,7 +402,6 @@ For change-execution and apply callbacks, the REST request uses `@type: IntentCa
 | `sourceState.reason` | Optional raw source reason. |
 | `sourceReference` | Optional external source reference. |
 | `details` | Safe structured callback detail, subject to policy and size limits. |
-
 
 For optimiser outcome callbacks, the REST request uses `@type: OptimisationStatusChangeEventRequest` and the internal relay event is `OptimisationStatusChangeEvent`. ICB MS relays the approved optimiser payload shape to `t7.intent.management.events` for II MS and does not interpret optimiser status, selected configuration, feasibility, or service meaning.
 
@@ -436,15 +436,11 @@ Security is enforced across the gateway, service, data, and event layers. Extern
 
 ## 21. User authentication and access governance:
 
-External users and client systems authenticate through the OEX, gateway, and platform access layer. The external access layer is responsible for user authentication, tenant/customer context, consent and delegation controls where applicable, and coarse-grained access governance.
-
-Downstream services should receive only the trusted platform identity and context required for their responsibility. Internal services must not accept caller-supplied trust claims directly from the public internet.
+External users and client systems authenticate through the OEX, gateway, and platform access layer. The external access layer is responsible for user authentication, tenant/customer context, consent and delegation controls where applicable, and coarse-grained access governance. Downstream services should receive only the trusted platform identity and context required for their responsibility. Internal services must not accept caller-supplied trust claims directly from the public internet.
 
 ## 22. OEX internal access path:
 
-OEX or other authorised experience layers call the Intent Enabler through the platform gateway path. The gateway validates access, normalises trusted headers and context, applies edge controls, and routes requests to the appropriate domain service.
-
-OEX should not call internal event-driven services directly. II MS and IA MS have no public TMF-compliant REST API in the active baseline.
+OEX or other authorised experience layers call the Intent Enabler through the platform gateway path. The gateway validates access, normalises trusted headers and context, applies edge controls, and routes requests to the appropriate domain service. OEX should not call internal event-driven services directly. II MS and IA MS have no public TMF-compliant REST API in the active baseline.
 
 ## 23. OEX to intent backend access:
 
@@ -466,9 +462,7 @@ The network gateway or API gateway authenticates callers, enforces coarse-graine
 
 ## 25. Service-to-service security:
 
-Internal service-to-service calls and event producers and consumers should use service identity, mTLS where applicable, least-privilege credentials, and topic and API-level ACLs. Service-to-service authorisation is based on system/service identity and allowed operation, not arbitrary end-user claims.
-
-User-context-related authorisation should be resolved before crossing into internal service-to-service paths unless a specific audited delegation model is introduced.
+Internal service-to-service calls and event producers and consumers should use service identity, mTLS where applicable, least-privilege credentials, and topic and API-level ACLs. Service-to-service authorisation is based on system/service identity and allowed operation, not arbitrary end-user claims. User-context-related authorisation should be resolved before crossing into internal service-to-service paths unless a specific audited delegation model is introduced.
 
 ## 26. Kafka security:
 
@@ -590,11 +584,11 @@ Expected platform controls include:
 | Specification lifecycle and version mistakes | Runtime intents created against wrong contract | Enforce one active version per `specKey` and active-only runtime creation. |
 | Kafka duplicate delivery | Duplicate lifecycle and report updates | Idempotent consumers and stable deduplication keys. |
 | Webhook delivery retry duplication | Duplicate subscriber notifications | Use event identifiers, idempotent subscriber listener handling, and delivery retry tracking. |
-| Long-lived stale docs | Implementation drift | Use GitHub main/baseline/intent as source of truth and update solution briefs after baseline changes. |
+| Long-lived stale docs | Implementation drift | Use GitHub `intent-3.6-baseline/baseline/intent` as source of truth and update solution briefs after baseline changes. |
 
 ## 33. Assumptions:
 
-- GitHub `main/baseline/intent` is the source of truth for baseline-v1.0 and committed solution briefs.
+- GitHub `intent-3.6-baseline/baseline/intent` is the source of truth for the Intent Architecture 3.6 baseline.
 - ID MS and IC MS expose the external TMF-compliant resource APIs.
 - ID MS and IC MS deliver external hub notifications by HTTP POST to subscriber listener callback URLs using TMF-aligned event payloads.
 - II MS and IA MS are internal-only event-driven services.
@@ -717,7 +711,6 @@ IntentCallbackEvent
 IntentAssuranceEvent
 ```
 
-
 ### 35.8. Worker instructions:
 
 Outbox workers and event consumers should follow these rules:
@@ -760,8 +753,8 @@ This table is conceptual. Concrete raw `sourceState.state` mapping belongs to IA
 | `intent_internal_events_specification.md` | Intent Event Specification | Internal event contract baseline. |
 | `id_ms_specification.md` | ID MS Specification | ID MS detailed external API specification. |
 | `ic_ms_specification.md` | IC MS Specification | IC MS detailed external API specification. |
-| `ii_ms_specification.md` | II MS Specification | II MS internal specification. |
-| `ia_ms_specification.md` | IA MS Specification | IA MS internal specification. |
+| `ii_ms_specification.md` | II MS internal specification | II MS internal specification. |
+| `ia_ms_specification.md` | IA MS internal specification | IA MS internal specification. |
 | `icb_ms_specification.md` | ICB MS Specification | ICB MS callback API and event specification. |
 
 ### 35.11. Canonical runtime expression shape:
