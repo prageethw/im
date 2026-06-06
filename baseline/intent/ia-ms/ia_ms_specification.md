@@ -66,7 +66,7 @@ IA MS consumes only:
 
 Optimisation output may influence the service-ready configuration produced upstream, but IA receives its assurance and apply context through `IntentNetworkReadyEvent.serviceConfiguration` and IA stored/applied assurance state.
 
-IC MS consumes `IntentAssuranceEvent` and projects the external TMF-compliant ``Intent.lifecycleStatus` and `IntentReport.expression.expressionValue`.
+IC MS consumes `IntentAssuranceEvent` and projects the external TMF-compliant `Intent.lifecycleStatus` and `IntentReport.expression.expressionValue`.
 
 IA MS does not own external TMF APIs, runtime `Intent` resources, design-time `IntentSpecification`, semantic interpretation, optimisation decisions, callback ingestion, or network change-execution and apply execution.
 
@@ -123,7 +123,7 @@ The observer scope may intentionally be wider than the selected orchestrator app
     "intentId": "INT-HOSP-2026-001",
     "intentVersion": "v1",
     "lifecycleStatus": "InProgress",
-    "statusReason": "Service configuration has been prepared for change-execution/apply.",
+    "statusReason": "Service configuration has been prepared for change execution and apply.",
     "expression": {
       "context": {
         "targets": {
