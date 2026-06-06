@@ -174,7 +174,7 @@ Required handling fields:
 | `body.serviceConfiguration.observerConfiguration.resources[].metrics` | List of metric names to observe, not metric values. |
 | `body.references` | Correlation and resource references. |
 
-`IntentNetworkReadyEvent` means service configuration is ready for change-execution/apply. It does not mean the service has already been applied.
+`IntentNetworkReadyEvent` means service configuration is ready for change execution and apply. It does not mean the service has already been applied.
 
 ## 9. IntentCallbackEvent input shape:
 

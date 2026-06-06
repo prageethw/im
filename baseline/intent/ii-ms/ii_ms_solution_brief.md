@@ -54,10 +54,10 @@ II MS is not an external TMF-compliant API service. It does not expose runtime I
 Its responsibility is to convert a syntactically accepted runtime intent into one of the following internal outcomes:
 
 - `IntentRejectedEvent` when the admitted intent cannot be semantically, policy, or capability resolved.
-- `IntentResolvedEvent` when the admitted intent has been semantically resolved into a canonical intent context and a full, valid candidate resource set for downstream optimisation or fulfilment consideration.
+- `IntentResolvedEvent` when the admitted intent has been semantically resolved into an optional candidate-level semantic-resolution milestone for audit, observability, and traceability.
 - `IntentNetworkReadyEvent` when II MS has prepared the concrete service configuration needed for change execution and assurance observation.
 
-`IntentResolvedEvent` and `IntentNetworkReadyEvent` are intentionally different milestones. `IntentResolvedEvent` is the candidate-level semantic-resolution handoff. `IntentNetworkReadyEvent` is the service-ready preparation handoff to IA MS and means the service configuration and resource set has been prepared for change execution and assurance observation. It does not mean the network application has succeeded. IntentNetworkReadyEvent may be emitted only after II MS has received or derived a governed selected configuration from the authorised downstream selection or optimisation path. II MS does not own the optimisation algorithm or optimiser backend. II MS owns packaging the selected configuration into the service-ready event for IA MS.
+`IntentResolvedEvent` and `IntentNetworkReadyEvent` are intentionally different milestones. `IntentResolvedEvent` is an optional candidate-level semantic-resolution milestone for audit, observability, and traceability. It is not the optimiser invocation mechanism. `IntentNetworkReadyEvent` is the service-ready preparation handoff to IA MS and means the service configuration and resource set has been prepared for change execution and assurance observation. It does not mean the network application has succeeded. IntentNetworkReadyEvent may be emitted only after II MS has received or derived a governed selected configuration from the authorised downstream selection or optimisation path. II MS does not own the optimisation algorithm or optimiser backend. II MS owns packaging the selected configuration into the service-ready event for IA MS.
 
 For optimisation-backed selection, II MS uses the approved Optimiser platform integration pattern: `POST /optimisation` for the governed REST request, with the ICB-owned callback submission URL, `POST /intent-callback/v1/submissions`, registered or supplied as the optimiser outcome target. The Optimiser platform sends `OptimisationStatusChangeEventRequest` to the ICB-owned callback submission URL. ICB MS ingests the callback request and publishes `OptimisationStatusChangeEvent` to Kafka for II MS consumption. The Optimiser platform owns optimisation execution, selection logic, solver models, and optimiser lifecycle. II MS owns submitting the governed request, correlating the Kafka-delivered optimiser outcome, and packaging that selected configuration into `IntentNetworkReadyEvent` for IA MS.
 
@@ -81,7 +81,7 @@ Logical responsibilities:
 | Canonicalisation | Preserve and normalise canonical semantic buckets: `targets`, `constraints`, and `preferences`. |
 | Candidate discovery | Resolve the full valid candidate resource set known for the resolved context after scope and policy filtering. |
 | Rejection decision | Emit `IntentRejectedEvent` for semantic, policy, capability, or processing rejection. |
-| Resolution handoff | Emit `IntentResolvedEvent` for candidate-level semantic resolution. |
+| Resolution milestone | Emit `IntentResolvedEvent` as an optional candidate-level semantic-resolution milestone. |
 | Service-ready handoff | Emit `IntentNetworkReadyEvent` when service configuration is prepared for change execution and assurance observation. |
 | Reliability | Use idempotent consumption and outbox-backed publication. |
 | Audit | Persist the semantic decision trail where required. |
@@ -147,7 +147,7 @@ II MS owns:
 | Preference preservation | Preserve soft selection guidance for downstream selection and optimisation. |
 | Candidate resource resolution | Build the full, valid candidate resource set after applicable scope and policy filtering. |
 | Semantic rejection | Emit `IntentRejectedEvent` with intent-domain reason codes. |
-| Candidate-level resolution | Emit `IntentResolvedEvent` for downstream optimisation and fulfilment consideration. |
+| Candidate-level resolution | Emit `IntentResolvedEvent` as an optional candidate-level semantic-resolution milestone for audit, observability, and traceability. |
 | Service-ready preparation | Emit `IntentNetworkReadyEvent` with prepared change-execution and observation configuration. |
 | Idempotency | Deduplicate consumed events and avoid duplicate milestone outcomes. |
 | Persistence | Store current semantic resolution state, decision audit, idempotency records, and outbox entries. |
@@ -180,7 +180,7 @@ II MS contracts are internal event contracts only.
 |---|---|---|---|---|
 | `IntentValidatedEvent` | Inbound | `intent-controller-ms` | `intent-intelligence-ms` | Tells II MS that IC MS admitted a runtime Intent syntactically. |
 | `IntentRejectedEvent` | Outbound | `intent-intelligence-ms` | `intent-controller-ms` | Tells IC MS that the admitted intent is semantic, policy, or capability rejected. |
-| `IntentResolvedEvent` | Outbound | `intent-intelligence-ms` | Optional observability and audit consumers | Candidate-level semantic-resolution handoff. |
+| `IntentResolvedEvent` | Outbound | `intent-intelligence-ms` | Optional observability and audit consumers | Optional candidate-level semantic-resolution milestone for audit, observability, and traceability. |
 | `IntentNetworkReadyEvent` | Outbound | `intent-intelligence-ms` | `intent-assurance-ms` | Service-ready change-execution and observation configuration handoff. |
 | `OptimisationStatusChangeEvent` | Inbound internal Kafka event | ICB MS | `intent-intelligence-ms` | Optimiser outcome event ingested by ICB MS and relayed to Kafka for a previously submitted `POST /optimisation` request. |
 
@@ -630,7 +630,7 @@ Baseline reason-code families:
 
 ## 19. Internal Kafka message body: IntentResolvedEvent:
 
-`IntentResolvedEvent` is the candidate-level semantic-resolution handoff. It carries canonical context and all valid and applicable candidate resources known for the resolved context after scope and policy filtering. It is not the final selected or applied resource set.
+`IntentResolvedEvent` is an optional candidate-level semantic-resolution milestone for audit, observability, and traceability. It carries canonical context and all valid and applicable candidate resources known for the resolved context after scope and policy filtering. It is not the optimiser invocation mechanism and it is not the final selected or applied resource set.
 
 ```json
 {
