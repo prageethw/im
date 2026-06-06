@@ -66,7 +66,7 @@ It does not expose a TMF-compliant REST API and is not exposed through NGW, OEX,
 II MS answers this question:
 
 ```text
-Can this admitted intent be semantically understood, resolved into a canonical candidate-level handoff, and, where applicable, prepared into a service-ready configuration for IA MS?
+Can this admitted intent be semantically understood, resolved into a canonical candidate-level semantic milestone, and, where applicable, prepared into a service-ready configuration for IA MS?
 ```
 
 II MS does this after IC MS has already performed syntactic admission validation.
@@ -231,7 +231,7 @@ A successful resolution implies:
 - the requested service type and service class are understood
 - the requested service is available or supported for the resolved location
 - hard constraints are semantically valid
-- the resource set is known and valid for downstream consideration after scope and policy filtering
+- the resource set is known and valid as candidate facts after scope and policy filtering
 - the intent can proceed to the next internal fulfilment and preparation stage
 
 `IntentResolvedEvent.resources[]` contains the full valid, applicable, and apply-capable resource set known in KP for the resolved context after applicable scope and policy filtering.
