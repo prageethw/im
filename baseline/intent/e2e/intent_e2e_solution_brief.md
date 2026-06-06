@@ -320,9 +320,9 @@ IC MS validates:
 - runtime expression shape against the active specification contract;
 - basic external authorisation context passed by the gateway/security layer.
 
-IC MS does not validate semantic feasibility, network topology, resource suitability, or assurance success. After successful admission, IC MS persists the intent with the server-resolved `isBundle` value, sets the projected lifecycle to `Acknowledged`, and emits `IntentValidatedEvent`. II MS then performs semantic interpretation and service-ready preparation. Where an optimiser component is used, `IntentResolvedEvent` can hand off a full candidate set to the optimisation path.
+IC MS does not validate semantic feasibility, network topology, resource suitability, or assurance success. After successful admission, IC MS persists the intent with the server-resolved `isBundle` value, sets the projected lifecycle to `Acknowledged`, and emits `IntentValidatedEvent`. II MS then performs semantic interpretation and service-ready preparation. `IntentResolvedEvent` may be emitted as an optional candidate-level semantic-resolution milestone for audit, observability, replay, or future consumers. It is not the optimiser invocation mechanism.
 
-II MS submits `POST /optimisation` through its optimisation API outbox, supplies the ICB callback URL, and consumes ICB-relayed `OptimisationStatusChangeEvent` before producing `IntentNetworkReadyEvent`.
+Where optimisation-backed selection is required, II MS submits `POST /optimisation` through its optimisation API outbox, supplies the ICB callback URL, and consumes ICB-relayed `OptimisationStatusChangeEvent` before producing `IntentNetworkReadyEvent`.
 
 ## 14. Monitor runtime intent:
 
