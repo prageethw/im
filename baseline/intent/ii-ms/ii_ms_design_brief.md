@@ -236,7 +236,7 @@ A successful resolution implies:
 
 `IntentResolvedEvent.resources[]` contains the full valid, applicable, and apply-capable resource set known in KP for the resolved context after applicable scope and policy filtering.
 
-It includes neutral event-facing metric values for those resources so `optimiser-controller-ms` can compare and select the best applicable configuration. `IntentResolvedEvent.resources[]` is not the final selected or applied resource set and it is not the service-ready or apply-ready handoff.
+IntentResolvedEvent.resources[] carries candidate facts for audit, observability, traceability, and optional milestone consumers. It is not the optimiser invocation contract. Optimiser invocation is through the governed `POST /optimisation` path. `IntentResolvedEvent.resources[]` is not the final selected or applied resource set and it is not the service-ready or apply-ready handoff.
 
 ## 12. Service-ready preparation rule:
 
@@ -415,6 +415,6 @@ II MS is the internal semantic interpretation, resolution, and service-ready pre
 
 It consumes `IntentValidatedEvent` and, for optimisation-backed selection, `OptimisationStatusChangeEvent` after ICB MS callback ingestion. It validates and resolves the admitted expression using Knowledge Plane data, domain knowledge, and any required use-case-specific pre-resolution validation sources, preserves the canonical `expression.context.targets`, `expression.context.constraints`, and `expression.context.preferences` buckets, and emits `IntentRejectedEvent`, `IntentResolvedEvent`, or `IntentNetworkReadyEvent` depending on the resolved milestone. II MS emits neutral event-facing resource and metric structures.
 
-`IntentResolvedEvent.resources[]` carries the full applicable and apply-capable resource set with metric values for downstream optimisation and selection. `IntentNetworkReadyEvent.serviceConfiguration.orchestratorConfiguration.resources[]` carries only the selected apply and change-execution configuration, while `serviceConfiguration.observerConfiguration.resources[]` carries the full IA observation scope with metric names to observe.
+IntentResolvedEvent.resources[] carries candidate facts for audit, observability, traceability, and optional milestone consumers. It is not the optimiser invocation contract. Optimiser invocation is through the governed `POST /optimisation` path. `IntentNetworkReadyEvent.serviceConfiguration.orchestratorConfiguration.resources[]` carries only the selected apply and change-execution configuration, while `serviceConfiguration.observerConfiguration.resources[]` carries the full IA observation scope with metric names to observe.
 
 II MS does not own external TMF APIs, runtime Intent lifecycle projection, downstream apply execution, assurance truth, callback ingestion, or KP governance.
