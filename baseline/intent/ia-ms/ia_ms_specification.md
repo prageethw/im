@@ -38,7 +38,9 @@ Document authority: this specification is authoritative for IA MS field-level co
 - [8. Output event rules:](#8-output-event-rules)
 - [9. Persistence:](#9-persistence)
 - [10. Dependency behaviour:](#10-dependency-behaviour)
-- [11. Final baseline statement:](#11-final-baseline-statement)
+- [11. Security:](#11-security)
+- [12. Observability:](#12-observability)
+- [13. Final baseline statement:](#13-final-baseline-statement)
 
 ## 1. Service identity:
 
@@ -993,6 +995,39 @@ DLQ handling is a required minimum baseline for exhausted `IntentNetworkReadyEve
 
 ---
 
-## 11. Final baseline statement:
+## 11. Security:
+
+IA MS is an internal-only runtime assurance service. It must not expose an external TMF-compliant API, OEX-facing operation, partner-facing endpoint, or public callback endpoint.
+
+Security controls:
+
+- Consume only authorised internal Kafka topics using platform workload identity.
+- Publish `IntentAssuranceEvent` only with `ce-source: intent-assurance-ms`.
+- Enforce least-privilege access to IA-owned persistence tables.
+- Restrict health, readiness, and metrics endpoints to the platform and runtime network plane.
+- Treat callback source trust as already admitted by ICB MS, while still validating correlation, version, and assurance-state consistency before using callback facts.
+- Do not emit secrets, tokens, credentials, raw stack traces, raw telemetry dumps, or raw callback payloads in `IntentAssuranceEvent`.
+- Use service-to-service authentication and network policy for observability endpoint access.
+- Preserve correlation identifiers for audit without trusting caller-supplied identity claims from raw callback payloads.
+- Record security-relevant skip, dead-letter, stale version, and unknown intent decisions for audit.
+
+IA MS authorisation is resource and state scoped. It may update only IA-owned assurance state and publish IA-owned assurance outcome events. It must not update external `Intent`, external `IntentReport`, design-time `IntentSpecification`, callback submission records, optimiser state, or change-execution state.
+
+## 12. Observability:
+
+IA MS must provide enough operational visibility to support runtime assurance, callback mapping, observation collection, stale event handling, DLQ management, and downstream lifecycle projection.
+
+Observability baseline:
+
+- Structured logs must include `correlationId`, `intentId`, `intentVersion` where available, consumed event type, emitted event type, lifecycle outcome, and decision reason.
+- Metrics must track consumed `IntentNetworkReadyEvent` count, consumed `IntentCallbackEvent` count, observation collection attempts, observation collection failures, emitted `IntentAssuranceEvent` count by lifecycle status, stale or superseded event count, unknown intent count, callback mapping failures, DLQ count, and outbox relay backlog.
+- Traces should propagate correlation across Kafka consumption, IA state update, observation collection, and outbox publication where platform tracing is available.
+- Dashboards should expose assurance publication rate, failed and degraded outcome rate, callback mapping error rate, observation freshness, DLQ backlog, outbox backlog, and processing latency.
+- Alerts should cover exhausted input retries, DLQ growth, stale observation windows, repeated observation endpoint failure, outbox relay failure, and unexpected drops in assurance publication.
+- Audit records should capture callback mapping decisions, unknown or unmapped source states, stale or superseded version handling, and reasons for emitting `Active`, `Degraded`, `Failed`, or `Terminated`.
+
+Observability data must remain safe for internal operations. It must not expose raw callback payloads, raw telemetry dumps, credentials, optimiser internals, or customer-sensitive data beyond approved operational identifiers.
+
+## 13. Final baseline statement:
 
 IA MS is the internal runtime assurance truth service. It consumes `IntentNetworkReadyEvent`, `IntentCallbackEvent`, and runtime metrics and observation facts only; normalises callback and runtime state; updates IA-owned assurance state; and emits curated generic `IntentAssuranceEvent` outcomes. IC MS consumes these outcomes to project external TMF-compliant `Intent` and `IntentReport` resources.
