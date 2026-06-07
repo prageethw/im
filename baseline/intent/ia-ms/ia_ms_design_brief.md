@@ -23,7 +23,9 @@ Document authority: this design brief is authoritative for IA MS design decision
 - [9. IntentAssuranceEvent baseline:](#9-intentassuranceevent-baseline)
 - [10. Observation endpoint baseline:](#10-observation-endpoint-baseline)
 - [11. Observation gap and DLQ baseline:](#11-observation-gap-and-dlq-baseline)
-- [12. Final baseline statement:](#12-final-baseline-statement)
+- [12. Security baseline:](#12-security-baseline)
+- [13. Observability baseline:](#13-observability-baseline)
+- [14. Final baseline statement:](#14-final-baseline-statement)
 
 ## 1. Purpose:
 
@@ -163,7 +165,40 @@ IA MS must treat observation collection gaps as explicit operational facts. If t
 
 DLQ handling is a required minimum baseline for exhausted `IntentNetworkReadyEvent` and `IntentCallbackEvent` processing, unknown `intentId`, unknown or unmapped `sourceState.state`, invalid event shape, stale or superseded version handling that cannot be safely ignored, and repeated observation collection failures after retry policy is exhausted.
 
-## 12. Final baseline statement:
+## 12. Security baseline:
+
+IA MS is an internal-only runtime assurance service. It must not expose an external TMF API, OEX-facing operation, partner-facing endpoint, or public callback endpoint.
+
+Security design rules:
+
+- Consume `IntentNetworkReadyEvent` only from the authorised internal event backbone and expected II MS source identity.
+- Consume `IntentCallbackEvent` only from the authorised internal callback event path produced by ICB MS.
+- Publish `IntentAssuranceEvent` only as `ce-source: intent-assurance-ms`.
+- Restrict IA-owned health, readiness, and metrics endpoints to the platform and runtime network plane.
+- Enforce least-privilege access to IA-owned assurance state, observation, idempotency, audit, outbox, and dead-letter storage.
+- Validate `intentId`, `intentVersion`, correlation, and current IA state before applying callback or observation facts.
+- Treat raw callback source trust as admitted by ICB MS, but do not trust raw callback payloads for lifecycle projection without IA-owned mapping and correlation.
+- Do not emit secrets, tokens, credentials, raw callback payloads, raw telemetry dumps, raw stack traces, optimiser internals, or unrestricted source-system details in `IntentAssuranceEvent`.
+- Use service-to-service authentication and network policy for observability endpoint access.
+
+IA MS security responsibility is limited to its internal assurance boundary. It does not authorise external user operations, mutate external `Intent` resources, mutate external `IntentReport` resources, own callback ingestion APIs, or perform network change execution.
+
+## 13. Observability baseline:
+
+IA MS must provide operational visibility for runtime assurance evaluation, callback mapping, observation collection, stale event handling, dead-letter handling, and assurance event publication.
+
+Design-level observability rules:
+
+- Structured logs must include `correlationId`, `intentId`, `intentVersion` where available, consumed event type, emitted event type, lifecycle outcome, and decision reason.
+- Metrics must track consumed `IntentNetworkReadyEvent` count, consumed `IntentCallbackEvent` count, observation collection attempts, observation collection failures, emitted `IntentAssuranceEvent` count by lifecycle status, stale or superseded event count, unknown intent count, callback mapping failures, dead-letter count, and outbox backlog.
+- Traces should propagate correlation across Kafka consumption, IA state update, observation collection, and outbox publication where platform tracing is available.
+- Dashboards should show assurance publication rate, degraded and failed outcome rate, callback mapping error rate, observation freshness, dead-letter backlog, outbox backlog, and processing latency.
+- Alerts should cover exhausted input retries, dead-letter growth, stale observation windows, repeated observation endpoint failure, outbox relay failure, and unexpected drops in assurance publication.
+- Audit records should capture callback mapping decisions, unknown or unmapped source states, stale or superseded version handling, and reasons for emitting `Active`, `Degraded`, `Failed`, or `Terminated`.
+
+Observability data must remain safe for internal operations. It must not expose raw callback payloads, raw telemetry dumps, credentials, optimiser internals, or customer-sensitive data beyond approved operational identifiers.
+
+## 14. Final baseline statement:
 
 IA MS is the runtime assurance truth service.
 
