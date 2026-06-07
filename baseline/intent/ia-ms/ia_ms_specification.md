@@ -32,6 +32,8 @@ Document authority: this specification is authoritative for IA MS field-level co
   - [6.2. Generic payload model:](#62-generic-payload-model)
   - [6.3. Active outcome:](#63-active-outcome)
   - [6.4. Degraded outcome:](#64-degraded-outcome)
+- [6.5. Failed outcome:](#65-failed-outcome)
+- [6.6. Terminated outcome:](#66-terminated-outcome)
 - [7. IntentReport projection support:](#7-intentreport-projection-support)
 - [8. Output event rules:](#8-output-event-rules)
 - [9. Persistence:](#9-persistence)
@@ -760,6 +762,166 @@ This shape lets II MS or another authorised decision component inspect the affec
 ```
 
 ---
+
+### 6.5. Failed outcome:
+
+For `Failed`, IA MS uses `body.current.resources` to report the observed resource and path set in the assurance scope where those facts are available. A failed outcome may be driven by an apply failure callback, repeated observation failure after retry policy, or observed runtime facts that make the intent unsatisfied according to assurance policy.
+
+The event remains fact-based: lifecycle and status reason plus neutral resource metrics, or empty metric objects where no safe current observation is available. Do not include `requiresReoptimisation`, optimiser scoring, raw callback payloads, or derived evaluation blocks by default.
+
+```json
+{
+  "body": {
+    "intentId": "INT-HOSP-2026-001",
+    "intentVersion": "v1",
+    "lifecycleStatus": "Failed",
+    "statusReason": "Apply failed for the selected delivery resources and the runtime intent could not be confirmed as active.",
+    "expression": {
+      "context": {
+        "targets": {
+          "maxLatencyMs": 10,
+          "minAvailabilityPercent": 99.99,
+          "maxJitterMs": 2,
+          "maxPacketLossPercent": 0.01
+        },
+        "constraints": {
+          "location": {
+            "locationId": "AU-NSW-SYD-HOSP-001",
+            "displayName": "Sydney-Main-Hospital"
+          },
+          "serviceType": "surgical-connectivity",
+          "serviceClass": "critical-gold",
+          "priority": "critical",
+          "redundancyRequired": true
+        },
+        "preferences": {
+          "preferredAccessTechnology": "5G"
+        }
+      }
+    },
+    "current": {
+      "resources": [
+        {
+          "resourceId": "SYD-PRI-01",
+          "roles": [
+            "primary"
+          ],
+          "resourceType": "deliveryResource",
+          "resourceClass": "critical-gold",
+          "accessTechnology": "fibre",
+          "relationships": [
+            {
+              "type": "pairedSecondary",
+              "resourceId": "SYD-SEC-01"
+            }
+          ],
+          "metrics": {}
+        },
+        {
+          "resourceId": "SYD-SEC-01",
+          "roles": [
+            "secondary"
+          ],
+          "resourceType": "deliveryResource",
+          "resourceClass": "critical-gold",
+          "accessTechnology": "5G",
+          "relationships": [
+            {
+              "type": "protects",
+              "resourceId": "SYD-PRI-01"
+            }
+          ],
+          "metrics": {}
+        }
+      ]
+    },
+    "references": {
+      "correlationId": "corr-intent-assurance-failed-001",
+      "intent": {
+        "id": "INT-HOSP-2026-001",
+        "href": "/intentManagement/v5/intent/INT-HOSP-2026-001"
+      },
+      "intentSpecification": {
+        "id": "ispec-hss-001",
+        "specKey": "hospital-surgical-slice-spec",
+        "version": "1.20",
+        "href": "/intentManagement/v5/intentSpecification/ispec-hss-001"
+      }
+    }
+  }
+}
+```
+
+Rules for failed outcomes:
+
+- Use `lifecycleStatus: Failed`.
+- Preserve `body.intentId`, `body.intentVersion`, `body.statusReason`, `body.expression.context`, and `body.references`.
+- Include `body.current.resources[]` where IA has an assurance scope or failed apply resource facts.
+- Use neutral metric names when observations are available.
+- Use an empty `metrics` object only when no safe current metric values are available for the failed resource.
+- Do not infer rollback, retry, reselection, or re-optimisation directly in the IA event.
+
+### 6.6. Terminated outcome:
+
+For `Terminated`, IA MS emits an assurance outcome when termination has been confirmed by callback, observation policy, or another authorised runtime signal. `current.resources` is normally not required unless IA has final resource facts that are safe and useful to report.
+
+The event remains a lifecycle-driving assurance fact for IC MS projection. It is not a physical delete event and must not be confused with governed administrative removal of reports or records.
+
+```json
+{
+  "body": {
+    "intentId": "INT-HOSP-2026-001",
+    "intentVersion": "v1",
+    "lifecycleStatus": "Terminated",
+    "statusReason": "Termination was confirmed by the change-execution layer.",
+    "expression": {
+      "context": {
+        "targets": {
+          "maxLatencyMs": 10,
+          "minAvailabilityPercent": 99.99,
+          "maxJitterMs": 2,
+          "maxPacketLossPercent": 0.01
+        },
+        "constraints": {
+          "location": {
+            "locationId": "AU-NSW-SYD-HOSP-001",
+            "displayName": "Sydney-Main-Hospital"
+          },
+          "serviceType": "surgical-connectivity",
+          "serviceClass": "critical-gold",
+          "priority": "critical",
+          "redundancyRequired": true
+        },
+        "preferences": {
+          "preferredAccessTechnology": "5G"
+        }
+      }
+    },
+    "references": {
+      "correlationId": "corr-intent-assurance-terminated-001",
+      "intent": {
+        "id": "INT-HOSP-2026-001",
+        "href": "/intentManagement/v5/intent/INT-HOSP-2026-001"
+      },
+      "intentSpecification": {
+        "id": "ispec-hss-001",
+        "specKey": "hospital-surgical-slice-spec",
+        "version": "1.20",
+        "href": "/intentManagement/v5/intentSpecification/ispec-hss-001"
+      }
+    }
+  }
+}
+```
+
+Rules for terminated outcomes:
+
+- Use `lifecycleStatus: Terminated`.
+- Preserve `body.intentId`, `body.intentVersion`, `body.statusReason`, `body.expression.context`, and `body.references`.
+- Omit `body.current.resources` by default unless final resource facts are needed and safe to report.
+- Do not treat termination as physical deletion of the runtime intent or report history.
+- Do not include raw termination callback payloads in the IA event.
+
 
 ## 7. IntentReport projection support:
 
