@@ -101,12 +101,14 @@
 - [23. IntentReportAttributeValueChangeEvent:](#23-intentreportattributevaluechangeevent)
 - [24. IntentReportDeleteEvent:](#24-intentreportdeleteevent)
 - [25. Internal Kafka event publication note:](#25-internal-kafka-event-publication-note)
-- [26. Final specification notes:](#26-final-specification-notes)
-- [27. Shared semantic bucket baseline:](#27-shared-semantic-bucket-baseline)
-  - [27.1. Runtime Intent expression:](#271-runtime-intent-expression)
-  - [27.2. Complete POST /intent request body example:](#272-complete-post-intent-request-body-example)
-  - [27.3. Complete IntentValidatedEvent body example:](#273-complete-intentvalidatedevent-body-example)
-  - [27.4. Baseline rules:](#274-baseline-rules)
+- [26. Security:](#26-security)
+- [27. Observability:](#27-observability)
+- [28. Final specification notes:](#28-final-specification-notes)
+- [29. Shared semantic bucket baseline:](#29-shared-semantic-bucket-baseline)
+  - [29.1. Runtime Intent expression:](#291-runtime-intent-expression)
+  - [29.2. Complete POST /intent request body example:](#292-complete-post-intent-request-body-example)
+  - [29.3. Complete IntentValidatedEvent body example:](#293-complete-intentvalidatedevent-body-example)
+  - [29.4. Baseline rules:](#294-baseline-rules)
 
 **Service identity:**
 
@@ -2299,7 +2301,47 @@ External hub notifications do not use these Kafka headers. They are HTTP webhook
 
 ---
 
-## 26. Final specification notes:
+## 26. Security:
+
+IC MS is the main external runtime Intent API owner. Security is enforced at the gateway, service, data, event, and webhook-delivery layers. IC MS must not rely only on gateway authentication for resource-level and lifecycle-level decisions.
+
+Security controls:
+
+- External API access must come through the approved gateway or OEX path with authenticated platform identity, tenant or customer context, and authorised caller context.
+- IC MS must enforce resource-level authorisation for `Intent`, `IntentReport`, and hub subscription access.
+- IC MS must enforce lifecycle-level authority for Draft submission, unsafe update, termination, report access, and governed report purge where implemented.
+- External consumers must not set or patch `lifecycleStatus`; lifecycle is assigned, transitioned, and projected by IC MS from authorised commands and downstream outcomes.
+- Unsafe operations must use the configured concurrency controls, including `If-Match` where required.
+- IC MS must validate `intentSpecification.id` and `expression.iri` for submitted runtime admission and must not infer the governing runtime contract from caller-controlled hints alone.
+- Hub subscription callbacks must use subscriber-owned callback URLs and must be protected according to platform policy, such as mTLS, signed delivery, shared secret, OAuth client credentials, or another approved subscriber authentication mechanism.
+- Hub notification delivery must not expose internal Kafka headers, internal event payloads, raw telemetry, raw callback payloads, optimiser internals, knowledge-plane internals, or internal candidate scoring.
+- Internal Kafka publication must use service identity, authorised topic access, and stable CloudEvents-style metadata.
+- IC MS must publish internal events only as `ce-source: intent-controller-ms`.
+- Secrets, tokens, credentials, raw stack traces, and sensitive internal implementation details must not be returned in API responses, external events, internal events, logs, or report projections.
+- IC MS persistence access must be least-privilege and scoped to IC-owned `Intent`, `IntentReport`, subscription, projection, idempotency, event outbox, and webhook delivery state.
+
+Security-relevant actions must be auditable, including admission, draft update, submission, lifecycle projection, termination, hub subscription changes, webhook delivery failures, report projection updates, and governed report removal.
+
+## 27. Observability:
+
+IC MS must provide operational visibility for external API behaviour, lifecycle projection, report projection, internal event publication, hub delivery, cache behaviour, and unsafe-operation concurrency.
+
+Observability baseline:
+
+- Structured logs must include `correlationId`, `intentId` where applicable, `intentVersion` where applicable, caller-safe tenant or customer context where allowed, operation name, HTTP status, lifecycle transition, event type, and projection decision reason.
+- Metrics must track REST request count, latency, and error rate by endpoint and response class.
+- Metrics must track create, draft update, admission, termination, lifecycle projection, report projection, hub subscription, and webhook delivery outcomes.
+- Metrics must track `IntentValidatedEvent` publication attempts, outbox backlog, outbox relay failures, Kafka publication failures, and idempotency skips.
+- Metrics must track webhook delivery attempts, retries, failures, dead-lettered notifications, subscriber response codes, and webhook outbox backlog.
+- Metrics must track cache hit rate, cache bypass count from `Cache-Control: no-cache`, cache refresh count, and cache invalidation count for GET projections.
+- Metrics must track optimistic-concurrency failures, including `412 Precondition Failed` and `428 Precondition Required`.
+- Traces should propagate correlation across external API handling, persistence, ID MS validation calls where applicable, projection updates, internal event publication, and webhook delivery where platform tracing is available.
+- Dashboards should expose external API health, admission success and rejection rates, projection lag, report update lag, webhook backlog, Kafka outbox backlog, cache effectiveness, and dependency failures.
+- Alerts should cover sustained API error rates, ID MS lookup dependency failure, projection backlog, outbox relay failure, webhook retry exhaustion, cache refresh failure where material, and abnormal spikes in lifecycle transition errors.
+
+Observability data must remain consumer-safe where exposed externally. Internal dashboards and logs must still avoid raw callback payloads, raw telemetry dumps, credentials, optimiser internals, knowledge-plane internals, and customer-sensitive data outside approved operational identifiers.
+
+## 28. Final specification notes:
 
 - `GET /intent/{id}` returns current projected Intent state, not a full internal version aggregate.
 - `GET /intent` lists current projected Intent states for retained Intent IDs.
@@ -2333,9 +2375,9 @@ Baseline:
 - External event examples include both `eventTime` and `timeOccurred` with the same canonical event occurrence timestamp.
 - IC MS does not expose ordinary external `DELETE /intent/{intentId}/intentReport/{id}` by default; IntentReport is read-only audit/projection history and is retained unless governed internal retention policy archives or purges it.
 
-## 27. Shared semantic bucket baseline:
+## 29. Shared semantic bucket baseline:
 
-### 27.1. Runtime Intent expression:
+### 29.1. Runtime Intent expression:
 
 IC MS accepts and projects runtime Intent resources using the external runtime expression shape baselined by ID MS:
 
@@ -2358,7 +2400,7 @@ IC MS accepts and projects runtime Intent resources using the external runtime e
 
 `location`, `serviceType`, and `serviceClass` are not peer fields beside `targets`, `constraints`, and `preferences`. They are modelled under `expression.expressionValue.context.constraints` because they restrict what and where the intent must fulfil.
 
-### 27.2. Complete POST /intent request body example:
+### 29.2. Complete POST /intent request body example:
 
 ```json
 {
@@ -2410,7 +2452,7 @@ IC MS accepts and projects runtime Intent resources using the external runtime e
 }
 ```
 
-### 27.3. Complete IntentValidatedEvent body example:
+### 29.3. Complete IntentValidatedEvent body example:
 
 ```json
 {
@@ -2467,7 +2509,7 @@ IC MS accepts and projects runtime Intent resources using the external runtime e
 }
 ```
 
-### 27.4. Baseline rules:
+### 29.4. Baseline rules:
 
 - External runtime `Intent.expression.expressionValue` uses the `context` wrapper.
 - `context` contains only `targets`, `constraints`, and `preferences`.
