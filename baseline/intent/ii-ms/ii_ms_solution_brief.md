@@ -419,17 +419,9 @@ content-type: application/json
 
 ### 9.3. IntentAssuranceEvent:
 
-II MS consumes `IntentAssuranceEvent` from IA MS for degraded-state control-loop handling.
+II MS consumes `IntentAssuranceEvent` for degraded-state control-loop handling, per Section 4.9 of the II MS specification.
 
-Only `Degraded` is a default II MS control-loop trigger. For degraded outcomes, II MS may evaluate assurance facts, candidate resource context, policy, KP freshness, and runtime version state. Where policy allows, II MS may reselect or re-optimise through the governed `POST /optimisation` path.
-
-`Failed` does not trigger an II MS retry decision. Retry after failure is triggered through the retrial endpoint or a governed retry workflow.
-
-`Terminated` and `Paused` do not trigger II MS control-loop action. II MS must not resume paused network or service execution.
-
-Stale, superseded, or older-version assurance outcomes must be recorded or ignored according to audit policy and must not trigger control-loop action for the current runtime version.
-
-Normal degradation recovery does not require IC MS to emit a new `IntentValidatedEvent`. IC MS emits `IntentValidatedEvent` only for a newly admitted or materially changed runtime intent version.
+Only `Degraded` is a default II MS control-loop trigger. The II MS specification owns the full input contract, validation rules, stale-version handling, and non-trigger rules for `Failed`, `Terminated`, and `Paused` outcomes.
 
 ## 10. Field specification:
 
