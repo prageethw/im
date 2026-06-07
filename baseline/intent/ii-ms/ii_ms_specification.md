@@ -21,6 +21,7 @@
   - [4.6. Example body consumed by II MS:](#46-example-body-consumed-by-ii-ms)
   - [4.7. Input validation rules:](#47-input-validation-rules)
   - [4.8. Event input: OptimisationStatusChangeEvent:](#48-event-input-optimisationstatuschangeevent)
+  - [4.9. Event input: IntentAssuranceEvent:](#49-event-input-intentassuranceevent)
 - [5. Semantic processing flow:](#5-semantic-processing-flow)
 - [6. Target, constraint, and preference handling:](#6-target-constraint-and-preference-handling)
   - [6.1. Targets:](#61-targets)
@@ -73,7 +74,7 @@
 | Domain | Intent Domain |
 | Primary responsibility | Semantic interpretation, Knowledge Plane-backed validation, required pre-resolution validation, candidate-level semantic resolution, and service-ready preparation |
 | External API | None |
-| Primary input events | `IntentValidatedEvent`; `OptimisationStatusChangeEvent` after ICB MS callback ingestion |
+| Primary input events | `IntentValidatedEvent`; `OptimisationStatusChangeEvent` after ICB MS callback ingestion; `IntentAssuranceEvent` for degraded-state control-loop handling |
 | Output events | `IntentRejectedEvent`, `IntentResolvedEvent`, `IntentNetworkReadyEvent` |
 
 ## 2. Boundary statement:
@@ -436,11 +437,75 @@ II MS expects:
 
 II MS must process this event idempotently. Duplicate optimiser status events must not produce duplicate `IntentNetworkReadyEvent` publications.
 
+### 4.9. Event input: IntentAssuranceEvent:
+
+II MS consumes `IntentAssuranceEvent` as a runtime assurance input for degraded-state control-loop handling.
+
+#### Topic:
+
+```text
+t7.intent.management.events
+```
+
+#### Producer:
+
+```text
+intent-assurance-ms
+```
+
+#### Consumer:
+
+```text
+intent-intelligence-ms
+```
+
+#### Meaning:
+
+`IntentAssuranceEvent` carries IA-owned runtime assurance truth. II MS consumes this event only to evaluate whether a degraded runtime intent needs reselection or re-optimisation.
+
+Only `lifecycleStatus: Degraded` is a default II MS control-loop trigger. For degraded outcomes, II MS may evaluate current assurance facts, candidate resource context, policy, and runtime version state, then reselect or re-optimise through the governed `POST /optimisation` path where allowed.
+
+`lifecycleStatus: Failed` does not trigger an II MS retry decision. Retry after failure is triggered only through the retrial endpoint or a governed retry workflow. II MS must not treat failure as a default re-optimisation command.
+
+`lifecycleStatus: Terminated` and `lifecycleStatus: Paused` do not trigger II MS control-loop action. `Paused` is controlled by network or change-execution behaviour and projected through IC MS lifecycle state. II MS must not resume paused network or service execution.
+
+Stale, superseded, or older-version assurance outcomes must be recorded or ignored according to audit policy and must not trigger control-loop action for the current runtime version.
+
+Normal degradation recovery does not require IC MS to emit a new `IntentValidatedEvent`. IC MS emits `IntentValidatedEvent` only for a newly admitted or materially changed runtime intent version.
+
+#### Input validation rules:
+
+II MS expects:
+
+| Field | Rule |
+|---|---|
+| Kafka `ce-type` | Must be `IntentAssuranceEvent` |
+| Kafka `ce-source` | Must identify IA MS, normally `intent-assurance-ms` |
+| Kafka `ce-subject` | Must carry the related runtime `intentId` |
+| `body.intentId` | Required runtime intent id |
+| `body.intentVersion` | Required where runtime intent versioning is used |
+| `body.lifecycleStatus` | Required assurance lifecycle state |
+| `body.statusReason` | Required where available for control-loop decision audit |
+| `body.expression.context` | Required where target and constraint context is needed |
+| `body.current.resources[]` | Required for degraded control-loop evaluation where observed resource facts are available |
+| `body.references.correlationId` | Required for traceability |
+
+#### Event-specific rules:
+
+- Act only on `Degraded` by default.
+- Do not trigger II retry from `Failed`.
+- Do not trigger II action from `Terminated`.
+- Do not trigger II action from `Paused`.
+- Do not resume paused network or service execution.
+- Do not act on stale or superseded runtime versions.
+- Use `POST /optimisation` only when degraded-state policy allows reselection or re-optimisation.
+
+
 ## 5. Semantic processing flow:
 
 | Step | Action |
 |---|---|
-| 1 | Consume `IntentValidatedEvent`; for optimisation-backed selection, also consume `OptimisationStatusChangeEvent` from Kafka after ICB MS callback ingestion |
+| 1 | Consume `IntentValidatedEvent`; for optimisation-backed selection, also consume `OptimisationStatusChangeEvent` from Kafka after ICB MS callback ingestion; for degraded-state control-loop handling, consume `IntentAssuranceEvent` from IA MS |
 | 2 | Check idempotency using CloudEvents `ce-id` and intent identity |
 | 3 | Parse admitted internal `expression.context` |
 | 4 | Resolve `context.constraints.location` from KP or another approved pre-resolution validation source where required |
@@ -1576,6 +1641,7 @@ Rules:
 
 - Deduplicate consumed `IntentValidatedEvent` by `ce-id` and event id.
 - Deduplicate consumed `OptimisationStatusChangeEvent` by CloudEvents `ce-id`, optimisation id, event type, and intentId and intentVersion where available.
+- Deduplicate consumed `IntentAssuranceEvent` by CloudEvents `ce-id`, event type, intentId, and intentVersion where available.
 - Duplicate `OptimisationStatusChangeEvent` instances must not produce duplicate `IntentNetworkReadyEvent` publications.
 - A stale optimiser outcome must not overwrite newer semantic or service-ready state for the same intentId and intentVersion.
 - If IC MS supersedes, updates, or cancels a runtime intent while II MS or Optimiser processing is in flight, II MS must not publish a milestone event for the older or non-current runtime version. Late optimiser outcomes for that version are audit and correlation records only.
@@ -1597,7 +1663,7 @@ Suggested tables:
 | `intent_optimisation_api_outbox` | Durable API outbox for II-submitted `POST /optimisation` requests, including request body, idempotency key, callback submission URL, request status, retry count, next retry time, accepted optimisation id, and error/failure state. |
 | `intent_resolution_audit` | KP lookup, policy, semantic, and rejection decision trail |
 | `intent_resolution_outbox` | Reliable publication of II-owned events, including `IntentRejectedEvent`, `IntentResolvedEvent`, and `IntentNetworkReadyEvent` |
-| `intent_resolution_dead_letter` | Required minimum failed and unprocessable event handling for exhausted `IntentValidatedEvent` and `OptimisationStatusChangeEvent` processing, including event id, event type, intentId, intentVersion where available, failure reason, retry count, payload hash, and replay and operational status. |
+| `intent_resolution_dead_letter` | Required minimum failed and unprocessable event handling for exhausted `IntentValidatedEvent`, `OptimisationStatusChangeEvent`, and degraded-state `IntentAssuranceEvent` processing, including event id, event type, intentId, intentVersion where available, failure reason, retry count, payload hash, and replay and operational status. |
 | `shedlock` | Relay coordination if clustered outbox relay is used |
 
 ---
@@ -1622,6 +1688,8 @@ Recommended logs and metrics:
 
 ```text
 ii_ms_intent_validated_consumed_count
+ii_ms_intent_assurance_consumed_count
+ii_ms_degraded_control_loop_triggered_count
 ii_ms_intent_resolved_count
 ii_ms_intent_network_ready_count
 ii_ms_intent_rejected_count
@@ -1632,6 +1700,7 @@ ii_ms_outbox_publish_failure_count
 ii_ms_duplicate_event_count
 ii_ms_optimisation_timeout_count
 ii_ms_stale_event_ignored_count
+ii_ms_non_degraded_assurance_ignored_count
 ii_ms_kp_stale_or_refresh_failure_count
 ii_ms_dead_letter_count
 ```
@@ -1647,6 +1716,7 @@ II MS is internal only.
 Rules:
 
 - consume only from trusted internal event backbone
+- authorise `IntentAssuranceEvent` consumption only from IA MS source identity
 - use workload identity for KP access
 - expose no public, NGW, OEX, partner, or consumer-facing REST API
 - restrict any platform probes to the internal runtime and network plane
@@ -1658,7 +1728,9 @@ Rules:
 
 ## 17. Contract summary:
 
-II MS consumes `IntentValidatedEvent` and, for optimisation-backed selection, `OptimisationStatusChangeEvent` after ICB MS callback ingestion. It validates and resolves the admitted expression using Knowledge Plane data, domain knowledge, and any required use-case-specific pre-resolution validation sources, preserves `expression.context.targets`, `expression.context.constraints`, and `expression.context.preferences`, and emits `IntentRejectedEvent`, `IntentResolvedEvent`, or `IntentNetworkReadyEvent` depending on the resolved milestone.
+II MS consumes `IntentValidatedEvent`; for optimisation-backed selection, it consumes `OptimisationStatusChangeEvent` after ICB MS callback ingestion; for degraded-state control-loop handling, it consumes `IntentAssuranceEvent` from IA MS. It validates and resolves the admitted expression using Knowledge Plane data, domain knowledge, and any required use-case-specific pre-resolution validation sources, preserves `expression.context.targets`, `expression.context.constraints`, and `expression.context.preferences`, and emits `IntentRejectedEvent`, `IntentResolvedEvent`, or `IntentNetworkReadyEvent` depending on the resolved milestone.
+
+`IntentAssuranceEvent` is a runtime assurance input for degraded-state control-loop handling only. Only `Degraded` is a default II MS trigger. `Failed` retry is handled through the retrial endpoint or a governed retry workflow, not by an II MS default retry decision. `Terminated` and `Paused` do not trigger II MS control-loop action, and II MS must not resume paused network or service execution. Normal degradation recovery does not require IC MS to emit a new `IntentValidatedEvent`.
 
 II MS must fail closed for stale KP facts, stale runtime versions, duplicate optimiser outcomes, missing optimiser callbacks, failed optimisation outcomes, and cancelled or superseded intents. These conditions must not produce unsafe or duplicate `IntentNetworkReadyEvent` publications.
 
