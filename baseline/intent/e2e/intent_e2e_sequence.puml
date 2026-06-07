@@ -1,0 +1,87 @@
+@startuml
+title Intent Management end-to-end runtime sequence
+
+skinparam sequenceMessageAlign center
+skinparam maxMessageSize 90
+skinparam ParticipantPadding 20
+skinparam BoxPadding 10
+
+actor Consumer
+participant "IC MS\nIntent Controller" as IC
+participant "II MS\nIntent Intelligence" as II
+participant "Optimiser" as OPT
+participant "ICB MS\nIntent Callback" as ICB
+participant "Change execution\nNetwork or fulfilment" as NET
+participant "Observability\nPlatform" as OBS
+participant "IA MS\nIntent Assurance" as IA
+
+box "Internal event backbone" #F7F7F7
+queue "t7.intent.management.events" as Kafka
+end box
+
+== Runtime intent admission ==
+
+Consumer -> IC : POST /intentManagement/v5/intent
+IC -> IC : Validate request shape, IntentSpecification id, expression IRI
+IC -> IC : Persist runtime Intent projection\nAcknowledged
+IC -> Kafka : publish IntentValidatedEvent
+Kafka -> II : consume IntentValidatedEvent
+
+== Semantic resolution and selected configuration ==
+
+II -> II : Interpret expression context\nValidate targets, constraints, preferences
+II -> II : Resolve KP and governed source facts
+II -> OPT : POST /optimisation\nwhen optimisation-backed selection is required
+OPT -> ICB : POST /intent-callback/v1/submissions\nOptimisationStatusChangeEventRequest
+ICB -> ICB : Ingest callback and persist outbox
+ICB -> Kafka : publish OptimisationStatusChangeEvent
+Kafka -> II : consume OptimisationStatusChangeEvent
+
+II -> II : Correlate optimiser outcome\nPackage selected configuration
+II -> Kafka : publish IntentNetworkReadyEvent
+Kafka -> IA : consume IntentNetworkReadyEvent
+
+== Change execution and assurance ==
+
+IA -> IA : Store selected apply resources\nand observer scope
+NET -> ICB : POST /intent-callback/v1/submissions\napply or termination callback
+ICB -> Kafka : publish IntentCallbackEvent
+Kafka -> IA : consume IntentCallbackEvent
+
+IA -> OBS : collect runtime metrics\nfor observer scope
+OBS --> IA : resource metric facts
+
+IA -> IA : Map callback state\nEvaluate observations against targets
+IA -> Kafka : publish IntentAssuranceEvent
+Kafka -> IC : consume IntentAssuranceEvent
+IC -> IC : Project external Intent lifecycle\nand IntentReport
+Consumer -> IC : GET /intent/{id}\nGET /intent/{id}/intentReport
+
+== Degraded control-loop path ==
+
+Kafka -> II : consume IntentAssuranceEvent\nDegraded only
+II -> II : Evaluate degraded-state control-loop policy
+II -> OPT : POST /optimisation\nif reselection or re-optimisation is allowed
+OPT -> ICB : POST /intent-callback/v1/submissions\nOptimisationStatusChangeEventRequest
+ICB -> Kafka : publish OptimisationStatusChangeEvent
+Kafka -> II : consume OptimisationStatusChangeEvent
+II -> Kafka : publish IntentNetworkReadyEvent\nnew selected configuration
+Kafka -> IA : consume IntentNetworkReadyEvent
+
+== Non-triggering assurance outcomes ==
+
+note over II,IA
+Only Degraded is a default II MS control-loop trigger.
+
+Failed does not trigger II retry.
+Retry after failure is triggered through the retrial endpoint
+or a governed retry workflow.
+
+Terminated and Paused do not trigger II MS control-loop action.
+II MS must not resume paused network or service execution.
+
+Normal degradation recovery does not require IC MS
+to emit a new IntentValidatedEvent.
+end note
+
+@enduml
