@@ -10,6 +10,10 @@
 
 - [1. KP master config baseline:](#1-kp-master-config-baseline)
 - [2. Baseline notes:](#2-baseline-notes)
+- [3. Freshness, cache, and invalidation policy:](#3-freshness-cache-and-invalidation-policy)
+- [4. Candidate fact model and degraded lookup support:](#4-candidate-fact-model-and-degraded-lookup-support)
+- [5. Fail-closed and audit rules:](#5-fail-closed-and-audit-rules)
+- [6. Observability expectations:](#6-observability-expectations)
 
 
 ## 1. KP master config baseline:
@@ -475,3 +479,111 @@ The baseline surgical hospital slice in this file is an illustrative Knowledge P
 - Logical references such as `optimiserTarget`, `optimiserModel`, `orchestratorTarget`, `orchestratorProfile`, `observerTarget`, and `observerProfile` are names only, not endpoint, payload, or credential details.
 - Events may map these logical references into nested event-specific configuration structures such as `serviceConfiguration.orchestratorConfiguration.target and profile` and `serviceConfiguration.observerConfiguration.target and profile`.
 - KP does not include `semanticProfile`, `assuranceProfiles`, optimiser objective rules, hops, or service attributes by default.
+
+## 3. Freshness, cache, and invalidation policy:
+
+KP master config provides governed reference knowledge for II MS resolution and service-ready preparation. II MS may cache KP facts, but cached facts must remain bounded, version-aware, and safe for runtime use.
+
+Freshness baseline:
+
+| Area | Baseline |
+|---|---|
+| Config identity | `knowledgePlaneConfig.configId` and `knowledgePlaneConfig.version` identify the governed KP configuration snapshot. |
+| Location service facts | Use only when the location service entry is present, enabled by policy, and within the configured freshness window. |
+| Resource facts | Use only when every referenced `resourceId` can be resolved to a current resource entry. |
+| Candidate set freshness | II MS must evaluate candidate resources against the current KP snapshot before emitting `IntentResolvedEvent` or packaging `IntentNetworkReadyEvent`. |
+| Optimisation wait window | If optimisation wait time exceeds the configured freshness threshold, II MS must refresh or re-check the KP snapshot before packaging `IntentNetworkReadyEvent`. |
+| Degraded control-loop lookup | For degraded-state handling, II MS must use a fresh or policy-accepted KP snapshot before reselection or re-optimisation. |
+
+Cache baseline:
+
+- KP cache entries must be keyed by config identity, location id, service type, service class, and any other scope field that changes the candidate set.
+- Cache entries must retain the KP config version used to produce the cached facts.
+- Cache TTL must be bounded and shorter for runtime control-loop use than for low-risk discovery or design-time browsing.
+- Client or service logic may bypass cache when a safety-critical decision requires a fresh KP read.
+- Cache miss, cache refresh failure, and stale-cache use must be observable.
+
+Invalidation baseline:
+
+- KP config version change invalidates cached location service facts and resource facts for the affected scope.
+- Resource availability, resource metric benchmark, role, relationship, or capability changes invalidate the affected resource and candidate-set cache entries.
+- Location service capability status changes invalidate the affected location service cache entry.
+- Policy changes that affect eligibility, redundancy, target support, or service class support invalidate the affected candidate sets.
+- If invalidation cannot be confirmed, II MS must treat the affected safety-critical lookup as stale and follow the fail-closed rules.
+
+## 4. Candidate fact model and degraded lookup support:
+
+II MS uses KP facts to construct the applicable candidate resource set for semantic resolution, service-ready preparation, and degraded-state control-loop evaluation.
+
+Candidate fact baseline:
+
+| Fact | Source in this config | Event-facing treatment |
+|---|---|---|
+| Location identity | `locationBasedServices` key | Maps to `expression.context.constraints.location.locationId`. |
+| Service type | `locationBasedServices[locationId].serviceType` | Maps to `expression.context.constraints.serviceType`. |
+| Service class | `locationBasedServices[locationId].serviceClass` | Maps to `expression.context.constraints.serviceClass`. |
+| Capability status | `capabilityStatus` | Used by II MS to accept, reject, or fail closed. |
+| Redundancy availability | `redundancyAvailable` and resource `roles` | Used to validate `redundancyRequired`. |
+| Candidate resources | `resourceIds` plus `resources` entries | Maps to `IntentResolvedEvent.resources[]` and optimiser request candidate resources. |
+| Design-time benchmarks | `benchmarks` and `metrics.benchmark` | Maps to neutral metric fields in II-owned events where applicable. |
+| Optimiser target | `optimiserTarget` and `optimiserModel` | Used to select the governed optimiser path, not exposed as credentials or endpoint detail. |
+| Orchestrator and observer references | `orchestratorTarget`, `orchestratorProfile`, `observerTarget`, `observerProfile` | Maps to `IntentNetworkReadyEvent.serviceConfiguration` target and profile fields. |
+
+Degraded lookup baseline:
+
+- `IntentAssuranceEvent` with `lifecycleStatus: Degraded` may cause II MS degraded-state control-loop handling.
+- During degraded-state handling, II MS must correlate `intentId`, `intentVersion`, location, service type, service class, current observed resources, and KP candidate facts.
+- II MS must not treat `Failed`, `Terminated`, or `Paused` assurance outcomes as default KP reselection triggers.
+- II MS must not resume paused network or service execution.
+- II MS may use KP candidate facts to reselect or re-optimise only when degraded-state policy allows it.
+- II MS must use the full relevant candidate set known in KP for the applicable location and service context after scope and policy filtering.
+- If the degraded resource is no longer present, no longer eligible, or the KP snapshot is stale, II MS must fail closed or route to governed operational handling according to policy.
+
+## 5. Fail-closed and audit rules:
+
+KP lookups that affect safety-critical runtime decisions must fail closed when the governing facts are missing, stale, contradictory, or not trusted.
+
+Fail-closed examples:
+
+- Requested `locationId` cannot be found.
+- Location service `capabilityStatus` is `unknown` for the requested service context.
+- `redundancyRequired` is true, but `redundancyAvailable` is false or the candidate set lacks suitable primary and secondary roles.
+- A referenced resource id is missing from `resources`.
+- KP config version cannot be confirmed.
+- KP cache is stale and cannot be refreshed within policy.
+- KP candidate facts changed while optimisation or service-ready packaging was in progress.
+- Degraded-state control-loop handling cannot confirm a fresh applicable candidate set.
+
+Audit baseline:
+
+- Record the KP config id and version used for each semantic decision.
+- Record freshness decision, cache hit or miss, and invalidation status where relevant.
+- Record location id, service type, service class, and candidate resource ids used for the decision.
+- Record fail-closed reasons using intent-domain reason codes such as `KNOWLEDGE_LOOKUP_ERROR`, `SEMANTIC_LOCATION_UNSUPPORTED`, or `SEMANTIC_INTENT_CONTRADICTORY`.
+- Do not record credentials, endpoint secrets, raw upstream system payloads, or unrestricted inventory dumps in II-owned events.
+
+## 6. Observability expectations:
+
+KP-related behaviour must be visible enough for II MS operators and platform owners to understand resolution quality, freshness, and control-loop safety.
+
+Recommended signals:
+
+```text
+ii_ms_kp_lookup_count
+ii_ms_kp_lookup_error_count
+ii_ms_kp_cache_hit_count
+ii_ms_kp_cache_miss_count
+ii_ms_kp_cache_stale_count
+ii_ms_kp_refresh_count
+ii_ms_kp_refresh_failure_count
+ii_ms_kp_invalidation_count
+ii_ms_kp_candidate_set_size
+ii_ms_kp_fail_closed_count
+ii_ms_degraded_kp_lookup_count
+ii_ms_degraded_reselection_allowed_count
+ii_ms_degraded_reselection_blocked_count
+```
+
+Logs and traces should include `correlationId`, `intentId`, `intentVersion`, `configId`, KP config version, location id, service type, service class, and decision outcome where available.
+
+KP observability must not expose credentials, unrestricted raw KP payloads, raw inventory dumps, optimiser internals, or customer-sensitive data outside approved operational identifiers.
