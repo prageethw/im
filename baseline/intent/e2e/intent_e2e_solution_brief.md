@@ -191,7 +191,13 @@ A consumer requests `DELETE /intentManagement/v5/intent/{id}`. IC MS treats this
 
 ### 6.11. Handle failed or degraded runtime state:
 
-IA MS may emit `IntentAssuranceEvent` with lifecycle outcomes such as `Degraded` or `Failed`. IC MS projects the external status. Any re-interpretation, re-optimisation, rollback, or recovery decision remains a separate authorised workflow and is not hidden inside IA or ICB. `Paused` is handled through the separate IC MS-governed pause and resume lifecycle path and must be explicitly resumed or redirected before retry-style workflow continues.
+IA MS may emit `IntentAssuranceEvent` with lifecycle outcomes such as `Degraded`, `Failed`, `Terminated`, or `Paused`. IC MS projects the external `Intent.lifecycleStatus` and `IntentReport` state from authorised callbacks, observations, and IA MS assurance outcomes.
+
+After Intent Management submits the selected configuration to the network or change-execution layer, the network or change-execution layer owns execution state. Intent Management does not independently decide apply, pause, resume, failure, or termination.
+
+For `Degraded` outcomes, II MS consumes `IntentAssuranceEvent` as a degraded-state control-loop input. II MS may evaluate current assurance facts, KP candidate facts, policy, and runtime version context, then reselect or re-optimise through the governed `POST /optimisation` path where allowed.
+
+`Failed` does not trigger an II MS retry decision. Retry after failure is triggered through the retrial endpoint or a governed retry workflow. `Terminated` and `Paused` do not trigger II MS control-loop action. `Paused` is projected from network or change-execution state. Actual resume is performed by the network or change-execution layer, not by Intent Management.
 
 ## 7. Logical view:
 
@@ -228,7 +234,7 @@ The callback ingestion path has two approved profiles. Change-execution and appl
 Subscriber callback URLs are subscriber-owned; the platform defines the subscription API, delivery rules, retry behaviour, and TMF-aligned notification payload shape.
 
 ## 9. Process view:
-![view](intent_e2e_sequence.svg)
+
 ### 9.1. Definition-time process:
 
 ```text
@@ -371,13 +377,13 @@ This is a termination request, not physical deletion of the runtime record. IC M
 
 ## 16. Pause and resume runtime intent:
 
-`Paused` is a governed runtime state where the policy remains known but active downstream progression is intentionally suspended. Entry into `Paused` is owned by IC MS through an authorised runtime lifecycle operation or platform policy action; II MS, IA MS, and ICB MS must not independently place an intent into `Paused`. While paused, new semantic interpretation, optimisation, apply, or recovery work should not start unless an authorised resume or recovery workflow explicitly permits it.
+`Paused` is a governed runtime state where the policy remains known but active downstream progression is intentionally suspended. Entry into `Paused` is owned by IC MS through an authorised runtime lifecycle operation or platform policy action; II MS, IA MS, and ICB MS must not independently place an intent into `Paused`. While paused, new semantic interpretation, optimisation, apply, or recovery work should not start unless an authorised network or change-execution resume outcome, or an authorised recovery workflow, explicitly permits it.
 
 Exit from `Paused` returns the runtime intent to an authorised workflow path such as re-evaluation, recovery, termination, or continued monitoring according to IC MS lifecycle rules.
 
 ## 17. Retry failed runtime intent:
 
-A failed, degraded, or paused runtime intent does not automatically imply retry, rollback, reselection, or re-optimisation. IA MS reports assurance truth. IC MS projects it externally. `Paused` requires an authorised resume or recovery decision before retry-style workflow continues.
+A failed, degraded, or paused runtime intent does not automatically imply retry, rollback, reselection, or re-optimisation. IA MS reports assurance truth. IC MS projects it externally. `Paused` requires an authorised network or change-execution resume outcome, or an authorised recovery decision, before further runtime workflow continues.
 
 A retry or recovery action should be initiated by an authorised workflow that can evaluate:
 
