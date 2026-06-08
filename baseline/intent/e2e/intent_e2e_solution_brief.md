@@ -234,7 +234,7 @@ The callback ingestion path has two approved profiles. Change-execution and appl
 Subscriber callback URLs are subscriber-owned; the platform defines the subscription API, delivery rules, retry behaviour, and TMF-aligned notification payload shape.
 
 ## 9. Process view:
-
+![view](intent_e2e_sequence.svg)
 ### 9.1. Definition-time process:
 
 ```text
