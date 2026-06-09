@@ -130,11 +130,6 @@
                         </Array>
                     </mxGeometry>
                 </mxCell>
-                <mxCell id="52" value="Text" style="edgeLabel;html=1;align=center;verticalAlign=middle;resizable=0;points=[];" vertex="1" connectable="0" parent="33">
-                    <mxGeometry x="0.8545" y="-1" relative="1" as="geometry">
-                        <mxPoint x="1" as="offset"/>
-                    </mxGeometry>
-                </mxCell>
                 <mxCell id="36" value="" style="curved=1;endArrow=classic;html=1;exitX=0;exitY=0.5;exitDx=0;exitDy=0;entryX=0;entryY=0;entryDx=0;entryDy=0;strokeWidth=3;fillColor=#e3c800;strokeColor=#B09500;flowAnimation=1;" parent="1" source="2" target="21" edge="1">
                     <mxGeometry width="50" height="50" relative="1" as="geometry">
                         <mxPoint x="230" y="859" as="sourcePoint"/>
@@ -208,6 +203,9 @@
                 </mxCell>
                 <mxCell id="51" value="POST /submissions (4.1)" style="edgeLabel;align=center;verticalAlign=middle;resizable=0;points=[];fontStyle=1;labelBackgroundColor=none;fontColor=default;" vertex="1" connectable="0" parent="1">
                     <mxGeometry x="744.3029013611379" y="693.5364916215115" as="geometry"/>
+                </mxCell>
+                <mxCell id="54" value="Control Loop" style="text;html=1;align=center;verticalAlign=middle;whiteSpace=wrap;rounded=0;fontStyle=1" vertex="1" parent="1">
+                    <mxGeometry x="50" y="470" width="60" height="30" as="geometry"/>
                 </mxCell>
             </root>
         </mxGraphModel>
