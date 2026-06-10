@@ -78,8 +78,8 @@
                 <mxCell id="22" value="Intent Owner" style="text;html=1;align=center;verticalAlign=middle;whiteSpace=wrap;rounded=0;fontStyle=1;fillColor=none;strokeColor=none;fontColor=#0B1220;strokeWidth=2;shadow=0;" parent="1" vertex="1">
                     <mxGeometry x="380" y="155" width="60" height="30" as="geometry"/>
                 </mxCell>
-                <mxCell id="23" value="KP,CRM,Etc" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#FFF3E0;fontColor=#0B1220;strokeColor=default;fontStyle=1;strokeWidth=2;shadow=0;" parent="1" vertex="1">
-                    <mxGeometry x="632" y="494" width="120" height="30" as="geometry"/>
+                <mxCell id="23" value="KP,Inventory,CRM,Etc" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#FFF3E0;fontColor=#0B1220;strokeColor=default;fontStyle=1;strokeWidth=2;shadow=0;" parent="1" vertex="1">
+                    <mxGeometry x="632" y="494" width="158" height="46" as="geometry"/>
                 </mxCell>
                 <mxCell id="25" value="" style="endArrow=classic;startArrow=classic;html=1;exitX=1;exitY=0.5;exitDx=0;exitDy=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;endSize=6;strokeWidth=3;flowAnimation=1;strokeColor=default;fontColor=#0B1220;" parent="1" target="23" edge="1">
                     <mxGeometry width="50" height="50" relative="1" as="geometry">
@@ -111,7 +111,7 @@
                 </mxCell>
                 <mxCell id="32" value="" style="curved=1;endArrow=classic;html=1;strokeWidth=3;flowAnimation=1;fillColor=#0050ef;strokeColor=default;fontColor=#0B1220;" parent="1" edge="1">
                     <mxGeometry width="50" height="50" relative="1" as="geometry">
-                        <mxPoint x="660" y="529" as="sourcePoint"/>
+                        <mxPoint x="670" y="550" as="sourcePoint"/>
                         <mxPoint x="410" y="789" as="targetPoint"/>
                         <Array as="points">
                             <mxPoint x="700" y="749"/>
