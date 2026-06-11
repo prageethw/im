@@ -8,7 +8,7 @@ This document defines the mandatory implementation stack and repository implemen
 
 The stack applies to all service implementation slices unless a later Architecture Decision Record changes the baseline.
 
-This document is tool-neutral. GPT Codex, Claude Code or any other approved coding agent must follow this stack when generating implementation code.
+This document is tool-neutral. Approved coding agents must follow this stack when generating implementation code.
 
 ## 2. Stack baseline:
 
@@ -359,7 +359,7 @@ These technologies may appear in tooling scripts only when explicitly approved a
 
 ## 21. Agent instructions:
 
-GPT Codex, Claude Code or any other approved coding agent must:
+Approved coding agents must:
 
 - read this file before generating service code
 - use Java 21 and Spring Boot 3.x for service implementation
