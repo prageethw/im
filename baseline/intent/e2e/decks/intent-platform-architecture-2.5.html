@@ -1,0 +1,2113 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="slides-format" content="viewport">
+    <title>Intent Platform — Target Software Architecture</title>
+
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=DM+Sans:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+
+    <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
+
+    <style type="text/tailwindcss">
+        @theme {
+            --color-bg: #040d1a;
+            --color-bg-deep: #010610;
+            --color-surface: #0a1628;
+            --color-text: #f0f4ff;
+            --color-text-secondary: #b8c8e8;
+            --color-text-muted: #6e87aa;
+            --color-accent-1: #00B0EB;
+            --color-accent-2: #0078C0;
+            --color-accent-3: #F96449;
+            --color-glass-bg: rgba(0,176,235,0.05);
+            --color-glass-border: rgba(0,176,235,0.15);
+            --color-vignette: rgba(0,0,0,0.5);
+            --font-display: 'Instrument Serif', Georgia, serif;
+            --font-body: 'DM Sans', system-ui, sans-serif;
+        }
+    
+        .telstra-corner-logo {
+            position: fixed;
+            top: 18px;
+            left: 22px;
+            z-index: 120;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            pointer-events: none;
+            opacity: 0.92;
+        }
+        .telstra-corner-logo .t-mark {
+            width: 30px;
+            height: 30px;
+            border-radius: 9px;
+            background: linear-gradient(135deg, #00B0EB 0%, #004D9D 72%);
+            box-shadow: 0 8px 24px rgba(0,176,235,0.22);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 900;
+            font-size: 18px;
+            color: #ffffff;
+            font-family: Arial, sans-serif;
+            letter-spacing: -1px;
+        }
+        .telstra-corner-logo .brand-text {
+            color: #f0f4ff;
+            font-weight: 700;
+            font-size: 0.82rem;
+            letter-spacing: 0.02em;
+            text-shadow: 0 2px 10px rgba(0,0,0,0.35);
+        }
+
+
+    
+        .comp-chip { display: inline-block; padding: 3px 8px; border-radius: 5px; font-size: 0.58rem; font-weight: 500; background: rgba(0,176,235,0.08); border: 1px solid rgba(0,176,235,0.18); color: #b8c8e8; margin: 2px; }
+        .comp-chip-orange { background: rgba(249,100,73,0.08); border-color: rgba(249,100,73,0.18); color: #F96449; }
+    </style>
+
+    <style>
+        :root {
+            --color-bg: #040d1a;
+            --color-text: #f0f4ff;
+            --glow-color-rgb: 0,176,235;
+            --telstra-blue: #004D9D;
+            --telstra-cyan: #00B0EB;
+            --telstra-orange: #F96449;
+        }
+        *, *::before, *::after { box-sizing: border-box; }
+        html, body { background: var(--color-bg); margin: 0; }
+        body { font-family: 'DM Sans', system-ui, sans-serif; color: var(--color-text); overflow: hidden; height: 100vh; width: 100vw; }
+        .deck { width: 100vw; height: 100vh; position: relative; }
+        .slide { position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: var(--color-bg); display: flex; flex-direction: column; align-items: center; justify-content: center; opacity: 0; transform: scale(0.95); transition: opacity 0.7s ease, transform 0.7s ease; pointer-events: none; overflow: hidden; }
+        .slide.active { opacity: 1; transform: scale(1); pointer-events: all; }
+        .slide > .content { position: relative; z-index: 2; width: 100%; max-width: 1100px; padding: clamp(1.5rem, 3.5vw, 3.5rem); }
+        .nav-controls { position: fixed; top: 18px; right: 22px; display: flex; align-items: center; gap: 10px; z-index: 100; background: rgba(0,176,235,0.07); backdrop-filter: blur(12px); padding: 7px 14px; border-radius: 40px; border: 1px solid rgba(0,176,235,0.2); box-shadow: 0 8px 28px rgba(0,0,0,0.18); }
+        .nav-btn { width: 32px; height: 32px; border: none; background: rgba(0,176,235,0.1); color: var(--telstra-cyan); border-radius: 50%; font-size: 1.1rem; cursor: pointer; display: flex; align-items: center; justify-content: center; transition: background 0.3s; }
+        .nav-btn:hover { background: rgba(0,176,235,0.22); }
+        .slide-dots { display: flex; gap: 6px; }
+        .slide-dots .dot { width: 8px; height: 8px; border-radius: 50%; background: rgba(0,176,235,0.25); cursor: pointer; transition: background 0.3s, transform 0.3s; }
+        .slide-dots .dot.active { background: var(--telstra-cyan); transform: scale(1.35); }
+        .slide-counter { font-size: 0.75rem; color: var(--color-text-muted); min-width: 38px; text-align: center; font-family: 'DM Sans', sans-serif; }
+        .reveal { opacity: 0; transform: translateY(20px); }
+
+        /* === Telstra T-mark SVG logo === */
+        .telstra-logo { width: 100px; height: 100px; margin: 0 auto 1.5rem; display: block; }
+        .telstra-wordmark { height: 32px; object-fit: contain; }
+
+        /* === Glow === */
+        .text-glow { text-shadow: 0 0 18px rgba(0,176,235,0.55), 0 0 40px rgba(0,176,235,0.2); }
+        .stat-glow { text-shadow: 0 0 28px rgba(0,176,235,0.65), 0 0 60px rgba(0,176,235,0.25); }
+        @keyframes glow-pulse {
+            0%,100% { text-shadow: 0 0 18px rgba(0,176,235,0.55), 0 0 40px rgba(0,176,235,0.2); }
+            50% { text-shadow: 0 0 30px rgba(0,176,235,0.8), 0 0 60px rgba(0,176,235,0.35); }
+        }
+        .glow-pulse { animation: glow-pulse 3s ease-in-out infinite; }
+        @keyframes float { 0%,100% { transform: translateY(0); } 50% { transform: translateY(-12px); } }
+        @keyframes float-slow { 0%{ transform: translate(0,0) scale(1); } 25%{ transform: translate(60px,-50px) scale(1.12); } 50%{ transform: translate(-40px,40px) scale(0.9); } 75%{ transform: translate(50px,20px) scale(1.08); } 100%{ transform: translate(0,0) scale(1); } }
+        @keyframes float-drift { 0%{ transform: translate(0,0) scale(1) rotate(0deg); } 33%{ transform: translate(-50px,-60px) scale(1.15) rotate(3deg); } 66%{ transform: translate(40px,30px) scale(0.88) rotate(-2deg); } 100%{ transform: translate(0,0) scale(1) rotate(0deg); } }
+
+        .gradient-mesh { position: absolute; inset: 0; z-index: 0; overflow: hidden; pointer-events: none; }
+        .blob { position: absolute; border-radius: 50%; filter: blur(80px); animation: float-slow 10s ease-in-out infinite; }
+        .blob:nth-child(2) { animation: float-drift 14s ease-in-out infinite; }
+        .blob:nth-child(3) { animation: float-slow 18s ease-in-out infinite reverse; }
+
+        .slide::before { content: ''; position: absolute; inset: 0; z-index: 1; pointer-events: none;
+            background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 512 512' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.7' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.04'/%3E%3C/svg%3E");
+            background-repeat: repeat; background-size: 256px; opacity: 0.03; mix-blend-mode: overlay; }
+        .slide::after { content: ''; position: absolute; inset: 0; z-index: 1; pointer-events: none;
+            background: radial-gradient(ellipse at center, transparent 50%, var(--color-vignette) 100%); }
+
+        /* Bar chart */
+        .bar-track { background: rgba(0,176,235,0.08); border-radius: 6px; height: 26px; overflow: hidden; }
+        .bar-fill { height: 100%; border-radius: 6px; background: linear-gradient(90deg, #004D9D, #00B0EB); width: 0%; transition: width 0.7s ease; }
+
+        /* Event pill */
+        .event-pill { display: inline-flex; align-items: center; gap: 6px; padding: 4px 12px; border-radius: 20px; font-size: 0.72rem; font-weight: 600; letter-spacing: 0.03em; border: 1px solid; }
+        .ep-blue { background: rgba(0,176,235,0.12); border-color: rgba(0,176,235,0.3); color: #00B0EB; }
+        .ep-orange { background: rgba(249,100,73,0.12); border-color: rgba(249,100,73,0.3); color: #F96449; }
+        .ep-green { background: rgba(34,197,94,0.12); border-color: rgba(34,197,94,0.3); color: #22c55e; }
+        .ep-purple { background: rgba(167,139,250,0.12); border-color: rgba(167,139,250,0.3); color: #a78bfa; }
+
+        /* Flow arrow */
+        .flow-arrow { color: rgba(0,176,235,0.5); font-size: 1.1rem; display: flex; align-items: center; }
+
+        /* MS Box */
+        .ms-box { border: 1px solid rgba(0,176,235,0.22); border-radius: 8px; padding: 0.65rem 1rem; background: rgba(0,176,235,0.05); transition: transform 0.25s, box-shadow 0.25s; }
+        .ms-box:hover { transform: translateY(-3px); box-shadow: 0 0 18px rgba(0,176,235,0.2); }
+        .ms-box-orange { border-color: rgba(249,100,73,0.3); background: rgba(249,100,73,0.06); }
+        .ms-box-orange:hover { box-shadow: 0 0 16px rgba(249,100,73,0.2); }
+
+        /* Reduced motion */
+        @media (prefers-reduced-motion: reduce) { *, *::before, *::after { animation-duration: 0.01ms !important; transition-duration: 0.2s !important; } }
+    </style>
+
+
+
+<style id="intent-flow-svg-preview-styles">
+.intent-flow-mini {
+    position: absolute;
+    right: 14px;
+    bottom: 14px;
+    width: 56px;
+    height: 66px;
+    z-index: 8;
+    border: 1px solid rgba(0,176,235,0.32);
+    border-radius: 10px;
+    background: rgba(6, 18, 40, 0.72);
+    box-shadow: 0 10px 26px rgba(0,0,0,0.30);
+    overflow: hidden;
+    cursor: zoom-in;
+    user-select: none;
+}
+.intent-flow-mini img {
+    width: 100%;
+    height: 100%;
+    display: block;
+    object-fit: contain;
+    background: #66B2FF;
+}
+.intent-flow-mini-badge {
+    position: absolute;
+    left: 5px;
+    right: 5px;
+    bottom: 5px;
+    padding: 2px 3px;
+    border-radius: 999px;
+    background: rgba(0, 22, 48, 0.72);
+    color: #f0f4ff;
+    font: 700 6.5px/1.1 "DM Sans", Arial, sans-serif;
+    text-align: center;
+    letter-spacing: .2px;
+    pointer-events: none;
+}
+.intent-flow-modal {
+    position: fixed;
+    inset: 0;
+    z-index: 9999;
+    display: none;
+    align-items: center;
+    justify-content: center;
+    padding: 28px;
+    background: rgba(2, 6, 18, 0.76);
+    backdrop-filter: blur(8px);
+}
+.intent-flow-modal.is-open {
+    display: flex;
+}
+.intent-flow-modal-card {
+    position: relative;
+    width: min(86vw, 840px);
+    height: min(88vh, 920px);
+    border: 1px solid rgba(0,176,235,0.35);
+    border-radius: 18px;
+    background: #061228;
+    box-shadow: 0 24px 80px rgba(0,0,0,0.55);
+    overflow: hidden;
+}
+.intent-flow-modal-card img {
+    width: 100%;
+    height: 100%;
+    display: block;
+    object-fit: contain;
+    background: #66B2FF;
+}
+.intent-flow-modal-close {
+    position: absolute;
+    top: 12px;
+    right: 12px;
+    z-index: 2;
+    width: 34px;
+    height: 34px;
+    border: 1px solid rgba(255,255,255,0.24);
+    border-radius: 999px;
+    background: rgba(6,18,40,0.82);
+    color: #ffffff;
+    font: 700 18px/1 Arial, sans-serif;
+    cursor: pointer;
+}
+</style>
+
+
+<style id="deep-dive-ms1-label-offset">
+/* Move the Slide 6 deep-dive eyebrow slightly down from the top edge. */
+.slide-6 .content > .reveal:first-child {
+    margin-top: 28px !important;
+}
+</style>
+
+
+<style id="deep-dive-ms1-tight-spacing">
+/* Tighten Slide 6 spacing so the Microservice 1 content fits cleanly. */
+.slide-6 .grid {
+    gap: 0.65rem !important;
+}
+.slide-6 .ms-box {
+    padding: 0.82rem !important;
+    margin-bottom: 0 !important;
+}
+.slide-6 .mb-5 {
+    margin-bottom: 0.75rem !important;
+}
+.slide-6 .mb-4 {
+    margin-bottom: 0.62rem !important;
+}
+.slide-6 .mb-3 {
+    margin-bottom: 0.48rem !important;
+}
+.slide-6 .space-y-4 > * + * {
+    margin-top: 0.62rem !important;
+}
+.slide-6 .leading-relaxed {
+    line-height: 1.48 !important;
+}
+</style>
+
+
+<style id="id-ms-slide-tight-spacing">
+/* Tighten ID MS slide card spacing so the content fits cleanly. */
+.slide-6 .grid {
+    gap: 0.5rem !important;
+}
+.slide-6 .ms-box {
+    padding: 0.68rem !important;
+    margin-bottom: 0 !important;
+}
+.slide-6 .mb-5 {
+    margin-bottom: 0.55rem !important;
+}
+.slide-6 .mb-4 {
+    margin-bottom: 0.45rem !important;
+}
+.slide-6 .mb-3 {
+    margin-bottom: 0.35rem !important;
+}
+.slide-6 .mb-2 {
+    margin-bottom: 0.25rem !important;
+}
+.slide-6 .mt-5 {
+    margin-top: 0.65rem !important;
+}
+.slide-6 .space-y-4 > * + * {
+    margin-top: 0.45rem !important;
+}
+.slide-6 .leading-relaxed {
+    line-height: 1.38 !important;
+}
+.slide-6 p {
+    line-height: 1.38 !important;
+}
+.slide-6 h2 {
+    margin-bottom: 0.65rem !important;
+}
+</style>
+
+
+<style id="slide17-tight-card-spacing">
+/* Slide 17: reduce gaps and card padding so all content fits cleanly. */
+.slide-17 .grid {
+    gap: 0.6rem !important;
+}
+.slide-17 .ms-box {
+    padding: 0.72rem !important;
+    margin-bottom: 0 !important;
+}
+.slide-17 h2 {
+    margin-bottom: 0.55rem !important;
+}
+.slide-17 p {
+    line-height: 1.36 !important;
+}
+.slide-17 .leading-relaxed {
+    line-height: 1.36 !important;
+}
+.slide-17 .mb-4 {
+    margin-bottom: 0.55rem !important;
+}
+.slide-17 .mb-3 {
+    margin-bottom: 0.4rem !important;
+}
+.slide-17 .mb-2 {
+    margin-bottom: 0.25rem !important;
+}
+.slide-17 .mt-2 {
+    margin-top: 0.35rem !important;
+}
+.slide-17 ul {
+    margin-top: 0 !important;
+    margin-bottom: 0 !important;
+    line-height: 1.34 !important;
+}
+.slide-17 li + li {
+    margin-top: 0.28rem !important;
+}
+.slide-17 [style*="padding:0.5rem"] {
+    padding: 0.38rem !important;
+}
+</style>
+
+
+<style id="security-tech-icon-row-style">
+.tech-icon-row {
+    display: inline-flex !important;
+    flex-wrap: wrap !important;
+    gap: 0.35rem !important;
+    align-items: center !important;
+    margin-left: 0.35rem !important;
+    vertical-align: middle !important;
+}
+.tech-icon {
+    display: inline-flex !important;
+    align-items: center !important;
+    gap: 0.2rem !important;
+    padding: 0.18rem 0.42rem !important;
+    border-radius: 999px !important;
+    border: 1px solid rgba(0,176,235,0.26) !important;
+    background: rgba(0,176,235,0.08) !important;
+    color: #d8e8ff !important;
+    font-size: 0.62rem !important;
+    font-weight: 700 !important;
+    line-height: 1.1 !important;
+    white-space: nowrap !important;
+}
+
+.tech-icon-row-only {
+    margin-left: 0 !important;
+}
+.tech-icon-row-only .tech-icon {
+    font-size: 0.68rem !important;
+    padding: 0.24rem 0.5rem !important;
+}
+
+.infra-icon-grid {
+    display: flex !important;
+    flex-wrap: wrap !important;
+    gap: 0.38rem !important;
+    align-items: center !important;
+}
+.infra-icon-grid .tech-icon {
+    flex: 1 1 22% !important;
+    justify-content: center !important;
+    min-width: 118px !important;
+}
+</style>
+
+
+<style id="springboot-marker-style">
+.springboot-marker {
+    display: inline-flex !important;
+    align-items: center !important;
+    gap: 0.2rem !important;
+    margin-left: 0.45rem !important;
+    padding: 0.16rem 0.42rem !important;
+    border-radius: 999px !important;
+    border: 1px solid rgba(96, 191, 90, 0.38) !important;
+    background: rgba(96, 191, 90, 0.12) !important;
+    color: #c8f7c5 !important;
+    font-size: 0.58rem !important;
+    font-weight: 700 !important;
+    letter-spacing: 0.02em !important;
+    vertical-align: middle !important;
+    white-space: nowrap !important;
+}
+</style>
+
+
+
+
+<style id="telstra-intents-badge-style">
+.telstra-intents-badge {
+    display: inline-flex !important;
+    align-items: center !important;
+    gap: 0.36rem !important;
+    margin-left: 0.45rem !important;
+    padding: 0.18rem 0.52rem !important;
+    border-radius: 999px !important;
+    border: 1px solid rgba(0,176,235,0.40) !important;
+    background: linear-gradient(135deg, rgba(0,176,235,0.16), rgba(0,78,157,0.18)) !important;
+    color: #e8f4ff !important;
+    font-size: 0.62rem !important;
+    font-weight: 800 !important;
+    letter-spacing: 0.01em !important;
+    vertical-align: middle !important;
+    white-space: nowrap !important;
+    box-shadow: 0 6px 16px rgba(0,176,235,0.10) !important;
+}
+.telstra-intents-badge .telstra-mark {
+    color: #00B0EB !important;
+    font-weight: 900 !important;
+    font-size: 0.72rem !important;
+    line-height: 1 !important;
+}
+.telstra-intents-badge .intent-emblem {
+    color: #ffd4ca !important;
+    font-weight: 900 !important;
+    font-size: 0.72rem !important;
+    line-height: 1 !important;
+}
+.telstra-intents-badge-title {
+    margin-left: 0 !important;
+    margin-top: 0.75rem !important;
+    font-size: 0.76rem !important;
+    padding: 0.26rem 0.68rem !important;
+}
+</style>
+
+
+<style id="slide1-telstra-intents-balanced-spacing">
+/* Slide 1: rebalance title and Telstra Intents badge spacing. */
+.slide[data-slide="1"] h1,
+.slide[data-slide="1"] h2 {
+    margin-bottom: 0.85rem !important;
+}
+.slide[data-slide="1"] .telstra-intents-title-wrap {
+    display: flex !important;
+    justify-content: center !important;
+    margin-top: 0 !important;
+    margin-bottom: 1.15rem !important;
+}
+.slide[data-slide="1"] .telstra-intents-badge-title {
+    margin-top: 0 !important;
+    margin-left: 0 !important;
+}
+.slide[data-slide="1"] .telstra-intents-title-wrap + * {
+    margin-top: 0 !important;
+}
+</style>
+
+
+<style id="slide1-target-architecture-balanced-spacing">
+/* Slide 1: move Target Software Architecture down to balance with the Telstra Intents badge. */
+.slide[data-slide="1"] .telstra-intents-title-wrap {
+    margin-bottom: 1.05rem !important;
+}
+.slide[data-slide="1"] .telstra-intents-title-wrap + .reveal,
+.slide[data-slide="1"] .telstra-intents-title-wrap + p,
+.slide[data-slide="1"] .telstra-intents-title-wrap + div {
+    margin-top: 1.05rem !important;
+}
+.slide[data-slide="1"] .target-architecture-subtitle {
+    margin-top: 1.05rem !important;
+}
+</style>
+
+
+<style id="heading-badge-sibling-style">
+.heading-badge-sibling {
+    margin-top: -0.2rem !important;
+    margin-bottom: 0.75rem !important;
+}
+.heading-badge-sibling .telstra-intents-badge {
+    margin-left: 0 !important;
+}
+</style>
+
+<style id="json-shape-slide-style">
+.json-shape-block {
+    margin: 0 !important;
+    padding: 0.62rem !important;
+    border-radius: 10px !important;
+    border: 1px solid rgba(255,255,255,0.12) !important;
+    background: rgba(2,12,28,0.82) !important;
+    color: #d8e8ff !important;
+    font-size: 0.62rem !important;
+    line-height: 1.22 !important;
+    white-space: pre-wrap !important;
+    overflow: hidden !important;
+    font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace !important;
+}
+.json-shape-block.runtime {
+    color: #ffe4de !important;
+}
+</style>
+
+
+<style id="capability-green-chip-style">
+.comp-chip-green {
+    background: rgba(34,197,94,0.12) !important;
+    border-color: rgba(34,197,94,0.36) !important;
+    color: #22c55e !important;
+}
+</style>
+
+
+
+</head>
+<body>
+<!-- Telstra corner brand mark -->
+<div class="telstra-corner-logo" aria-hidden="true">
+    <div class="t-mark">T</div>
+<div class="brand-text">Telstra</div>
+</div>
+
+
+<div class="mouse-spotlight" style="position:fixed;inset:0;z-index:99;pointer-events:none;"></div>
+
+<div class="deck">
+
+<!-- ═══════════════════════════════════════ SLIDE 1: TITLE ═══════════════════════════════════════ -->
+<div class="slide slide-1 active" data-slide="1">
+    <div class="gradient-mesh">
+        <div class="blob" style="width:600px;height:600px;top:-150px;right:-120px;background:#0078C0;opacity:0.18;"></div>
+        <div class="blob" style="width:350px;height:350px;bottom:-100px;left:-80px;background:#00B0EB;opacity:0.13;"></div>
+        <div class="blob" style="width:220px;height:220px;top:45%;left:12%;background:#F96449;opacity:0.09;"></div>
+    </div>
+    <canvas class="particle-canvas" style="position:absolute;inset:0;z-index:1;"></canvas>
+    <div class="content text-center">
+        <!-- Telstra T-mark inline SVG -->
+        <svg class="telstra-logo reveal" viewBox="0 0 296 338" fill="none" xmlns="http://www.w3.org/2000/svg" style="animation: float 3s ease-in-out infinite; filter: drop-shadow(0 0 18px rgba(0,176,235,0.6));">
+            <ellipse cx="148" cy="185" rx="135" ry="135" fill="#00B0EB" opacity="0.9"/>
+            <rect x="108" y="60" width="80" height="200" rx="8" fill="#004D9D"/>
+            <rect x="60" y="60" width="176" height="40" rx="8" fill="#004D9D"/>
+        </svg>
+        <h1 class="font-display text-[clamp(2.6rem,5.5vw,4.8rem)] font-bold tracking-tight mb-3 reveal" style="background: linear-gradient(135deg, #00B0EB, #f0f4ff, #00B0EB); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;">Intent Platform</h1>
+        <div class="reveal telstra-intents-title-wrap"><span class="telstra-intents-badge telstra-intents-badge-title" title="Telstra Intents platform"><span class="telstra-mark">T</span><span class="intent-emblem">🎯↻🛡️</span><span>Telstra Intents</span></span></div>
+        <p class="text-[clamp(1rem,1.6vw,1.3rem)] font-light tracking-[5px] uppercase mb-2 reveal target-architecture-subtitle" style="color:#6e87aa;">Target Software Architecture</p>
+        <p class="text-[clamp(0.75rem,1.1vw,0.95rem)] reveal" style="color:#3a5a7a; letter-spacing:2px;">TMF 921 · Intent Architecture 3.6 Baseline · June 2026</p>
+    </div>
+</div>
+
+<!-- ═══════════════════════════════════════ SLIDE 1: BUSINESS CONTEXT ═══════════════════════════════════════ -->
+<div class="slide slide-2" data-slide="2">
+    <div class="gradient-mesh">
+        <div class="blob" style="width:400px;height:400px;top:-100px;right:-80px;background:#0078C0;opacity:0.1;"></div>
+        <div class="blob" style="width:280px;height:280px;bottom:-70px;left:-60px;background:#00B0EB;opacity:0.08;"></div>
+    </div>
+    <div class="content">
+        <div class="flex items-center gap-3 mb-5 reveal">
+            <svg viewBox="0 0 296 338" fill="none" xmlns="http://www.w3.org/2000/svg" style="width:28px;height:28px;flex-shrink:0;">
+                <ellipse cx="148" cy="185" rx="135" ry="135" fill="#00B0EB" opacity="0.85"/>
+                <rect x="108" y="60" width="80" height="200" rx="6" fill="#004D9D"/>
+                <rect x="60" y="60" width="176" height="40" rx="6" fill="#004D9D"/>
+            </svg>
+            <span class="text-xs tracking-[4px] uppercase" style="color:#6e87aa;">Why We're Building This</span>
+        </div>
+        <h2 class="font-display text-[clamp(1.8rem,3.8vw,2.8rem)] font-bold mb-6 reveal" style="color:#f0f4ff;">Outcome-Driven Service<br><em style="color:#00B0EB;">Instead of Low-Level Commands</em></h2>
+        <div class="grid grid-cols-2 gap-5">
+            <div class="ms-box reveal" style="border-left:4px solid #00B0EB;">
+                <div class="text-xs tracking-widest uppercase mb-2" style="color:#00B0EB;">The Problem Today</div>
+                <p class="text-sm leading-relaxed" style="color:#b8c8e8;">Network operators manually translate service goals into device-level configs — error-prone, slow, and hard to govern at scale across Telstra's 22M+ customer services.</p>
+            </div>
+            <div class="ms-box reveal" style="border-left:4px solid #F96449;">
+                <div class="text-xs tracking-widest uppercase mb-2" style="color:#F96449;">The Opportunity</div>
+                <p class="text-sm leading-relaxed" style="color:#b8c8e8;">Express desired outcomes — e.g. <em>"99.99% availability for selected production network slices"</em> — and let the platform interpret, resolve, apply, and assure automatically.</p>
+            </div>
+            <div class="ms-box reveal" style="border-left:4px solid #00B0EB;">
+                <div class="text-xs tracking-widest uppercase mb-2" style="color:#00B0EB;">Strategic Alignment</div>
+                <p class="text-sm leading-relaxed" style="color:#b8c8e8;">Aligns with TMF 921 Intent Management v5.0 standard, enabling interoperability with industry partners, OSS and BSS systems, and future AI control loops.</p>
+            </div>
+            <div class="ms-box reveal" style="border-left:4px solid #F96449;">
+                <div class="text-xs tracking-widest uppercase mb-2" style="color:#F96449;">First Use Case</div>
+                <p class="text-sm leading-relaxed" style="color:#b8c8e8;">Critical regulated enterprise connectivity — selected production network slices — where uptime guarantees, latency SLAs, and automated remediation are non-negotiable.</p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- ═══════════════════════════════════════ SLIDE 2: PLATFORM OVERVIEW ═══════════════════════════════════════ -->
+
+<div class="slide slide-ea1" data-slide="3">
+    <div class="gradient-mesh">
+        <div class="blob" style="width:420px;height:420px;top:-110px;right:-90px;background:#0078C0;opacity:0.13;"></div>
+        <div class="blob" style="width:300px;height:300px;bottom:-80px;left:-60px;background:#004D9D;opacity:0.1;"></div>
+        <div class="blob" style="width:200px;height:200px;top:40%;left:10%;background:#F96449;opacity:0.07;"></div>
+    </div>
+    <div class="content">
+        <div style="font-size:0.68rem;letter-spacing:4px;text-transform:uppercase;color:#6e87aa;" class="reveal">Reference View</div>
+        <h2 class="reveal" style="font-family:'Instrument Serif',Georgia,serif;font-size:clamp(1.5rem,3.2vw,2.4rem);font-weight:bold;margin-bottom:0.25rem;color:#f0f4ff;">Intent Management Enabler (T7)- Capability Map</h2>
+        <p class="reveal" style="font-size:0.82rem;color:#6e87aa;margin-bottom:1.2rem;">TMF 921 functional component view and dependent T7 platform entities</p>
+        <div class="reveal" style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:12px;">
+            <div class="ms-box" style="border-left:4px solid #00B0EB;position:relative;padding-top:1.1rem;">
+                <div style="position:absolute;top:7px;right:9px;padding:2px 7px;border-radius:999px;background:rgba(167,139,250,0.14);border:1px solid rgba(167,139,250,0.34);color:#cfc6ff;font-size:0.52rem;font-weight:800;letter-spacing:0.03em;text-transform:uppercase;line-height:1.1;">ID MS (Intent Definition)</div>
+                <div style="font-size:0.68rem;letter-spacing:3px;text-transform:uppercase;color:#00B0EB;margin-bottom:6px;font-weight:600;">Intent Registry</div>
+                <div style="display:flex;flex-wrap:wrap;gap:3px;">
+                    <span class="comp-chip">Intent Specification Management</span>
+                    <span class="comp-chip">IMC Capability Specification</span>
+                    <span class="comp-chip">Intent-Capability Association</span>
+                    <span class="comp-chip comp-chip-green">Intent Model and Ontology</span>
+                </div>
+            </div>
+            <div style="position:relative;">
+                <div style="position:absolute;top:-30px;left:9px;z-index:4;padding:2px 7px;border-radius:999px;background:rgba(34,197,94,0.16);border:1px solid rgba(34,197,94,0.40);color:#22c55e;font-size:0.52rem;font-weight:800;letter-spacing:0.03em;text-transform:uppercase;line-height:1.1;box-shadow:0 6px 14px rgba(34,197,94,0.10);">FY27</div>
+                <div class="ms-box" style="border-left:4px solid #00B0EB;position:relative;padding-top:1.1rem;height:100%;">
+                    <div style="position:absolute;top:7px;right:9px;padding:2px 7px;border-radius:999px;background:rgba(167,139,250,0.14);border:1px solid rgba(167,139,250,0.34);color:#cfc6ff;font-size:0.52rem;font-weight:800;letter-spacing:0.03em;text-transform:uppercase;line-height:1.1;">IC MS (Intent Controller)</div>
+                    <div style="font-size:0.68rem;letter-spacing:3px;text-transform:uppercase;color:#00B0EB;margin-bottom:6px;font-weight:600;">Intent Capture and Handling</div>
+                    <div style="font-size:0.6rem;color:#6e87aa;margin-bottom:4px;">Interfaces</div>
+                    <div style="display:flex;flex-wrap:wrap;gap:3px;margin-bottom:6px;">
+                        <span class="comp-chip">Design Time API (TMF921)</span>
+                        <span class="comp-chip comp-chip-green">Runtime API (TMF921)</span>
+                        <span class="comp-chip comp-chip-green">NLP Proxy</span>
+                    </div>
+                    <span class="comp-chip comp-chip-green">Intent Request Validation</span>
+                </div>
+            </div>
+        </div>
+        <div class="reveal" style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:12px;">
+            <div class="ms-box" style="border-left:4px solid #00B0EB;position:relative;padding-top:1.1rem;">
+                <div style="position:absolute;top:7px;right:9px;padding:2px 7px;border-radius:999px;background:rgba(167,139,250,0.14);border:1px solid rgba(167,139,250,0.34);color:#cfc6ff;font-size:0.52rem;font-weight:800;letter-spacing:0.03em;text-transform:uppercase;line-height:1.1;">II MS (Intent Intelligence)</div>
+                <div style="font-size:0.68rem;letter-spacing:3px;text-transform:uppercase;color:#00B0EB;margin-bottom:6px;font-weight:600;">Intelligence and Reasoning Engine</div>
+                <div style="display:flex;flex-wrap:wrap;gap:3px;">
+                    <span class="comp-chip">Feasibility Assessment</span>
+                    <span class="comp-chip">Conflict Management</span>
+                    <span class="comp-chip comp-chip-green">Knowledge and Context Consumption</span>
+                    <span class="comp-chip comp-chip-green">Probing and Negotiation</span>
+                    <span class="comp-chip comp-chip-green">Decomposition</span>
+                    <span class="comp-chip comp-chip-green">Inventory Awareness</span>
+                    <span class="comp-chip comp-chip-green">Target Model Generation</span>
+                    <span class="comp-chip comp-chip-green">Target Model Evaluation</span>
+                    <span class="comp-chip comp-chip-green">Execution Plan Generation</span>
+                    <span class="comp-chip comp-chip-green">Observability Awareness and Trigger</span>
+                </div>
+            </div>
+            <div class="ms-box" style="border-left:4px solid #00B0EB;position:relative;padding-top:1.1rem;">
+                <div style="position:absolute;top:7px;right:9px;padding:2px 7px;border-radius:999px;background:rgba(167,139,250,0.14);border:1px solid rgba(167,139,250,0.34);color:#cfc6ff;font-size:0.52rem;font-weight:800;letter-spacing:0.03em;text-transform:uppercase;line-height:1.1;">IA MS (Intent Assurance)</div>
+                <div style="font-size:0.68rem;letter-spacing:3px;text-transform:uppercase;color:#00B0EB;margin-bottom:6px;font-weight:600;">Intent Compliance and Reporting</div>
+                <div style="display:flex;flex-wrap:wrap;gap:3px;">
+                    <span class="comp-chip comp-chip-green">Intent Lifecycle and State Management</span>
+                    <span class="comp-chip comp-chip-green">Explainability and Traceability</span>
+                    <span class="comp-chip comp-chip-green">Compliance Evaluation</span>
+                    <span class="comp-chip comp-chip-green">Intent Observability</span>
+                    <span class="comp-chip comp-chip-green">Compliance and Assurance Reporting</span>
+                    <span class="comp-chip comp-chip-green">Intent Status Reporting</span>
+                </div>
+                <div style="margin-top:8px;padding:6px 10px;border-radius:6px;background:rgba(34,197,94,0.10);border:1px solid rgba(34,197,94,0.30);display:flex;align-items:center;gap:6px;">
+                    <span style="font-size:0.62rem;color:#22c55e;font-weight:700;">Intent Inventory (persistent store)</span>
+                </div>
+            </div>
+        </div>
+        <div class="reveal" style="border:1px solid rgba(249,100,73,0.25);border-radius:10px;padding:1.1rem 1rem 0.7rem;background:rgba(249,100,73,0.04);position:relative;">
+            <div style="position:absolute;top:7px;right:9px;padding:2px 7px;border-radius:999px;background:rgba(249,100,73,0.14);border:1px solid rgba(249,100,73,0.34);color:#ffd4ca;font-size:0.52rem;font-weight:800;letter-spacing:0.03em;text-transform:uppercase;line-height:1.1;">External systems(Tx)</div>
+            <div style="font-size:0.68rem;letter-spacing:3px;text-transform:uppercase;color:#F96449;margin-bottom:8px;font-weight:600;">Dependent T7 Platform Entities</div>
+            <div style="display:flex;flex-wrap:wrap;gap:6px;">
+                <span class="comp-chip comp-chip-green">T7 Knowledge Plane Enabler</span>
+                <span class="comp-chip comp-chip-green">T7 Mathematical Optimisation Enabler</span>
+                <span class="comp-chip comp-chip-green">T7 Observability Enabler</span>
+                <span class="comp-chip comp-chip-green">T7 Service and Resource — Inventory Management Enabler</span>
+                <span class="comp-chip comp-chip-green">T7 Service and Resource — Orchestration Management Enabler</span>
+                <span class="comp-chip comp-chip-green">T7 Workflow Enabler</span>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="slide slide-ea2" data-slide="4">
+    <div class="gradient-mesh">
+        <div class="blob" style="width:400px;height:400px;top:-100px;left:-80px;background:#004D9D;opacity:0.14;"></div>
+        <div class="blob" style="width:300px;height:300px;bottom:-70px;right:-60px;background:#F96449;opacity:0.08;"></div>
+        <div class="blob" style="width:220px;height:220px;top:45%;right:15%;background:#00B0EB;opacity:0.07;"></div>
+    </div>
+    <div class="content">
+        <div class="reveal" style="display:flex;align-items:center;gap:8px;margin-bottom:6px;">
+            <div style="font-size:0.68rem;letter-spacing:4px;text-transform:uppercase;color:#6e87aa;">FY27 Scope</div>
+            
+        </div>
+        <h2 class="reveal" style="font-family:'Instrument Serif',Georgia,serif;font-size:clamp(1.5rem,3.2vw,2.4rem);font-weight:bold;margin-bottom:0.2rem;color:#f0f4ff;">FY27 Scope and Foundation Approach</h2>
+        <p class="reveal" style="font-size:0.82rem;color:#6e87aa;margin-bottom:1rem;">Controlled, deterministic implementation focused on single-use-case intents</p>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
+            <div class="ms-box reveal" style="border-left:4px solid #00B0EB;">
+                <div style="font-size:0.68rem;letter-spacing:3px;text-transform:uppercase;color:#00B0EB;margin-bottom:8px;font-weight:600;">FY27 Functional Features</div>
+                <div style="display:flex;flex-direction:column;gap:6px;">
+                    <div style="display:flex;gap:6px;align-items:flex-start;"><span style="color:#00B0EB;font-size:0.7rem;font-weight:700;flex-shrink:0;">&bull;</span><div style="font-size:0.68rem;color:#b8c8e8;"><strong style="color:#f0f4ff;">Intent Submission:</strong> Ability to support natural language and TMF921 Intent</div></div>
+                    <div style="display:flex;gap:6px;align-items:flex-start;"><span style="color:#00B0EB;font-size:0.7rem;font-weight:700;flex-shrink:0;">&bull;</span><div style="font-size:0.68rem;color:#b8c8e8;"><strong style="color:#f0f4ff;">Intent Processing:</strong> The Intent Manager validates and decomposes submitted intent</div></div>
+                    <div style="display:flex;gap:6px;align-items:flex-start;"><span style="color:#00B0EB;font-size:0.7rem;font-weight:700;flex-shrink:0;">&bull;</span><div style="font-size:0.68rem;color:#b8c8e8;"><strong style="color:#f0f4ff;">Target State Realisation:</strong> The Intent Manager determines the target state model</div></div>
+                    <div style="display:flex;gap:6px;align-items:flex-start;"><span style="color:#00B0EB;font-size:0.7rem;font-weight:700;flex-shrink:0;">&bull;</span><div style="font-size:0.68rem;color:#b8c8e8;"><strong style="color:#f0f4ff;">Monitoring and Feedback (Basic Loop):</strong> Monitoring only, no automated re-optimisation</div></div>
+                    <div style="display:flex;gap:6px;align-items:flex-start;"><span style="color:#00B0EB;font-size:0.7rem;font-weight:700;flex-shrink:0;">&bull;</span><div style="font-size:0.68rem;color:#b8c8e8;"><strong style="color:#f0f4ff;">Traceability:</strong> Persist information of all stages of Intent into the Knowledge Plane</div></div>
+                </div>
+            </div>
+            <div class="ms-box reveal" style="border-left:4px solid #00B0EB;">
+                <div style="font-size:0.68rem;letter-spacing:3px;text-transform:uppercase;color:#00B0EB;margin-bottom:8px;font-weight:600;">Dependent T7 Interactions</div>
+                <div style="display:flex;flex-direction:column;gap:6px;">
+                    <div style="display:flex;gap:6px;align-items:flex-start;"><span style="color:#00B0EB;font-size:0.7rem;font-weight:700;flex-shrink:0;">&bull;</span><div style="font-size:0.68rem;color:#b8c8e8;"><strong style="color:#f0f4ff;">Knowledge Plane</strong> for context, reasoning and target outcome</div></div>
+                    <div style="display:flex;gap:6px;align-items:flex-start;"><span style="color:#00B0EB;font-size:0.7rem;font-weight:700;flex-shrink:0;">&bull;</span><div style="font-size:0.68rem;color:#b8c8e8;"><strong style="color:#f0f4ff;">Observability</strong> to monitor observable intent metrics</div></div>
+                    <div style="display:flex;gap:6px;align-items:flex-start;"><span style="color:#00B0EB;font-size:0.7rem;font-weight:700;flex-shrink:0;">&bull;</span><div style="font-size:0.68rem;color:#b8c8e8;"><strong style="color:#f0f4ff;">Optimisation</strong> for deriving the optimal path/solution</div></div>
+                    <div style="display:flex;gap:6px;align-items:flex-start;"><span style="color:#00B0EB;font-size:0.7rem;font-weight:700;flex-shrink:0;">&bull;</span><div style="font-size:0.68rem;color:#b8c8e8;"><strong style="color:#f0f4ff;">Inventory</strong> for detailed service/resource information</div></div>
+                    <div style="display:flex;gap:6px;align-items:flex-start;"><span style="color:#00B0EB;font-size:0.7rem;font-weight:700;flex-shrink:0;">&bull;</span><div style="font-size:0.68rem;color:#b8c8e8;"><strong style="color:#f0f4ff;">Orchestration/Workflow</strong> for execution</div></div>
+                </div>
+            </div>
+            <div class="ms-box reveal" style="border-left:4px solid #00B0EB;">
+                <div style="font-size:0.68rem;letter-spacing:3px;text-transform:uppercase;color:#00B0EB;margin-bottom:8px;font-weight:600;">Tenant Value</div>
+                <div style="display:flex;flex-direction:column;gap:6px;">
+                    <div style="display:flex;gap:6px;align-items:flex-start;"><span style="color:#00B0EB;font-size:0.7rem;font-weight:700;flex-shrink:0;">&bull;</span><div style="font-size:0.68rem;color:#b8c8e8;">Tenants can <strong style="color:#f0f4ff;">submit intent</strong> via Natural Language (NLP Proxy) or standard TMF921 northbound API</div></div>
+                    <div style="display:flex;gap:6px;align-items:flex-start;"><span style="color:#00B0EB;font-size:0.7rem;font-weight:700;flex-shrink:0;">&bull;</span><div style="font-size:0.68rem;color:#b8c8e8;">Tenants can <strong style="color:#f0f4ff;">express desired outcomes</strong>, including goals, constraints, expectations, and target service/resource</div></div>
+                    <div style="display:flex;gap:6px;align-items:flex-start;"><span style="color:#00B0EB;font-size:0.7rem;font-weight:700;flex-shrink:0;">&bull;</span><div style="font-size:0.68rem;color:#b8c8e8;">Tenants can <strong style="color:#f0f4ff;">define and manage intent types</strong>, including configuring intent parameters and monitoring their execution over time</div></div>
+                    <div style="display:flex;gap:6px;align-items:flex-start;"><span style="color:#00B0EB;font-size:0.7rem;font-weight:700;flex-shrink:0;">&bull;</span><div style="font-size:0.68rem;color:#b8c8e8;">Tenants <strong style="color:#f0f4ff;">gain basic visibility of outcomes</strong> through monitoring and observability</div></div>
+                </div>
+            </div>
+            <div class="ms-box ms-box-orange reveal" style="border-left:4px solid #F96449;">
+                <div style="font-size:0.68rem;letter-spacing:3px;text-transform:uppercase;color:#F96449;margin-bottom:8px;font-weight:600;">Out of Scope for FY27</div>
+                <div style="font-size:0.68rem;color:#b8c8e8;margin-bottom:8px;font-style:italic;">Intent Handling — Foundation</div>
+                <div style="display:flex;flex-direction:column;gap:6px;">
+                    <div style="display:flex;gap:6px;align-items:flex-start;"><span style="color:#F96449;font-size:0.7rem;font-weight:700;flex-shrink:0;">&cross;</span><div style="font-size:0.68rem;color:#b8c8e8;">No intent conflict resolution</div></div>
+                    <div style="display:flex;gap:6px;align-items:flex-start;"><span style="color:#F96449;font-size:0.7rem;font-weight:700;flex-shrink:0;">&cross;</span><div style="font-size:0.68rem;color:#b8c8e8;">No multi-intent prioritisation</div></div>
+                    <div style="display:flex;gap:6px;align-items:flex-start;"><span style="color:#F96449;font-size:0.7rem;font-weight:700;flex-shrink:0;">&cross;</span><div style="font-size:0.68rem;color:#b8c8e8;">No feasibility assessment</div></div>
+                    <div style="display:flex;gap:6px;align-items:flex-start;"><span style="color:#F96449;font-size:0.7rem;font-weight:700;flex-shrink:0;">&cross;</span><div style="font-size:0.68rem;color:#b8c8e8;">No negotiation between intents</div></div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+<div class="slide slide-3" data-slide="5">
+    <div class="gradient-mesh">
+        <div class="blob" style="width:380px;height:380px;top:-90px;right:-70px;background:#004D9D;opacity:0.15;"></div>
+        <div class="blob" style="width:260px;height:260px;bottom:-60px;left:-50px;background:#00B0EB;opacity:0.09;"></div>
+    </div>
+    <canvas class="particle-canvas-ambient" style="position:absolute;inset:0;z-index:1;"></canvas>
+    <div class="content">
+        <div class="text-xs tracking-[4px] uppercase mb-2 reveal" style="color:#6e87aa;">High-Level Platform View</div>
+        <h2 class="font-display text-[clamp(1.6rem,3.5vw,2.6rem)] font-bold mb-5 reveal" style="color:#f0f4ff;">Intent Platform — High-Level Architecture</h2>
+        <p class="reveal" style="font-size:0.72rem;color:#6e87aa;font-style:italic;margin-bottom:0.5rem;">Software realisation of the Intent Management Enabler (T7) functional architecture</p>
+
+<!-- Architecture layers diagram -->
+        <div class="reveal" style="display:flex;flex-direction:column;gap:10px;">
+            <!-- External layer, NGW boundary and external systems -->
+            <div style="display:grid;grid-template-columns:0.78fr 0.45fr 0.95fr;gap:8px;align-items:stretch;">
+                <div style="border:1px solid rgba(0,176,235,0.22);border-radius:10px;padding:0.55rem 0.7rem;background:rgba(0,176,235,0.035);">
+                    <div class="text-[0.62rem] tracking-widest uppercase mb-1" style="color:#6e87aa;">External consumer layer (Ex and Tx)</div>
+                    <div class="ms-box" style="text-align:center;padding:0.48rem 0.45rem;"><div style="font-size:1.05rem;">🏥</div><div class="text-[0.65rem] font-semibold mt-1" style="color:#b8c8e8;">OEX and BSS Consumer</div></div>
+                </div>
+                <div style="border:2px solid rgba(249,100,73,0.72);border-radius:10px;padding:0.55rem 0.55rem;background:linear-gradient(180deg,rgba(249,100,73,0.24),rgba(249,100,73,0.10));box-shadow:0 8px 22px rgba(249,100,73,0.12);display:flex;flex-direction:column;justify-content:center;text-align:center;">
+                    <div class="text-[0.62rem] tracking-widest uppercase mb-1" style="color:#F96449;">Gateway</div>
+                    <div style="font-size:1.05rem;">🌐</div>
+                    <div class="text-[0.65rem] font-semibold mt-1" style="color:#ffffff;">NGW</div>
+                    <div class="text-[0.55rem] mt-1" style="color:#ffd4ca;">TMF ingress boundary</div>
+                </div>
+                <div style="border:1px solid rgba(249,100,73,0.26);border-radius:10px;padding:0.55rem 0.7rem;background:rgba(249,100,73,0.045);">
+                    <div class="text-[0.62rem] tracking-widest uppercase mb-1" style="color:#F96449;">External systems(Tx)</div>
+                    <div class="ms-box ms-box-orange" style="text-align:center;padding:0.48rem 0.45rem;"><div style="font-size:1.05rem;">🔁</div><div class="text-[0.65rem] font-semibold mt-1" style="color:#b8c8e8;">Execution and Decision Systems</div><div class="text-[0.54rem] mt-1" style="color:#6e87aa;">Network execution, inventory, CRM, MyID, policy, optimiser</div></div>
+                </div>
+            </div>
+            <!-- Intent Platform -->
+            <div style="border:2px solid rgba(0,176,235,0.35);border-radius:10px;padding:0.7rem 1rem;background:rgba(0,78,157,0.09);">
+                <div class="text-xs tracking-widest uppercase mb-2" style="color:#00B0EB; font-weight:600;">Intent Enabler Platform-T7 (5 Microservices) <span class="telstra-intents-badge" title="Platform badge"><span class="telstra-mark">T</span><span class="intent-emblem">🎯↻🛡️</span><span>Telstra Intents</span></span> <span class="springboot-marker" title="Microservices implemented with Spring Boot">🍃 Spring Boot</span></div>
+                <div style="display:flex;gap:8px;flex-wrap:wrap;">
+                    <div class="ms-box" style="flex:1;text-align:center;padding:0.5rem 0.4rem;"><div class="text-[0.63rem] font-bold" style="color:#00B0EB;">ID MS (Intent Definition)</div><div class="text-[0.6rem]" style="color:#6e87aa;">Librarian</div></div>
+                    <div class="ms-box" style="flex:1;text-align:center;padding:0.5rem 0.4rem;"><div class="text-[0.63rem] font-bold" style="color:#00B0EB;">IC MS (Intent Controller)</div><div class="text-[0.6rem]" style="color:#6e87aa;">Controller</div></div>
+                    <div class="ms-box" style="flex:1;text-align:center;padding:0.5rem 0.4rem;"><div class="text-[0.63rem] font-bold" style="color:#00B0EB;">II MS (Intent Intelligence)</div><div class="text-[0.6rem]" style="color:#6e87aa;">Brain</div></div>
+                    <div class="ms-box ms-box-orange" style="flex:1;text-align:center;padding:0.5rem 0.4rem;"><div class="text-[0.63rem] font-bold" style="color:#F96449;">ICB MS (Intent Callback Broker)</div><div class="text-[0.6rem]" style="color:#6e87aa;">Dispatcher</div></div>
+                    <div class="ms-box" style="flex:1;text-align:center;padding:0.5rem 0.4rem;"><div class="text-[0.63rem] font-bold" style="color:#00B0EB;">IA MS (Intent Assurance)</div><div class="text-[0.6rem]" style="color:#6e87aa;">Guardian</div></div>
+                </div>
+            </div>
+            <div class="text-sm mb-4 reveal" style="color:#f0f4ff;font-weight:600;">Friendly names: Librarian keeps specifications; Controller owns runtime API and projection; Brain resolves meaning and configuration; Dispatcher relays feedback; Guardian emits IntentAssuranceEvent.</div>
+            <!-- Infrastructure -->
+            <div style="border:1px solid rgba(0,176,235,0.15);border-radius:10px;padding:0.6rem 1rem;background:rgba(0,0,0,0.15);">
+                <div class="text-xs tracking-widest uppercase mb-2" style="color:#6e87aa;">Platform Infrastructure</div>
+                <div class="infra-icon-grid" aria-label="Platform infrastructure support technologies">
+                    <span class="tech-icon" title="Kubernetes runtime">☸️ Kubernetes</span>
+                    <span class="tech-icon" title="Kafka event bus">🧭 Kafka</span>
+                    <span class="tech-icon" title="PostgreSQL database">🐘 PostgreSQL</span>
+                    <span class="tech-icon" title="Redis caching tier">⚡ Redis</span>
+                    <span class="tech-icon" title="Secrets management with Vault">🔐 Vault</span>
+                    <span class="tech-icon" title="CI/CD">⚙️ CI/CD</span>
+                    <span class="tech-icon" title="Service Mesh">🕸️ Service Mesh</span>
+                    <span class="tech-icon" title="Monitoring, logging and observability">📈 Observability</span>
+                </div>
+                <div class="text-[0.68rem] mt-3" style="color:#f0f4ff;font-weight:600;line-height:1.35;background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.12);border-radius:8px;padding:0.5rem 0.65rem;">Platform services and supporting technologies should be selected so future regional redundancy remains possible. Initial rollout may be single-region, but service boundaries, persistence, event topics, idempotency, replay behaviour, and deployment patterns should not block active-passive or regional failover later. This keeps the platform on a path toward stronger resilience without overcommitting the first release.</div>
+                <div class="text-[0.62rem] mt-2" style="color:#b8c8e8;background:rgba(0,176,235,0.045);border:1px solid rgba(0,176,235,0.14);border-radius:8px;padding:0.5rem 0.65rem;">
+                    <strong style="color:#f0f4ff;">Design choices that preserve regional resilience:</strong>
+                    stateless service boundaries where practical; per-service persistence with backup, restore and replication options; outbox and idempotent event handling; stable event identity and replayable Kafka topics; configurable external endpoints and callback routes; deployment patterns that can evolve from single-region to active-passive failover.
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- ═══════════════════════════════════════ SLIDE 3: TWO PHASES ═══════════════════════════════════════ -->
+
+<div class="text-[10px] mt-2 reveal" style="color:#6e87aa;">NGW is shown between external consumers and the Intent Platform as the controlled TMF ingress boundary.</div><div class="slide slide-4" data-slide="6">
+    <div class="gradient-mesh">
+        <div class="blob" style="width:420px;height:420px;top:-100px;left:-80px;background:#004D9D;opacity:0.14;"></div>
+        <div class="blob" style="width:300px;height:300px;bottom:-70px;right:-60px;background:#F96449;opacity:0.08;"></div>
+    </div>
+    <div class="content">
+        <div class="text-xs tracking-[4px] uppercase mb-2 reveal" style="color:#6e87aa;">Two Distinct Phases</div>
+        <h2 class="font-display text-[clamp(1.6rem,3.5vw,2.5rem)] font-bold mb-5 reveal" style="color:#f0f4ff;">Definition-Time vs Runtime</h2>
+        <div class="grid grid-cols-2 gap-6">
+            <!-- Definition Time -->
+            <div class="reveal" style="border:1px solid rgba(0,176,235,0.25);border-radius:12px;padding:1.2rem;background:rgba(0,176,235,0.04);">
+                <div class="flex items-center gap-2 mb-3">
+                    <div style="width:32px;height:32px;border-radius:50%;background:rgba(0,176,235,0.2);display:flex;align-items:center;justify-content:center;font-size:1rem;">📋</div>
+                    <div>
+                        <div class="font-semibold text-sm" style="color:#00B0EB;">Definition-Time</div>
+                        <div class="text-xs" style="color:#6e87aa;">Governed by ID MS, the Librarian</div>
+                    </div>
+                </div>
+                <div style="display:flex;flex-direction:column;gap:7px;">
+                    <div style="display:flex;align-items:center;gap:8px;padding:5px 8px;background:rgba(0,0,0,0.2);border-radius:6px;" class="text-xs">
+                        <span style="color:#00B0EB;">1.</span><span style="color:#b8c8e8;">Author DRAFT <code style="color:#00B0EB;">IntentSpecification</code></span>
+                    </div>
+                    <div style="display:flex;align-items:center;gap:8px;padding:5px 8px;background:rgba(0,0,0,0.2);border-radius:6px;" class="text-xs">
+                        <span style="color:#00B0EB;">2.</span><span style="color:#b8c8e8;">Define expression contract, schema, targets, constraints, preferences</span>
+                    </div>
+                    <div style="display:flex;align-items:center;gap:8px;padding:5px 8px;background:rgba(0,0,0,0.2);border-radius:6px;" class="text-xs">
+                        <span style="color:#00B0EB;">3.</span><span style="color:#b8c8e8;">Validate governance, policy, ownership, and compatibility</span>
+                    </div>
+                    <div style="display:flex;align-items:center;gap:8px;padding:5px 8px;background:rgba(0,0,0,0.2);border-radius:6px;" class="text-xs">
+                        <span style="color:#00B0EB;">4.</span><span style="color:#b8c8e8;">Activate DRAFT → <strong style="color:#22c55e;">ACTIVE</strong> official version</span>
+                    </div>
+                    <div style="display:flex;align-items:center;gap:8px;padding:5px 8px;background:rgba(0,0,0,0.2);border-radius:6px;" class="text-xs">
+                        <span style="color:#00B0EB;">5.</span><span style="color:#b8c8e8;">New version in the same spec family becomes <strong style="color:#22c55e;">ACTIVE</strong>; previous <strong style="color:#F96449;">ACTIVE</strong> version becomes <strong style="color:#F96449;">RETIRED</strong></span>
+                    </div>
+                    <div style="display:flex;align-items:center;gap:8px;padding:5px 8px;background:rgba(0,0,0,0.2);border-radius:6px;" class="text-xs">
+                        <span style="color:#00B0EB;">6.</span><span style="color:#b8c8e8;">Publish lifecycle events, refresh active-spec cache, and allow only ACTIVE IntentSpecifications for new runtime Intent admission</span>
+                    </div>
+                </div>
+            </div>
+            <!-- Runtime -->
+            <div class="reveal" style="border:1px solid rgba(249,100,73,0.25);border-radius:12px;padding:1.2rem;background:rgba(249,100,73,0.04);">
+                <div class="flex items-center gap-2 mb-3">
+                    <div style="width:32px;height:32px;border-radius:50%;background:rgba(249,100,73,0.2);display:flex;align-items:center;justify-content:center;font-size:1rem;">⚡</div>
+                    <div>
+                        <div class="font-semibold text-sm" style="color:#F96449;">Runtime</div>
+                        <div class="text-xs" style="color:#6e87aa;">Coordinated by Controller, Brain, Dispatcher and Guardian; executed by external network systems</div>
+                    </div>
+                </div>
+                <div style="display:flex;flex-direction:column;gap:7px;">
+                    <div style="display:flex;align-items:center;gap:8px;padding:5px 8px;background:rgba(0,0,0,0.2);border-radius:6px;" class="text-xs">
+                        <span style="color:#F96449;">1.</span><span style="color:#b8c8e8;">Consumer submits new runtime <code style="color:#F96449;">Intent</code> to IC MS</span>
+                    </div>
+                    <div style="display:flex;align-items:center;gap:8px;padding:5px 8px;background:rgba(0,0,0,0.2);border-radius:6px;" class="text-xs">
+                        <span style="color:#F96449;">2.</span><span style="color:#b8c8e8;">IC MS, the Controller, validates against ACTIVE IntentSpecification and admits request</span>
+                    </div>
+                    <div style="display:flex;align-items:center;gap:8px;padding:5px 8px;background:rgba(0,0,0,0.2);border-radius:6px;" class="text-xs">
+                        <span style="color:#F96449;">3.</span><span style="color:#b8c8e8;">II MS, the Brain, resolves semantics and coordinates required decision systems</span>
+                    </div>
+                    <div style="display:flex;align-items:center;gap:8px;padding:5px 8px;background:rgba(0,0,0,0.2);border-radius:6px;" class="text-xs">
+                        <span style="color:#F96449;">4.</span><span style="color:#b8c8e8;">Brain hands service-ready configuration to Guardian (IA MS) so approved configuration can be applied and monitoring can start</span>
+                    </div>
+                    <div style="display:flex;align-items:center;gap:8px;padding:5px 8px;background:rgba(0,0,0,0.2);border-radius:6px;" class="text-xs">
+                        <span style="color:#F96449;">5.</span><span style="color:#b8c8e8;">External execution layer applies configuration; ICB MS relays callbacks</span>
+                    </div>
+                    <div style="display:flex;align-items:center;gap:8px;padding:5px 8px;background:rgba(0,0,0,0.2);border-radius:6px;" class="text-xs">
+                        <span style="color:#F96449;">6.</span><span style="color:#b8c8e8;">Guardian evaluates callbacks and observations, then emits IntentAssuranceEvent; Controller projects lifecycle and Brain decides any degraded-state action</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- ═══════════════════════════════════════ SLIDE 4: ID MS LIBRARIAN ═══════════════════════════════════════ -->
+
+<div class="slide slide-5" data-slide="7">
+    <div class="gradient-mesh">
+        <div class="blob" style="width:420px;height:420px;top:-110px;right:-80px;background:#004D9D;opacity:0.13;"></div>
+        <div class="blob" style="width:300px;height:300px;bottom:-70px;left:-60px;background:#F96449;opacity:0.08;"></div>
+    </div>
+    <div class="content">
+        <div class="text-xs tracking-[4px] uppercase mb-2 reveal" style="color:#6e87aa;">Example Payload Shapes</div>
+        <h2 class="font-display text-[clamp(1.6rem,3.5vw,2.5rem)] font-bold mb-4 reveal" style="color:#f0f4ff;">ACTIVE IntentSpecification Used by Runtime Intent</h2>
+        <p class="text-sm mb-4 reveal" style="color:#6e87aa;">The ACTIVE IntentSpecification is the governed contract. The runtime Intent triggers fulfilment by referencing that ACTIVE specification ID and supplying targets, constraints and preferences.</p>
+
+        <div class="grid grid-cols-2 gap-5">
+            <div class="ms-box reveal" style="border-left:4px solid #00B0EB;background:rgba(0,176,235,0.05);">
+                <div class="text-xs tracking-widest uppercase mb-2" style="color:#00B0EB;">ACTIVE IntentSpecification</div>
+                <pre class="json-shape-block">{
+  &quot;id&quot;: &quot;ispec-hss-001&quot;,
+  &quot;version&quot;: &quot;1.1&quot;,
+  &quot;lifecycleStatus&quot;: &quot;ACTIVE&quot;,
+  &quot;expressionSpecification&quot;: {
+    &quot;iri&quot;: &quot;https://mycsp.com.au/tio/hospital-surgical-slice/v1.0&quot;
+  },
+  &quot;@type&quot;: &quot;IntentSpecification&quot;
+}</pre>
+            </div>
+
+            <div class="ms-box reveal" style="border-left:4px solid #F96449;background:rgba(249,100,73,0.05);">
+                <div class="text-xs tracking-widest uppercase mb-2" style="color:#F96449;">Runtime Intent using the ACTIVE spec</div>
+                <pre class="json-shape-block runtime">{
+  &quot;name&quot;: &quot;Sydney Hospital Surgical Connection Intent&quot;,
+  &quot;intentSpecification&quot;: {
+    &quot;id&quot;: &quot;ispec-hss-001&quot;
+  },
+  &quot;expression&quot;: {
+    &quot;iri&quot;: &quot;https://mycsp.com.au/tio/hospital-surgical-slice/v1.0&quot;,
+    &quot;expressionValue&quot;: {
+      &quot;context&quot;: {
+        &quot;targets&quot;: {
+          &quot;minAvailabilityPercent&quot;: 99.99
+        },
+        &quot;constraints&quot;: {
+          &quot;serviceClass&quot;: &quot;critical-gold&quot;,
+          &quot;locationId&quot;: &quot;AU-NSW-SYD-HOSP-001&quot;
+        },
+        &quot;preferences&quot;: {
+          &quot;preferredAccessTechnology&quot;: &quot;5G&quot;
+        }
+      }
+    }
+  },
+  &quot;@type&quot;: &quot;Intent&quot;
+}</pre>
+            </div>
+        </div>
+
+        <div class="ms-box reveal mt-4" style="border-left:4px solid #6B5BFF;background:rgba(107,91,255,0.07);padding:0.75rem 0.9rem;">
+            <div class="text-xs tracking-widest uppercase mb-1" style="color:#9b8cff;">Key distinction</div>
+            <p class="text-sm leading-relaxed" style="color:#d8d2ff;">Only an ACTIVE IntentSpecification can be used for new runtime Intent admission. IC MS validates the runtime request against the referenced specification before the intent moves into downstream resolution and execution. The example omits submit because the normal path is immediate submission; submit=false is only for draft authoring.</p>
+        </div>
+    </div>
+</div>
+
+<div class="slide slide-5" data-slide="8">
+    <div class="gradient-mesh">
+        <div class="blob" style="width:450px;height:450px;top:-120px;right:-100px;background:#0078C0;opacity:0.12;"></div>
+        <div class="blob" style="width:300px;height:300px;bottom:-80px;left:-60px;background:#004D9D;opacity:0.1;"></div>
+    </div>
+    <div class="content">
+        <div class="text-xs tracking-[4px] uppercase mb-2 reveal" style="color:#6e87aa;">Service Breakdown</div>
+        <h2 class="font-display text-[clamp(1.6rem,3.5vw,2.5rem)] font-bold mb-4 reveal" style="color:#f0f4ff;">Five Microservices — Clear Boundaries</h2>
+        <div class="reveal heading-badge-sibling"><span class="telstra-intents-badge" title="Telstra Intents platform"><span class="telstra-mark">T</span><span class="intent-emblem">🎯↻🛡️</span><span>Telstra Intents</span></span></div>
+<div class="reveal text-xs mb-3" style="color:#6e87aa;">Friendly role names: <span style="color:#00B0EB;">Librarian</span> = specification keeper, <span style="color:#00B0EB;">Controller</span> = runtime API owner, <span style="color:#00B0EB;">Brain</span> = semantic and configuration decisioning, <span style="color:#F96449;">Dispatcher</span> = feedback relay, <span style="color:#00B0EB;">Guardian</span> = assurance truth.</div>
+        <div style="display:flex;flex-direction:column;gap:8px;">
+            <div class="reveal" style="display:grid;grid-template-columns:90px 1fr 1fr;gap:10px;align-items:start;border:1px solid rgba(0,176,235,0.2);border-radius:9px;padding:0.7rem 0.9rem;background:rgba(0,176,235,0.04);">
+                <div><div class="text-sm font-bold" style="color:#00B0EB;">Librarian <span style="color:#6e87aa;font-weight:500;">(ID MS)</span></div><div class="text-xs" style="color:#6e87aa;">Definition</div></div>
+                <div class="text-xs" style="color:#b8c8e8;"><strong>Owns:</strong> IntentSpecification lifecycle (DRAFT → ACTIVE → RETIRED), version families, schema references, specification event webhooks</div>
+                <div class="text-xs" style="color:#b8c8e8;"><strong>Key API:</strong> <code style="color:#00B0EB;">POST /intentSpecification</code>, <code style="color:#00B0EB;">PATCH /intentSpecification/draft/{draftId}</code></div>
+            </div>
+            <div class="reveal" style="display:grid;grid-template-columns:90px 1fr 1fr;gap:10px;align-items:start;border:1px solid rgba(0,176,235,0.2);border-radius:9px;padding:0.7rem 0.9rem;background:rgba(0,176,235,0.04);">
+                <div><div class="text-sm font-bold" style="color:#00B0EB;">Controller <span style="color:#6e87aa;font-weight:500;">(IC MS)</span></div><div class="text-xs" style="color:#6e87aa;">Controller</div></div>
+                <div class="text-xs" style="color:#b8c8e8;"><strong>Owns:</strong> Runtime Intent + IntentReport APIs, external TMF lifecycle projection, hub subscription and webhook delivery, IntentValidatedEvent production</div>
+                <div class="text-xs" style="color:#b8c8e8;"><strong>Key API:</strong> <code style="color:#00B0EB;">POST /intentManagement/v5/intent</code> — the primary entry point for runtime intents</div>
+            </div>
+            <div class="reveal" style="display:grid;grid-template-columns:90px 1fr 1fr;gap:10px;align-items:start;border:1px solid rgba(0,176,235,0.2);border-radius:9px;padding:0.7rem 0.9rem;background:rgba(0,176,235,0.04);">
+                <div><div class="text-sm font-bold" style="color:#00B0EB;">Brain <span style="color:#6e87aa;font-weight:500;">(II MS)</span></div><div class="text-xs" style="color:#6e87aa;">Intelligence</div></div>
+                <div class="text-xs" style="color:#b8c8e8;"><strong>Owns:</strong> Semantic interpretation, Knowledge Plane validation, canonicalisation, optimisation dispatch, service-ready config preparation. Internal-only — no public API.</div>
+                <div class="text-xs" style="color:#b8c8e8;"><strong>Key outputs:</strong> <code style="color:#00B0EB;">IntentResolvedEvent</code>, <code style="color:#00B0EB;">IntentNetworkReadyEvent</code>, <code style="color:#F96449;">IntentRejectedEvent</code></div>
+            </div>
+            <div class="reveal" style="display:grid;grid-template-columns:90px 1fr 1fr;gap:10px;align-items:start;border:1px solid rgba(249,100,73,0.2);border-radius:9px;padding:0.7rem 0.9rem;background:rgba(249,100,73,0.04);">
+                <div><div class="text-sm font-bold" style="color:#F96449;">Dispatcher <span style="color:#6e87aa;font-weight:500;">(ICB MS)</span></div><div class="text-xs" style="color:#6e87aa;">Callback</div></div>
+                <div class="text-xs" style="color:#b8c8e8;"><strong>Owns:</strong> Thin callback ingestion adapter — structural validation only, durable outbox persistence, raw event relay. Does NOT interpret lifecycle meaning.</div>
+                <div class="text-xs" style="color:#b8c8e8;"><strong>Key API:</strong> <code style="color:#F96449;">POST /intent-callback/v1/submissions</code> — enables feedback loops where external systems send status back; ICB MS relays accepted submissions as internal events such as <code style="color:#F96449;">IntentCallbackEvent</code>, <code style="color:#F96449;">OptimisationStatusChangeEvent</code>, and other governed callback event types where required</div>
+            </div>
+            <div class="reveal" style="display:grid;grid-template-columns:90px 1fr 1fr;gap:10px;align-items:start;border:1px solid rgba(0,176,235,0.2);border-radius:9px;padding:0.7rem 0.9rem;background:rgba(0,176,235,0.04);">
+                <div><div class="text-sm font-bold" style="color:#00B0EB;">Guardian <span style="color:#6e87aa;font-weight:500;">(IA MS)</span></div><div class="text-xs" style="color:#6e87aa;">Assurance</div></div>
+                <div class="text-xs" style="color:#b8c8e8;"><strong>Owns:</strong> Runtime assurance truth — callback correlation, state mapping, degradation detection vs KPIs, assurance event publication. Observes latency, availability, jitter, packet loss.</div>
+                <div class="text-xs" style="color:#b8c8e8;"><strong>Key output:</strong> <code style="color:#00B0EB;">IntentAssuranceEvent</code> → drives IC MS external lifecycle projection</div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- ═══════════════════════════════════════ SLIDE 6: EVENT FLOW ═══════════════════════════════════════ -->
+<div class="slide slide-6" data-slide="9">
+    <div class="gradient-mesh">
+        <div class="blob" style="width:420px;height:420px;top:-120px;right:-90px;background:#004D9D;opacity:0.12;"></div>
+        <div class="blob" style="width:320px;height:320px;bottom:-90px;left:-70px;background:#00B0EB;opacity:0.08;"></div>
+    </div>
+    <canvas class="particle-canvas-ambient" style="position:absolute;inset:0;z-index:1;"></canvas>
+    <div class="content">
+        <div class="text-xs tracking-[4px] uppercase mb-2 reveal" style="color:#6e87aa;">Deep Dive · Microservice 1</div>
+        <h2 class="font-display text-[clamp(1.5rem,3.2vw,2.35rem)] font-bold mb-2 reveal" style="color:#f0f4ff;">ID MS (Intent Definition) — Librarian for IntentSpecifications</h2>
+        <p class="text-sm mb-3 reveal" style="color:#6e87aa;">Definition-time catalogue and version governance</p>
+
+        <div class="reveal mb-3" style="border:1px solid rgba(255,255,255,0.13);border-left:4px solid #00B0EB;border-radius:12px;background:rgba(255,255,255,0.055);padding:0.7rem 0.85rem;">
+            <div style="display:flex;align-items:flex-start;gap:0.65rem;">
+                <div style="font-size:1.35rem;line-height:1;">📚</div>
+                <div>
+                    <div class="text-xs tracking-widest uppercase mb-1" style="color:#00B0EB;">Role</div>
+                    <div class="text-sm font-semibold leading-relaxed" style="color:#f0f4ff;">Librarian (ID MS) owns the governed IntentSpecification catalogue that defines which runtime Intent requests are allowed.</div>
+                </div>
+            </div>
+        </div>
+
+        <div class="reveal mt-3" style="border:1px solid rgba(0,176,235,0.16);border-left:4px solid #00B0EB;border-radius:10px;background:rgba(0,176,235,0.045);padding:0.6rem 0.75rem;">
+            <div class="text-xs tracking-widest uppercase mb-2" style="color:#00B0EB;">TMF-aligned REST surface</div>
+            <div style="display:grid;grid-template-columns:1fr;gap:5px;"><div style="display:flex;gap:0.45rem;align-items:flex-start;padding:0.34rem 0.45rem;border-radius:6px;background:rgba(0,0,0,0.20);border:1px solid rgba(255,255,255,0.08);">
+                    <span class="text-[0.56rem] font-semibold" style="color:#00B0EB;min-width:6.6rem;">Create/List</span>
+                    <span class="text-[0.55rem]" style="color:#b8c8e8;font-family:monospace;">POST, GET /intentManagement/v5/intentSpecification</span>
+                </div>
+<div style="display:flex;gap:0.45rem;align-items:flex-start;padding:0.34rem 0.45rem;border-radius:6px;background:rgba(0,0,0,0.20);border:1px solid rgba(255,255,255,0.08);">
+                    <span class="text-[0.56rem] font-semibold" style="color:#00B0EB;min-width:6.6rem;">Retrieve/Update</span>
+                    <span class="text-[0.55rem]" style="color:#b8c8e8;font-family:monospace;">GET, PATCH /intentManagement/v5/intentSpecification/{id}</span>
+                </div>
+<div style="display:flex;gap:0.45rem;align-items:flex-start;padding:0.34rem 0.45rem;border-radius:6px;background:rgba(0,0,0,0.20);border:1px solid rgba(255,255,255,0.08);">
+                    <span class="text-[0.56rem] font-semibold" style="color:#00B0EB;min-width:6.6rem;">Retire</span>
+                    <span class="text-[0.55rem]" style="color:#b8c8e8;font-family:monospace;">DELETE /intentManagement/v5/intentSpecification/{id}</span>
+                </div>
+<div style="display:flex;gap:0.45rem;align-items:flex-start;padding:0.34rem 0.45rem;border-radius:6px;background:rgba(0,0,0,0.20);border:1px solid rgba(255,255,255,0.08);">
+                    <span class="text-[0.56rem] font-semibold" style="color:#00B0EB;min-width:6.6rem;">Subscribe</span>
+                    <span class="text-[0.55rem]" style="color:#b8c8e8;font-family:monospace;">POST /intentManagement/v5/intentSpecification/hub</span>
+                </div></div>
+        </div>
+
+        <div class="grid grid-cols-2 gap-4 mt-3 reveal">
+            <div class="ms-box" style="border-left:4px solid #00B0EB;">
+                <div class="text-xs tracking-widest uppercase mb-2" style="color:#00B0EB;">Key responsibilities</div>
+                <ul class="text-xs leading-relaxed space-y-1" style="color:#b8c8e8;list-style:disc;margin-left:1rem;"><li>Creates and governs IntentSpecification drafts and active versions.</li>
+<li>Maintains version lifecycle: DRAFT, ACTIVE and RETIRED.</li>
+<li>Protects governed changes with optimistic concurrency using ETag and If-Match.</li></ul>
+            </div>
+            <div class="ms-box" style="border-left:4px solid #6e87aa;">
+                <div class="text-xs tracking-widest uppercase mb-2" style="color:#b8c8e8;">Boundary: does not own</div>
+                <ul class="text-xs leading-relaxed space-y-1" style="color:#b8c8e8;list-style:disc;margin-left:1rem;"><li>Does not admit runtime Intents.</li>
+<li>Does not resolve intent meaning or select network resources.</li>
+<li>Does not rewrite historical runtime context when a specification is retired.</li></ul>
+                <div style="height:1px;background:rgba(255,255,255,0.12);margin:0.55rem 0;"></div>
+                <div class="text-xs tracking-widest uppercase mb-1" style="color:#f0f4ff;">Why it matters</div>
+                <div class="text-[0.62rem] leading-relaxed" style="color:#f0f4ff;font-weight:600;">Keeps runtime admission safe by making the allowed contract explicit, versioned and governed.</div>
+            </div>
+        </div>
+
+        <div class="grid grid-cols-2 gap-4 mt-3 reveal">
+            <div class="ms-box">
+                <div class="text-xs tracking-widest uppercase mb-2" style="color:#00B0EB;">Main inputs</div>
+                <div style="display:flex;gap:6px;flex-wrap:wrap;"><span class="event-pill ep-blue" style="font-size:0.56rem;">REST specification requests</span>
+<span class="event-pill ep-blue" style="font-size:0.56rem;">Governance approvals</span>
+<span class="event-pill ep-blue" style="font-size:0.56rem;">Lifecycle changes</span></div>
+            </div>
+            <div class="ms-box">
+                <div class="text-xs tracking-widest uppercase mb-2" style="color:#F96449;">Main outputs</div>
+                <div style="display:flex;gap:6px;flex-wrap:wrap;"><span class="event-pill ep-blue" style="font-size:0.56rem;">IntentSpecification resources</span>
+<span class="event-pill ep-blue" style="font-size:0.56rem;">Specification event notifications</span>
+<span class="event-pill ep-blue" style="font-size:0.56rem;">Versioned contract references</span></div>
+            </div>
+        </div>
+
+        <div class="reveal mt-3" style="border:1px solid rgba(34,197,94,0.18);border-left:4px solid #22c55e;border-radius:10px;background:rgba(34,197,94,0.055);padding:0.6rem 0.75rem;">
+            <div class="text-xs tracking-widest uppercase mb-2" style="color:#22c55e;">Lifecycle</div>
+            <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:0.4rem;"><span class="event-pill ep-green" style="font-size:0.54rem;">DRAFT</span>
+<span class="event-pill ep-green" style="font-size:0.54rem;">ACTIVE</span>
+<span class="event-pill ep-green" style="font-size:0.54rem;">RETIRED</span></div>
+            <div class="text-[0.6rem] leading-relaxed" style="color:#f0f4ff;font-weight:600;">A new version in the same spec family becomes ACTIVE; previous ACTIVE version becomes RETIRED.</div>
+        </div>
+    </div>
+</div>
+
+<div class="slide slide-7" data-slide="10">
+    <div class="gradient-mesh">
+        <div class="blob" style="width:420px;height:420px;top:-120px;right:-90px;background:#004D9D;opacity:0.12;"></div>
+        <div class="blob" style="width:320px;height:320px;bottom:-90px;left:-70px;background:#00B0EB;opacity:0.08;"></div>
+    </div>
+    <canvas class="particle-canvas-ambient" style="position:absolute;inset:0;z-index:1;"></canvas>
+    <div class="content">
+        <div class="text-xs tracking-[4px] uppercase mb-2 reveal" style="color:#6e87aa;">Deep Dive · Microservice 2</div>
+        <h2 class="font-display text-[clamp(1.5rem,3.2vw,2.35rem)] font-bold mb-2 reveal" style="color:#f0f4ff;">IC MS (Intent Controller) — Controller For Intents</h2>
+        <p class="text-sm mb-3 reveal" style="color:#6e87aa;">External-facing runtime Intent and IntentReport owner</p>
+
+        <div class="reveal mb-3" style="border:1px solid rgba(255,255,255,0.13);border-left:4px solid #00B0EB;border-radius:12px;background:rgba(255,255,255,0.055);padding:0.7rem 0.85rem;">
+            <div style="display:flex;align-items:flex-start;gap:0.65rem;">
+                <div style="font-size:1.35rem;line-height:1;">🎛️</div>
+                <div>
+                    <div class="text-xs tracking-widest uppercase mb-1" style="color:#00B0EB;">Role</div>
+                    <div class="text-sm font-semibold leading-relaxed" style="color:#f0f4ff;">Controller (IC MS) is the external-facing interface and lifecycle owner for runtime Intents and IntentReports.</div>
+                </div>
+            </div>
+        </div>
+
+        <div class="reveal mt-3" style="border:1px solid rgba(0,176,235,0.16);border-left:4px solid #00B0EB;border-radius:10px;background:rgba(0,176,235,0.045);padding:0.6rem 0.75rem;">
+            <div class="text-xs tracking-widest uppercase mb-2" style="color:#00B0EB;">TMF-aligned REST surface</div>
+            <div style="display:grid;grid-template-columns:1fr;gap:5px;"><div style="display:flex;gap:0.45rem;align-items:flex-start;padding:0.34rem 0.45rem;border-radius:6px;background:rgba(0,0,0,0.20);border:1px solid rgba(255,255,255,0.08);">
+                    <span class="text-[0.56rem] font-semibold" style="color:#00B0EB;min-width:6.6rem;">Create/List</span>
+                    <span class="text-[0.55rem]" style="color:#b8c8e8;font-family:monospace;">POST, GET /intentManagement/v5/intent</span>
+                </div>
+<div style="display:flex;gap:0.45rem;align-items:flex-start;padding:0.34rem 0.45rem;border-radius:6px;background:rgba(0,0,0,0.20);border:1px solid rgba(255,255,255,0.08);">
+                    <span class="text-[0.56rem] font-semibold" style="color:#00B0EB;min-width:6.6rem;">Retrieve/Update</span>
+                    <span class="text-[0.55rem]" style="color:#b8c8e8;font-family:monospace;">GET, PATCH /intentManagement/v5/intent/{id}</span>
+                </div>
+<div style="display:flex;gap:0.45rem;align-items:flex-start;padding:0.34rem 0.45rem;border-radius:6px;background:rgba(0,0,0,0.20);border:1px solid rgba(255,255,255,0.08);">
+                    <span class="text-[0.56rem] font-semibold" style="color:#00B0EB;min-width:6.6rem;">Retire</span>
+                    <span class="text-[0.55rem]" style="color:#b8c8e8;font-family:monospace;">DELETE /intentManagement/v5/intent/{id}</span>
+                </div>
+<div style="display:flex;gap:0.45rem;align-items:flex-start;padding:0.34rem 0.45rem;border-radius:6px;background:rgba(0,0,0,0.20);border:1px solid rgba(255,255,255,0.08);">
+                    <span class="text-[0.56rem] font-semibold" style="color:#00B0EB;min-width:6.6rem;">Report/Hub</span>
+                    <span class="text-[0.55rem]" style="color:#b8c8e8;font-family:monospace;">GET /intent/{id}/intentReport · POST /intent/hub</span>
+                </div></div>
+        </div>
+
+        <div class="grid grid-cols-2 gap-4 mt-3 reveal">
+            <div class="ms-box" style="border-left:4px solid #00B0EB;">
+                <div class="text-xs tracking-widest uppercase mb-2" style="color:#00B0EB;">Key responsibilities</div>
+                <ul class="text-xs leading-relaxed space-y-1" style="color:#b8c8e8;list-style:disc;margin-left:1rem;"><li>Accepts runtime Intent API requests and applies admission checks.</li>
+<li>Projects runtime Intent lifecycle state and IntentReport visibility.</li>
+<li>Emits IntentValidatedEvent after successful admission.</li></ul>
+            </div>
+            <div class="ms-box" style="border-left:4px solid #6e87aa;">
+                <div class="text-xs tracking-widest uppercase mb-2" style="color:#b8c8e8;">Boundary: does not own</div>
+                <ul class="text-xs leading-relaxed space-y-1" style="color:#b8c8e8;list-style:disc;margin-left:1rem;"><li>Does not perform semantic interpretation or policy reasoning.</li>
+<li>Does not apply network configuration.</li>
+<li>Does not evaluate assurance truth.</li></ul>
+                <div style="height:1px;background:rgba(255,255,255,0.12);margin:0.55rem 0;"></div>
+                <div class="text-xs tracking-widest uppercase mb-1" style="color:#f0f4ff;">Why it matters</div>
+                <div class="text-[0.62rem] leading-relaxed" style="color:#f0f4ff;font-weight:600;">Gives consumers one stable external interface while keeping internal workflow event-driven.</div>
+            </div>
+        </div>
+
+        <div class="grid grid-cols-2 gap-4 mt-3 reveal">
+            <div class="ms-box">
+                <div class="text-xs tracking-widest uppercase mb-2" style="color:#00B0EB;">Main inputs</div>
+                <div style="display:flex;gap:6px;flex-wrap:wrap;"><span class="event-pill ep-blue" style="font-size:0.56rem;">External REST Intent requests</span>
+<span class="event-pill ep-blue" style="font-size:0.56rem;">IntentRejectedEvent</span>
+<span class="event-pill ep-blue" style="font-size:0.56rem;">IntentAssuranceEvent</span></div>
+            </div>
+            <div class="ms-box">
+                <div class="text-xs tracking-widest uppercase mb-2" style="color:#F96449;">Main outputs</div>
+                <div style="display:flex;gap:6px;flex-wrap:wrap;"><span class="event-pill ep-blue" style="font-size:0.56rem;">Runtime Intent resource</span>
+<span class="event-pill ep-blue" style="font-size:0.56rem;">IntentReport projection</span>
+<span class="event-pill ep-blue" style="font-size:0.56rem;">IntentValidatedEvent</span></div>
+            </div>
+        </div>
+
+        <div class="reveal mt-3" style="border:1px solid rgba(34,197,94,0.18);border-left:4px solid #22c55e;border-radius:10px;background:rgba(34,197,94,0.055);padding:0.6rem 0.75rem;">
+            <div class="text-xs tracking-widest uppercase mb-2" style="color:#22c55e;">Lifecycle</div>
+            <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:0.4rem;"><span class="event-pill ep-green" style="font-size:0.54rem;">Acknowledged</span>
+<span class="event-pill ep-green" style="font-size:0.54rem;">InProgress</span>
+<span class="event-pill ep-green" style="font-size:0.54rem;">Active</span>
+<span class="event-pill ep-green" style="font-size:0.54rem;">Degraded</span>
+<span class="event-pill ep-green" style="font-size:0.54rem;">Paused</span>
+<span class="event-pill ep-green" style="font-size:0.54rem;">Rejected</span>
+<span class="event-pill ep-green" style="font-size:0.54rem;">Failed</span>
+<span class="event-pill ep-green" style="font-size:0.54rem;">Terminated</span></div>
+            <div class="text-[0.6rem] leading-relaxed" style="color:#f0f4ff;font-weight:600;">IC MS projects externally visible runtime lifecycle and IntentReport state.</div>
+        </div>
+    </div>
+</div>
+
+<div class="slide slide-8" data-slide="11">
+    <div class="gradient-mesh">
+        <div class="blob" style="width:420px;height:420px;top:-120px;right:-90px;background:#004D9D;opacity:0.12;"></div>
+        <div class="blob" style="width:320px;height:320px;bottom:-90px;left:-70px;background:#00B0EB;opacity:0.08;"></div>
+    </div>
+    <canvas class="particle-canvas-ambient" style="position:absolute;inset:0;z-index:1;"></canvas>
+    <div class="content">
+        <div class="text-xs tracking-[4px] uppercase mb-2 reveal" style="color:#6e87aa;">Deep Dive · Microservice 3</div>
+        <h2 class="font-display text-[clamp(1.5rem,3.2vw,2.35rem)] font-bold mb-2 reveal" style="color:#f0f4ff;">II MS (Intent Intelligence) — Brain For Intents</h2>
+        <p class="text-sm mb-3 reveal" style="color:#6e87aa;">Meaning, decision coordination and service-ready configuration</p>
+
+        <div class="reveal mb-3" style="border:1px solid rgba(255,255,255,0.13);border-left:4px solid #00B0EB;border-radius:12px;background:rgba(255,255,255,0.055);padding:0.7rem 0.85rem;">
+            <div style="display:flex;align-items:flex-start;gap:0.65rem;">
+                <div style="font-size:1.35rem;line-height:1;">🧠</div>
+                <div>
+                    <div class="text-xs tracking-widest uppercase mb-1" style="color:#00B0EB;">Role</div>
+                    <div class="text-sm font-semibold leading-relaxed" style="color:#f0f4ff;">Brain (II MS) interprets intent meaning, uses KP context, coordinates approved decision systems and resolves service-ready configuration.</div>
+                </div>
+            </div>
+        </div>
+
+        
+
+        <div class="grid grid-cols-2 gap-4 mt-3 reveal">
+            <div class="ms-box" style="border-left:4px solid #00B0EB;">
+                <div class="text-xs tracking-widest uppercase mb-2" style="color:#00B0EB;">Key responsibilities</div>
+                <ul class="text-xs leading-relaxed space-y-1" style="color:#b8c8e8;list-style:disc;margin-left:1rem;"><li>Consumes admitted IntentValidatedEvent workflow input.</li>
+<li>Uses KP context: policy, topology models, benchmarks, constraints, freshness rules and trust signals.</li>
+<li>Coordinates approved systems such as Inventory, CRM, identity, policy, optimiser and domain sources where needed.</li>
+<li>Produces IntentNetworkReadyEvent when configuration is ready for apply and monitoring.</li>
+                    <li>Consumes IntentAssuranceEvent when assurance indicates degraded-state decisioning may be needed.</li></ul>
+            </div>
+            <div class="ms-box" style="border-left:4px solid #6e87aa;">
+                <div class="text-xs tracking-widest uppercase mb-2" style="color:#b8c8e8;">Boundary: does not own</div>
+                <ul class="text-xs leading-relaxed space-y-1" style="color:#b8c8e8;list-style:disc;margin-left:1rem;"><li>Does not own external system-of-record data.</li>
+<li>Does not apply configuration directly.</li>
+<li>Does not project external runtime lifecycle state.</li></ul>
+                <div style="height:1px;background:rgba(255,255,255,0.12);margin:0.55rem 0;"></div>
+                <div class="text-xs tracking-widest uppercase mb-1" style="color:#f0f4ff;">Why it matters</div>
+                <div class="text-[0.62rem] leading-relaxed" style="color:#f0f4ff;font-weight:600;">Turns an admitted customer intent into an actionable, governed configuration decision.</div>
+            </div>
+        </div>
+
+        <div class="grid grid-cols-2 gap-4 mt-3 reveal">
+            <div class="ms-box">
+                <div class="text-xs tracking-widest uppercase mb-2" style="color:#00B0EB;">Main inputs</div>
+                <div style="display:flex;gap:6px;flex-wrap:wrap;"><span class="event-pill ep-blue" style="font-size:0.56rem;">IntentValidatedEvent</span>
+<span class="event-pill ep-blue" style="font-size:0.56rem;">KP governed context</span>
+<span class="event-pill ep-blue" style="font-size:0.56rem;">Decision outcomes</span>
+<span class="event-pill ep-blue" style="font-size:0.56rem;">IntentAssuranceEvent for governed control-loop input</span></div>
+            </div>
+            <div class="ms-box">
+                <div class="text-xs tracking-widest uppercase mb-2" style="color:#F96449;">Main outputs</div>
+                <div style="display:flex;gap:6px;flex-wrap:wrap;"><span class="event-pill ep-blue" style="font-size:0.56rem;">IntentNetworkReadyEvent</span>
+<span class="event-pill ep-blue" style="font-size:0.56rem;">IntentRejectedEvent</span>
+<span class="event-pill ep-blue" style="font-size:0.56rem;">Governed degraded-state decisions</span></div>
+            </div>
+        
+            <div class="ms-box reveal" style="grid-column:span 2;border-left:4px solid #F96449;background:rgba(249,100,73,0.06);padding:0.65rem 0.85rem;display:flex;align-items:center;gap:0.85rem;">
+                <div class="text-xs tracking-widest uppercase" style="color:#F96449;min-width:11.5rem;">Design finalisation item</div>
+                <p class="text-xs leading-relaxed" style="color:#b8c8e8;margin:0;">II MS integration with KP and knowledge discovery is being finalised with delivery stakeholders, including source discovery, freshness checks, trust scoring and governed lookup contracts.</p>
+            </div>
+        </div>
+
+        
+    </div>
+</div>
+
+<div class="slide slide-9" data-slide="12">
+    <div class="gradient-mesh">
+        <div class="blob" style="width:420px;height:420px;top:-120px;right:-90px;background:#004D9D;opacity:0.12;"></div>
+        <div class="blob" style="width:320px;height:320px;bottom:-90px;left:-70px;background:#F96449;opacity:0.08;"></div>
+    </div>
+    <canvas class="particle-canvas-ambient" style="position:absolute;inset:0;z-index:1;"></canvas>
+    <div class="content">
+        <div class="text-xs tracking-[4px] uppercase mb-2 reveal" style="color:#6e87aa;">Deep Dive · Microservice 4</div>
+        <h2 class="font-display text-[clamp(1.5rem,3.2vw,2.35rem)] font-bold mb-2 reveal" style="color:#f0f4ff;">ICB MS (Intent Callback Broker) — Callback Dispatcher</h2>
+        <p class="text-sm mb-3 reveal" style="color:#6e87aa;">External feedback ingress and trusted event relay</p>
+
+        <div class="reveal mb-3" style="border:1px solid rgba(255,255,255,0.13);border-left:4px solid #F96449;border-radius:12px;background:rgba(255,255,255,0.055);padding:0.7rem 0.85rem;">
+            <div style="display:flex;align-items:flex-start;gap:0.65rem;">
+                <div style="font-size:1.35rem;line-height:1;">📡</div>
+                <div>
+                    <div class="text-xs tracking-widest uppercase mb-1" style="color:#F96449;">Role</div>
+                    <div class="text-sm font-semibold leading-relaxed" style="color:#f0f4ff;">Dispatcher (ICB MS) receives external callbacks, validates the submission shape and relays accepted feedback as internal events.</div>
+                </div>
+            </div>
+        </div>
+
+        <div class="reveal mt-3" style="border:1px solid rgba(0,176,235,0.16);border-left:4px solid #00B0EB;border-radius:10px;background:rgba(0,176,235,0.045);padding:0.6rem 0.75rem;">
+            <div class="text-xs tracking-widest uppercase mb-2" style="color:#00B0EB;">TMF-aligned REST surface</div>
+            <div style="display:grid;grid-template-columns:1fr;gap:5px;"><div style="display:flex;gap:0.45rem;align-items:flex-start;padding:0.34rem 0.45rem;border-radius:6px;background:rgba(0,0,0,0.20);border:1px solid rgba(255,255,255,0.08);">
+                    <span class="text-[0.56rem] font-semibold" style="color:#00B0EB;min-width:6.6rem;">Submit callback</span>
+                    <span class="text-[0.55rem]" style="color:#b8c8e8;font-family:monospace;">POST /intent-callback/v1/submissions</span>
+                </div></div>
+        </div>
+
+        <div class="grid grid-cols-2 gap-4 mt-3 reveal">
+            <div class="ms-box" style="border-left:4px solid #F96449;">
+                <div class="text-xs tracking-widest uppercase mb-2" style="color:#F96449;">Key responsibilities</div>
+                <ul class="text-xs leading-relaxed space-y-1" style="color:#b8c8e8;list-style:disc;margin-left:1rem;"><li>Exposes the callback submission endpoint for approved external systems.</li>
+<li>Performs structural validation, correlation capture and durable outbox persistence.</li>
+<li>Relays accepted feedback as IntentCallbackEvent, OptimisationStatusChangeEvent and approved callback events.</li></ul>
+            </div>
+            <div class="ms-box" style="border-left:4px solid #6e87aa;">
+                <div class="text-xs tracking-widest uppercase mb-2" style="color:#b8c8e8;">Boundary: does not own</div>
+                <ul class="text-xs leading-relaxed space-y-1" style="color:#b8c8e8;list-style:disc;margin-left:1rem;"><li>Does not interpret lifecycle meaning.</li>
+<li>Does not decide assurance outcomes.</li>
+<li>Does not own external execution systems.</li></ul>
+                <div style="height:1px;background:rgba(255,255,255,0.12);margin:0.55rem 0;"></div>
+                <div class="text-xs tracking-widest uppercase mb-1" style="color:#f0f4ff;">Why it matters</div>
+                <div class="text-[0.62rem] leading-relaxed" style="color:#f0f4ff;font-weight:600;">Provides the trusted ingress point that reconnects external execution feedback to the platform workflow.</div>
+            </div>
+        </div>
+
+        <div class="grid grid-cols-2 gap-4 mt-3 reveal">
+            <div class="ms-box">
+                <div class="text-xs tracking-widest uppercase mb-2" style="color:#00B0EB;">Main inputs</div>
+                <div style="display:flex;gap:6px;flex-wrap:wrap;"><span class="event-pill ep-blue" style="font-size:0.56rem;">External callbacks</span>
+<span class="event-pill ep-blue" style="font-size:0.56rem;">Optimiser callbacks</span>
+<span class="event-pill ep-blue" style="font-size:0.56rem;">Network execution feedback</span></div>
+            </div>
+            <div class="ms-box">
+                <div class="text-xs tracking-widest uppercase mb-2" style="color:#F96449;">Main outputs</div>
+                <div style="display:flex;gap:6px;flex-wrap:wrap;"><span class="event-pill ep-orange" style="font-size:0.56rem;">IntentCallbackEvent</span>
+<span class="event-pill ep-orange" style="font-size:0.56rem;">OptimisationStatusChangeEvent</span>
+<span class="event-pill ep-orange" style="font-size:0.56rem;">Callback relay audit trail</span></div>
+            </div>
+        </div>
+
+        
+    </div>
+</div>
+
+<div class="slide slide-10" data-slide="13">
+    <div class="gradient-mesh">
+        <div class="blob" style="width:420px;height:420px;top:-120px;right:-90px;background:#004D9D;opacity:0.12;"></div>
+        <div class="blob" style="width:320px;height:320px;bottom:-90px;left:-70px;background:#00B0EB;opacity:0.08;"></div>
+    </div>
+    <canvas class="particle-canvas-ambient" style="position:absolute;inset:0;z-index:1;"></canvas>
+    <div class="content">
+        <div class="text-xs tracking-[4px] uppercase mb-2 reveal" style="color:#6e87aa;">Deep Dive · Microservice 5</div>
+        <h2 class="font-display text-[clamp(1.5rem,3.2vw,2.35rem)] font-bold mb-2 reveal" style="color:#f0f4ff;">IA MS (Intent Assurance) — Guardian For Intents</h2>
+        <p class="text-sm mb-3 reveal" style="color:#6e87aa;">Runtime monitoring, assurance truth and benchmark variance detection</p>
+
+        <div class="reveal mb-3" style="border:1px solid rgba(255,255,255,0.13);border-left:4px solid #00B0EB;border-radius:12px;background:rgba(255,255,255,0.055);padding:0.7rem 0.85rem;">
+            <div style="display:flex;align-items:flex-start;gap:0.65rem;">
+                <div style="font-size:1.35rem;line-height:1;">🛡️</div>
+                <div>
+                    <div class="text-xs tracking-widest uppercase mb-1" style="color:#00B0EB;">Role</div>
+                    <div class="text-sm font-semibold leading-relaxed" style="color:#f0f4ff;">Guardian (IA MS) monitors applied intent behaviour, correlates callbacks and telemetry, and emits assurance outcomes.</div>
+                </div>
+            </div>
+        </div>
+
+        
+
+        <div class="grid grid-cols-2 gap-4 mt-3 reveal">
+            <div class="ms-box" style="border-left:4px solid #00B0EB;">
+                <div class="text-xs tracking-widest uppercase mb-2" style="color:#00B0EB;">Key responsibilities</div>
+                <ul class="text-xs leading-relaxed space-y-1" style="color:#b8c8e8;list-style:disc;margin-left:1rem;"><li>Starts monitoring after service-ready configuration is handed over for apply and observation.</li>
+<li>Correlates callbacks, telemetry and benchmark variance against governed intent context.</li>
+<li>Emits IntentAssuranceEvent for IC MS lifecycle projection and II MS degraded-state evaluation.</li></ul>
+            </div>
+            <div class="ms-box" style="border-left:4px solid #6e87aa;">
+                <div class="text-xs tracking-widest uppercase mb-2" style="color:#b8c8e8;">Boundary: does not own</div>
+                <ul class="text-xs leading-relaxed space-y-1" style="color:#b8c8e8;list-style:disc;margin-left:1rem;"><li>Does not own callback ingress.</li>
+<li>Does not apply network configuration.</li>
+<li>Does not decide degraded-state recovery action.</li></ul>
+                <div style="height:1px;background:rgba(255,255,255,0.12);margin:0.55rem 0;"></div>
+                <div class="text-xs tracking-widest uppercase mb-1" style="color:#f0f4ff;">Why it matters</div>
+                <div class="text-[0.62rem] leading-relaxed" style="color:#f0f4ff;font-weight:600;">Provides the assurance truth that lets the platform project lifecycle and trigger governed control-loop decisions.</div>
+            </div>
+        </div>
+
+        <div class="grid grid-cols-2 gap-4 mt-3 reveal">
+            <div class="ms-box">
+                <div class="text-xs tracking-widest uppercase mb-2" style="color:#00B0EB;">Main inputs</div>
+                <div style="display:flex;gap:6px;flex-wrap:wrap;"><span class="event-pill ep-blue" style="font-size:0.56rem;">IntentNetworkReadyEvent</span>
+<span class="event-pill ep-blue" style="font-size:0.56rem;">IntentCallbackEvent</span>
+<span class="event-pill ep-blue" style="font-size:0.56rem;">Telemetry metrics</span>
+<span class="event-pill ep-blue" style="font-size:0.56rem;">Observation benchmarks</span></div>
+            </div>
+            <div class="ms-box">
+                <div class="text-xs tracking-widest uppercase mb-2" style="color:#F96449;">Main outputs</div>
+                <div style="display:flex;gap:6px;flex-wrap:wrap;"><span class="event-pill ep-blue" style="font-size:0.56rem;">IntentAssuranceEvent</span>
+<span class="event-pill ep-blue" style="font-size:0.56rem;">Assurance state evidence</span>
+<span class="event-pill ep-blue" style="font-size:0.56rem;">Variance signals</span></div>
+            </div>
+        </div>
+
+        
+    </div>
+</div>
+
+<div class="slide slide-11" data-slide="14">
+    <div class="gradient-mesh">
+        <div class="blob" style="width:420px;height:420px;top:-110px;right:-90px;background:#004D9D;opacity:0.13;"></div>
+        <div class="blob" style="width:300px;height:300px;bottom:-90px;left:-70px;background:#00B0EB;opacity:0.08;"></div>
+        <div class="blob" style="width:230px;height:230px;top:40%;right:10%;background:#F96449;opacity:0.07;"></div>
+    </div>
+    <canvas class="particle-canvas-ambient" style="position:absolute;inset:0;z-index:1;"></canvas>
+    <div class="content">
+        <div class="text-xs tracking-[4px] uppercase mb-2 reveal" style="color:#6e87aa;">Runtime Workflow</div>
+        <h2 class="font-display text-[clamp(1.5rem,3.2vw,2.35rem)] font-bold mb-2 reveal" style="color:#f0f4ff;">End-to-End Intent Event Flow</h2>
+        <p class="text-sm mb-4 reveal" style="color:#6e87aa;">A process-flow view showing where the request enters, where decisioning happens, and where the governed control loop starts.</p>
+
+        <div class="reveal mb-3" style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;">
+            <span class="text-[0.62rem] tracking-widest uppercase" style="color:#6e87aa;">Role key</span>
+            <span class="event-pill ep-blue" style="font-size:0.58rem;">Controller (IC MS) admits and projects</span>
+            <span class="event-pill ep-blue" style="font-size:0.58rem;">Brain (II MS) decides and resolves</span>
+            <span class="event-pill ep-orange" style="font-size:0.58rem;">Dispatcher (ICB MS) relays callbacks</span>
+            <span class="event-pill ep-blue" style="font-size:0.58rem;">Guardian (IA MS) emits assurance</span>
+        </div>
+
+        <div class="reveal" style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;">
+            <div class="ms-box" style="border-left:4px solid #00B0EB;">
+                <div class="text-xs tracking-widest uppercase mb-2" style="color:#00B0EB;">1. Admission path</div>
+                <div style="display:flex;flex-direction:column;gap:7px;">
+                    <div style="padding:0.55rem 0.65rem;border-radius:8px;background:rgba(0,176,235,0.06);border:1px solid rgba(0,176,235,0.15);">
+                        <div class="text-[0.65rem] font-bold mb-1" style="color:#f0f4ff;">Consumer → Controller (IC MS)</div>
+                        <div class="text-[0.6rem]" style="color:#b8c8e8;">External REST request enters through TMF-aligned Intent APIs.</div>
+                    </div>
+                    <div style="padding:0.55rem 0.65rem;border-radius:8px;background:rgba(0,176,235,0.06);border:1px solid rgba(0,176,235,0.15);">
+                        <div class="text-[0.65rem] font-bold mb-1" style="color:#f0f4ff;">Controller (IC MS) admits or rejects</div>
+                        <div class="text-[0.6rem]" style="color:#b8c8e8;">Shape, authority and ACTIVE IntentSpecification checks happen before runtime workflow.</div>
+                    </div>
+                    <div class="event-pill ep-blue" style="font-size:0.58rem;width:fit-content;">IntentValidatedEvent</div>
+                </div>
+            </div>
+
+            <div class="ms-box" style="border-left:4px solid #00B0EB;">
+                <div class="text-xs tracking-widest uppercase mb-2" style="color:#00B0EB;">2. Decisioning path</div>
+                <div style="display:flex;flex-direction:column;gap:7px;">
+                    <div style="padding:0.55rem 0.65rem;border-radius:8px;background:rgba(0,176,235,0.06);border:1px solid rgba(0,176,235,0.15);">
+                        <div class="text-[0.65rem] font-bold mb-1" style="color:#f0f4ff;">Brain (II MS) uses KP context</div>
+                        <div class="text-[0.6rem]" style="color:#b8c8e8;">Policy, topology models, benchmarks, constraints, freshness rules and trust signals.</div>
+                    </div>
+                    <div style="padding:0.55rem 0.65rem;border-radius:8px;background:rgba(249,100,73,0.06);border:1px solid rgba(249,100,73,0.16);">
+                        <div class="text-[0.65rem] font-bold mb-1" style="color:#F96449;">Brain (II MS) coordinates approved systems</div>
+                        <div class="text-[0.6rem]" style="color:#b8c8e8;">Inventory, CRM, identity, policy, capacity, optimiser and domain sources where needed.</div>
+                    </div>
+                    <div style="padding:0.55rem 0.65rem;border-radius:8px;background:rgba(0,176,235,0.06);border:1px solid rgba(0,176,235,0.15);">
+                        <div class="text-[0.65rem] font-bold mb-1" style="color:#f0f4ff;">Brain (II MS) resolves configuration</div>
+                        <div class="text-[0.6rem]" style="color:#b8c8e8;">Service-ready apply and observation configuration is prepared after decision inputs are known.</div>
+                    </div>
+                    <div class="event-pill ep-blue" style="font-size:0.58rem;width:fit-content;">IntentNetworkReadyEvent</div>
+                </div>
+            </div>
+
+            <div class="ms-box" style="border-left:4px solid #00B0EB;">
+                <div class="text-xs tracking-widest uppercase mb-2" style="color:#00B0EB;">3. Apply, assure and control loop</div>
+                <div class="text-[0.58rem] mb-2" style="color:#f0f4ff;background:rgba(0,176,235,0.08);border:1px solid rgba(0,176,235,0.22);border-radius:8px;padding:0.45rem 0.55rem;font-weight:600;">Governed control loop — automated where the use-case autonomy boundary allows it</div>
+                <div style="display:flex;flex-direction:column;gap:7px;">
+                    <div style="padding:0.55rem 0.65rem;border-radius:8px;background:rgba(0,176,235,0.06);border:1px solid rgba(0,176,235,0.15);">
+                        <div class="text-[0.65rem] font-bold mb-1" style="color:#f0f4ff;">Guardian (IA MS) initiates apply monitoring</div>
+                        <div class="text-[0.6rem]" style="color:#b8c8e8;">Approved configuration is applied by the execution owner, while Guardian (IA MS) starts monitoring callbacks and telemetry.</div>
+                    </div>
+                    <div style="padding:0.55rem 0.65rem;border-radius:8px;background:rgba(249,100,73,0.06);border:1px solid rgba(249,100,73,0.16);">
+                        <div class="text-[0.65rem] font-bold mb-1" style="color:#F96449;">External feedback → Dispatcher (ICB MS)</div>
+                        <div class="text-[0.6rem]" style="color:#b8c8e8;">Callbacks and apply outcomes are ingested and relayed as trusted event input.</div>
+                    </div>
+                    <div style="display:flex;gap:6px;flex-wrap:wrap;">
+                        <span class="event-pill ep-orange" style="font-size:0.56rem;">IntentCallbackEvent</span>
+                        <span class="event-pill ep-blue" style="font-size:0.56rem;">IntentAssuranceEvent</span>
+                    </div>
+                    <div style="padding:0.55rem 0.65rem;border-radius:8px;background:rgba(0,176,235,0.06);border:1px solid rgba(0,176,235,0.15);">
+                        <div class="text-[0.65rem] font-bold mb-1" style="color:#f0f4ff;">Controller (IC MS) projects; Brain (II MS) evaluates</div>
+                        <div class="text-[0.6rem]" style="color:#b8c8e8;">Controller (IC MS) updates lifecycle and IntentReport. If Degraded, Brain (II MS) evaluates governed degraded-state action where required.</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="reveal mt-2" style="border:1px solid rgba(255,255,255,0.14);border-radius:9px;background:rgba(255,255,255,0.055);padding:0.55rem 0.7rem;">
+            <div class="text-[0.62rem] leading-relaxed" style="color:#f0f4ff;font-weight:600;">Decision ownership: Guardian (IA MS) observes and emits assurance; Brain (II MS) decides governed degraded-state action where required.</div>
+        </div>
+
+        <div class="reveal mt-3" style="border:1px solid rgba(249,100,73,0.18);border-radius:10px;background:rgba(249,100,73,0.045);padding:0.65rem 0.8rem;">
+            <div class="text-xs tracking-widest uppercase mb-1" style="color:#F96449;">Feedback boundary</div>
+            <div class="text-xs" style="color:#b8c8e8;">REST handles external commands and reads. Kafka carries internal workflow. Dispatcher reconnects external execution feedback into the governed control loop.</div>
+    
+        <div class="intent-flow-mini reveal" ondblclick="openIntentFlowModal()" title="Double-click to expand data flow">
+            <img data-svg-src="https://raw.githubusercontent.com/prageethw/im/main/baseline/intent/id-ms/loop.svg" alt="Intent data flow diagram" loading="lazy" referrerpolicy="no-referrer">
+            <div class="intent-flow-mini-badge">Data flow</div>
+
+            <div class="ms-box reveal" style="border-left:4px solid #6B5BFF;background:rgba(107,91,255,0.07);padding:0.6rem 0.8rem;">
+                <div class="text-xs tracking-widest uppercase mb-1" style="color:#9b8cff;">Flow simplification note</div>
+                <p class="text-xs leading-relaxed" style="color:#d8d2ff;">IntentResolvedEvent may be emitted as an internal resolution milestone; this simplified E2E flow continues with IntentNetworkReadyEvent.</p>
+            </div>
+        </div>
+    </div>
+</div>
+</div>
+
+<div class="slide slide-12" data-slide="15">
+    <div class="gradient-mesh">
+        <div class="blob" style="width:430px;height:430px;top:-110px;right:-90px;background:#0078C0;opacity:0.13;"></div>
+        <div class="blob" style="width:290px;height:290px;bottom:-70px;left:-60px;background:#00B0EB;opacity:0.09;"></div>
+    </div>
+    <div class="content">
+        <div class="text-xs tracking-[4px] uppercase mb-2 reveal" style="color:#6e87aa;">Infrastructure Pattern</div>
+        <h2 class="font-display text-[clamp(1.6rem,3.5vw,2.6rem)] font-bold mb-4 reveal" style="color:#f0f4ff;">Event Architecture &amp; Kafka Topology</h2>
+        <div class="grid grid-cols-3 gap-4">
+            <div class="ms-box reveal" style="grid-column:span 3;">
+                <div class="text-xs tracking-widest uppercase mb-3" style="color:#00B0EB;">3 Delivery Models — Must Not Be Collapsed</div>
+                <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;">
+                    <div style="padding:0.5rem 0.7rem;border-radius:7px;background:rgba(0,176,235,0.07);border:1px solid rgba(0,176,235,0.15);">
+                        <div class="text-[0.65rem] font-bold mb-1" style="color:#00B0EB;">① Internal Kafka Events</div>
+                        <div class="text-[0.6rem]" style="color:#b8c8e8;">CloudEvents-style headers + plain JSON body. At-least-once delivery. Idempotent consumers required. Used for all internal workflow facts.</div>
+                    </div>
+                    <div style="padding:0.5rem 0.7rem;border-radius:7px;background:rgba(249,100,73,0.07);border:1px solid rgba(249,100,73,0.15);">
+                        <div class="text-[0.65rem] font-bold mb-1" style="color:#F96449;">② External Webhooks</div>
+                        <div class="text-[0.6rem]" style="color:#b8c8e8;">HTTP POST to subscriber callback URLs. Service-owned outbox + retry relay. TMF-aligned payloads. Used by ID MS and IC MS for subscriber notifications.</div>
+                    </div>
+                    <div style="padding:0.5rem 0.7rem;border-radius:7px;background:rgba(249,100,73,0.07);border:1px solid rgba(249,100,73,0.15);">
+                        <div class="text-[0.65rem] font-bold mb-1" style="color:#F96449;">③ Callback Ingestion</div>
+                        <div class="text-[0.6rem]" style="color:#b8c8e8;">REST POST to ICB MS. Outbox persistence before Kafka relay. Two profiles: change-execution callbacks go to IA MS; optimisation status callbacks go to II MS.</div>
+                    </div>
+                </div>
+            </div>
+            <div class="ms-box reveal" style="grid-column:span 2;">
+                <div class="text-xs tracking-widest uppercase mb-2" style="color:#00B0EB;">Kafka Topic Map</div>
+                <div class="text-[0.58rem] mb-2" style="color:#6e87aa;">Role reminder: IC is Controller, II is Brain, ICB is Dispatcher, IA is Guardian.</div>
+                <table style="width:100%;border-collapse:collapse;font-size:0.65rem;">
+                    <thead><tr style="color:#6e87aa;"><th style="text-align:left;padding:3px 6px;border-bottom:1px solid rgba(0,176,235,0.15);">Topic</th><th style="text-align:left;padding:3px 6px;border-bottom:1px solid rgba(0,176,235,0.15);">Producer</th><th style="text-align:left;padding:3px 6px;border-bottom:1px solid rgba(0,176,235,0.15);">Consumer</th></tr></thead>
+                    <tbody>
+                        <tr><td style="padding:4px 6px;color:#00B0EB;"><code>t7.intent.management.events</code></td><td style="padding:4px 6px;color:#b8c8e8;">IC, II, IA and ICB MS</td><td style="padding:4px 6px;color:#b8c8e8;">IC, II and IA MS</td></tr>
+                        <tr style="background:rgba(0,0,0,0.15);"><td style="padding:4px 6px;color:#F96449;"><code>t7.intent.management.events.callbacks</code></td><td style="padding:4px 6px;color:#b8c8e8;">ICB MS</td><td style="padding:4px 6px;color:#b8c8e8;">IA MS and II MS</td></tr>
+                    </tbody>
+                </table>
+            </div>
+            <div class="ms-box reveal" style="grid-column:span 3;border-left:4px solid #00B0EB;background:rgba(0,176,235,0.045);">
+                <div class="text-xs tracking-widest uppercase mb-2" style="color:#00B0EB;">REST and event boundary interoperation</div>
+                <div style="display:grid;grid-template-columns:1fr 1fr 1.25fr;gap:8px;">
+                    <div class="text-xs" style="color:#b8c8e8;"><strong style="color:#f0f4ff;">REST API boundary:</strong> External clients use TMF-aligned REST APIs for commands, reads and subscriptions.</div>
+                    <div class="text-xs" style="color:#b8c8e8;"><strong style="color:#f0f4ff;">Event boundary:</strong> Internal services use Kafka events for asynchronous workflow, assurance, callbacks and state projection.</div>
+                    <div class="text-xs" style="color:#b8c8e8;"><strong style="color:#f0f4ff;">Interoperation:</strong> REST admission updates canonical resources, events move the workflow forward, and IC MS projects final state through REST resources, IntentReport and webhooks.</div>
+                </div>
+            </div>
+
+            <div class="ms-box reveal">
+                <div class="text-xs tracking-widest uppercase mb-2" style="color:#00B0EB;">Reliability Pattern</div>
+                <div style="display:flex;flex-direction:column;gap:4px;">
+                    <div class="text-xs" style="color:#b8c8e8;">📦 Outbox per microservice</div>
+                    <div class="text-xs" style="color:#b8c8e8;">🔁 Relay retries on Kafka failure</div>
+                    <div class="text-xs" style="color:#b8c8e8;">☠️ DLQ for poison messages</div>
+                    <div class="text-xs" style="color:#b8c8e8;">🔑 Kafka key = intentId</div>
+                    <div class="text-xs" style="color:#b8c8e8;">📋 ce-id deduplication</div>
+                </div>
+            </div>
+
+            <div class="ms-box reveal" style="grid-column:span 3;border-left:4px solid #F96449;background:rgba(249,100,73,0.06);padding:0.65rem 0.85rem;">
+                <div class="text-xs tracking-widest uppercase mb-1" style="color:#F96449;">Routing clarification</div>
+                <p class="text-xs leading-relaxed" style="color:#f0f4ff;">ICB MS publishes IntentCallbackEvent on the callbacks topic for IA MS, and OptimisationStatusChangeEvent on the main events topic for II MS.</p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- ═══════════════════════════════════════ SLIDE 12: KNOWLEDGE PLANE + OPTIMISER ═══════════════════════════════════════ -->
+<div class="slide slide-13" data-slide="16">
+    <div class="gradient-mesh">
+        <div class="blob" style="width:400px;height:400px;top:-100px;right:-80px;background:#004D9D;opacity:0.14;"></div>
+        <div class="blob" style="width:280px;height:280px;bottom:-70px;left:-50px;background:#F96449;opacity:0.09;"></div>
+    </div>
+    <div class="content">
+        <div class="text-xs tracking-[4px] uppercase mb-2 reveal" style="color:#6e87aa;">Supporting Systems</div>
+        <h2 class="font-display text-[clamp(1.6rem,3.5vw,2.6rem)] font-bold mb-4 reveal" style="color:#f0f4ff;">Knowledge Plane &amp; External Decision Systems</h2>
+        <div class="grid grid-cols-2 gap-5">
+            <div class="reveal" style="border:1px solid rgba(0,176,235,0.22);border-radius:12px;padding:1.1rem;background:rgba(0,78,157,0.08);">
+                <div class="flex items-center gap-2 mb-3">
+                    <span style="font-size:1.4rem;">🗄️</span>
+                    <div>
+                        <div class="font-semibold text-sm" style="color:#00B0EB;">Knowledge Plane (KP)</div>
+                        <div class="text-xs" style="color:#6e87aa;">Network intelligence backbone the Brain uses for safe decisions</div>
+                    </div>
+                </div>
+                <div style="display:flex;flex-direction:column;gap:5px;">
+                    <div class="text-xs" style="color:#b8c8e8;">II MS queries KP for <strong>location capability</strong>, <strong>service class availability</strong>, <strong>resource inventory</strong>, and <strong>policy constraints</strong></div>
+                    <div class="text-xs" style="color:#b8c8e8;">KP config CRUD and governance is <em>outside</em> the Intent Platform scope — owned by Knowledge Plane operating model</div>
+                    <div class="text-xs" style="color:#b8c8e8;">II MS uses circuit-breaker + dependency handling on KP unavailability — does not surface raw KP structures in internal events</div>
+                    <div class="text-xs" style="color:#b8c8e8;">Domain-specific KP profiles vary per use case; II MS maps them into the stable event contract</div>
+                </div>
+            </div>
+            <div class="reveal" style="border:1px solid rgba(249,100,73,0.25);border-radius:12px;padding:1.1rem;background:rgba(249,100,73,0.05);">
+                <div class="flex items-center gap-2 mb-3">
+                    <span style="font-size:1.4rem;">🎯</span>
+                    <div>
+                        <div class="font-semibold text-sm" style="color:#F96449;">External Decision &amp; Data Services</div>
+                        <div class="text-xs" style="color:#6e87aa;">External systems(Tx) needed to make intents network-ready</div>
+                    </div>
+                </div>
+                <div style="display:flex;flex-direction:column;gap:5px;">
+                    <div class="text-xs" style="color:#b8c8e8;"><strong>Examples:</strong> inventory, CRM, MyID, topology systems, policy engines, domain-specific data sources, and optimisation engines where needed.</div>
+                    <div class="text-xs" style="color:#b8c8e8;"><strong>Trigger:</strong> II MS invokes one or more decision and data services as required to resolve an admitted intent.</div>
+                    <div class="text-xs" style="color:#b8c8e8;"><strong>Callback:</strong> Those systems post results via ICB MS (<code style="color:#F96449;">POST /intent-callback/v1/submissions</code>).</div>
+                    <div class="text-xs" style="color:#b8c8e8;"><strong>Rule:</strong> II MS cannot emit <code>IntentNetworkReadyEvent</code> until all required external outcomes are available or deterministically timed out.</div>
+                    <div style="display:flex;flex-wrap:wrap;gap:4px;margin-top:4px;">
+                        <span class="event-pill ep-green" style="font-size:0.58rem;">COMPLETED</span>
+                        <span class="event-pill ep-orange" style="font-size:0.58rem;">INFEASIBLE</span>
+                        <span class="event-pill" style="font-size:0.58rem;background:rgba(239,68,68,0.1);border-color:rgba(239,68,68,0.3);color:#ef4444;">FAILED</span>
+                        <span class="event-pill ep-blue" style="font-size:0.58rem;">PROCESSING</span>
+                    </div>
+                </div>
+            </div>
+            <!-- serviceConfiguration structure -->
+            <div class="ms-box reveal" style="grid-column:span 2;">
+                <div class="text-xs tracking-widest uppercase mb-2" style="color:#00B0EB;">IntentNetworkReadyEvent — serviceConfiguration Structure</div>
+                <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">
+                    <pre style="font-size:0.6rem;color:#b8c8e8;line-height:1.5;background:rgba(0,0,0,0.3);padding:0.5rem;border-radius:6px;margin:0;">orchestratorConfiguration:
+  target: &lt;system&gt;
+  profile: &lt;profile&gt;
+  resources: [&lt;selected-for-apply&gt;]</pre>
+                    <pre style="font-size:0.6rem;color:#b8c8e8;line-height:1.5;background:rgba(0,0,0,0.3);padding:0.5rem;border-radius:6px;margin:0;">observerConfiguration:
+  target: &lt;system&gt;
+  profile: &lt;profile&gt;
+  resources: [{ metrics: [latencyMs,
+    availabilityPercent...] }]</pre>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- ═══════════════════════════════════════ SLIDE 13: SECURITY ═══════════════════════════════════════ -->
+<div class="slide slide-14" data-slide="17">
+    <div class="gradient-mesh">
+        <div class="blob" style="width:420px;height:420px;top:-110px;right:-90px;background:#0078C0;opacity:0.12;"></div>
+        <div class="blob" style="width:300px;height:300px;bottom:-70px;left:-60px;background:#004D9D;opacity:0.1;"></div>
+    </div>
+    <canvas class="particle-canvas-ambient" style="position:absolute;inset:0;z-index:1;"></canvas>
+    <div class="content">
+        <div class="text-xs tracking-[4px] uppercase mb-2 reveal" style="color:#6e87aa;">Security Architecture</div>
+        <h2 class="font-display text-[clamp(1.6rem,3.5vw,2.6rem)] font-bold mb-4 reveal" style="color:#f0f4ff;">Defence-in-Depth Security Model</h2>
+        <div class="grid grid-cols-3 gap-4">
+            <div class="ms-box reveal">
+                <div style="font-size:1.2rem; margin-bottom:0.4rem;">🔐</div>
+                <div class="text-xs font-semibold mb-1" style="color:#00B0EB;">User Authentication</div>
+                <div class="text-xs" style="color:#b8c8e8;">OEX users authenticated via identity provider. Authorised sessions only. All requests carry verified identity through API Gateway.</div>
+            </div>
+            <div class="ms-box reveal">
+                <div style="font-size:1.2rem; margin-bottom:0.4rem;">🚪</div>
+                <div class="text-xs font-semibold mb-1" style="color:#00B0EB;">API Gateway (NGW)</div>
+                <div class="text-xs" style="color:#b8c8e8;">ID MS, IC MS, ICB MS exposed through NGW. NGW authenticates and forwards trusted identity claims. External callers cannot reach services directly.</div>
+            </div>
+            <div class="ms-box reveal">
+                <div style="font-size:1.2rem; margin-bottom:0.4rem;">🛡️</div>
+                <div class="text-xs font-semibold mb-1" style="color:#00B0EB;">Service-to-Service</div>
+                <div class="text-xs" style="color:#b8c8e8;">Internal traffic uses mTLS or equivalent. II MS and IA MS are internal-only — not exposed via NGW or any external-facing interface.</div>
+            </div>
+            <div class="ms-box reveal">
+                <div style="font-size:1.2rem; margin-bottom:0.4rem;">📨</div>
+                <div class="text-xs font-semibold mb-1" style="color:#00B0EB;">Kafka Security</div>
+                <div class="text-xs" style="color:#b8c8e8;">Topic-level ACLs. Producers and consumers authenticated. Event integrity enforced. Sensitive data (secrets, tokens) never included in event payloads.</div>
+            </div>
+            <div class="ms-box reveal">
+                <div style="font-size:1.2rem; margin-bottom:0.4rem;">🔁</div>
+                <div class="text-xs font-semibold mb-1" style="color:#00B0EB;">Callback Trust Boundary</div>
+                <div class="text-xs" style="color:#b8c8e8;">ICB MS performs technical authorisation — validates caller identity from NGW-forwarded claims before accepting any callback submission. No blind trust.</div>
+            </div>
+            <div class="ms-box reveal">
+                <div style="font-size:1.2rem; margin-bottom:0.4rem;">🔒</div>
+                <div class="text-xs font-semibold mb-1" style="color:#00B0EB;">API Concurrency</div>
+                <div class="text-xs" style="color:#b8c8e8;">Optimistic locking or equivalent for concurrent updates. Idempotency keys on write operations. ETag or version headers for resource-level conflict detection.</div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- ═══════════════════════════════════════ SLIDE 14: QUALITY ATTRIBUTES ═══════════════════════════════════════ -->
+<div class="slide slide-15" data-slide="18">
+    <div class="gradient-mesh">
+        <div class="blob" style="width:400px;height:400px;top:-100px;right:-80px;background:#004D9D;opacity:0.13;"></div>
+        <div class="blob" style="width:280px;height:280px;bottom:-70px;left:-50px;background:#00B0EB;opacity:0.09;"></div>
+    </div>
+    <div class="content">
+        <div class="text-xs tracking-[4px] uppercase mb-2 reveal" style="color:#6e87aa;">Non-Functional Requirements</div>
+        <h2 class="font-display text-[clamp(1.6rem,3.5vw,2.6rem)] font-bold mb-4 reveal" style="color:#f0f4ff;">Quality Attributes</h2>
+        <!-- Horizontal bar chart for quality areas -->
+        <div style="display:flex;flex-direction:column;gap:9px;" class="reveal">
+            <div style="display:grid;grid-template-columns:130px 1fr 200px;gap:8px;align-items:center;">
+                <div class="text-xs font-semibold" style="color:#b8c8e8;">Availability</div>
+                <div class="bar-track"><div class="bar-fill" data-width="92" style="background:linear-gradient(90deg,#004D9D,#00B0EB);"></div></div>
+                <div class="text-xs" style="color:#6e87aa;">Outbox pattern; API safe-fail on DB outage</div>
+            </div>
+            <div style="display:grid;grid-template-columns:130px 1fr 200px;gap:8px;align-items:center;">
+                <div class="text-xs font-semibold" style="color:#b8c8e8;">Scalability</div>
+                <div class="bar-track"><div class="bar-fill" data-width="85" style="background:linear-gradient(90deg,#004D9D,#00B0EB);"></div></div>
+                <div class="text-xs" style="color:#6e87aa;">Horizontal scale; intentId Kafka partitioning</div>
+            </div>
+            <div style="display:grid;grid-template-columns:130px 1fr 200px;gap:8px;align-items:center;">
+                <div class="text-xs font-semibold" style="color:#b8c8e8;">Performance</div>
+                <div class="bar-track"><div class="bar-fill" data-width="80" style="background:linear-gradient(90deg,#004D9D,#00B0EB);"></div></div>
+                <div class="text-xs" style="color:#6e87aa;">Admission = syntactic-only; semantics async</div>
+            </div>
+            <div style="display:grid;grid-template-columns:130px 1fr 200px;gap:8px;align-items:center;">
+                <div class="text-xs font-semibold" style="color:#b8c8e8;">Reliability</div>
+                <div class="bar-track"><div class="bar-fill" data-width="90" style="background:linear-gradient(90deg,#004D9D,#00B0EB);"></div></div>
+                <div class="text-xs" style="color:#6e87aa;">State changes outbox-backed; idempotent consumers</div>
+            </div>
+            <div style="display:grid;grid-template-columns:130px 1fr 200px;gap:8px;align-items:center;">
+                <div class="text-xs font-semibold" style="color:#b8c8e8;">Maintainability</div>
+                <div class="bar-track"><div class="bar-fill" data-width="88" style="background:linear-gradient(90deg,#004D9D,#00B0EB);"></div></div>
+                <div class="text-xs" style="color:#6e87aa;">Specs, design briefs, solution briefs aligned but distinct</div>
+            </div>
+            <div style="display:grid;grid-template-columns:130px 1fr 200px;gap:8px;align-items:center;">
+                <div class="text-xs font-semibold" style="color:#b8c8e8;">TMF Compliance</div>
+                <div class="bar-track"><div class="bar-fill" data-width="95" style="background:linear-gradient(90deg,#F96449,#FF8C00);"></div></div>
+                <div class="text-xs" style="color:#6e87aa;">TMF 921 v5.0 — external APIs and event shapes</div>
+            </div>
+        </div>
+        <div class="grid grid-cols-3 gap-3 mt-4">
+            <div class="ms-box reveal" style="text-align:center;padding:0.5rem;">
+                <div class="text-xl font-bold glow-pulse" style="color:#00B0EB;" data-count="5">0</div>
+                <div class="text-xs" style="color:#6e87aa;">Microservices</div>
+            </div>
+            <div class="ms-box reveal" style="text-align:center;padding:0.5rem;">
+                <div class="text-xl font-bold glow-pulse" style="color:#00B0EB;" data-count="2">0</div>
+                <div class="text-xs" style="color:#6e87aa;">Kafka Topics</div>
+            </div>
+            <div class="ms-box reveal" style="text-align:center;padding:0.5rem;">
+                <div class="text-xl font-bold glow-pulse" style="color:#00B0EB;" data-count="7">0</div>
+                <div class="text-xs" style="color:#6e87aa;">Internal Event Types</div>
+            </div>
+
+
+
+
+
+
+<div class="ms-box reveal" style="grid-column:span 3;border-left:4px solid #00B0EB;background:rgba(0,176,235,0.045);">
+                <div class="text-xs tracking-widest uppercase mb-2" style="color:#00B0EB;">How to read this slide</div>
+                <p class="text-xs leading-relaxed" style="color:#b8c8e8;">These quality targets define what the platform must achieve. The next slide shows the delivery and operational readiness practices used to meet them.</p>
+            </div>
+</div>
+    </div>
+</div>
+
+<!-- ═══════════════════════════════════════ SLIDE 15: AI CODING STACK ═══════════════════════════════════════ -->
+<!-- ═══════════════════════════════════════ SLIDE 16: ARCHITECTURE PRINCIPLES ═══════════════════════════════════════ -->
+
+<!-- ═══════════════════════════════════════ SLIDE 16: DELIVERY AND OPERATIONAL READINESS ═══════════════════════════════════════ -->
+<div class="slide slide-16" data-slide="19">
+    <div class="gradient-mesh">
+        <div class="blob" style="width:430px;height:430px;top:-110px;right:-90px;background:#004D9D;opacity:0.13;"></div>
+        <div class="blob" style="width:310px;height:310px;bottom:-80px;left:-70px;background:#00B0EB;opacity:0.08;"></div>
+        <div class="blob" style="width:220px;height:220px;top:42%;right:12%;background:#F96449;opacity:0.06;"></div>
+    </div>
+    <div class="content">
+        <div class="text-xs tracking-[4px] uppercase mb-2 reveal" style="color:#6e87aa;">Operationalisation</div>
+        <h2 class="font-display text-[clamp(1.6rem,3.5vw,2.6rem)] font-bold mb-3 reveal" style="color:#f0f4ff;">Delivery and Operational Readiness</h2>
+        <p class="text-sm mb-4 reveal" style="color:#6e87aa;">How the platform is built, released, scaled, observed and recovered in production.</p>
+
+        <div class="grid grid-cols-3 gap-4">
+            <div class="ms-box reveal" style="border-left:4px solid #00B0EB;">
+                <div class="text-xs tracking-widest uppercase mb-2" style="color:#00B0EB;">Elastic deployment and cost control</div>
+                <p class="text-xs leading-relaxed" style="color:#b8c8e8;">Each microservice owns its persistence, cache strategy and Helm-based deployment unit. Autoscaling uses CPU, memory, request throughput, error rate, latency and queue-depth signals so the platform can scale under load while avoiding unnecessary infrastructure cost.</p>
+            </div>
+
+            <div class="ms-box reveal" style="border-left:4px solid #00B0EB;">
+                <div class="text-xs tracking-widest uppercase mb-2" style="color:#00B0EB;">Regional resilience posture</div>
+                <p class="text-xs leading-relaxed" style="color:#b8c8e8;">Platform services, persistence, eventing, external endpoints and SaaS choices are selected so the deployment can evolve from single-region to active-passive regional failover without redesigning the platform.</p>
+            </div>
+
+            <div class="ms-box reveal" style="border-left:4px solid #00B0EB;">
+                <div class="text-xs tracking-widest uppercase mb-2" style="color:#00B0EB;">CI/CD and release governance</div>
+                <p class="text-xs leading-relaxed" style="color:#b8c8e8;">Each microservice should have an independent pipeline for build, test, security scan, contract validation, container image promotion and Helm-based deployment. Pipelines should support environment promotion, rollback, configuration control and approval gates for production changes.</p>
+            </div>
+
+            <div class="ms-box reveal" style="border-left:4px solid #00B0EB;">
+                <div class="text-xs tracking-widest uppercase mb-2" style="color:#00B0EB;">Automated quality validation</div>
+                <p class="text-xs leading-relaxed" style="color:#b8c8e8;">Automated functional, load and performance testing should be combined with chaos-engineering practices to prove the platform meets defined quality attributes before production rollout and during controlled release cycles.</p>
+            </div>
+
+            <div class="ms-box reveal" style="border-left:4px solid #00B0EB;">
+                <div class="text-xs tracking-widest uppercase mb-2" style="color:#00B0EB;">Observability, traceability and visualisation</div>
+                <p class="text-xs leading-relaxed" style="color:#b8c8e8;">Centralised logs, metrics, traces, events, dashboards and alerts. Candidate stack: Prometheus, Grafana, Jaeger, Kiali and service mesh. Views cover request health, event lag, callback failures, latency, saturation and end-to-end traceability.</p>
+            </div>
+
+            <div class="ms-box reveal" style="border-left:4px solid #00B0EB;">
+                <div class="text-xs tracking-widest uppercase mb-2" style="color:#00B0EB;">Operational readiness and runbooks</div>
+                <p class="text-xs leading-relaxed" style="color:#b8c8e8;">Production readiness should include runbooks for DLQ handling, outbox recovery, callback failures, dependency timeouts, regional failover, rollback and controlled manual intervention when the use-case autonomy boundary requires approval.</p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="slide slide-17" data-slide="20">
+    <div class="gradient-mesh">
+        <div class="blob" style="width:440px;height:440px;top:-120px;right:-90px;background:#004D9D;opacity:0.14;"></div>
+        <div class="blob" style="width:320px;height:320px;bottom:-100px;left:-70px;background:#00B0EB;opacity:0.08;"></div>
+        <div class="blob" style="width:230px;height:230px;top:42%;right:12%;background:#F96449;opacity:0.07;"></div>
+    </div>
+    <div class="content">
+        <div class="text-xs tracking-[4px] uppercase mb-2 reveal" style="color:#6e87aa;">Architecture Close</div>
+        <h2 class="font-display text-[clamp(1.6rem,3.5vw,2.6rem)] font-bold mb-3 reveal" style="color:#f0f4ff;">Architecture Principles and Recommended Next Steps</h2>
+        <p class="text-sm mb-4 reveal" style="color:#6e87aa;">The decisions that should remain stable as the platform moves from architecture into delivery.</p>
+
+        <div class="grid grid-cols-3 gap-4">
+            <div class="ms-box reveal" style="border-left:4px solid #00B0EB;">
+                <div class="text-xs tracking-widest uppercase mb-2" style="color:#00B0EB;">Clear ownership</div>
+                <p class="text-xs leading-relaxed" style="color:#b8c8e8;">Librarian, Controller, Brain, Dispatcher and Guardian each own a distinct platform responsibility.</p>
+            </div>
+
+            <div class="ms-box reveal" style="border-left:4px solid #00B0EB;">
+                <div class="text-xs tracking-widest uppercase mb-2" style="color:#00B0EB;">Governed admission</div>
+                <p class="text-xs leading-relaxed" style="color:#b8c8e8;">Only ACTIVE IntentSpecifications admit new runtime Intents, with version and lifecycle governance.</p>
+            </div>
+
+            <div class="ms-box reveal" style="border-left:4px solid #F96449;">
+                <div class="text-xs tracking-widest uppercase mb-2" style="color:#F96449;">External execution ownership</div>
+                <p class="text-xs leading-relaxed" style="color:#b8c8e8;">Intent Management derives, hands over and assures configuration; the network or change-execution layer owns execution state.</p>
+            </div>
+
+            <div class="ms-box reveal" style="border-left:4px solid #F96449;">
+                <div class="text-xs tracking-widest uppercase mb-2" style="color:#F96449;">Feedback-loop architecture</div>
+                <p class="text-xs leading-relaxed" style="color:#b8c8e8;">External systems(Tx) send status back through Dispatcher, Guardian evaluates assurance, and Brain decides degraded-state control-loop action.</p>
+            </div>
+
+            <div class="ms-box reveal" style="border-left:4px solid #00B0EB;">
+                <div class="text-xs tracking-widest uppercase mb-2" style="color:#00B0EB;">Future regional resilience</div>
+                <p class="text-xs leading-relaxed" style="color:#b8c8e8;">Platform services and supporting technologies are selected so active-passive or regional failover remains possible later.</p>
+            </div>
+
+            <div class="ms-box reveal" style="border-left:4px solid #00B0EB;">
+                <div class="text-xs tracking-widest uppercase mb-2" style="color:#00B0EB;">Autonomy boundary</div>
+                <p class="text-xs leading-relaxed" style="color:#b8c8e8;">Each use case defines what can run automatically, what needs approval, and what remains manual.</p>
+            </div>
+
+            <div class="ms-box reveal" style="grid-column:span 3;border-left:4px solid #8B5CF6;background:rgba(139,92,246,0.045);">
+                <div class="text-xs tracking-widest uppercase mb-2" style="color:#A78BFA;">TMF autonomy positioning</div>
+                <div style="display:grid;grid-template-columns:0.85fr 2fr;gap:0;border:1px solid rgba(0,176,235,0.18);border-radius:8px;overflow:hidden;">
+                    <div class="text-xs font-bold" style="color:#f0f4ff;background:rgba(0,176,235,0.12);padding:0.5rem;">Autonomy position</div>
+                    <div class="text-xs font-bold" style="color:#f0f4ff;background:rgba(0,176,235,0.12);padding:0.5rem;">How this platform supports it</div>
+                    <div class="text-xs" style="color:#b8c8e8;padding:0.5rem;border-top:1px solid rgba(0,176,235,0.12);">L3-style assisted closed loop</div>
+                    <div class="text-xs" style="color:#b8c8e8;padding:0.5rem;border-top:1px solid rgba(0,176,235,0.12);">Detect assurance variance, surface IntentReport evidence, and support governed operator-approved action where the use case requires approval.</div>
+                    <div class="text-xs" style="color:#b8c8e8;padding:0.5rem;border-top:1px solid rgba(0,176,235,0.12);">L4-style bounded autonomous loop</div>
+                    <div class="text-xs" style="color:#b8c8e8;padding:0.5rem;border-top:1px solid rgba(0,176,235,0.12);">For approved use cases, evaluate benchmark variance, trigger Brain-led control-loop decisioning, and hand over approved configuration to the external execution owner without routine operator touch.</div>
+                </div>
+                <div class="text-[0.58rem] mt-2" style="color:#6e87aa;">Positioning is use-case bounded. This is not a claim of unrestricted full autonomy across every domain from day one.</div>
+            </div>
+
+            <div class="ms-box reveal" style="grid-column:span 3;border-left:4px solid #F96449;background:rgba(249,100,73,0.06);">
+                <div class="text-xs tracking-widest uppercase mb-2" style="color:#00B0EB;">Stable architecture decisions</div>
+                <p class="text-sm leading-relaxed" style="color:#f0f4ff;">Use this architecture as the baseline for API contract hardening, event contract testing, deployment design, and production operations planning.</p>
+            </div>
+        
+            <div class="ms-box reveal" style="grid-column:span 3;border-left:4px solid #F96449;background:rgba(249,100,73,0.06);">
+                <div class="text-xs tracking-widest uppercase mb-2" style="color:#F96449;">Recommended next steps</div>
+                <ul class="text-sm leading-relaxed" style="color:#f0f4ff;margin:0;padding-left:1.1rem;">
+                    <li>Finalise the exact Knowledge Plane integration and knowledge discovery pattern, including how II MS discovers governed knowledge sources, resolves freshness, and applies trust rules during decisioning.</li>
+                    <li>Finalise infrastructure and SaaS solution decisions through the conversations already started with the TCG team.</li>
+                </ul>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="slide slide-18" data-slide="21">
+    <div class="gradient-mesh">
+        <div class="blob" style="width:420px;height:420px;top:-110px;left:-80px;background:#004D9D;opacity:0.13;"></div>
+        <div class="blob" style="width:300px;height:300px;bottom:-70px;right:-60px;background:#F96449;opacity:0.09;"></div>
+        <div class="blob" style="width:200px;height:200px;top:40%;right:10%;background:#00B0EB;opacity:0.07;"></div>
+    </div>
+    <div class="content">
+        <div class="text-xs tracking-[4px] uppercase mb-2 reveal" style="color:#6e87aa;">Delivery Enablement</div>
+        <h2 class="font-display text-[clamp(1.6rem,3.5vw,2.6rem)] font-bold mb-4 reveal" style="color:#f0f4ff;">Supplementary: Delivery Acceleration</h2>
+        <div class="reveal text-sm mb-4" style="color:#b8c8e8;background:rgba(110,135,170,0.08);border:1px solid rgba(110,135,170,0.22);border-radius:10px;padding:0.65rem 0.85rem;">
+            This is supplementary delivery tooling, not part of the intent platform runtime architecture. Use it only if the discussion moves to delivery acceleration.
+        </div>
+        <div class="grid grid-cols-3 gap-4">
+            <div class="ms-box reveal" style="border-left:4px solid #6e87aa;">
+                <div class="text-xs font-bold mb-1" style="color:#6e87aa;">Baseline (Funded)</div>
+                <div class="text-sm font-semibold mb-1" style="color:#b8c8e8;">GitHub Copilot Enterprise</div>
+                <div class="text-xs" style="color:#6e87aa;">~USD 39/user/month</div>
+                <hr style="border-color:rgba(255,255,255,0.07);margin:6px 0;">
+                <div class="text-xs" style="color:#b8c8e8;">✓ Inline IDE completions, PR review, small refactors. Best for file-scoped work.</div>
+                <div class="text-xs mt-1" style="color:#6e87aa;">⚠ Cannot: read whole repo, multi-file plans, autonomous execution</div>
+            </div>
+            <div class="ms-box reveal" style="border-left:4px solid #00B0EB;box-shadow:0 0 16px rgba(0,176,235,0.15);">
+                <div class="flex items-center gap-1 mb-1">
+                    <span class="event-pill ep-blue" style="font-size:0.6rem;">RECOMMENDED</span>
+                </div>
+                <div class="text-sm font-semibold mb-1" style="color:#00B0EB;">Claude Code (Anthropic)</div>
+                <div class="text-xs" style="color:#6e87aa;">+USD 500/month (6 seats, Phase 1)</div>
+                <hr style="border-color:rgba(0,176,235,0.15);margin:6px 0;">
+                <div class="text-xs" style="color:#b8c8e8;">✓ Reads entire repo, proposes cross-service change plans, executes multi-file edits, translates specs → code. Strongest at large context reasoning.</div>
+                <div class="text-xs mt-1" style="color:#22c55e;">18-month total cost: ~USD 4,200 — less than 1 week of senior engineer time</div>
+            </div>
+            <div class="ms-box reveal" style="border-left:4px solid #6e87aa;">
+                <div class="text-xs font-bold mb-1" style="color:#6e87aa;">Option B</div>
+                <div class="text-sm font-semibold mb-1" style="color:#b8c8e8;">OpenAI Codex CLI</div>
+                <div class="text-xs" style="color:#6e87aa;">~USD 100-150/user/month</div>
+                <hr style="border-color:rgba(255,255,255,0.07);margin:6px 0;">
+                <div class="text-xs" style="color:#b8c8e8;">✓ Similar repo-aware agentic capabilities. Preferred if team is standardising on OpenAI ecosystem.</div>
+                <div class="text-xs mt-1" style="color:#6e87aa;">Similar or slightly higher cost than Option A</div>
+            </div>
+        </div>
+        <div class="ms-box reveal mt-3" style="border-left:4px solid #F96449;">
+            <div class="text-xs" style="color:#b8c8e8;"><strong style="color:#F96449;">ROI Framing:</strong> A conservative 0.5 day/week productivity gain from agents yields USD 1,000–2,000/month in labour value — 2×–4× the Phase 1 licence cost. Even a single avoided rework cycle outweighs 18 months of licensing spend.</div>
+        </div>
+    </div>
+</div>
+
+<!-- ═══════════════════════════════════════ SLIDE 18: CLOSING ═══════════════════════════════════════ -->
+<div class="slide slide-19" data-slide="22">
+    <div class="gradient-mesh">
+        <div class="blob" style="width:650px;height:650px;top:-180px;right:-150px;background:#0078C0;opacity:0.18;"></div>
+        <div class="blob" style="width:400px;height:400px;bottom:-120px;left:-100px;background:#00B0EB;opacity:0.14;"></div>
+        <div class="blob" style="width:250px;height:250px;top:40%;left:15%;background:#F96449;opacity:0.1;"></div>
+    </div>
+    <canvas class="particle-canvas" style="position:absolute;inset:0;z-index:1;"></canvas>
+    <div class="content text-center">
+        <svg class="telstra-logo reveal" viewBox="0 0 296 338" fill="none" xmlns="http://www.w3.org/2000/svg" style="animation: float 3s ease-in-out infinite; filter: drop-shadow(0 0 20px rgba(0,176,235,0.7));">
+            <ellipse cx="148" cy="185" rx="135" ry="135" fill="#00B0EB" opacity="0.9"/>
+            <rect x="108" y="60" width="80" height="200" rx="8" fill="#004D9D"/>
+            <rect x="60" y="60" width="176" height="40" rx="8" fill="#004D9D"/>
+        </svg>
+        <h1 class="font-display text-[clamp(2.2rem,5vw,4.2rem)] font-bold tracking-tight mb-3 reveal" style="background:linear-gradient(135deg,#00B0EB,#f0f4ff,#00B0EB);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;">Thank You</h1>
+        <p class="text-[clamp(0.9rem,1.4vw,1.2rem)] font-light tracking-[4px] uppercase mb-5 reveal" style="color:#6e87aa;">Questions Welcome</p>
+        <div class="grid grid-cols-3 gap-4 reveal" style="max-width:700px;margin:0 auto;">
+            <div class="ms-box" style="padding:0.6rem;text-align:center;">
+                <div class="text-xs font-semibold mb-1" style="color:#00B0EB;">Architecture</div>
+                <div class="text-xs" style="color:#6e87aa;">5 role-based microservices: Librarian, Controller, Brain, Dispatcher and Guardian</div>
+            </div>
+            <div class="ms-box" style="padding:0.6rem;text-align:center;">
+                <div class="text-xs font-semibold mb-1" style="color:#00B0EB;">Standard</div>
+                <div class="text-xs" style="color:#6e87aa;">TMF 921 v5.0, Intent Architecture 3.6 baseline</div>
+            </div>
+            <div class="ms-box" style="padding:0.6rem;text-align:center;">
+                <div class="text-xs font-semibold mb-1" style="color:#00B0EB;">First Use Case</div>
+                <div class="text-xs" style="color:#6e87aa;">First production use case — selected by business priority and operational readiness</div>
+            </div>
+        </div>
+        <p class="text-xs mt-5 reveal" style="color:#3a5a7a; letter-spacing:2px;">github.com/prageethw/im · baseline/intent · intent-3.6-baseline</p>
+    </div>
+</div>
+
+</div><!-- end .deck -->
+
+<div class="nav-controls">
+    <button class="nav-btn" onclick="changeSlide(-1)" aria-label="Previous slide">&#8249;</button>
+    <div class="slide-dots" id="dots"></div>
+    <button class="nav-btn" onclick="changeSlide(1)" aria-label="Next slide">&#8250;</button>
+    <span class="slide-counter" id="counter">1 / 22</span>
+</div>
+
+<script>
+    let current = 1;
+    const total = document.querySelectorAll('.slide').length;
+    const dotsContainer = document.getElementById('dots');
+    const counter = document.getElementById('counter');
+    for (let i = 1; i <= total; i++) {
+        const dot = document.createElement('div');
+        dot.className = 'dot' + (i === 1 ? ' active' : '');
+        dot.onclick = () => goToSlide(i);
+        dotsContainer.appendChild(dot);
+    }
+    function goToSlide(n) {
+        const prev = document.querySelector('.slide.active');
+        const next = document.querySelector('.slide[data-slide="' + n + '"]');
+        if (prev) prev.classList.remove('active');
+        if (next) { next.classList.add('active'); animateSlide(next); }
+        current = n; updateNav();
+    }
+    function changeSlide(dir) { let n = current + dir; if (n < 1) n = total; if (n > total) n = 1; goToSlide(n); }
+    function updateNav() {
+        document.querySelectorAll('.dot').forEach((d, i) => d.classList.toggle('active', i + 1 === current));
+        counter.textContent = current + ' / ' + total;
+    }
+    document.addEventListener('keydown', e => {
+        if (e.key === 'ArrowRight' || e.key === ' ') { e.preventDefault(); changeSlide(1); }
+        if (e.key === 'ArrowLeft') { e.preventDefault(); changeSlide(-1); }
+    });
+    let touchStartX = 0;
+    document.addEventListener('touchstart', e => { touchStartX = e.touches[0].clientX; });
+    document.addEventListener('touchend', e => { const diff = touchStartX - e.changedTouches[0].clientX; if (Math.abs(diff) > 50) changeSlide(diff > 0 ? 1 : -1); });
+
+    function animateSlide(slide) {
+        slide.querySelectorAll('.reveal').forEach((el, i) => {
+            el.style.transition = 'none';
+            el.style.opacity = '0';
+            el.style.transform = 'translateY(20px)';
+            el.offsetHeight;
+            const delay = i * 0.07;
+            el.style.transition = `opacity 0.35s ease ${delay}s, transform 0.35s ease ${delay}s`;
+            el.style.opacity = '1';
+            el.style.transform = 'translateY(0px)';
+        });
+        animateSlideEffects(slide);
+    }
+
+    function animateSlideEffects(slide) {
+        slide.querySelectorAll('[data-count]:not(.counted)').forEach(el => {
+            el.classList.add('counted');
+            const target = parseInt(el.dataset.count);
+            let cur = 0; const step = Math.max(1, target / 30);
+            const timer = setInterval(() => { cur += step; if (cur >= target) { cur = target; clearInterval(timer); } el.textContent = Math.round(cur); }, 40);
+        });
+        slide.querySelectorAll('.bar-fill:not(.fill-init)').forEach((bar, i) => {
+            bar.classList.add('fill-init');
+            bar.style.width = '0%';
+            bar.style.transition = 'width 0.7s ease ' + (i * 0.1) + 's';
+            bar.offsetHeight;
+            bar.style.width = bar.dataset.width + '%';
+        });
+    }
+
+    document.addEventListener('mousemove', e => {
+        const spotlight = document.querySelector('.mouse-spotlight');
+        if (spotlight) {
+            spotlight.style.background = `radial-gradient(600px circle at ${e.clientX}px ${e.clientY}px, rgba(0,176,235,0.05), transparent 40%)`;
+        }
+    });
+
+    window.initParticles = function(canvas, options) {
+        if (!canvas) return;
+        const ctx = canvas.getContext('2d');
+        const resize = () => { canvas.width = canvas.offsetWidth; canvas.height = canvas.offsetHeight; };
+        resize();
+        const interactive = options.interactive !== false;
+        const count = options.count || (interactive ? 55 : 18);
+        let mx = -1000, my = -1000;
+        const particles = Array.from({ length: count }, () => ({
+            x: Math.random() * canvas.width, y: Math.random() * canvas.height,
+            vx: (Math.random() - 0.5) * 0.3, vy: (Math.random() - 0.5) * 0.3,
+            size: Math.random() * 2.2 + 0.6, alpha: Math.random() * 0.3 + 0.08
+        }));
+        if (interactive) {
+            canvas.addEventListener('mousemove', e => { const r = canvas.getBoundingClientRect(); mx = e.clientX - r.left; my = e.clientY - r.top; });
+            canvas.addEventListener('mouseleave', () => { mx = -1000; my = -1000; });
+        }
+        (function animate() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            particles.forEach(p => {
+                if (interactive) { const dx = p.x - mx, dy = p.y - my, dist = Math.sqrt(dx*dx+dy*dy); if (dist < 120) { const f = (120-dist)/120*2; p.vx += (dx/dist)*f*0.1; p.vy += (dy/dist)*f*0.1; } }
+                p.vx *= 0.98; p.vy *= 0.98; p.x += p.vx; p.y += p.vy;
+                if (p.x < 0) p.x = canvas.width; if (p.x > canvas.width) p.x = 0;
+                if (p.y < 0) p.y = canvas.height; if (p.y > canvas.height) p.y = 0;
+                ctx.beginPath(); ctx.arc(p.x, p.y, p.size, 0, Math.PI*2);
+                ctx.fillStyle = `rgba(0,176,235,${p.alpha})`; ctx.fill();
+            });
+            requestAnimationFrame(animate);
+        })();
+    };
+    document.querySelectorAll('.particle-canvas').forEach(c => window.initParticles(c, { interactive: true, count: 55 }));
+    document.querySelectorAll('.particle-canvas-ambient').forEach(c => window.initParticles(c, { interactive: false, count: 18 }));
+
+    try { animateSlide(document.querySelector('.slide.active')); } catch(e) { console.warn(e); }
+</script>
+
+
+
+
+
+<div id="intentFlowModal" class="intent-flow-modal" aria-hidden="true">
+    <div class="intent-flow-modal-card" role="dialog" aria-label="Intent data flow diagram">
+        <button class="intent-flow-modal-close" onclick="closeIntentFlowModal()" aria-label="Close data flow diagram">×</button>
+        <img data-svg-src="https://raw.githubusercontent.com/prageethw/im/main/baseline/intent/id-ms/loop.svg" alt="Expanded intent data flow diagram" referrerpolicy="no-referrer">
+    </div>
+</div>
+
+
+<script id="intent-flow-svg-preview-script">
+(function () {
+    var svgBaseUrl = "https://raw.githubusercontent.com/prageethw/im/main/baseline/intent/id-ms/loop.svg";
+    var activeObjectUrls = [];
+
+    function revokeOldObjectUrls() {
+        activeObjectUrls.forEach(function (url) {
+            try { URL.revokeObjectURL(url); } catch (e) {}
+        });
+        activeObjectUrls = [];
+    }
+
+    function setFallbackDirectUrls(cacheBuster) {
+        document.querySelectorAll('img[data-svg-src]').forEach(function (img) {
+            var src = img.getAttribute('data-svg-src') || svgBaseUrl;
+            img.setAttribute('src', src + '?cb=' + cacheBuster);
+        });
+    }
+
+    function refreshIntentFlowImages() {
+        var cacheBuster = Date.now().toString() + '-' + Math.random().toString(36).slice(2);
+        var requestUrl = svgBaseUrl + '?cb=' + encodeURIComponent(cacheBuster);
+
+        fetch(requestUrl, {
+            method: 'GET',
+            cache: 'no-store',
+            mode: 'cors',
+            credentials: 'omit',
+            headers: {
+                'Cache-Control': 'no-cache',
+                'Pragma': 'no-cache'
+            }
+        })
+        .then(function (response) {
+            if (!response.ok) throw new Error('SVG fetch failed: ' + response.status);
+            return response.blob();
+        })
+        .then(function (blob) {
+            revokeOldObjectUrls();
+            document.querySelectorAll('img[data-svg-src]').forEach(function (img) {
+                var objectUrl = URL.createObjectURL(blob);
+                activeObjectUrls.push(objectUrl);
+                img.setAttribute('src', objectUrl);
+            });
+        })
+        .catch(function () {
+            // Fallback for local-file or locked-down browser contexts where fetch/CORS is blocked.
+            setFallbackDirectUrls(cacheBuster);
+        });
+    }
+
+    function openIntentFlowModal() {
+        refreshIntentFlowImages();
+        var modal = document.getElementById('intentFlowModal');
+        if (modal) modal.classList.add('is-open');
+    }
+
+    function closeIntentFlowModal() {
+        var modal = document.getElementById('intentFlowModal');
+        if (modal) modal.classList.remove('is-open');
+    }
+
+    window.openIntentFlowModal = openIntentFlowModal;
+    window.closeIntentFlowModal = closeIntentFlowModal;
+
+    document.addEventListener('DOMContentLoaded', refreshIntentFlowImages);
+    window.addEventListener('pageshow', refreshIntentFlowImages);
+
+    document.addEventListener('keydown', function (event) {
+        if (event.key === 'Escape') closeIntentFlowModal();
+    });
+
+    document.addEventListener('click', function (event) {
+        var modal = document.getElementById('intentFlowModal');
+        if (modal && event.target === modal) closeIntentFlowModal();
+    });
+})();
+</script>
+
+</body>
+</html>
