@@ -4,7 +4,7 @@
 
 ## 1. Purpose:
 
-This document defines the mandatory implementation stack for the Intent Management Platform.
+This document defines the mandatory implementation stack and repository implementation structure for the Intent Management Platform.
 
 The stack applies to all service implementation slices unless a later Architecture Decision Record changes the baseline.
 
@@ -30,7 +30,7 @@ This document is tool-neutral. GPT Codex, Claude Code or any other approved codi
 | Containerisation | Docker |
 | Local runtime | Docker Compose |
 | Container orchestration | Kubernetes |
-| Deployment packaging | Helm charts |
+| Deployment packaging | Per-microservice Helm chart |
 | Service mesh | Istio |
 | Service-to-service security | mTLS through Istio |
 | Metrics instrumentation | Micrometer |
@@ -43,7 +43,81 @@ This document is tool-neutral. GPT Codex, Claude Code or any other approved codi
 | Security baseline | Spring Security scaffold, no hardcoded secrets |
 | Secrets management | AWS Secrets Manager |
 
-## 3. Service implementation baseline:
+## 3. Repository implementation baseline:
+
+All implementation code must be created under:
+
+```text
+baseline/intent/
+```
+
+Approved implementation roots are:
+
+```text
+baseline/intent/codebases/
+baseline/intent/platform/
+baseline/intent/tests/
+```
+
+Do not create:
+
+```text
+baseline/intent/services/
+baseline/intent/libs/
+services/
+libs/
+platform/
+tests/
+intents/
+```
+
+at repository root or under `baseline/intent/`.
+
+The branch name is not a directory.
+
+## 4. Microservice codebase baseline:
+
+Each Intent Platform microservice must be implemented as an independently buildable, testable, deployable and versionable Spring Boot codebase.
+
+The approved service implementation roots are:
+
+```text
+baseline/intent/codebases/id-ms/
+baseline/intent/codebases/ic-ms/
+baseline/intent/codebases/icb-ms/
+baseline/intent/codebases/ii-ms/
+baseline/intent/codebases/ia-ms/
+```
+
+Each microservice must own:
+
+- its own Maven project
+- its own source tree
+- its own service-local tests
+- its own Dockerfile
+- its own Helm chart scaffold
+- its own configuration
+- its own persistence model
+- its own PostgreSQL database or schema boundary
+- its own Redis cache namespace
+- its own deployment lifecycle
+
+A microservice must not share:
+
+- domain entities
+- lifecycle state machines
+- repository models
+- service-local business rules
+- persistence models
+- database ownership
+- cache namespaces
+- runtime modules
+
+Shared code must not be introduced by default.
+
+If shared reusable technical libraries are required later, they must be introduced as independent shareable libraries through a dedicated ADR and delivery slice.
+
+## 5. Service implementation baseline:
 
 All Intent Platform microservices must be implemented using Java 21 and Spring Boot 3.x.
 
@@ -55,15 +129,16 @@ The baseline applies to:
 - II MS
 - IA MS
 
-Each service must follow the same foundation pattern:
+Each service must follow the same independent codebase pattern:
 
 ```text
+README.md
+pom.xml
+Dockerfile
+helm/
 src/main/java
 src/main/resources
 src/test/java
-Dockerfile
-pom.xml
-README.md
 ```
 
 Each service must expose:
@@ -73,37 +148,89 @@ Each service must expose:
 
 Health and readiness endpoints may be implemented through Spring Boot Actuator, provided the public paths remain stable for the platform runtime.
 
-## 4. Shared foundation modules:
+## 6. Helm ownership baseline:
 
-Shared implementation code should be placed under a common library module when the same behaviour is required by more than one service.
+Each microservice owns its own Helm chart scaffold under its own codebase.
 
-The shared foundation should include scaffolds for:
+Approved chart locations are:
 
-- correlation ID handling
-- common error model
-- event envelope
-- idempotency
-- outbox
-- inbox
-- Kafka producer wrapper
-- Kafka consumer wrapper
-- structured logging helpers
-- metrics helpers
-- tracing helpers
-- Redis cache configuration helpers
-- AWS Secrets Manager configuration readiness
+```text
+baseline/intent/codebases/id-ms/helm/
+baseline/intent/codebases/ic-ms/helm/
+baseline/intent/codebases/icb-ms/helm/
+baseline/intent/codebases/ii-ms/helm/
+baseline/intent/codebases/ia-ms/helm/
+```
 
-Shared modules must not contain service-specific domain workflow logic.
+Do not create a common Helm chart for all services by default.
 
-## 5. Build tool decision:
+The `baseline/intent/platform/` folder must not contain shared service charts by default. It may contain local development configuration, environment-level reference configuration, and platform capability scaffolding.
+
+## 7. Test ownership baseline:
+
+Service-local tests must live inside the owning microservice codebase.
+
+Examples:
+
+```text
+baseline/intent/codebases/id-ms/src/test/java
+baseline/intent/codebases/ic-ms/src/test/java
+baseline/intent/codebases/icb-ms/src/test/java
+baseline/intent/codebases/ii-ms/src/test/java
+baseline/intent/codebases/ia-ms/src/test/java
+```
+
+Cross-service tests must live under:
+
+```text
+baseline/intent/tests/
+```
+
+The platform-level `tests/` folder is only for:
+
+- contract tests
+- cross-service smoke tests
+- end-to-end tests
+
+Do not create shared test libraries by default.
+
+If reusable test support is required later, it must be introduced as an independent shareable test-support library through a dedicated ADR and delivery slice.
+
+## 8. Platform environment baseline:
+
+The `baseline/intent/platform/` folder is for platform environment scaffolding only.
+
+It may contain:
+
+- local Docker Compose runtime
+- Kafka or Redpanda local runtime readiness
+- PostgreSQL local runtime readiness
+- Redis local runtime readiness
+- Prometheus configuration placeholders
+- Grafana configuration placeholders
+- Jaeger configuration placeholders
+- Istio readiness placeholders
+- Kiali readiness placeholders
+- AWS Secrets Manager readiness notes
+- CI/CD examples
+
+It must not contain:
+
+- shared domain code
+- shared service runtime code
+- shared service Helm charts by default
+- service-specific business behaviour
+- service-specific persistence models
+
+## 9. Build tool decision:
 
 Maven is the baseline build tool.
 
-The repository should use a consistent Maven structure across all service modules and shared modules.
+Each microservice must have its own Maven project.
 
 Do not mix Maven and Gradle in the same baseline unless an ADR approves the change.
 
-## 6. Messaging baseline:
+## 10. Messaging baseline:
 
 Kafka is the messaging abstraction for implementation.
 
@@ -111,25 +238,27 @@ Spring Kafka must be used for producer and consumer scaffolding.
 
 For local development, Docker Compose may use either Redpanda or Apache Kafka, provided the local topic names and producer and consumer configuration remain compatible with the platform event contracts.
 
-## 7. Persistence baseline:
+## 11. Persistence baseline:
 
 PostgreSQL is the baseline relational database for local and deployable service persistence.
 
+Each microservice owns its own PostgreSQL database or schema boundary.
+
 Spring Data JPA may be used for repository scaffolding.
 
-The foundation slice must only create persistence scaffolding. It must not implement full domain persistence behaviour unless the relevant service slice requires it.
+A microservice must not directly read or write another microservice's database or schema.
 
-## 8. Cache baseline:
+## 12. Cache baseline:
 
 Redis is the baseline cache provider.
+
+Each microservice owns its own Redis cache namespace and cache configuration.
 
 Caching must be explicit and service-owned. A service may use Redis only where the service specification or delivery slice defines a cache requirement.
 
 Redis must not be used as a source of truth for domain state.
 
-The foundation slice may include Redis dependency and configuration readiness, but it must not introduce cache-backed business behaviour.
-
-## 9. API baseline:
+## 13. API baseline:
 
 REST APIs must be implemented using Spring Web.
 
@@ -145,35 +274,31 @@ Generated or handwritten controllers must preserve:
 
 No service may rename public API paths without an ADR and contract update.
 
-## 10. Container orchestration baseline:
+## 14. Container orchestration baseline:
 
 Kubernetes is the baseline container orchestration platform.
 
-Helm charts must be used for deployment packaging.
+Each microservice must be independently deployable to Kubernetes through its own Helm chart scaffold.
 
 Docker Compose remains the local development runtime only. Docker Compose must not be treated as the production container orchestration baseline.
 
-The foundation slice may include local Docker Compose and Helm chart scaffolding, but it must not create production-grade Kubernetes manifests unless the delivery slice explicitly requires them.
-
-## 11. Service mesh baseline:
+## 15. Service mesh baseline:
 
 Istio is the baseline service mesh for deployed environments.
 
 The platform must assume that service-to-service communication is protected through the service mesh.
 
-The foundation slice may include configuration placeholders for service mesh readiness, but it must not create full production Istio policies unless the delivery slice explicitly requires them.
+Services must not implement custom service-to-service trust mechanisms that bypass the mesh.
 
-## 12. Service-to-service security baseline:
+## 16. Service-to-service security baseline:
 
 mTLS is the baseline for microservice-to-microservice communication.
 
 In deployed environments, mTLS should be enforced through Istio service mesh policy.
 
-Services must not implement custom service-to-service trust mechanisms that bypass the mesh.
-
 Local development may run without Istio and mTLS, but local bypasses must be clearly scoped to local profiles and must not become production defaults.
 
-## 13. Secrets management baseline:
+## 17. Secrets management baseline:
 
 AWS Secrets Manager is the baseline secrets provider.
 
@@ -183,9 +308,7 @@ Services must read secrets through configuration that can be backed by AWS Secre
 
 Local development may use safe local placeholders, but those placeholders must not be treated as production defaults.
 
-The foundation slice may include configuration readiness for AWS Secrets Manager, but it must not create real secrets or production credentials.
-
-## 14. Observability baseline:
+## 18. Observability baseline:
 
 All services must include observability scaffolding for:
 
@@ -207,26 +330,9 @@ Jaeger is the baseline distributed tracing visualisation tool.
 
 Kiali is the baseline visualisation tool for Istio service mesh topology, service-to-service traffic and mesh health.
 
-The foundation slice may include service-level observability dependencies, configuration placeholders and documentation, but it must not create production-grade Prometheus, Grafana, Kiali or Jaeger deployment configuration unless the delivery slice explicitly requires it.
-
-## 15. Testing baseline:
-
-All services must include a test scaffold.
-
-The baseline test stack is:
-
-- JUnit 5 for unit tests
-- Mockito for mocking
-- Spring Boot Test for service tests
-- Testcontainers for integration tests that require PostgreSQL, Kafka, Redis or other runtime dependencies
-
-Each slice must provide test evidence before merge.
-
-## 16. Security baseline:
+## 19. Security baseline:
 
 Each service must include a Spring Security scaffold.
-
-The foundation slice does not need to implement full production identity integration, but it must avoid insecure defaults that would block later hardening.
 
 The implementation must not include:
 
@@ -236,40 +342,7 @@ The implementation must not include:
 - security bypasses hidden inside service code
 - custom service-to-service mTLS code that bypasses Istio
 
-## 17. Slice 01 implementation guidance:
-
-For Slice 01 Foundation, coding agents must use this file as source of truth.
-
-Slice 01 may create:
-
-- Java 21 and Spring Boot 3.x service skeletons
-- Maven module structure
-- common library scaffolding
-- Spring Web health and readiness endpoints
-- Spring Security scaffold
-- Spring Kafka producer and consumer scaffolding
-- Spring Data JPA persistence scaffolding
-- Redis configuration readiness
-- AWS Secrets Manager configuration readiness
-- Micrometer metrics readiness
-- OpenTelemetry tracing readiness
-- Docker Compose local runtime
-- Helm chart scaffolding
-- test scaffolds
-
-Slice 01 must not create:
-
-- full domain workflows
-- production-grade Kubernetes manifests
-- production-grade Istio policies
-- custom mTLS implementation inside service code
-- production-grade Prometheus, Grafana, Kiali or Jaeger deployment configuration
-- real secrets or production credentials
-- cache-backed business behaviour
-- optimiser integration
-- network apply integration
-
-## 18. Explicit exclusions:
+## 20. Explicit exclusions:
 
 Coding agents must not use the following for service implementation unless a later ADR changes the platform stack:
 
@@ -284,22 +357,26 @@ Coding agents must not use the following for service implementation unless a lat
 
 These technologies may appear in tooling scripts only when explicitly approved and not used as the service runtime stack.
 
-## 19. Agent instructions:
+## 21. Agent instructions:
 
 GPT Codex, Claude Code or any other approved coding agent must:
 
 - read this file before generating service code
 - use Java 21 and Spring Boot 3.x for service implementation
 - use Maven consistently
-- avoid introducing another runtime language
-- avoid creating implementation files outside `baseline/intent/`
+- create individually deployable codebases under `baseline/intent/codebases/<ms>/`
+- create one Helm chart scaffold per microservice under `baseline/intent/codebases/<ms>/helm/`
+- keep service-local tests inside each owning microservice codebase
+- place only cross-service contract, smoke and e2e tests under `baseline/intent/tests/`
+- avoid introducing shared implementation code by default
+- avoid creating `baseline/intent/libs/`
+- avoid creating `baseline/intent/services/`
 - avoid creating `/intents`, `intents/`, root-level `services/`, root-level `libs/`, root-level `platform/` or root-level `tests/`
 - avoid changing architecture ownership boundaries
-- avoid implementing domain workflows in foundation-only slices
 - provide changed files and test evidence
 
-## 20. Change control:
+## 22. Change control:
 
-Changes to this technology stack require an Architecture Decision Record.
+Changes to this technology stack or implementation structure require an Architecture Decision Record.
 
-A coding agent must not change this file as part of implementation unless the task explicitly requests a stack update.
+A coding agent must not change this file as part of implementation unless the task explicitly requests a stack or structure update.
