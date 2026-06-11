@@ -229,7 +229,7 @@ Open a pull request or produce a working tree change set with:
 The Slice 01 change set is complete only when:
 
 - all generated implementation files are under `baseline/intent/`
-- service codebases are under `baseline/intent/codebases/<ms>/`
+- service codebases are under `baseline/intent/codebases/{ms}/`
 - no `baseline/intent/services/` folder is created
 - no `baseline/intent/libs/` folder is created
 - no root-level `intents/`, `services/`, `libs/`, `platform/` or `tests/` folders are created

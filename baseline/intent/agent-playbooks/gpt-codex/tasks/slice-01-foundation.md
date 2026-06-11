@@ -26,7 +26,7 @@ Also read and follow:
 - Do not infer a different technology stack.
 - Use Java 21, Spring Boot 3.x and Maven.
 - Keep all generated implementation files under `baseline/intent/`.
-- Create independent service codebases under `baseline/intent/codebases/<ms>/`.
+- Create independent service codebases under `baseline/intent/codebases/{ms}/`.
 - Do not create shared implementation libraries.
 - Do not create `baseline/intent/services/`.
 - Do not create `baseline/intent/libs/`.

@@ -364,8 +364,8 @@ Approved coding agents must:
 - read this file before generating service code
 - use Java 21 and Spring Boot 3.x for service implementation
 - use Maven consistently
-- create individually deployable codebases under `baseline/intent/codebases/<ms>/`
-- create one Helm chart scaffold per microservice under `baseline/intent/codebases/<ms>/helm/`
+- create individually deployable codebases under `baseline/intent/codebases/{ms}/`
+- create one Helm chart scaffold per microservice under `baseline/intent/codebases/{ms}/helm/`
 - keep service-local tests inside each owning microservice codebase
 - place only cross-service contract, smoke and e2e tests under `baseline/intent/tests/`
 - avoid introducing shared implementation code by default

@@ -27,7 +27,7 @@ Also read and follow:
 - Use Java 21, Spring Boot 3.x and Maven.
 - Inspect the repository structure before creating files.
 - Keep all generated implementation files under `baseline/intent/`.
-- Create independent service codebases under `baseline/intent/codebases/<ms>/`.
+- Create independent service codebases under `baseline/intent/codebases/{ms}/`.
 - Do not create shared implementation libraries.
 - Do not create `baseline/intent/services/`.
 - Do not create `baseline/intent/libs/`.
