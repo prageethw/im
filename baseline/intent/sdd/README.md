@@ -62,7 +62,7 @@ Tool-specific instructions are stored outside this folder:
 
 | Tool | Instruction file |
 |---|---|
-| Codex | `../agent-playbooks/codex/AGENTS.md` |
+| Codex | `../agent-playbooks/gpt-codex/AGENTS.md` |
 | Claude Code | `../agent-playbooks/claude-code/CLAUDE.md` |
 
 ## 6. Completion rule:
