@@ -212,7 +212,36 @@ Do not rename:
 
 Do not move ownership boundaries between ID MS, IC MS, ICB MS, II MS and IA MS.
 
-## 10. Expected output:
+## 10. Code comments rule:
+
+Generated code must include comments only where they explain non-obvious architectural intent, service ownership boundaries, intentional placeholders or future-slice extension points.
+
+Comments should explain why something exists, not restate obvious Java or Spring syntax.
+
+Use comments for:
+
+- service ownership boundaries
+- intentional Slice 01 placeholders
+- future-slice extension points
+- security or secrets-management constraints
+- cache namespace ownership
+- readiness and health contract stability
+- cross-service integration assumptions
+
+Avoid comments such as:
+
+- `This is a controller.`
+- `This method returns a value.`
+- `Set the variable.`
+- comments that simply repeat the class or method name
+
+Prefer comments such as:
+
+- `Slice 01 intentionally exposes readiness only. Domain workflow endpoints are introduced in later slices.`
+- `This Redis namespace keeps cache keys service-owned and must not be shared across microservices.`
+- `AWS Secrets Manager integration is represented as configuration readiness only. No real secrets must be committed.`
+
+## 11. Expected output:
 
 Open a pull request or produce a working tree change set with:
 
@@ -224,7 +253,7 @@ Open a pull request or produce a working tree change set with:
 - known gaps
 - test evidence
 
-## 11. Acceptance criteria:
+## 12. Acceptance criteria:
 
 The Slice 01 change set is complete only when:
 
@@ -248,7 +277,7 @@ The Slice 01 change set is complete only when:
 - no shared implementation code is created
 - no domain workflow is implemented in this slice
 
-## 12. Post-run evidence:
+## 13. Post-run evidence:
 
 After implementation, provide:
 

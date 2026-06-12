@@ -357,7 +357,36 @@ Coding agents must not use the following for service implementation unless a lat
 
 These technologies may appear in tooling scripts only when explicitly approved and not used as the service runtime stack.
 
-## 21. Agent instructions:
+## 21. Code comments baseline:
+
+Generated code must include comments only where they explain non-obvious architectural intent, service ownership boundaries, intentional placeholders or future-slice extension points.
+
+Comments should explain why something exists, not restate obvious Java or Spring syntax.
+
+Use comments for:
+
+- service ownership boundaries
+- intentional Slice 01 placeholders
+- future-slice extension points
+- security or secrets-management constraints
+- cache namespace ownership
+- readiness and health contract stability
+- cross-service integration assumptions
+
+Avoid comments such as:
+
+- `This is a controller.`
+- `This method returns a value.`
+- `Set the variable.`
+- comments that simply repeat the class or method name
+
+Prefer comments such as:
+
+- `Slice 01 intentionally exposes readiness only. Domain workflow endpoints are introduced in later slices.`
+- `This Redis namespace keeps cache keys service-owned and must not be shared across microservices.`
+- `AWS Secrets Manager integration is represented as configuration readiness only. No real secrets must be committed.`
+
+## 22. Agent instructions:
 
 Approved coding agents must:
 
@@ -375,7 +404,7 @@ Approved coding agents must:
 - avoid changing architecture ownership boundaries
 - provide changed files and test evidence
 
-## 22. Change control:
+## 23. Change control:
 
 Changes to this technology stack or implementation structure require an Architecture Decision Record.
 
