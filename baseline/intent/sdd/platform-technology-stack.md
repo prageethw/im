@@ -386,7 +386,131 @@ Prefer comments such as:
 - `This Redis namespace keeps cache keys service-owned and must not be shared across microservices.`
 - `AWS Secrets Manager integration is represented as configuration readiness only. No real secrets must be committed.`
 
-## 22. Agent instructions:
+## 22. Test coverage baseline:
+
+Test coverage is a delivery gate, but it is not the only proof of correctness.
+
+Generated tests must prove meaningful behaviour rather than only increasing line coverage.
+
+For Slice 01 Foundation, each microservice must meet:
+
+- minimum 70% line coverage
+- minimum 60% branch coverage
+- explicit tests for required scaffolding paths
+
+Slice 01 tests must include:
+
+- application context starts
+- `GET /health` returns 200
+- `GET /ready` returns 200
+- correlation ID is accepted or generated
+- basic error response shape is stable
+- security scaffold does not expose unintended endpoints
+- local profile configuration loads successfully
+
+For later domain and production slices, the expected baseline is:
+
+- minimum 80% line coverage
+- minimum 70% branch coverage
+- explicit scenario tests for lifecycle rules, event handling, idempotency and state transitions
+- 90% or higher coverage for critical lifecycle, event and idempotency logic where feasible
+
+Coverage must not be achieved through shallow tests that only instantiate classes or call getters.
+
+Acceptance criteria, API contract tests, event contract tests and lifecycle scenario tests remain the primary proof of correctness.
+
+## 23. External dependency mocking baseline:
+
+Generated code may use mocks, stubs or test doubles for external systems only where required for local execution, isolated tests or unavailable dependencies.
+
+Mocks must:
+
+- be clearly located under test or local-development scaffolding
+- match the expected contract shape where a contract exists
+- avoid inventing new API paths, event names or payload semantics
+- include happy-path and failure-path examples where relevant
+- be clearly documented as non-production scaffolding
+
+Mocks must not:
+
+- replace API or event contract tests
+- become production integration code
+- hide missing integration decisions
+- introduce behaviour not present in the architecture or contracts
+- create fake source-of-truth data ownership
+
+For Slice 01 Foundation, external systems may be mocked only to prove service startup, readiness, local configuration and test isolation.
+
+## 24. Agent stop conditions:
+
+Approved coding agents must stop and report instead of guessing when a required decision or contract is missing.
+
+Stop and report if:
+
+- a required source-of-truth file is missing
+- the architecture documents conflict with API or event contracts
+- folder structure or implementation root is unclear
+- implementation would require changing service ownership boundaries
+- implementation would require inventing an API path, event name, topic name, lifecycle state or integration behaviour
+- tests cannot pass without inventing behaviour not defined in the SDD task
+- an external API or event contract is unavailable but required for the slice
+- generated code would require shared implementation code not approved by the slice
+- the task would create disallowed folders such as `services/`, `libs/` or `intents/`
+
+When a stop condition is reached, the agent must provide:
+
+- the blocking issue
+- the file or contract that caused the issue
+- the decision required from a human
+- any safe partial work already completed
+
+## 25. Agent evidence pack and review checklist:
+
+Every agent run must provide a small evidence pack.
+
+The evidence pack must include:
+
+- `git status --short`
+- `git diff --stat`
+- changed files list
+- test command output
+- coverage summary per microservice
+- mock or stub summary where external dependencies are isolated
+- architecture boundary check
+- forbidden folder check
+- known gaps and deferred work
+
+The architecture boundary check must confirm:
+
+- generated implementation files stay under `baseline/intent/`
+- microservice codebases stay under `baseline/intent/codebases/{ms}/`
+- no shared implementation libraries were created
+- no public API paths were renamed
+- no event names or topic names were invented
+- no lifecycle states were invented
+- no service ownership boundaries were moved
+- no future-slice domain workflow was implemented early
+
+The forbidden folder check must confirm that the run did not create:
+
+- `baseline/intent/services/`
+- `baseline/intent/libs/`
+- root-level `intents/`
+- root-level `services/`
+- root-level `libs/`
+- root-level `platform/`
+- root-level `tests/`
+
+Human review must check:
+
+- the generated code satisfies only the selected slice
+- tests prove meaningful behaviour
+- comments explain only non-obvious intent
+- mocks stay under test or local-development scaffolding
+- contracts remain the source of truth
+- implementation does not overbuild future slices
+
+## 26. Agent instructions:
 
 Approved coding agents must:
 
@@ -403,8 +527,12 @@ Approved coding agents must:
 - avoid creating `/intents`, `intents/`, root-level `services/`, root-level `libs/`, root-level `platform/` or root-level `tests/`
 - avoid changing architecture ownership boundaries
 - provide changed files and test evidence
+- meet the test coverage baseline while still proving meaningful behaviour
+- use mocks, stubs or test doubles only according to the external dependency mocking baseline
+- provide the required evidence pack after each run
+- stop and report when a stop condition is reached instead of guessing
 
-## 23. Change control:
+## 27. Change control:
 
 Changes to this technology stack or implementation structure require an Architecture Decision Record.
 
