@@ -4,9 +4,11 @@
 
 ## 1. Purpose:
 
-This file tells GPT Codex how to execute the agent-neutral SDD task for Slice 01 Foundation.
+This file tells GPT Codex how to execute the agent-neutral SDD task for Slice 01 Foundation in controlled sub-slices.
 
 The source of truth is the neutral task file. This wrapper must not override the SDD task, platform technology stack or architecture guardrails.
+
+For the first coding run, execute **Slice 01A only**. Do not execute Slice 01B or Slice 01C until the previous sub-slice has passed human review.
 
 ## 2. Execute this task:
 
@@ -23,6 +25,8 @@ Also read and follow:
 ## 3. GPT Codex execution rules:
 
 - Do not override the neutral SDD task.
+- Execute only Slice 01A for the first coding run.
+- Do not execute Slice 01B or Slice 01C without the required human approval.
 - Do not infer a different technology stack.
 - Use Java 21, Spring Boot 3.x and Maven.
 - Keep all generated implementation files under `baseline/intent/`.
@@ -39,12 +43,12 @@ Also read and follow:
 From the repository root:
 
 ```bash
-codex "Read baseline/intent/agent-playbooks/gpt-codex/tasks/slice-01-foundation.md and execute the referenced neutral SDD task."
+codex "Read baseline/intent/agent-playbooks/gpt-codex/tasks/slice-01-foundation.md and execute Slice 01A only from the referenced neutral SDD task. Do not execute Slice 01B or Slice 01C."
 ```
 
 ## 5. Required evidence after run:
 
-Provide:
+Provide the Slice 01A evidence pack:
 
 ```text
 git status --short
