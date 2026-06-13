@@ -14,6 +14,7 @@ This document is tool-neutral. Approved coding agents must follow this stack whe
 
 | Area | Baseline |
 |---|---|
+| Version baseline | `sdd/platform-version-baseline.md` |
 | Service language | Java 21 |
 | Service framework | Spring Boot 3.x |
 | Build tool | Maven |
@@ -581,11 +582,24 @@ Validation rules:
 - An agent must not claim that a validation check passed when it was not executed.
 - Commands and concise results must be included in the evidence pack.
 
-## 28. Agent instructions:
+## 28. Exact version baseline:
+
+Slice 01A must use:
+
+- `baseline/intent/sdd/platform-version-baseline.md`
+
+The version baseline defines the approved Java distribution, Spring Boot version, Maven and Maven Wrapper versions, container image tags, Kubernetes compatibility target, Helm baseline, Maven plugin versions and external validation tool versions.
+
+Agents must not independently select newer or alternative versions.
+
+A version change requires human approval and the change-control process defined in the version baseline.
+
+## 29. Agent instructions:
 
 Approved coding agents must:
 
 - read this file before generating service code
+- read `baseline/intent/sdd/platform-version-baseline.md` before selecting any version
 - use Java 21 and Spring Boot 3.x for service implementation
 - use Maven consistently
 - create individually deployable codebases under `baseline/intent/codebases/{ms}/`
@@ -601,13 +615,16 @@ Approved coding agents must:
 - meet the test coverage baseline while still proving meaningful behaviour
 - use mocks, stubs or test doubles only according to the external dependency mocking baseline
 - provide the required evidence pack after each run
+- run `baseline/intent/sdd/validation/validate-slice-01a.sh` for Slice 01A
+- allow only one coding agent on the same slice and branch at a time
+- keep agent names, prompts, timestamps and machine-specific paths out of generated implementation files
 - stop and report when a stop condition is reached instead of guessing
 - obey the task-specific write scope and Git safety rules
 - use the Maven Wrapper and pin dependency, plugin, image and chart versions
 - run the required validation toolchain and report checks that were not run
 - do not commit, push, merge, rebase, tag or change branches unless explicitly requested by a human
 
-## 29. Change control:
+## 30. Change control:
 
 Changes to this technology stack or implementation structure require an Architecture Decision Record.
 

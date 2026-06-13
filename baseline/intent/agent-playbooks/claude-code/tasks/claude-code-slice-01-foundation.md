@@ -21,11 +21,15 @@ Also read and follow:
 - `baseline/intent/agent-playbooks/claude-code/CLAUDE.md`
 - `baseline/intent/agent-playbooks/common/architecture-guardrails.md`
 - `baseline/intent/sdd/platform-technology-stack.md`
+- `baseline/intent/sdd/platform-version-baseline.md`
+- `baseline/intent/sdd/validation/validate-slice-01a.sh`
 
 ## 3. Claude Code execution rules:
 
 - Do not override the neutral SDD task.
 - Execute only Slice 01A for the first coding run.
+- Use task version `1.0.0` and version baseline `intent-platform-versions-2026-06-13`.
+- Only one coding agent may work on the Slice 01A branch and working tree at a time.
 - Write only under `baseline/intent/codebases/id-ms/`, `baseline/intent/platform/` and `baseline/intent/tests/`.
 - Treat SDD files, agent playbooks, architecture specifications, OpenAPI contracts and event contracts as read-only.
 - Do not delete, move or rename existing files unless Slice 01A explicitly requires it.
@@ -46,6 +50,9 @@ Also read and follow:
 - Use the Maven Wrapper and pin dependency, plugin, image and Helm chart versions.
 - Run the required validation set and report checks as `PASS`, `FAIL` or `NOT RUN`.
 - Stop and report rather than changing source-of-truth documents or exceeding the approved write scope.
+- Keep agent names, prompts, generation timestamps and machine-specific paths out of generated implementation files.
+- Run `bash baseline/intent/sdd/validation/validate-slice-01a.sh HEAD` and include its result.
+- Record the source commit SHA, task checksum and prefixed wrapper filename in the evidence pack.
 
 ## 4. Suggested Claude Code command:
 

@@ -2,6 +2,10 @@
 
 **Document status:** Agent-neutral SDD execution task for Slice 01 Foundation.
 
+**Task version:** `1.0.0`
+
+**Version baseline:** `intent-platform-versions-2026-06-13`
+
 ## 1. Purpose:
 
 This task instructs an approved coding agent to implement the foundation skeleton for the Intent Management Platform.
@@ -85,6 +89,8 @@ Read and follow these files before generating code:
 - `baseline/intent/sdd/platform-build-plan.md`
 - `baseline/intent/sdd/service-build-order.md`
 - `baseline/intent/sdd/platform-technology-stack.md`
+- `baseline/intent/sdd/platform-version-baseline.md`
+- `baseline/intent/sdd/validation/validate-slice-01a.sh`
 - `baseline/intent/sdd/slices/slice-01-foundation.md`
 - `baseline/intent/agent-playbooks/common/architecture-guardrails.md`
 
@@ -98,9 +104,10 @@ Use the service specifications as architecture context only:
 
 ## 4. Mandatory technology and structure baseline:
 
-Use the platform technology stack file as the mandatory implementation baseline:
+Use the platform technology stack and exact version baseline as the mandatory implementation baseline:
 
 - `baseline/intent/sdd/platform-technology-stack.md`
+- `baseline/intent/sdd/platform-version-baseline.md`
 
 The service implementation stack is:
 
@@ -407,6 +414,11 @@ The evidence pack must include:
 - generated SBOM location
 - dependency, secret and container scan summaries
 - confirmation that no Git commit, push, merge, rebase, tag or branch operation was performed
+- source commit SHA, task version and task-file checksum
+- version baseline identifier and version inventory
+- exact prefixed wrapper filename used
+- confirmation that only one coding agent worked on the slice branch
+- automated validator result
 - architecture boundary check
 - forbidden folder check
 - known gaps and deferred work
@@ -481,6 +493,18 @@ The agent must not:
 
 Stop and report if Slice 01A cannot be completed within this write scope.
 
+Only one coding agent may modify Slice 01A on the active branch and working tree at a time.
+
+Do not run GPT Codex and Claude Code concurrently on the same Slice 01A branch.
+
+Generated implementation files must not contain:
+
+- agent or model names
+- prompts or chat transcripts
+- generation timestamps
+- machine-specific absolute paths
+- temporary tool output or agent scratch files
+
 ## 17. Dependency and build reproducibility rule:
 
 ID MS must include the Maven Wrapper:
@@ -491,10 +515,11 @@ mvnw.cmd
 .mvn/wrapper/
 ```
 
-ID MS must use:
+ID MS must use the exact values in `baseline/intent/sdd/platform-version-baseline.md`, including:
 
-- Java 21
-- an explicitly pinned Spring Boot 3.x version
+- Eclipse Temurin 21.0.11+10 and Java 21
+- Spring Boot 3.5.14
+- Apache Maven 3.9.16 through Maven Wrapper 3.3.4
 - pinned direct dependency versions where they are not governed by the Spring Boot BOM or parent
 - pinned Maven plugin versions
 - Maven Enforcer
@@ -558,6 +583,21 @@ Validation rules:
 - If Docker, Helm or an external scanner is unavailable, record the check as `NOT RUN`, explain why and do not claim it passed.
 - Include commands executed, concise results and generated SBOM location in the evidence pack.
 
+Run the automated validator from the repository root:
+
+```bash
+bash baseline/intent/sdd/validation/validate-slice-01a.sh HEAD
+```
+
+The evidence pack must record:
+
+- source commit SHA before agent changes
+- task version `1.0.0`
+- version baseline identifier `intent-platform-versions-2026-06-13`
+- SHA-256 checksum of `slice-01-foundation-task.md`
+- wrapper filename used
+- coding agent used
+
 ## 19. Expected output:
 
 Open a pull request or produce a working tree change set with:
@@ -586,6 +626,10 @@ Slice 01A is complete only when:
 - `ic-ms`, `icb-ms`, `ii-ms` and `ia-ms` implementation code is not created
 - ID MS has its own Maven project
 - ID MS includes `mvnw`, `mvnw.cmd` and `.mvn/wrapper/`
+- ID MS uses the exact versions in `platform-version-baseline.md`
+- ID MS uses `eclipse-temurin:21.0.11_10-jre-jammy`
+- platform scaffolding uses `postgres:18.4`, `redis:8.8.0` and `apache/kafka:4.3.0`
+- Helm chart uses `apiVersion: v2`, `version: 0.1.0` and `appVersion: 0.1.0`
 - ID MS uses Maven Enforcer
 - direct dependency and Maven plugin versions are pinned
 - no `SNAPSHOT`, dynamic version range or floating container tag is used
@@ -604,6 +648,10 @@ Slice 01A is complete only when:
 - only approved Slice 01A write-scope paths were changed
 - no source-of-truth SDD, architecture, API or event contract file was modified
 - no Git commit, push, merge, rebase, tag or branch operation was performed by the agent
+- only one coding agent worked on the Slice 01A branch at a time
+- generated implementation files contain no agent names, prompts, generation timestamps or machine-specific paths
+- old unprefixed wrapper filenames are absent
+- the automated Slice 01A validator completes successfully
 - ID MS has explicit tests for health, readiness, correlation ID, error shape, security scaffold and local configuration
 - ID MS exposes `GET /health`
 - ID MS exposes `GET /ready`
@@ -702,4 +750,9 @@ Also provide:
 - Helm lint result
 - selected version inventory
 - any check marked `NOT RUN` and the reason
+- source commit SHA
+- task version and SHA-256 checksum
+- version baseline identifier
+- prefixed wrapper filename used
+- automated validator result
 

@@ -2,6 +2,10 @@
 
 **Document status:** Agent-neutral delivery slice definition for the Intent Platform foundation.
 
+**Slice version:** `1.0.0`
+
+**Version baseline:** `intent-platform-versions-2026-06-13`
+
 ## 1. Purpose:
 
 Slice 01 establishes the implementation foundation for the Intent Management Platform.
@@ -23,6 +27,8 @@ The first coding run must implement only:
 - `baseline/intent/tests/`
 
 Slice 01A establishes ID MS as the reviewed golden service skeleton pattern.
+
+Slice 01A must use `sdd/platform-version-baseline.md` and pass `sdd/validation/validate-slice-01a.sh`.
 
 Slice 01A must prove:
 
@@ -85,3 +91,5 @@ Slice 01 is complete only when:
 - no forbidden folders were created
 - no service ownership boundaries were moved
 - no future-slice domain workflow was implemented early
+- exact version pins match the approved baseline
+- the automated validator passed

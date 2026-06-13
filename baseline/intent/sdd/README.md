@@ -18,9 +18,12 @@ Approved coding agents may assist with implementation, but they must follow the 
 | `platform-build-plan.md` | Overall build approach and delivery model. |
 | `service-build-order.md` | Recommended service implementation order. |
 | `platform-technology-stack.md` | Mandatory implementation stack and repository structure baseline. |
+| `platform-version-baseline.md` | Exact approved versions for runtimes, frameworks, containers and validation tools. |
 | `acceptance-criteria/` | Service-level acceptance criteria used to prove each service behaves correctly. |
 | `slices/` | Incremental delivery slices used to build the platform in a controlled order. |
 | `tasks/` | Agent-neutral execution tasks for delivery slices. |
+| `validation/` | Automated SDD validation scripts. |
+| `templates/` | Review and delivery templates. |
 
 ## 3. Source of truth:
 
@@ -34,6 +37,7 @@ The implementation must be driven by:
 | Event contracts and schemas | Define executable event boundaries. |
 | Lifecycle tables | Define allowed state transitions. |
 | Platform technology stack | Defines implementation stack, runtime platform and repository structure. |
+| Platform version baseline | Defines exact approved versions and image tags. |
 | Acceptance criteria | Define what must be proven before a slice is complete. |
 | Agent-neutral tasks | Define what an approved coding agent may implement for a slice. |
 
@@ -43,7 +47,7 @@ Each delivery item should follow this flow:
 
 1. Select a delivery slice.
 2. Confirm the relevant service specifications and contracts.
-3. Confirm the platform technology stack and repository structure baseline.
+3. Confirm the platform technology stack, exact version baseline and repository structure.
 4. Confirm or update acceptance criteria.
 5. Create failing tests from the acceptance criteria.
 6. Implement the minimum change required to pass the tests.
@@ -60,6 +64,8 @@ The agent must:
 
 - follow `../agent-playbooks/common/architecture-guardrails.md`
 - follow `platform-technology-stack.md`
+- follow `platform-version-baseline.md`
+- run the relevant script under `validation/`
 - use the relevant service specification as source of truth
 - use the relevant agent-neutral task under `tasks/`
 - avoid changing public API paths, event names, lifecycle states or topic names without an ADR
