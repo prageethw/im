@@ -402,6 +402,11 @@ The evidence pack must include:
 - test command output
 - coverage summary per microservice
 - mock or stub summary where external dependencies are isolated
+- dependency and plugin version inventory
+- validation matrix showing `PASS`, `FAIL` or `NOT RUN`
+- generated SBOM location
+- dependency, secret and container scan summaries
+- confirmation that no Git commit, push, merge, rebase, tag or branch operation was performed
 - architecture boundary check
 - forbidden folder check
 - known gaps and deferred work
@@ -436,7 +441,124 @@ Human review must check:
 - contracts remain the source of truth
 - implementation does not overbuild future slices
 
-## 16. Expected output:
+## 16. Slice 01A write scope and Git safety:
+
+For the first coding run, the agent may create or modify files only under:
+
+```text
+baseline/intent/codebases/id-ms/
+baseline/intent/platform/
+baseline/intent/tests/
+```
+
+All other repository paths are read-only for Slice 01A.
+
+In particular, do not modify:
+
+- `baseline/intent/sdd/`
+- `baseline/intent/agent-playbooks/`
+- `baseline/intent/id-ms/`
+- `baseline/intent/ic-ms/`
+- `baseline/intent/icb-ms/`
+- `baseline/intent/ii-ms/`
+- `baseline/intent/ia-ms/`
+- `baseline/intent/e2e/`
+- existing OpenAPI or event contract files
+
+Before making changes:
+
+- run `git status --short`
+- record any pre-existing changes
+- preserve all pre-existing human changes
+
+The agent must not:
+
+- delete, move or rename existing files unless explicitly required by Slice 01A
+- use `git reset --hard`, `git clean`, broad `git checkout`, broad `git restore` or destructive file removal
+- create, delete or switch branches
+- commit, amend, push, merge, rebase, tag or open a pull request
+- write outside the repository or outside the approved Slice 01A paths
+
+Stop and report if Slice 01A cannot be completed within this write scope.
+
+## 17. Dependency and build reproducibility rule:
+
+ID MS must include the Maven Wrapper:
+
+```text
+mvnw
+mvnw.cmd
+.mvn/wrapper/
+```
+
+ID MS must use:
+
+- Java 21
+- an explicitly pinned Spring Boot 3.x version
+- pinned direct dependency versions where they are not governed by the Spring Boot BOM or parent
+- pinned Maven plugin versions
+- Maven Enforcer
+- an explicitly pinned container base image tag
+- explicit Helm chart `version` and `appVersion`
+
+Do not use:
+
+- `SNAPSHOT`
+- `LATEST`
+- `RELEASE`
+- Maven version ranges
+- floating container tags such as `latest`
+- unversioned Maven plugins
+- unapproved dependency repositories
+
+The ID MS README and evidence pack must record:
+
+- Java version
+- Maven Wrapper version
+- Spring Boot version
+- significant dependency and plugin versions
+- container base image and tag
+- build, test and validation commands
+
+Stop and report if a required version decision is not governed by the platform baseline or an existing ADR.
+
+## 18. Required validation and supply-chain evidence:
+
+The ID MS Maven build must configure the verification lifecycle to include:
+
+- Maven Enforcer
+- Spotless formatting check
+- SpotBugs static analysis
+- unit and component tests
+- JaCoCo line and branch coverage checks
+- CycloneDX SBOM generation
+
+Mandatory validation:
+
+```text
+cd baseline/intent/codebases/id-ms
+./mvnw clean verify
+```
+
+Pre-merge validation must also include:
+
+- OWASP Dependency-Check
+- Gitleaks secret scan
+- service container image build
+- Trivy container image scan
+- `helm lint helm`
+
+Validation rules:
+
+- `./mvnw clean verify` must pass and cannot be skipped.
+- ID MS must meet the Slice 01A coverage thresholds.
+- No unresolved critical dependency or container vulnerability is acceptable.
+- High-severity findings require documented human review and approval.
+- Scans must not be disabled merely to make the build pass.
+- If Docker, Helm or an external scanner is unavailable, record the check as `NOT RUN`, explain why and do not claim it passed.
+- Include commands executed, concise results and generated SBOM location in the evidence pack.
+
+## 19. Expected output:
 
 Open a pull request or produce a working tree change set with:
 
@@ -451,9 +573,9 @@ Open a pull request or produce a working tree change set with:
 - coverage summary per microservice
 - mock or stub summary where external dependencies are isolated
 
-## 17. Acceptance criteria:
+## 20. Acceptance criteria:
 
-### 17.1 Slice 01A acceptance criteria:
+### 20.1 Slice 01A acceptance criteria:
 
 Slice 01A is complete only when:
 
@@ -463,11 +585,25 @@ Slice 01A is complete only when:
 - `baseline/intent/tests/` scaffolding is created
 - `ic-ms`, `icb-ms`, `ii-ms` and `ia-ms` implementation code is not created
 - ID MS has its own Maven project
+- ID MS includes `mvnw`, `mvnw.cmd` and `.mvn/wrapper/`
+- ID MS uses Maven Enforcer
+- direct dependency and Maven plugin versions are pinned
+- no `SNAPSHOT`, dynamic version range or floating container tag is used
+- the ID MS README records selected versions and validation commands
 - ID MS has its own Dockerfile
 - ID MS has its own Helm chart scaffold
 - ID MS has its own service-local tests
 - ID MS meets minimum 70% line coverage
 - ID MS meets minimum 60% branch coverage
+- `./mvnw clean verify` passes
+- Spotless and SpotBugs checks pass through the Maven verification lifecycle
+- a CycloneDX SBOM is generated
+- no unresolved critical dependency or container vulnerability remains
+- high-severity findings, if any, have documented human review
+- Docker build, Trivy scan, Gitleaks scan and Helm lint results are recorded as `PASS`, `FAIL` or `NOT RUN`
+- only approved Slice 01A write-scope paths were changed
+- no source-of-truth SDD, architecture, API or event contract file was modified
+- no Git commit, push, merge, rebase, tag or branch operation was performed by the agent
 - ID MS has explicit tests for health, readiness, correlation ID, error shape, security scaffold and local configuration
 - ID MS exposes `GET /health`
 - ID MS exposes `GET /ready`
@@ -487,7 +623,7 @@ Slice 01A is complete only when:
 - known gaps and deferred work are documented
 - Slice 01A has passed human review before Slice 01B begins
 
-### 17.2 Slice 01B acceptance criteria:
+### 20.2 Slice 01B acceptance criteria:
 
 Slice 01B is complete only when:
 
@@ -495,6 +631,9 @@ Slice 01B is complete only when:
 - the approved ID MS skeleton pattern is replicated to `ic-ms`, `icb-ms`, `ii-ms` and `ia-ms`
 - all four new service codebases are under `baseline/intent/codebases/{ms}/`
 - each new service has its own Maven project
+- each new service includes its own Maven Wrapper
+- each new service pins dependency, plugin, image and Helm chart versions
+- each new service uses Maven Enforcer, Spotless, SpotBugs, JaCoCo and CycloneDX
 - each new service has its own Dockerfile
 - each new service has its own Helm chart scaffold
 - each new service has its own service-local tests
@@ -515,7 +654,7 @@ Slice 01B is complete only when:
 - known gaps and deferred work are documented
 - Slice 01B has passed human review before Slice 01C begins
 
-### 17.3 Slice 01C acceptance criteria:
+### 20.3 Slice 01C acceptance criteria:
 
 Slice 01C is complete only when:
 
@@ -534,16 +673,33 @@ Slice 01C is complete only when:
 - no future-slice domain workflow was implemented early
 - known gaps and deferred work are documented
 - the complete Slice 01 evidence pack has passed human review
-## 18. Post-run evidence:
+## 21. Post-run evidence:
 
 After implementation, provide:
 
 ```text
 git status --short
 git diff --stat
+git diff --name-only
 find baseline/intent/codebases -maxdepth 2 -type d -print
 find baseline/intent -maxdepth 2 -type d \( -name codebases -o -name platform -o -name tests -o -name services -o -name libs \) -print
 find . -maxdepth 2 -type d \( -name intents -o -name services -o -name libs -o -name platform -o -name tests \) -print
 ```
 
 The second and third find commands must not show disallowed generated implementation folders.
+
+Also provide:
+
+- the initial and final `git status --short`
+- `./mvnw clean verify` result
+- line and branch coverage summary
+- Spotless and SpotBugs results
+- SBOM path
+- dependency scan result
+- Gitleaks result
+- Docker build result
+- Trivy image scan result
+- Helm lint result
+- selected version inventory
+- any check marked `NOT RUN` and the reason
+

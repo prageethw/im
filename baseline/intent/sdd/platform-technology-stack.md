@@ -17,6 +17,14 @@ This document is tool-neutral. Approved coding agents must follow this stack whe
 | Service language | Java 21 |
 | Service framework | Spring Boot 3.x |
 | Build tool | Maven |
+| Build reproducibility | Maven Wrapper and Maven Enforcer |
+| Test coverage | JaCoCo |
+| Code formatting | Spotless Maven plugin |
+| Static analysis | SpotBugs Maven plugin |
+| Dependency vulnerability scanning | OWASP Dependency-Check |
+| Software bill of materials | CycloneDX |
+| Secret scanning | Gitleaks |
+| Container vulnerability scanning | Trivy |
 | API framework | Spring Web |
 | Validation | Jakarta Bean Validation |
 | Persistence | Spring Data JPA |
@@ -510,7 +518,70 @@ Human review must check:
 - contracts remain the source of truth
 - implementation does not overbuild future slices
 
-## 26. Agent instructions:
+## 26. Dependency and build reproducibility baseline:
+
+Each microservice must include:
+
+- `mvnw`
+- `mvnw.cmd`
+- `.mvn/wrapper/`
+- Maven Enforcer configuration
+- pinned direct dependency versions
+- pinned Maven plugin versions
+- pinned container base image tags
+- explicit Helm chart `version` and `appVersion`
+
+The implementation must not use:
+
+- `SNAPSHOT` dependencies or plugins
+- `LATEST` or `RELEASE`
+- Maven version ranges
+- floating container tags such as `latest`
+- unversioned Maven plugins
+- unapproved dependency repositories
+
+A Spring Boot BOM or parent may govern compatible transitive versions, but direct dependencies and build plugins must remain reproducible and reviewable.
+
+Each service README must record:
+
+- Java version
+- Maven Wrapper version
+- Spring Boot version
+- significant dependency and plugin versions
+- container base image and tag
+- commands used to build, test and validate the service
+
+## 27. Validation toolchain baseline:
+
+The service Maven verification lifecycle must include:
+
+- Maven Enforcer
+- Spotless formatting check
+- SpotBugs static analysis
+- unit and component tests
+- JaCoCo line and branch coverage checks
+- CycloneDX SBOM generation
+
+The pre-merge validation set must include:
+
+- `./mvnw clean verify`
+- dependency vulnerability scan using OWASP Dependency-Check
+- repository secret scan using Gitleaks
+- service container image build
+- container image scan using Trivy
+- `helm lint` for the service-owned chart
+
+Validation rules:
+
+- `./mvnw clean verify` is mandatory and must pass.
+- No unresolved critical dependency or container vulnerability is acceptable.
+- High-severity findings require documented human review and approval.
+- Scans must not be disabled merely to make a build pass.
+- Skipped or unavailable external checks must be reported as `NOT RUN` with the reason.
+- An agent must not claim that a validation check passed when it was not executed.
+- Commands and concise results must be included in the evidence pack.
+
+## 28. Agent instructions:
 
 Approved coding agents must:
 
@@ -531,8 +602,12 @@ Approved coding agents must:
 - use mocks, stubs or test doubles only according to the external dependency mocking baseline
 - provide the required evidence pack after each run
 - stop and report when a stop condition is reached instead of guessing
+- obey the task-specific write scope and Git safety rules
+- use the Maven Wrapper and pin dependency, plugin, image and chart versions
+- run the required validation toolchain and report checks that were not run
+- do not commit, push, merge, rebase, tag or change branches unless explicitly requested by a human
 
-## 27. Change control:
+## 29. Change control:
 
 Changes to this technology stack or implementation structure require an Architecture Decision Record.
 

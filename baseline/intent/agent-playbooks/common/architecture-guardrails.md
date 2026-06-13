@@ -1,6 +1,6 @@
 # Intent Platform Architecture Guardrails
 
-**Document status:** Draft agent-neutral guardrail document.
+**Document status:** Baseline agent-neutral guardrail document.
 
 ## 1. Purpose:
 
@@ -70,7 +70,46 @@ These guardrails apply regardless of tool. Codex, Claude Code or another approve
 - Include negative tests for invalid lifecycle transitions and invalid payloads.
 - Pull requests must include test evidence.
 
-## 10. Pull request rules:
+## 10. Write scope and Git safety rules:
+
+- The selected SDD task defines the only paths that may be created or modified.
+- For Slice 01A, write access is limited to:
+  - `baseline/intent/codebases/id-ms/`
+  - `baseline/intent/platform/`
+  - `baseline/intent/tests/`
+- Treat all architecture documents, service specifications, OpenAPI contracts, event contracts, SDD files and agent playbooks as read-only unless the task explicitly requests a document change.
+- Do not delete, move or rename existing files unless the task explicitly requires it and a human has approved the change.
+- Inspect `git status --short` before making changes and preserve all pre-existing human changes.
+- Do not run commands that discard work, including `git reset --hard`, `git clean`, broad `git checkout`, broad `git restore` or destructive file removal.
+- Do not create, delete or switch branches.
+- Do not commit, amend, push, merge, rebase, tag or open a pull request unless a human explicitly requests that action.
+- Do not write outside the repository or outside the task's approved paths.
+- Stop and report if the requested implementation cannot be completed within the approved write scope.
+
+## 11. Dependency and build reproducibility rules:
+
+- Use the Maven Wrapper in every service codebase.
+- Pin direct dependency, Maven plugin, container image and Helm chart versions.
+- Do not use `SNAPSHOT`, `LATEST`, `RELEASE`, dynamic version ranges, floating tags or unpinned build plugins.
+- Use Maven Enforcer to verify Java, Maven and dependency convergence requirements.
+- Use only approved dependency repositories already established by the project.
+- Do not add a dependency when the Java or Spring standard library provides a clear solution.
+- Record selected framework, dependency, plugin and container image versions in the service README and evidence pack.
+- Stop and report when a required version choice is not governed by the platform baseline or an existing ADR.
+
+## 12. Validation and supply-chain rules:
+
+- `./mvnw clean verify` is mandatory and must not be skipped.
+- The Maven verification lifecycle must enforce formatting, static analysis, tests and coverage thresholds.
+- Generate a CycloneDX SBOM for each service.
+- Run dependency vulnerability, secret and container image scans before merge.
+- Build the service container image and lint the service-owned Helm chart.
+- No unresolved critical vulnerability is acceptable.
+- High-severity findings require documented human review and approval before merge.
+- If Docker, Helm or an external scanner is unavailable, report the check as `NOT RUN`, explain why and do not claim that it passed.
+- Preserve the commands executed and concise results in the evidence pack.
+
+## 13. Pull request rules:
 
 Every pull request must state:
 
