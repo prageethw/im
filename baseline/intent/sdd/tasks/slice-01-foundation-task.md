@@ -453,39 +453,87 @@ Open a pull request or produce a working tree change set with:
 
 ## 17. Acceptance criteria:
 
-The Slice 01 change set is complete only when:
+### 17.1 Slice 01A acceptance criteria:
+
+Slice 01A is complete only when:
 
 - all generated implementation files are under `baseline/intent/`
-- Slice 01A creates only the ID MS service codebase, platform scaffolding and cross-service test scaffolding
-- Slice 01B is not started until Slice 01A is reviewed and accepted
-- Slice 01C is not started until Slice 01B is reviewed and accepted
-- service codebases are under `baseline/intent/codebases/{ms}/`
+- only `baseline/intent/codebases/id-ms/` is created as a service codebase
+- `baseline/intent/platform/` scaffolding is created
+- `baseline/intent/tests/` scaffolding is created
+- `ic-ms`, `icb-ms`, `ii-ms` and `ia-ms` implementation code is not created
+- ID MS has its own Maven project
+- ID MS has its own Dockerfile
+- ID MS has its own Helm chart scaffold
+- ID MS has its own service-local tests
+- ID MS meets minimum 70% line coverage
+- ID MS meets minimum 60% branch coverage
+- ID MS has explicit tests for health, readiness, correlation ID, error shape, security scaffold and local configuration
+- ID MS exposes `GET /health`
+- ID MS exposes `GET /ready`
+- ID MS has PostgreSQL readiness configuration
+- ID MS has Redis namespace readiness configuration
+- ID MS has AWS Secrets Manager configuration readiness
+- ID MS has Micrometer and OpenTelemetry readiness
 - no `baseline/intent/services/` folder is created
 - no `baseline/intent/libs/` folder is created
 - no root-level `intents/`, `services/`, `libs/`, `platform/` or `tests/` folders are created
-- each service has its own Maven project
-- each service has its own Dockerfile
-- each service has its own Helm chart scaffold
-- each service has its own service-local tests
-- each service meets minimum 70% line coverage
-- each service meets minimum 60% branch coverage
-- each service has explicit tests for health, readiness, correlation ID, error shape, security scaffold and local configuration
-- each service exposes `GET /health`
-- each service exposes `GET /ready`
-- each service has PostgreSQL readiness configuration
-- each service has Redis namespace readiness configuration
-- each service has AWS Secrets Manager configuration readiness
-- each service has Micrometer and OpenTelemetry readiness
-- platform environment scaffolding is under `baseline/intent/platform/`
-- cross-service test scaffolding is under `baseline/intent/tests/`
 - no shared implementation code is created
-- no domain workflow is implemented in this slice
+- no domain workflow is implemented
 - external dependency mocks are limited to test or local-development scaffolding
 - external dependency mocks do not replace contract tests or production integration decisions
 - architecture boundary check confirms no ownership boundaries were moved
 - forbidden folder check confirms no disallowed folders were created
 - known gaps and deferred work are documented
+- Slice 01A has passed human review before Slice 01B begins
 
+### 17.2 Slice 01B acceptance criteria:
+
+Slice 01B is complete only when:
+
+- Slice 01A has already passed human review
+- the approved ID MS skeleton pattern is replicated to `ic-ms`, `icb-ms`, `ii-ms` and `ia-ms`
+- all four new service codebases are under `baseline/intent/codebases/{ms}/`
+- each new service has its own Maven project
+- each new service has its own Dockerfile
+- each new service has its own Helm chart scaffold
+- each new service has its own service-local tests
+- each new service meets minimum 70% line coverage
+- each new service meets minimum 60% branch coverage
+- each new service has explicit tests for health, readiness, correlation ID, error shape, security scaffold and local configuration
+- each new service exposes `GET /health`
+- each new service exposes `GET /ready`
+- each new service has PostgreSQL readiness configuration
+- each new service has Redis namespace readiness configuration
+- each new service has AWS Secrets Manager configuration readiness
+- each new service has Micrometer and OpenTelemetry readiness
+- no shared implementation libraries are created
+- no service ownership boundaries are moved
+- no future-slice domain workflow is implemented
+- architecture boundary check confirms the approved skeleton pattern was preserved
+- forbidden folder check confirms no disallowed folders were created
+- known gaps and deferred work are documented
+- Slice 01B has passed human review before Slice 01C begins
+
+### 17.3 Slice 01C acceptance criteria:
+
+Slice 01C is complete only when:
+
+- Slice 01B has already passed human review
+- all five service skeletons start successfully
+- all five `GET /health` endpoints respond successfully
+- all five `GET /ready` endpoints respond successfully
+- coverage evidence is captured per microservice
+- test command output is captured
+- mock or stub summaries are documented where external dependencies are isolated
+- architecture boundary check passes
+- forbidden folder check passes
+- no public API paths, event names, topic names or lifecycle states were invented
+- no service ownership boundaries were moved
+- no shared implementation code was introduced
+- no future-slice domain workflow was implemented early
+- known gaps and deferred work are documented
+- the complete Slice 01 evidence pack has passed human review
 ## 18. Post-run evidence:
 
 After implementation, provide:
