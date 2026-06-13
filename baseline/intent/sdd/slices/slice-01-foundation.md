@@ -1,74 +1,87 @@
 # Slice 01 Foundation
 
-**Document status:** Initial SDD delivery slice baseline.
+**Document status:** Agent-neutral delivery slice definition for the Intent Platform foundation.
 
 ## 1. Purpose:
 
-This slice establishes the engineering foundation required before individual Intent Platform services are implemented.
+Slice 01 establishes the implementation foundation for the Intent Management Platform.
 
-## 2. Scope:
+It creates independently deployable Spring Boot microservice skeletons and platform environment scaffolding only.
 
-The foundation slice covers shared service scaffolding, local development, API contract generation, event contract validation, outbox and inbox patterns, observability baseline, security baseline and deployment packaging.
+Slice 01 must not implement domain workflows, full TMF921 APIs, optimiser integration, network apply integration or production-grade deployment configuration.
 
-## 3. In scope:
+## 2. Execution staging:
 
-- Repository structure for services, contracts, tests and platform deployment.
-- Common service template.
-- Health, readiness and liveness endpoints.
-- Correlation id middleware.
-- Platform error model.
-- OpenAPI validation test framework.
-- JSON schema event validation framework.
-- Kafka producer and consumer scaffolding.
-- Outbox and inbox persistence patterns.
-- Local docker compose environment.
-- Helm chart baseline.
-- Basic logging, metrics and tracing hooks.
-- Agent-neutral SDD task and review templates.
+Slice 01 must be executed in three controlled sub-slices.
 
-## 4. Out of scope:
+### 2.1 Slice 01A — Golden ID MS foundation skeleton:
 
-- Full business behaviour for any individual MS.
-- Production network integration.
-- Optimiser integration.
-- Full assurance logic.
-- Full TMF921 conformance evidence.
+The first coding run must implement only:
 
-## 5. Build tasks:
+- `baseline/intent/codebases/id-ms/`
+- `baseline/intent/platform/`
+- `baseline/intent/tests/`
 
-| ID | Task |
-|---|---|
-| FND-001 | Create service skeleton template with standard package layout. |
-| FND-002 | Add common HTTP middleware for correlation id, request logging and error handling. |
-| FND-003 | Add OpenAPI contract validation in CI. |
-| FND-004 | Add event schema validation in CI. |
-| FND-005 | Implement outbox persistence and relay scaffold. |
-| FND-006 | Implement inbox deduplication scaffold. |
-| FND-007 | Add docker compose for local database, Kafka and service execution. |
-| FND-008 | Add Helm chart baseline for each service. |
-| FND-009 | Add test evidence reporting template. |
-| FND-010 | Add agent instructions for approved coding agents. |
+Slice 01A establishes ID MS as the reviewed golden service skeleton pattern.
 
-## 6. Acceptance criteria:
+Slice 01A must prove:
 
-- A new service can be generated from the template and run locally.
-- Health, readiness and liveness endpoints respond consistently.
-- Contract tests can run in CI.
-- Event schema tests can run in CI.
-- Outbox relay can publish a test event to Kafka.
-- Inbox deduplication prevents duplicate handling of a test event.
-- Logs include service name, correlation id and request or event identity.
-- Helm chart renders without error.
+- ID MS starts successfully
+- `GET /health` returns 200
+- `GET /ready` returns 200
+- local configuration loads
+- correlation ID handling is scaffolded and tested
+- basic error response shape is scaffolded and tested
+- security scaffold is present and tested
+- PostgreSQL readiness configuration exists
+- Redis namespace readiness configuration exists
+- AWS Secrets Manager configuration readiness exists
+- Micrometer and OpenTelemetry readiness exists
+- Dockerfile exists
+- Helm chart scaffold exists
+- service-local tests exist
+- coverage gates are met
+- no forbidden folders are created
 
-## 7. Test evidence:
+Do not create `ic-ms`, `icb-ms`, `ii-ms` or `ia-ms` implementation code in Slice 01A.
 
-- Unit test report.
-- Component test report.
-- OpenAPI validation report.
-- Event schema validation report.
-- Local docker compose smoke test.
-- Helm template validation output.
+### 2.2 Slice 01B — Replicate approved skeleton pattern:
 
-## 8. Done when:
+Slice 01B may start only after Slice 01A is reviewed and accepted by a human.
 
-The team can create, run, test and package a skeleton MS without implementing domain-specific Intent Platform behaviour.
+Slice 01B replicates the approved ID MS skeleton pattern to:
+
+- `baseline/intent/codebases/ic-ms/`
+- `baseline/intent/codebases/icb-ms/`
+- `baseline/intent/codebases/ii-ms/`
+- `baseline/intent/codebases/ia-ms/`
+
+Replication must preserve independent codebases.
+
+Replication must not introduce shared implementation libraries or move service ownership boundaries.
+
+### 2.3 Slice 01C — Cross-service smoke, coverage and evidence cleanup:
+
+Slice 01C may start only after Slice 01B is reviewed and accepted by a human.
+
+Slice 01C verifies:
+
+- all five service skeletons start
+- all five service health endpoints respond
+- all five service readiness endpoints respond
+- coverage evidence is captured per microservice
+- forbidden folder checks pass
+- architecture boundary checks pass
+- mock and stub summaries are documented
+- known gaps and deferred work are documented
+
+## 3. Completion rule:
+
+Slice 01 is complete only when:
+
+- Slice 01A has passed human review
+- Slice 01B has passed human review
+- Slice 01C evidence has been captured
+- no forbidden folders were created
+- no service ownership boundaries were moved
+- no future-slice domain workflow was implemented early

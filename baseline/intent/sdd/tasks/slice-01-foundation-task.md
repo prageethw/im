@@ -8,9 +8,76 @@ This task instructs an approved coding agent to implement the foundation skeleto
 
 Slice 01 creates independently deployable Spring Boot microservice codebase skeletons and platform environment scaffolding only. It must not implement service-specific domain workflows.
 
+Slice 01 must be executed in staged sub-slices so the first generated service becomes a reviewed golden pattern before it is replicated to the remaining microservices.
+
 This task is agent-neutral. It may be executed by GPT Codex, Claude Code or another approved coding agent, provided the agent follows the same SDD documents, platform technology stack, architecture guardrails and review gates.
 
-## 2. Source of truth:
+## 2. Execution staging:
+
+Slice 01 must be executed in three controlled sub-slices.
+
+### 2.1 Slice 01A — Golden ID MS foundation skeleton:
+
+The first coding run must implement only:
+
+- `baseline/intent/codebases/id-ms/`
+- `baseline/intent/platform/`
+- `baseline/intent/tests/`
+
+Slice 01A must create the ID MS skeleton as the golden service pattern.
+
+Slice 01A must prove:
+
+- ID MS starts successfully
+- `GET /health` returns 200
+- `GET /ready` returns 200
+- local configuration loads
+- correlation ID handling is scaffolded and tested
+- basic error response shape is scaffolded and tested
+- security scaffold is present and tested
+- PostgreSQL readiness configuration exists
+- Redis namespace readiness configuration exists
+- AWS Secrets Manager configuration readiness exists
+- Micrometer and OpenTelemetry readiness exists
+- Dockerfile exists
+- Helm chart scaffold exists
+- service-local tests exist
+- coverage gates are met
+- no forbidden folders are created
+
+Do not create `ic-ms`, `icb-ms`, `ii-ms` or `ia-ms` implementation code in Slice 01A.
+
+### 2.2 Slice 01B — Replicate approved skeleton pattern:
+
+Slice 01B may start only after Slice 01A is reviewed and accepted by a human.
+
+Slice 01B must replicate the approved ID MS skeleton pattern to:
+
+- `baseline/intent/codebases/ic-ms/`
+- `baseline/intent/codebases/icb-ms/`
+- `baseline/intent/codebases/ii-ms/`
+- `baseline/intent/codebases/ia-ms/`
+
+Replication must preserve independent codebases.
+
+Replication must not introduce shared implementation libraries or move service ownership boundaries.
+
+### 2.3 Slice 01C — Cross-service smoke, coverage and evidence cleanup:
+
+Slice 01C may start only after Slice 01B is reviewed and accepted by a human.
+
+Slice 01C must verify:
+
+- all five service skeletons start
+- all five service health endpoints respond
+- all five service readiness endpoints respond
+- coverage evidence is captured per microservice
+- forbidden folder checks pass
+- architecture boundary checks pass
+- mock and stub summaries are documented
+- known gaps and deferred work are documented
+
+## 3. Source of truth:
 
 Read and follow these files before generating code:
 
@@ -29,7 +96,7 @@ Use the service specifications as architecture context only:
 - `baseline/intent/ii-ms/`
 - `baseline/intent/ia-ms/`
 
-## 3. Mandatory technology and structure baseline:
+## 4. Mandatory technology and structure baseline:
 
 Use the platform technology stack file as the mandatory implementation baseline:
 
@@ -55,7 +122,7 @@ The service implementation stack is:
 
 Do not use Python, FastAPI, Node.js, TypeScript, Go, .NET, Ruby or PHP for service implementation.
 
-## 4. Critical repository path rules:
+## 5. Critical repository path rules:
 
 The only valid implementation root is:
 
@@ -90,11 +157,16 @@ Do not create a folder named after the branch.
 
 The branch is only a Git branch. It is not a directory.
 
-## 5. Required independent service codebases:
+## 6. Required independent service codebases:
 
-Create independently deployable Spring Boot codebase skeletons for:
+Create independently deployable Spring Boot codebase skeletons using the staged execution model.
+
+Slice 01A creates only:
 
 - `baseline/intent/codebases/id-ms/`
+
+Slice 01B, after human approval of Slice 01A, creates:
+
 - `baseline/intent/codebases/ic-ms/`
 - `baseline/intent/codebases/icb-ms/`
 - `baseline/intent/codebases/ii-ms/`
@@ -123,7 +195,7 @@ Each service codebase must include:
 
 Health and readiness endpoints may use Spring Boot Actuator if the public paths remain stable.
 
-## 6. No shared code rule:
+## 7. No shared code rule:
 
 Do not create shared implementation code in this slice.
 
@@ -139,7 +211,7 @@ Do not create:
 
 If shared reusable technical libraries are required later, they must be introduced as independent shareable libraries through a dedicated ADR and delivery slice.
 
-## 7. Required platform environment scaffolding:
+## 8. Required platform environment scaffolding:
 
 Create platform environment scaffolding under:
 
@@ -165,7 +237,7 @@ Include placeholders or local scaffolding for:
 
 Do not create shared service code or common service Helm charts under `platform/`.
 
-## 8. Required cross-service test scaffolding:
+## 9. Required cross-service test scaffolding:
 
 Create cross-service test scaffolding under:
 
@@ -183,7 +255,7 @@ Service-local unit and component tests must remain inside each owning microservi
 
 Do not create shared test libraries.
 
-## 9. Explicit exclusions:
+## 10. Explicit exclusions:
 
 Do not implement:
 
@@ -212,7 +284,7 @@ Do not rename:
 
 Do not move ownership boundaries between ID MS, IC MS, ICB MS, II MS and IA MS.
 
-## 10. Code comments rule:
+## 11. Code comments rule:
 
 Generated code must include comments only where they explain non-obvious architectural intent, service ownership boundaries, intentional placeholders or future-slice extension points.
 
@@ -241,7 +313,7 @@ Prefer comments such as:
 - `This Redis namespace keeps cache keys service-owned and must not be shared across microservices.`
 - `AWS Secrets Manager integration is represented as configuration readiness only. No real secrets must be committed.`
 
-## 11. Test coverage rule:
+## 12. Test coverage rule:
 
 Test coverage is required, but coverage alone is not proof of correctness.
 
@@ -272,7 +344,7 @@ For later domain and production slices, the expected baseline is:
 - explicit scenario tests for lifecycle rules, event handling, idempotency and state transitions
 - 90% or higher coverage for critical lifecycle, event and idempotency logic where feasible
 
-## 12. External dependency mocking rule:
+## 13. External dependency mocking rule:
 
 Generated code may use mocks, stubs or test doubles for external systems only where required for local execution, isolated tests or unavailable dependencies.
 
@@ -294,7 +366,7 @@ Mocks must not:
 
 For Slice 01 Foundation, external systems may be mocked only to prove service startup, readiness, local configuration and test isolation.
 
-## 13. Agent stop conditions:
+## 14. Agent stop conditions:
 
 The agent must stop and report instead of guessing when a required decision or contract is missing.
 
@@ -309,6 +381,7 @@ Stop and report if:
 - an external API or event contract is unavailable but required for the slice
 - generated code would require shared implementation code not approved by this slice
 - the task would create disallowed folders such as `services/`, `libs/` or `intents/`
+- the task would implement Slice 01B or 01C before the previous sub-slice has human approval
 
 When a stop condition is reached, provide:
 
@@ -317,7 +390,7 @@ When a stop condition is reached, provide:
 - the decision required from a human
 - any safe partial work already completed
 
-## 14. Agent evidence pack and review checklist:
+## 15. Agent evidence pack and review checklist:
 
 Every run must provide an evidence pack.
 
@@ -363,11 +436,12 @@ Human review must check:
 - contracts remain the source of truth
 - implementation does not overbuild future slices
 
-## 15. Expected output:
+## 16. Expected output:
 
 Open a pull request or produce a working tree change set with:
 
 - summary of the foundation skeleton
+- sub-slice completed: 01A, 01B or 01C
 - changed file list
 - how to run each service locally
 - how to run each service's tests
@@ -377,11 +451,14 @@ Open a pull request or produce a working tree change set with:
 - coverage summary per microservice
 - mock or stub summary where external dependencies are isolated
 
-## 16. Acceptance criteria:
+## 17. Acceptance criteria:
 
 The Slice 01 change set is complete only when:
 
 - all generated implementation files are under `baseline/intent/`
+- Slice 01A creates only the ID MS service codebase, platform scaffolding and cross-service test scaffolding
+- Slice 01B is not started until Slice 01A is reviewed and accepted
+- Slice 01C is not started until Slice 01B is reviewed and accepted
 - service codebases are under `baseline/intent/codebases/{ms}/`
 - no `baseline/intent/services/` folder is created
 - no `baseline/intent/libs/` folder is created
@@ -409,7 +486,7 @@ The Slice 01 change set is complete only when:
 - forbidden folder check confirms no disallowed folders were created
 - known gaps and deferred work are documented
 
-## 17. Post-run evidence:
+## 18. Post-run evidence:
 
 After implementation, provide:
 
